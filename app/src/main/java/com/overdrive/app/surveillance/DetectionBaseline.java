@@ -224,12 +224,19 @@ public class DetectionBaseline {
                 continue;
             }
 
-            // Rule 3: Don't add duplicates (already in baseline)
+            // Rule 3: Don't add duplicates — but DO refresh existing entries.
+            // Refreshing the timestamp prevents the 2-hour expiry from evicting
+            // objects that are genuinely still in the scene. Without this, a car
+            // parked for >2 hours gets expired, and the next motion event near it
+            // treats it as "new" → false recording.
             boolean alreadyExists = false;
-            for (Entry entry : baselines[quadrant]) {
+            for (int i = 0; i < baselines[quadrant].size(); i++) {
+                Entry entry = baselines[quadrant].get(i);
                 if (entry.classId == det.getClassId()) {
                     float iou = computeIoU(cx, cy, w, h, entry.cx, entry.cy, entry.w, entry.h);
                     if (iou >= MATCH_IOU_THRESHOLD) {
+                        // Refresh: update position and reset timestamp
+                        baselines[quadrant].set(i, new Entry(det.getClassId(), cx, cy, w, h, quadrant));
                         alreadyExists = true;
                         break;
                     }
@@ -255,15 +262,39 @@ public class DetectionBaseline {
     // ==================== LIGHTING TRANSITION REFRESH ====================
 
     /**
-     * Full refresh of a quadrant's baseline on a lighting transition.
-     * Replaces the entire quadrant baseline with fresh detections.
-     * Called when Stage 1 brightness shift is detected (dawn/dusk).
+     * Refresh a quadrant's baseline on a lighting transition (dawn/dusk).
+     * 
+     * MERGE strategy (not replace): Keep existing entries and add/update from
+     * the fresh scan. This prevents losing entries that YOLO can't see under
+     * the new lighting conditions (e.g., a dark car invisible at night that was
+     * visible during the day). Lost entries would cause false triggers when
+     * headlights later illuminate the "invisible" car.
+     *
+     * Rules:
+     * - New detections not in baseline → add them
+     * - Existing entries that match a fresh detection → refresh timestamp
+     * - Existing entries with no match → keep (YOLO may not see them in new lighting)
+     * - Never promote living things
+     * - Expired entries (>2 hours) are cleaned up by isInBaseline() lazily
+     *
+     * Called when auto night/day mode switches (luma crosses threshold).
+     * Cost: 1 inference per quadrant, happens 2-3 times per night.
      */
     public void refreshQuadrant(int quadrant, List<Detection> detections, int quadW, int quadH) {
         if (quadrant < 0 || quadrant >= NUM_QUADRANTS) return;
 
-        baselines[quadrant].clear();
-        if (detections == null) return;
+        if (detections == null || detections.isEmpty()) {
+            // YOLO found nothing — keep existing baseline intact.
+            // At night, YOLO often returns empty on dark scenes. Flushing the
+            // baseline here would cause every previously-known static object to
+            // trigger a false recording the next time it becomes visible.
+            logger.info("Baseline refresh Q" + quadrant + ": YOLO returned empty, keeping " +
+                    baselines[quadrant].size() + " existing entries");
+            return;
+        }
+
+        int added = 0;
+        int refreshed = 0;
 
         for (Detection det : detections) {
             if (det.getConfidence() < MIN_BASELINE_CONFIDENCE) continue;
@@ -274,11 +305,31 @@ public class DetectionBaseline {
             float w = (float) det.getW() / quadW;
             float h = (float) det.getH() / quadH;
 
-            baselines[quadrant].add(new Entry(det.getClassId(), cx, cy, w, h, quadrant));
+            // Check if this detection matches an existing baseline entry
+            boolean matched = false;
+            for (int i = 0; i < baselines[quadrant].size(); i++) {
+                Entry entry = baselines[quadrant].get(i);
+                if (entry.classId == det.getClassId()) {
+                    float iou = computeIoU(cx, cy, w, h, entry.cx, entry.cy, entry.w, entry.h);
+                    if (iou >= MATCH_IOU_THRESHOLD) {
+                        // Refresh: replace with updated position/timestamp
+                        baselines[quadrant].set(i, new Entry(det.getClassId(), cx, cy, w, h, quadrant));
+                        refreshed++;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!matched) {
+                // New object not in baseline — add it
+                baselines[quadrant].add(new Entry(det.getClassId(), cx, cy, w, h, quadrant));
+                added++;
+            }
         }
 
-        logger.info("Baseline refreshed Q" + quadrant + " (lighting transition): " +
-                baselines[quadrant].size() + " entries");
+        logger.info("Baseline refresh Q" + quadrant + " (lighting transition): +" + added +
+                " new, " + refreshed + " refreshed, " + baselines[quadrant].size() + " total");
     }
 
     // ==================== RESET ====================

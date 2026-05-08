@@ -159,7 +159,7 @@ public final class DaemonLogConfig {
     public static final boolean ABRP_CONFIG = false;
     
     /** SohEstimator - battery SOH estimation */
-    public static final boolean SOH_ESTIMATOR = false;
+    public static final boolean SOH_ESTIMATOR = true;
     
     /** TelemetryDataCollector - telemetry data collection */
     public static final boolean TELEMETRY_DATA_COLLECTOR = false;

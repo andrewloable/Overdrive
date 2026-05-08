@@ -397,14 +397,26 @@ public class MqttConnectionManager {
             // power
             try {
                 boolean powerSet = false;
-                if (vd != null && !Double.isNaN(vd.enginePowerKw) && Math.abs(vd.enginePowerKw) <= 300) {
+                if (vd != null && !Double.isNaN(vd.enginePowerKw) && Math.abs(vd.enginePowerKw) > 0.1 && Math.abs(vd.enginePowerKw) <= 300) {
                     payload.put("power", vd.enginePowerKw);
                     powerSet = true;
                 }
                 if (!powerSet) {
+                    // Prefer externalChargingPowerKw (InstrumentDevice) — real charger-reported power.
+                    // ChargingDevice.getChargingPower() is broken on most BYD models (returns 0).
+                    // Threshold 0.15 kW filters phantom readings when charger is unplugged.
+                    double chargingPower = 0;
+                    if (vd != null && !Double.isNaN(vd.externalChargingPowerKw) && vd.externalChargingPowerKw > 0.15) {
+                        chargingPower = vd.externalChargingPowerKw;
+                    } else if (vd != null && !Double.isNaN(vd.chargingPowerKw) && vd.chargingPowerKw > 0.15) {
+                        chargingPower = vd.chargingPowerKw;
+                    }
+
                     ChargingStateData chargingData = vehicleDataMonitor.getChargingState();
-                    boolean isChg = chargingData != null && chargingData.status == ChargingStateData.ChargingStatus.CHARGING;
-                    double monitorPower = chargingData != null ? chargingData.chargingPowerKW : 0;
+                    boolean isChg = (chargingData != null && chargingData.status == ChargingStateData.ChargingStatus.CHARGING)
+                                    || chargingPower > 0.15;
+                    double monitorPower = chargingPower > 0 ? chargingPower
+                            : (chargingData != null ? chargingData.chargingPowerKW : 0);
                     payload.put("power", isChg && monitorPower > 0.1 ? -monitorPower : 0);
                 }
             } catch (Exception e) {
@@ -427,6 +439,16 @@ public class MqttConnectionManager {
             // is_charging
             ChargingStateData chargingState = vehicleDataMonitor.getChargingState();
             boolean isCharging = chargingState != null && chargingState.status == ChargingStateData.ChargingStatus.CHARGING;
+            // Fallback: detect AC charging even if BMS state is stale (reports READY/IDLE)
+            // but the gun is connected (state 2=AC, 3=DC) and power is flowing.
+            if (!isCharging && vd != null) {
+                boolean gunConnected = vd.chargingGunState == 2 || vd.chargingGunState == 3;
+                boolean powerFlowing = (!Double.isNaN(vd.externalChargingPowerKw) && vd.externalChargingPowerKw > 0.15)
+                        || (!Double.isNaN(vd.chargingPowerKw) && vd.chargingPowerKw > 0.15);
+                if (gunConnected && powerFlowing) {
+                    isCharging = true;
+                }
+            }
             payload.put("is_charging", isCharging ? 1 : 0);
 
             // is_dcfc

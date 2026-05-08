@@ -109,4 +109,15 @@
             android:defaultValue="/trips" />
     </fragment>
 
+    <fragment
+        android:id="@+id/vehicleControlFragment"
+        android:name="com.overdrive.app.ui.fragment.WebViewFragment"
+        android:label="Vehicle Control"
+        tools:layout="@layout/fragment_webview">
+        <argument
+            android:name="page_path"
+            app:argType="string"
+            android:defaultValue="/vehicle-control" />
+    </fragment>
+
 </navigation>

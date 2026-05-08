@@ -42,6 +42,10 @@ public class BydCloudApiHandler {
             handleSetup(out, body);
             return true;
         }
+        if (cleanPath.equals("/api/bydcloud/settings") && method.equals("POST")) {
+            handleSettings(out, body);
+            return true;
+        }
         if (cleanPath.equals("/api/bydcloud/test") && method.equals("POST")) {
             handleTest(out, body);
             return true;
@@ -73,7 +77,44 @@ public class BydCloudApiHandler {
         status.put("hasLoginKey", !config.loginKey.isEmpty());
         status.put("hasCommandPwd", !config.commandPwd.isEmpty());
 
+        // Cloud push status
+        status.put("cloudPush", com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().getStatusJson());
+
         response.put("status", status);
+        HttpResponse.sendJson(out, response.toString());
+    }
+
+    /**
+     * POST /api/bydcloud/settings — update toggle settings (cloudDataMerge).
+     */
+    private static void handleSettings(OutputStream out, String body) throws Exception {
+        JSONObject response = new JSONObject();
+        try {
+            JSONObject req = new JSONObject(body);
+
+            JSONObject fullConfig = UnifiedConfigManager.loadConfig();
+            JSONObject bydCloud = fullConfig.optJSONObject("bydCloud");
+            if (bydCloud == null) {
+                response.put("success", false);
+                response.put("error", "BYD Cloud not configured");
+                HttpResponse.sendJson(out, response.toString());
+                return;
+            }
+
+            if (req.has("cloudDataMerge")) {
+                bydCloud.put("cloudDataMerge", req.optBoolean("cloudDataMerge", false));
+            }
+
+            UnifiedConfigManager.updateSection("bydCloud", bydCloud);
+
+            // Sync poller state based on new toggle value
+            com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().syncPollerState();
+
+            response.put("success", true);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+        }
         HttpResponse.sendJson(out, response.toString());
     }
 
@@ -199,12 +240,16 @@ public class BydCloudApiHandler {
             client.login();
             logger.info("  Step 1/3: Login succeeded");
 
-            // Fetch VIN
+            // Fetch VIN and vehicle type
             String vin;
+            String energyType = "";
             logger.info("  Step 2/3: Fetching vehicle list...");
             try {
-                vin = client.fetchFirstVin();
-                logger.info("  Step 2/3: Found VIN=***" + vin.substring(Math.max(0, vin.length() - 4)));
+                String[] vinAndType = client.fetchFirstVinAndEnergyType();
+                vin = vinAndType[0];
+                energyType = vinAndType[1];
+                logger.info("  Step 2/3: Found VIN=***" + vin.substring(Math.max(0, vin.length() - 4))
+                        + " energyType=" + energyType);
             } catch (Exception e) {
                 logger.warn("  Step 2/3: FAILED to fetch vehicles: " + e.getMessage());
                 response.put("success", false);
@@ -226,17 +271,26 @@ public class BydCloudApiHandler {
                 return;
             }
 
-            // Save with VIN
+            // Preserve existing cloudDataMerge toggle state
+            BydCloudConfig existing2 = BydCloudConfig.fromUnifiedConfig();
+            boolean mergeToggle = existing2.cloudDataMerge;
+
+            // Save with VIN and energyType
             BydCloudConfig.saveCredentials(username, loginKey, signPassword,
-                    commandPwd, password, vin, countryCode, language, region);
+                    commandPwd, password, vin, countryCode, language, region,
+                    energyType, mergeToggle);
 
             // Reset deterrent so it picks up new credentials
             BydCloudDeterrent.getInstance().reset();
+
+            // Reset cloud data provider so it reconnects with new credentials
+            com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().reset();
 
             logger.info("BYD Cloud setup complete: VIN=***" + vin.substring(Math.max(0, vin.length() - 4)));
 
             response.put("success", true);
             response.put("vin", vin);
+            if (!energyType.isEmpty()) response.put("energyType", energyType);
             response.put("message", "Connected successfully");
 
         } catch (Exception e) {

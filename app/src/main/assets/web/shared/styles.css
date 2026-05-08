@@ -391,6 +391,8 @@ input, select { font-family: inherit; }
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    position: relative;
+    z-index: 0;
 }
 
 .card + .card { margin-top: 24px; }
@@ -835,14 +837,16 @@ input, select { font-family: inherit; }
     bottom: 24px;
     right: 24px;
     width: 320px;
+    max-height: 50vh;
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    z-index: 200;
+    z-index: 250;
     overflow: hidden;
     transition: all 0.3s ease;
     cursor: move;
+    pointer-events: auto;
 }
 
 .pip-container.expanded {
@@ -2115,8 +2119,8 @@ input, select { font-family: inherit; }
     .pip-container {
         bottom: 80px;
         right: 16px;
-        left: 16px;
-        width: auto;
+        left: auto;
+        width: 200px;
     }
     
     /* Car Selector Mobile - no extra padding needed since header is visible */
@@ -2361,7 +2365,7 @@ input, select { font-family: inherit; }
     padding-bottom: calc(16px + var(--safe-bottom));
     background: var(--bg-surface);
     border-top: 1px solid var(--border-subtle);
-    z-index: 200;
+    z-index: 300;
     display: flex;
     justify-content: center;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);

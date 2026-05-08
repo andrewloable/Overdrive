@@ -98,6 +98,29 @@ public class SurveillanceEngineGpu {
     private long recordingStopTime = 0;  // When to stop recording (motion time + post-record)
     private long lastRecordingStopTime = 0;  // When last recording stopped (for cooldown)
     
+    // DETERRENT FLASH SUPPRESSION: After the deterrent fires, suppress new motion triggers
+    // for a window that covers the cloud API round-trip + flash sequence + ring buffer flush.
+    // The BYD cloud flash_lights command has ~15s network latency (dispatch → poll → execute).
+    // The lights then flash for 2-3 seconds. Total: 20 seconds from dispatch to scene stable.
+    // This window prevents the deterrent's own light from triggering a second recording.
+    //
+    // WHY AI DOESN'T CATCH THIS (without the fix below):
+    // The DetectionBaseline only filtered YOLO output for THREAT_LOW events. For MEDIUM/HIGH,
+    // recording triggered purely from the motion pipeline. The deterrent light (and any
+    // external light source) creates persistent edge differences that Stage 5 classifies as
+    // THREAT_HIGH (loitering) or THREAT_MEDIUM (approaching). The fix extends the YOLO gate
+    // to MEDIUM always, and to HIGH during the deterrent window.
+    private static final long DETERRENT_SUPPRESSION_MS = 20000;
+    private long deterrentFiredTime = 0;  // Timestamp when deterrent was last dispatched
+    
+    // YOLO CONFIRMATION GATE: Track when YOLO last confirmed a real threat object.
+    // For THREAT_MEDIUM: recording requires YOLO confirmation within the motion sequence
+    // (with 2-second timeout fallback if YOLO is unavailable/broken).
+    // For THREAT_HIGH: only gated during deterrent window (loitering evidence is strong enough otherwise).
+    // This makes AI-based background subtraction effective against ALL lighting artifacts,
+    // not just the deterrent flash.
+    private volatile long lastAiConfirmationTimeMs = 0;  // When YOLO last found a real object
+    
     // Detection mode
     private boolean useObjectDetection = false;
     private YoloDetector yoloDetector = null;
@@ -121,7 +144,7 @@ public class SurveillanceEngineGpu {
     // --- END SOTA FIX ---
     
     // State
-    private boolean active = false;
+    private volatile boolean active = false;
     private boolean inActiveMode = false;
     private boolean recording = false;
     
@@ -142,7 +165,7 @@ public class SurveillanceEngineGpu {
     // when the template match is failing. Without this, a bad template causes
     // needsYoloHeartbeat=true on every frame, turning YOLO into a continuous
     // 10 FPS detector and destroying the battery savings of decoupled tracking.
-    private static final long HEARTBEAT_COOLDOWN_MS = 2000;  // Min 2s between heartbeats per quadrant
+    private static final long HEARTBEAT_COOLDOWN_MS = 5000;  // Min 5s between heartbeats per quadrant
     private final long[] lastHeartbeatTimeMs = new long[MotionPipelineV2.NUM_QUADRANTS];
     
     // Auto-exposure state (C++ handles per-quadrant threshold scaling,
@@ -171,6 +194,21 @@ public class SurveillanceEngineGpu {
     // Track which quadrant had the last event (for event-end baseline update)
     private int lastEventQuadrant = -1;
     
+    // POST-SUPPRESSION BASELINE REFRESH: When brightness suppression fires (lighting change),
+    // queue a baseline refresh for after the scene stabilizes. This keeps the baseline
+    // synchronized with what YOLO can actually see under the current lighting conditions.
+    // Without this, a streetlight turning on makes a previously-invisible car "appear" to
+    // YOLO as a new object → false trigger. Cost: 1 inference per quadrant per lighting
+    // event (5-10 per night = negligible).
+    //
+    // We track per-quadrant: when suppression was last active, and whether we've already
+    // refreshed after it. The refresh runs STABILIZATION_FRAMES after suppression ends
+    // (to let the ISP settle and avoid refreshing on a transitional frame).
+    private static final int BASELINE_STABILIZATION_FRAMES = 15;  // 1.5s at 10 FPS
+    private final int[] framesSinceSuppressionEnded = new int[MotionPipelineV2.NUM_QUADRANTS];
+    private final boolean[] suppressionWasActive = new boolean[MotionPipelineV2.NUM_QUADRANTS];
+    private final boolean[] baselineRefreshQueued = new boolean[MotionPipelineV2.NUM_QUADRANTS];
+    
     // Output directory
     private File eventOutputDir;
     private File currentEventFile;
@@ -186,6 +224,9 @@ public class SurveillanceEngineGpu {
     // Stats
     private int frameCount = 0;
     private int motionDetections = 0;
+    
+    // Cached latest mosaic frame for snapshot API (640×480 RGB)
+    private volatile byte[] latestMosaicFrame = null;
     
     /**
      * Initializes the surveillance engine.
@@ -378,6 +419,18 @@ public class SurveillanceEngineGpu {
             return;
         }
         
+        // RACE CONDITION FIX (belt-and-suspenders): If somehow active=true but ACC is ON,
+        // auto-disable. This catches the case where enable() raced with ACC ON and the
+        // disable path hasn't run yet.
+        if (com.overdrive.app.monitor.AccMonitor.isAccOn()) {
+            logger.warn("processFrame: ACC is ON but surveillance is active — auto-disabling");
+            disable();
+            if (downscaler != null) {
+                downscaler.recycleBuffer(smallRgbFrame);
+            }
+            return;
+        }
+        
         if (smallRgbFrame == null || smallRgbFrame.length != FRAME_SIZE) {
             logger.warn( "Invalid frame size: " + (smallRgbFrame != null ? smallRgbFrame.length : 0));
             if (downscaler != null && smallRgbFrame != null) {
@@ -389,6 +442,14 @@ public class SurveillanceEngineGpu {
         try {
             frameCount++;
             long now = System.currentTimeMillis();
+            
+            // Cache latest frame for snapshot API (every 10th frame to reduce copies)
+            if (frameCount % 10 == 0) {
+                if (latestMosaicFrame == null || latestMosaicFrame.length != smallRgbFrame.length) {
+                    latestMosaicFrame = new byte[smallRgbFrame.length];
+                }
+                System.arraycopy(smallRgbFrame, 0, latestMosaicFrame, 0, smallRgbFrame.length);
+            }
             
             // Log frame count every 100 frames to confirm frames are arriving
             if (frameCount % 100 == 0) {
@@ -766,13 +827,100 @@ public class SurveillanceEngineGpu {
                 }
                 
                 if (!recording) {
+                    // AI CONFIRMATION GATE: For THREAT_MEDIUM, require YOLO to have confirmed
+                    // a real object during this motion sequence before committing a recording.
+                    // This prevents lighting artifacts (streetlights, porch lights, deterrent
+                    // flashes, slow headlight sweeps) from triggering false recordings.
+                    //
+                    // For THREAT_HIGH (loitering), only gate during the deterrent window —
+                    // loitering is confirmed by 10+ seconds of centroid analysis, which is
+                    // strong enough evidence on its own. But the deterrent's own light creates
+                    // a static centroid that mimics loitering, so we gate it there.
+                    //
+                    // TIMEOUT FALLBACK: If YOLO hasn't confirmed within 2 seconds past the
+                    // required sustained duration, let it through anyway. This handles:
+                    // - YOLO model not loaded (useObjectDetection=false)
+                    // - YOLO busy on another quadrant (AI cooldown)
+                    // - Object too small/dark for YOLO but real (motion evidence sufficient)
+                    //
+                    // The 2-second grace is safe because YOLO gets queued at motion start
+                    // (early AI init). If it hasn't confirmed in 5+ seconds of motion, the
+                    // object is genuinely undetectable by YOLO and motion evidence alone
+                    // must be trusted.
+                    boolean deterrentActive = deterrentFiredTime > 0 
+                            && (now - deterrentFiredTime) < DETERRENT_SUPPRESSION_MS;
+                    boolean aiRecentlyConfirmed = lastAiConfirmationTimeMs >= firstMotionTime;  // Confirmed during THIS sequence
+                    boolean aiAvailable = useObjectDetection && yoloDetector != null;
+                    long timePastRequired = motionDuration - requiredDuration;  // How long past the trigger threshold
+                    
+                    // TIMEOUT FALLBACK: Let motion through if YOLO hasn't confirmed in time.
+                    // BUT: If brightness suppression fired during this motion sequence, the
+                    // motion is likely a lighting artifact. In that case, extend the timeout
+                    // to the full deterrent window (5s) — persistent lights (streetlights)
+                    // create motion that lasts indefinitely, so a short timeout would let
+                    // them through. If it's a real person in changing light, YOLO WILL see
+                    // them within 5 seconds (multiple inference opportunities).
+                    boolean brightnessEventDuringSequence = false;
+                    for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+                        if (suppressionWasActive[q] || results[q].brightnessSuppressed) {
+                            brightnessEventDuringSequence = true;
+                            break;
+                        }
+                    }
+                    long timeoutMs = brightnessEventDuringSequence ? DETERRENT_SUPPRESSION_MS : 2000;
+                    boolean timeoutExpired = timePastRequired > timeoutMs;
+                    
+                    boolean shouldSuppress = false;
+                    if (aiAvailable && !aiRecentlyConfirmed && !timeoutExpired) {
+                        if (effectiveThreat <= MotionPipelineV2.THREAT_MEDIUM) {
+                            // MEDIUM: always require AI confirmation (with timeout fallback)
+                            shouldSuppress = true;
+                        } else if (deterrentActive) {
+                            // HIGH during deterrent: require AI confirmation (deterrent mimics loitering)
+                            shouldSuppress = true;
+                        }
+                    }
+                    // NO-YOLO DETERRENT FALLBACK: When object detection is not available
+                    // (daemon mode without Context/AssetManager), the AI gate can't function.
+                    // But we still know when OUR OWN deterrent fired. Use a pure time-based
+                    // suppression: block new recordings for the full deterrent window after
+                    // we fired the lights. This prevents the exact scenario from the logs:
+                    // deterrent fires → light flash → motion re-triggers → second recording.
+                    // Without YOLO there's no way to confirm "is this a real person or just
+                    // our own lights?" so we err on the side of suppressing false positives.
+                    // Real threats that arrive during the 5s window will still be caught
+                    // because the first recording's post-record (10s) covers the gap.
+                    if (!aiAvailable && deterrentActive && !recording) {
+                        shouldSuppress = true;
+                        if (frameCount % 50 == 0) {
+                            logger.debug(String.format(
+                                "No-YOLO deterrent guard: suppressing (deterrent %.1fs ago, no AI available)",
+                                (now - deterrentFiredTime) / 1000.0));
+                        }
+                        firstMotionTime = 0;
+                        peakThreatDuringSequence = 0;
+                    }
+                    
+                    if (shouldSuppress) {
+                        if (frameCount % 50 == 0) {
+                            String[] tNames = {"NONE", "LOW", "MEDIUM", "HIGH"};
+                            logger.debug(String.format(
+                                "AI gate holding: threat=%s, motion=%.1fs, grace=%.1fs remaining, deterrent=%s, brightnessEvent=%s",
+                                tNames[effectiveThreat], motionDuration / 1000.0,
+                                Math.max(0, timeoutMs - timePastRequired) / 1000.0,
+                                deterrentActive ? "active" : "inactive",
+                                brightnessEventDuringSequence ? "yes" : "no"));
+                        }
+                        // Don't reset firstMotionTime — let the timer keep running.
+                        // When YOLO confirms (or timeout expires), the trigger fires immediately.
+                    }
                     // SOTA: Event stitching — if new motion appears shortly after the last
                     // recording stopped, start a new recording immediately. The previous
                     // recentlyStoppedRecording cooldown blocked new recordings for the entire
                     // postRecordMs window after a stop, causing missed events when someone
                     // lingered near the car. The 3-second sustained motion requirement already
                     // prevents rapid-fire false triggers, so the cooldown is unnecessary.
-                    {
+                    else {
                         motionDetections++;
                         int bestQ = pipelineV2.getHighestThreatQuadrant();
                         // If no quadrant has motion (e.g., tracker held through flash),
@@ -834,6 +982,7 @@ public class SurveillanceEngineGpu {
                         // Runs on background thread, never blocks surveillance pipeline
                         try {
                             com.overdrive.app.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
+                            deterrentFiredTime = now;  // Track when deterrent was dispatched
                         } catch (Exception e) {
                             logger.debug("Deterrent dispatch failed: " + e.getMessage());
                         }
@@ -850,6 +999,7 @@ public class SurveillanceEngineGpu {
                     // The cooldown inside BydCloudDeterrent prevents spamming (default 15s).
                     try {
                         com.overdrive.app.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
+                        deterrentFiredTime = now;  // Track latest deterrent dispatch
                     } catch (Exception e) {
                         // Fail silently — never block surveillance
                     }
@@ -915,6 +1065,12 @@ public class SurveillanceEngineGpu {
                 boolean trackerActive = false;
                 boolean anyLowActivity = false;
                 boolean aiPending = isAiRunning.get() || !aiQuadrantQueue.isEmpty();
+                // SOTA: If YOLO confirmed a person during this motion sequence, extend
+                // gap tolerance. The person may have briefly moved between block boundaries
+                // or between quadrants, causing motion to drop below MEDIUM. But YOLO
+                // already verified they're real — don't kill the sequence prematurely.
+                boolean aiConfirmedDuringSequence = (firstMotionTime > 0) 
+                        && (lastAiConfirmationTimeMs >= firstMotionTime);
                 for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
                     try {
                         if (NativeMotion.trackerHasActiveTrack(q)) {
@@ -926,7 +1082,50 @@ public class SurveillanceEngineGpu {
                     } catch (Exception ignored) {}
                     if (results[q].activeBlocks > 0) anyLowActivity = true;
                 }
-                long gapTolerance = (trackerActive || anyLowActivity || aiPending) ? 4000 : 2000;
+                long gapTolerance = (trackerActive || anyLowActivity || aiPending || aiConfirmedDuringSequence) ? 4000 : 2000;
+                
+                // DEFERRED TRIGGER: If the motion duration already exceeded the threshold
+                // during this sequence AND YOLO confirmed a real person, trigger NOW even
+                // though the current frame has no MEDIUM+ motion. This catches the case
+                // where the person is still present (YOLO confirmed) but motion blocks
+                // briefly dipped below MEDIUM on the exact frame where duration crossed
+                // the threshold. Without this, the sequence dies at gap tolerance expiry
+                // even though all conditions were met.
+                if (firstMotionTime != 0 && !recording && aiConfirmedDuringSequence) {
+                    long motionDuration = lastMotionTime - firstMotionTime;
+                    long requiredMs = (peakThreatDuringSequence >= MotionPipelineV2.THREAT_HIGH)
+                            ? SUSTAINED_MOTION_BASE_MS : loiteringTimeMs;
+                    if (motionDuration >= requiredMs && peakThreatDuringSequence >= MotionPipelineV2.THREAT_MEDIUM) {
+                        // All conditions met: duration exceeded, threat was MEDIUM+, YOLO confirmed person
+                        logger.info(String.format("DEFERRED TRIGGER: motion=%.1fs >= %.1fs, AI confirmed, triggering from gap phase",
+                                motionDuration / 1000.0, requiredMs / 1000.0));
+                        inActiveMode = true;
+                        motionDetections++;
+                        int bestQ = pipelineV2.getHighestThreatQuadrant();
+                        if (bestQ < 0) {
+                            // No quadrant has motion right now — use the last known active quadrant
+                            for (int tq = 0; tq < MotionPipelineV2.NUM_QUADRANTS; tq++) {
+                                try {
+                                    if (NativeMotion.trackerHasActiveTrack(tq)) { bestQ = tq; break; }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                        recordingStopTime = now + postRecordMs;
+                        startRecording();
+                        try {
+                            String videoFilename = currentEventFile != null ? currentEventFile.getName() : null;
+                            TelegramNotifier.notifyMotion("motion", 1.0f, videoFilename);
+                        } catch (Exception e) {
+                            logger.warn("Failed to send motion notification: " + e.getMessage());
+                        }
+                        try {
+                            com.overdrive.app.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
+                            deterrentFiredTime = now;
+                        } catch (Exception e) {
+                            logger.debug("Deterrent dispatch failed: " + e.getMessage());
+                        }
+                    }
+                }
                 
                 if (firstMotionTime != 0 && timeSinceLastMotion > gapTolerance) {
                     // Motion sequence ended without triggering
@@ -1147,6 +1346,59 @@ public class SurveillanceEngineGpu {
                         addFilterLogEntry(String.format("[%s] SUPPRESSED: %s (brightness shift, luma=%.0f)",
                                 new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(now)),
                                 MotionPipelineV2.QUADRANT_NAMES[q], results[q].meanLuma));
+                    }
+                }
+            }
+            
+            // POST-SUPPRESSION BASELINE REFRESH: Track per-quadrant suppression state.
+            // When suppression ends and the scene stabilizes (15 frames later), run YOLO
+            // once to update the baseline with what's currently visible. This prevents
+            // the "4 objects in day, 3 visible at night" mismatch from causing false triggers.
+            if (baselineSeeded && useObjectDetection && yoloDetector != null) {
+                for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+                    if (results[q].brightnessSuppressed) {
+                        // Suppression is active — mark it and reset the stabilization counter
+                        suppressionWasActive[q] = true;
+                        framesSinceSuppressionEnded[q] = 0;
+                        baselineRefreshQueued[q] = false;
+                    } else if (suppressionWasActive[q]) {
+                        // Suppression just ended — start counting stabilization frames
+                        framesSinceSuppressionEnded[q]++;
+                        
+                        if (framesSinceSuppressionEnded[q] >= BASELINE_STABILIZATION_FRAMES) {
+                            // Scene has stabilized — always clear the flag to prevent
+                            // permanently extending the AI gate timeout on future sequences.
+                            suppressionWasActive[q] = false;
+                            
+                            if (!baselineRefreshQueued[q] && !recording) {
+                                // Queue a baseline refresh for this quadrant.
+                                // Don't refresh during active recording (the person is still there,
+                                // we don't want to accidentally add them to baseline).
+                                baselineRefreshQueued[q] = true;
+                            
+                                final int qToRefresh = q;
+                                final byte[] frameSnapshot = new byte[smallRgbFrame.length];
+                                System.arraycopy(smallRgbFrame, 0, frameSnapshot, 0, smallRgbFrame.length);
+                            
+                                aiExecutor.execute(() -> {
+                                    try {
+                                        int qW = THUMBNAIL_WIDTH / 2;
+                                        int qH = THUMBNAIL_HEIGHT / 2;
+                                        byte[] quadCrop = cropFromMosaic(frameSnapshot, qToRefresh, qW, qH);
+                                        if (quadCrop != null) {
+                                            java.util.List<com.overdrive.app.ai.Detection> dets =
+                                                    yoloDetector.detect(quadCrop, qW, qH, aiConfidence, true, true, false, true, minObjectSize);
+                                            detectionBaseline.refreshQuadrant(qToRefresh, dets, qW, qH);
+                                            logger.debug("Post-suppression baseline refresh Q" + qToRefresh + 
+                                                    " [" + MotionPipelineV2.QUADRANT_NAMES[qToRefresh] + "]: " +
+                                                    (dets != null ? dets.size() : 0) + " detections");
+                                        }
+                                    } catch (Exception e) {
+                                        logger.warn("Post-suppression baseline refresh failed Q" + qToRefresh + ": " + e.getMessage());
+                                    }
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -1416,13 +1668,34 @@ public class SurveillanceEngineGpu {
                         lastYoloDetections[qIdx] = new java.util.ArrayList<>(motionFiltered);
                         lastEventQuadrant = qIdx;
                         
-                        // SOTA: Threat-level decision matrix — for THREAT_LOW, require at least
-                        // one non-baseline detection to commit recording. THREAT_MEDIUM and HIGH
-                        // always record (motion evidence is sufficient).
+                        // THREAT-LEVEL DECISION MATRIX (AI background subtraction gate):
+                        //
+                        // THREAT_LOW:    Require YOLO to find a non-baseline object. If all
+                        //                detections are known static objects → suppress entirely.
+                        //
+                        // THREAT_MEDIUM: Require YOLO to find a non-baseline object. This prevents
+                        //                lighting artifacts (streetlights, porch lights, slow
+                        //                headlight sweeps below brightness threshold) from triggering
+                        //                recordings. These create persistent edge differences that
+                        //                Stage 5 classifies as "approaching" because the centroid
+                        //                drifts slightly as shadows shift.
+                        //
+                        // THREAT_HIGH:   Always record — loitering is confirmed by centroid analysis
+                        //                over loiteringFrames (10+ seconds). If something physically
+                        //                moves in the same spot for that long, it's real regardless
+                        //                of what YOLO thinks. YOLO at 320×240 can miss small/dark
+                        //                targets that the motion pipeline detects fine.
+                        //
+                        // Safety: The motion pipeline already queues YOLO at the START of motion
+                        // (early AI init, line ~752). By the time MEDIUM's 3-second sustained
+                        // timer expires, YOLO has had 2.7+ seconds to run. If baselineFiltered
+                        // is empty, it means YOLO ran and found nothing real — the "motion" is
+                        // a lighting artifact.
                         int currentThreat = pipelineV2 != null ? pipelineV2.getMaxThreatLevel() : MotionPipelineV2.THREAT_MEDIUM;
-                        if (currentThreat <= MotionPipelineV2.THREAT_LOW && baselineFiltered.isEmpty()) {
-                            // THREAT_LOW + all detections are known static objects → suppress
-                            logger.info("Threat-level gate: THREAT_LOW + no new objects → suppressing AI trigger for Q" + qIdx);
+                        if (currentThreat <= MotionPipelineV2.THREAT_MEDIUM && baselineFiltered.isEmpty()) {
+                            // THREAT_LOW or MEDIUM + all detections are known static objects → suppress
+                            String[] tNames = {"NONE", "LOW", "MEDIUM", "HIGH"};
+                            logger.info("AI gate: " + tNames[currentThreat] + " + no new objects → suppressing for Q" + qIdx);
                             relevantCount = 0;
                             motionFilteredCount = 0;
                         } else {
@@ -1434,6 +1707,11 @@ public class SurveillanceEngineGpu {
                     }
                     
                     if (relevantCount > 0) {
+                        // YOLO confirmed a real object — update AI confirmation timestamp.
+                        // This is used by the deterrent flash guard to allow recording
+                        // even during the suppression window if YOLO sees a real threat.
+                        lastAiConfirmationTimeMs = System.currentTimeMillis();
+                        
                         long timeSinceMotion = System.currentTimeMillis() - lastMotionTime;
                         if (timeSinceMotion < 2000) {
                             lastMotionTime = System.currentTimeMillis();
@@ -1492,11 +1770,16 @@ public class SurveillanceEngineGpu {
                                     float[] trackBox = NativeMotion.trackerGetTrackBox(qIdx);
                                     int trackClassId = (trackBox != null) ? (int) trackBox[5] : -1;
                                     
-                                    if (trackClassId >= 0 && best.getClassId() != trackClassId) {
-                                        // Semantic mismatch — tracker morphed onto a different object
+                                    if (trackClassId >= 0 && best.getClassId() != trackClassId
+                                            && best.getConfidence() > 0.70f) {
+                                        // Semantic mismatch with high confidence — tracker morphed
+                                        // onto a different object (e.g., person → parked car).
+                                        // Require >70% confidence to avoid killing tracks on
+                                        // low-confidence misclassifications (person torso → bus).
                                         logger.info("Semantic mismatch: track Q" + qIdx + 
                                                 " born as class " + trackClassId + 
                                                 " but YOLO sees class " + best.getClassId() + 
+                                                " @" + String.format("%.0f%%", best.getConfidence() * 100) +
                                                 " — killing track");
                                         NativeMotion.trackerDropTrack(qIdx);
                                         NativeMotion.trackerConfirmHeartbeat(qIdx, System.currentTimeMillis());
@@ -1656,6 +1939,68 @@ public class SurveillanceEngineGpu {
         return inside;
     }
     
+    // ========================================================================
+    // Per-Quadrant ROI (Region of Interest)
+    // ========================================================================
+    
+    /**
+     * Applies a polygon ROI to a specific quadrant.
+     * Converts the polygon (normalized 0-1 coords) to a 10×7 block mask
+     * and passes it to the C++ pipeline via JNI.
+     *
+     * @param quadrant Quadrant index (0-3)
+     * @param polygon  Array of [x, y] vertex pairs in normalized coords (0.0-1.0)
+     */
+    public void applyQuadrantRoi(int quadrant, float[][] polygon) {
+        if (quadrant < 0 || quadrant >= MotionPipelineV2.NUM_QUADRANTS) return;
+        if (polygon == null || polygon.length < 3) {
+            clearQuadrantRoi(quadrant);
+            return;
+        }
+        
+        // Convert polygon to 10×7 block mask.
+        // For each block, check if its center is inside the polygon.
+        byte[] blockMask = new byte[MotionPipelineV2.TOTAL_BLOCKS];
+        int enabledCount = 0;
+        
+        for (int by = 0; by < MotionPipelineV2.GRID_ROWS; by++) {
+            for (int bx = 0; bx < MotionPipelineV2.GRID_COLS; bx++) {
+                int blockIdx = by * MotionPipelineV2.GRID_COLS + bx;
+                // Block center in normalized coordinates
+                float cx = (bx + 0.5f) / MotionPipelineV2.GRID_COLS;
+                float cy = (by + 0.5f) / MotionPipelineV2.GRID_ROWS;
+                
+                if (isPointInPolygon(cx, cy, polygon)) {
+                    blockMask[blockIdx] = 1;
+                    enabledCount++;
+                }
+            }
+        }
+        
+        try {
+            NativeMotion.setQuadrantRoi(quadrant, blockMask);
+            logger.info("ROI applied to Q" + quadrant + " [" + 
+                    MotionPipelineV2.QUADRANT_NAMES[quadrant] + "]: " + 
+                    enabledCount + "/" + MotionPipelineV2.TOTAL_BLOCKS + " blocks enabled");
+        } catch (Exception e) {
+            logger.warn("Failed to apply ROI to Q" + quadrant + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Clears the ROI for a specific quadrant (all blocks enabled).
+     */
+    public void clearQuadrantRoi(int quadrant) {
+        if (quadrant < 0 || quadrant >= MotionPipelineV2.NUM_QUADRANTS) return;
+        try {
+            NativeMotion.setQuadrantRoi(quadrant, null);
+            logger.info("ROI cleared for Q" + quadrant + " [" + 
+                    MotionPipelineV2.QUADRANT_NAMES[quadrant] + "] (all blocks enabled)");
+        } catch (Exception e) {
+            logger.warn("Failed to clear ROI for Q" + quadrant + ": " + e.getMessage());
+        }
+    }
+    
     /**
      * Sets the SOTA surveillance configuration.
      * 
@@ -1706,6 +2051,17 @@ public class SurveillanceEngineGpu {
         
         // Apply filter debug setting
         this.filterDebugEnabled = config.isFilterDebugLogEnabled();
+        
+        // Apply per-quadrant ROI from config (if surveillance is active, apply immediately)
+        if (active) {
+            for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+                if (config.isRoiEnabled(q) && config.getRoiPolygon(q) != null) {
+                    applyQuadrantRoi(q, config.getRoiPolygon(q));
+                } else {
+                    clearQuadrantRoi(q);
+                }
+            }
+        }
         
         logger.info("Config applied: " + config.toString());
     }
@@ -1952,6 +2308,14 @@ public class SurveillanceEngineGpu {
      * Enables surveillance (starts monitoring).
      */
     public void enable() {
+        // RACE CONDITION FIX (defense in depth): Final guard at the engine level.
+        // If ACC is ON, refuse to enable. This catches any edge case where the
+        // higher-level guards in CameraDaemon/AccSentryDaemon were bypassed.
+        if (com.overdrive.app.monitor.AccMonitor.isAccOn()) {
+            logger.warn(">>> Surveillance enable REJECTED at engine level — ACC is ON");
+            return;
+        }
+        
         // Check if native library is loaded
         if (!NativeMotion.isLibraryLoaded()) {
             logger.error(">>> Cannot enable surveillance: NativeMotion library not loaded! Error: " + 
@@ -1966,7 +2330,16 @@ public class SurveillanceEngineGpu {
         frameCount = 0;
         motionDetections = 0;
         firstMotionTime = 0;  // Reset sustained motion timer
+        deterrentFiredTime = 0;  // Reset deterrent suppression
+        lastAiConfirmationTimeMs = 0;  // Reset AI confirmation gate
         peakThreatDuringSequence = 0;
+        
+        // Reset post-suppression baseline refresh tracking
+        for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+            framesSinceSuppressionEnded[q] = 0;
+            suppressionWasActive[q] = false;
+            baselineRefreshQueued[q] = false;
+        }
         
         // Reset SOTA tracking variables
         lastTemporalBlocksCount = 0;
@@ -2001,6 +2374,35 @@ public class SurveillanceEngineGpu {
             lastYoloDetections[q] = null;
         }
         lastEventQuadrant = -1;
+        
+        // Apply per-quadrant ROI from persisted config
+        if (config != null) {
+            for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+                if (config.isRoiEnabled(q) && config.getRoiPolygon(q) != null) {
+                    applyQuadrantRoi(q, config.getRoiPolygon(q));
+                } else {
+                    // Also check for direct block masks in unified config
+                    try {
+                        org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                        String[] qKeys = {"Q0", "Q1", "Q2", "Q3"};
+                        boolean roiEnabled = survCfg.optBoolean("roiEnabled_" + qKeys[q], false);
+                        org.json.JSONArray blockArr = survCfg.optJSONArray("roiBlocks_" + qKeys[q]);
+                        if (roiEnabled && blockArr != null && blockArr.length() == MotionPipelineV2.TOTAL_BLOCKS) {
+                            byte[] blockMask = new byte[MotionPipelineV2.TOTAL_BLOCKS];
+                            for (int i = 0; i < MotionPipelineV2.TOTAL_BLOCKS; i++) {
+                                blockMask[i] = (byte)(blockArr.optInt(i, 1) != 0 ? 1 : 0);
+                            }
+                            NativeMotion.setQuadrantRoi(q, blockMask);
+                            logger.info("ROI blocks loaded for Q" + q + " from persisted config");
+                        } else {
+                            clearQuadrantRoi(q);
+                        }
+                    } catch (Exception e) {
+                        clearQuadrantRoi(q);
+                    }
+                }
+            }
+        }
         
         // Initialize native texture tracker (YOLO + NCC hybrid VOT)
         try {
@@ -2317,6 +2719,14 @@ public class SurveillanceEngineGpu {
      */
     public int getMotionDetections() {
         return motionDetections;
+    }
+    
+    /**
+     * Gets the latest cached mosaic frame (640×480 RGB) for snapshot API.
+     * Returns null if no frame has been cached yet.
+     */
+    public byte[] getLatestMosaicFrame() {
+        return latestMosaicFrame;
     }
     
     /**

@@ -315,6 +315,17 @@ object UnifiedConfigManager {
     }
     
     /**
+     * Get the surveillance schedule from config.
+     * Returns a SurveillanceSchedule loaded from the surveillance section.
+     */
+    @JvmStatic
+    fun getSurveillanceSchedule(): com.overdrive.app.surveillance.SurveillanceSchedule {
+        val schedule = com.overdrive.app.surveillance.SurveillanceSchedule()
+        schedule.loadFromJson(getSurveillance())
+        return schedule
+    }
+    
+    /**
      * Get recording config section.
      */
     @JvmStatic

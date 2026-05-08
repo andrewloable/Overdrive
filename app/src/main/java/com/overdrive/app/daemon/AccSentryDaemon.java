@@ -842,11 +842,11 @@ public class AccSentryDaemon {
                 
                 // 7. Register door lock listener and wait for lock before arming surveillance.
                 // When ACC goes OFF and you exit the car, motion detection would pick you up
-                // as a false event. By waiting for the doors to lock, we skip your own exit.
-                // The pipeline/camera are started by the notifyAccState(true) IPC above
-                // (CameraDaemon starts the pipeline on ACC OFF), so they're warming up
-                // while we wait for the lock — no extra delay once you lock the car.
-                registerDoorLockListenerAndArmOnLock();
+                // Door lock gate is now handled by CameraDaemon (which has the cloud MQTT
+                // subscriber running in-process). CameraDaemon arms/disarms surveillance
+                // based on lock/unlock events after receiving the ACC OFF notification above.
+                // AccSentryDaemon no longer needs to manage lock detection or surveillance IPC.
+                log("Door lock gate delegated to CameraDaemon (cloud MQTT in-process)");
                 
                 // 8. Optional: Telegram daemon (in separate try-catch so surveillance failure doesn't block it)
                 try {
@@ -887,18 +887,12 @@ public class AccSentryDaemon {
         // This race caused intermittent 20-30 second screen blackouts after vehicle ON.
         inSentryMode = false;
         doorLockListenerArmed = false;
+        surveillanceEnabled = false;
 
-        // Stop unlock polling thread (must be before disableSurveillance to avoid race)
-        stopUnlockPollThread();
-
-        // CRITICAL: Always notify CameraDaemon that ACC is ON, regardless of surveillance state.
-        // disableSurveillance() may skip IPC if surveillanceEnabled is already false
-        // (e.g. user had surveillance disabled, or safe zone suppressed it),
-        // which would leave AccMonitor stuck showing ACC OFF.
+        // CRITICAL: Always notify CameraDaemon that ACC is ON.
+        // CameraDaemon handles all surveillance cleanup (door lock gate, unlock poll,
+        // cloud listener, pipeline stop) in its ACC ON path.
         notifyAccState(false);  // accOff=false → ACC is ON
-
-        // Disable surveillance
-        disableSurveillance();
         
         // Clear safe zone suppression flag (clean slate for next sentry session)
         try { CameraDaemon.setSafeZoneSuppressed(false); } catch (Exception ignored) {}
@@ -1824,6 +1818,14 @@ public class AccSentryDaemon {
     private static void enableSurveillance() {
         if (surveillanceEnabled) return;
 
+        // RACE CONDITION FIX: Check inSentryMode before attempting to enable.
+        // If exitSentryMode() was called (ACC ON) while we were sleeping/retrying,
+        // we must NOT enable surveillance.
+        if (!inSentryMode) {
+            log("enableSurveillance() aborted — no longer in sentry mode (ACC is ON)");
+            return;
+        }
+
         // Check if user has enabled surveillance in config
         // If not enabled, skip — don't auto-start on ACC OFF
         try {
@@ -1853,11 +1855,31 @@ public class AccSentryDaemon {
             log("Safe zone check failed: " + e.getMessage() + " — proceeding with surveillance");
         }
 
+        // Check schedule — don't start surveillance outside configured time windows
+        try {
+            com.overdrive.app.surveillance.SurveillanceSchedule schedule =
+                com.overdrive.app.config.UnifiedConfigManager.getSurveillanceSchedule();
+            if (schedule != null && schedule.isEnabled() && !schedule.isActiveNow()) {
+                log("SCHEDULE: Outside time window (" + schedule.getSummary() + ") — skipping surveillance");
+                return;
+            }
+        } catch (Exception e) {
+            log("Schedule check failed: " + e.getMessage() + " — proceeding with surveillance");
+        }
+
         // Retry with backoff — CameraDaemon may not be up yet after boot
         int maxRetries = 10;
         long retryDelayMs = 3000; // Start with 3 seconds
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            // RACE CONDITION FIX: Re-check inSentryMode on EVERY retry iteration.
+            // exitSentryMode() sets inSentryMode=false, so if ACC turned ON during
+            // our sleep between retries, we bail out immediately.
+            if (!inSentryMode) {
+                log("enableSurveillance() aborted at attempt " + attempt + " — no longer in sentry mode (ACC is ON)");
+                return;
+            }
+
             try {
                 JSONObject cmd = new JSONObject();
                 cmd.put("command", "SET_CONFIG");
@@ -1871,6 +1893,14 @@ public class AccSentryDaemon {
 
                 JSONObject response = sendSurveillanceCommandRaw(cmd);
                 if (response != null && response.optBoolean("success", false)) {
+                    // Final guard: verify we're still in sentry mode AFTER the IPC succeeded.
+                    // There's a tiny window where exitSentryMode() could fire between the IPC
+                    // send and this check — if so, immediately send a disable to undo it.
+                    if (!inSentryMode) {
+                        log("Surveillance enabled but ACC turned ON during IPC — immediately disabling");
+                        disableSurveillance();
+                        return;
+                    }
                     surveillanceEnabled = true;
                     log("Surveillance ENABLED (attempt " + attempt + ")");
                     return;
@@ -1898,26 +1928,32 @@ public class AccSentryDaemon {
     }
 
     private static void disableSurveillance() {
-        if (!surveillanceEnabled) return;
+        // SOTA: Always attempt to disable when called — CameraDaemon may have enabled
+        // surveillance independently (e.g., via the periodic schedule checker or the
+        // 45-second fallback timer) without AccSentryDaemon knowing. Skipping based on
+        // the local surveillanceEnabled flag would leave surveillance running when the
+        // owner returns and unlocks the door.
+        // Note: exitSentryMode() already sends notifyAccState(false) which triggers
+        // CameraDaemon's full ACC ON path (pipeline.stop()), so this is a belt-and-suspenders
+        // call. It's safe to send even if surveillance is already stopped.
 
-        log("Disabling surveillance (session only — preserving user preference)...");
+        log("Disabling surveillance via IPC (battery protection / session stop)...");
 
         try {
-            // Only send accOff=false to signal ACC ON.
-            // Do NOT send enabled=false — that would overwrite the user's
-            // surveillance preference in UnifiedConfigManager, preventing
-            // auto-start on the next ACC OFF cycle.
+            // Send stopSurveillance=true to stop motion detection without persisting
+            // the preference change. This preserves the user's "surveillance enabled"
+            // setting so it auto-starts on the next ACC OFF cycle.
             JSONObject cmd = new JSONObject();
             cmd.put("command", "SET_CONFIG");
             JSONObject config = new JSONObject();
-            config.put("accOff", false);
+            config.put("stopSurveillance", true);
             cmd.put("config", config);
             
             sendSurveillanceCommandRaw(cmd);
             surveillanceEnabled = false;
-            log("Surveillance session STOPPED (user preference preserved)");
+            log("Surveillance STOPPED via IPC (user preference preserved)");
         } catch (Exception e) {
-            log("WARN: Failed to disable surveillance: " + e.getMessage());
+            log("WARN: Failed to disable surveillance via IPC: " + e.getMessage());
         }
     }
 
@@ -1936,9 +1972,12 @@ public class AccSentryDaemon {
     private static Object doorLockDevice = null;
     private static Object otaDevice = null;  // BYDAutoOtaDevice — alternative lock state source
     private static volatile boolean doorLockListenerArmed = false;
+    private static com.overdrive.app.byd.cloud.BydCloudDataProvider.CloudLockStateListener cloudLockListener = null;
     // Timeout: if doors aren't locked within this window, arm surveillance anyway
     // (user may have walked away without locking, or lock event wasn't detected)
-    private static final long DOOR_LOCK_ARM_TIMEOUT_MS = 30_000;  // 30 seconds
+    // Increased from 30s to 60s — gives more time for the owner to exit and lock,
+    // reducing false motion events from the owner's own movement near the car.
+    private static final long DOOR_LOCK_ARM_TIMEOUT_MS = 60_000;  // 60 seconds
     
     // Continuous unlock polling thread — runs while surveillance is armed to detect
     // door unlock events even if the listener fails to fire (module sleep, etc.)
@@ -1967,6 +2006,157 @@ public class AccSentryDaemon {
      * AccListener extends AbsBYDAutoBodyworkListener for ACC events).
      */
     private static void registerDoorLockListenerAndArmOnLock() {
+        // ── Decide: cloud-primary or device-SDK-primary ──
+        // If cloud is connected and has fresh lock data, use it exclusively.
+        // Only fall back to device SDK when cloud is unavailable or stale.
+        boolean cloudHandling = false;
+
+        try {
+            com.overdrive.app.byd.cloud.BydCloudDataProvider cloudProvider =
+                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+
+            if (cloudProvider.isMqttConnected() && cloudProvider.isLockStateFresh()) {
+                log("Cloud lock data available and fresh — using cloud for lock detection");
+                cloudHandling = true;
+
+                // Remove any previous listener from a prior sentry cycle
+                if (cloudLockListener != null) {
+                    cloudProvider.removeLockStateListener(cloudLockListener);
+                }
+
+                cloudLockListener = (locked, timestampMs) -> {
+                    if (!inSentryMode) return;
+
+                    if (locked && !surveillanceEnabled) {
+                        log("Cloud lock event: LOCKED — arming surveillance");
+                        doorLockListenerArmed = true;
+                        enableSurveillance();
+                    } else if (!locked && surveillanceEnabled && doorLockListenerArmed) {
+                        log("Cloud lock event: UNLOCKED — disarming surveillance");
+                        disableSurveillance();
+                        doorLockListenerArmed = false;
+                    }
+                };
+                cloudProvider.addLockStateListener(cloudLockListener);
+
+                // Check current cloud lock state
+                com.overdrive.app.byd.cloud.VehicleCloudSnapshot cs = cloudProvider.getSnapshot();
+                if (cs != null && cs.isAllLocked()) {
+                    log("Cloud says doors LOCKED — arming surveillance immediately");
+                    doorLockListenerArmed = true;
+                    enableSurveillance();
+                } else if (cs != null && cs.isAnyUnlocked()) {
+                    log("Cloud says doors UNLOCKED — waiting for cloud lock event");
+                } else {
+                    log("Cloud lock state ambiguous — waiting for cloud lock event");
+                }
+
+                // Start a watchdog that falls back to device SDK if cloud goes stale
+                startCloudStalenessWatchdog();
+                return; // Cloud is handling it — skip device SDK setup
+            }
+        } catch (Exception e) {
+            log("Cloud lock check failed: " + e.getMessage() + " — falling back to device SDK");
+        }
+
+        if (!cloudHandling) {
+            log("Cloud lock data not available — using device SDK for lock detection");
+        }
+
+        // ── Device SDK lock detection (fallback) ──
+        setupDeviceSdkLockDetection();
+    }
+
+    /**
+     * Watchdog thread: monitors cloud health and switches between cloud and
+     * device SDK lock detection as needed. If cloud goes stale, falls back
+     * to device SDK. If cloud recovers, switches back to cloud.
+     */
+    private static Thread cloudStalenessWatchdog = null;
+    private static volatile boolean usingCloudLock = false;
+
+    private static void startCloudStalenessWatchdog() {
+        if (cloudStalenessWatchdog != null && cloudStalenessWatchdog.isAlive()) {
+            cloudStalenessWatchdog.interrupt();
+        }
+
+        usingCloudLock = true;
+
+        cloudStalenessWatchdog = new Thread(() -> {
+            log("Cloud lock watchdog started");
+            while (inSentryMode) {
+                try {
+                    Thread.sleep(30_000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+
+                if (!inSentryMode) return;
+
+                com.overdrive.app.byd.cloud.BydCloudDataProvider provider =
+                        com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+                boolean cloudHealthy = provider.isConnectionHealthy() && provider.isLockStateFresh();
+
+                if (usingCloudLock && !cloudHealthy) {
+                    // Cloud went stale — switch to device SDK
+                    log("Cloud lock data went stale — switching to device SDK");
+                    usingCloudLock = false;
+                    if (cloudLockListener != null) {
+                        provider.removeLockStateListener(cloudLockListener);
+                        cloudLockListener = null;
+                    }
+                    setupDeviceSdkLockDetection();
+
+                } else if (!usingCloudLock && cloudHealthy) {
+                    // Cloud recovered — switch back to cloud
+                    log("Cloud lock data recovered — switching back to cloud");
+                    usingCloudLock = true;
+
+                    // Stop device SDK unlock poll (cloud takes over)
+                    stopUnlockPollThread();
+
+                    // Re-register cloud listener
+                    if (cloudLockListener != null) {
+                        provider.removeLockStateListener(cloudLockListener);
+                    }
+                    cloudLockListener = (locked, timestampMs) -> {
+                        if (!inSentryMode) return;
+                        if (locked && !surveillanceEnabled) {
+                            log("Cloud lock event: LOCKED — arming surveillance");
+                            doorLockListenerArmed = true;
+                            enableSurveillance();
+                        } else if (!locked && surveillanceEnabled && doorLockListenerArmed) {
+                            log("Cloud lock event: UNLOCKED — disarming surveillance");
+                            disableSurveillance();
+                            doorLockListenerArmed = false;
+                        }
+                    };
+                    provider.addLockStateListener(cloudLockListener);
+
+                    // Sync current state from cloud
+                    com.overdrive.app.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
+                    if (cs != null && cs.isAllLocked() && !surveillanceEnabled) {
+                        log("Cloud recovered with LOCKED state — arming surveillance");
+                        doorLockListenerArmed = true;
+                        enableSurveillance();
+                    } else if (cs != null && cs.isAnyUnlocked() && surveillanceEnabled) {
+                        log("Cloud recovered with UNLOCKED state — disarming surveillance");
+                        disableSurveillance();
+                        doorLockListenerArmed = false;
+                    }
+                }
+            }
+            log("Cloud lock watchdog exiting (sentry mode ended)");
+        }, "CloudLockWatchdog");
+        cloudStalenessWatchdog.setDaemon(true);
+        cloudStalenessWatchdog.start();
+    }
+
+    /**
+     * Device SDK lock detection — the original approach.
+     * Extracted into its own method so it can be called as primary or as fallback.
+     */
+    private static void setupDeviceSdkLockDetection() {
         if (appContext == null) {
             log("No context — arming surveillance immediately (no door lock gate)");
             enableSurveillance();
@@ -2050,7 +2240,7 @@ public class AccSentryDaemon {
                             }
                             
                             // OTA unlock — suppress surveillance (owner returning)
-                            if (state == 0 && doorLockListenerArmed && inSentryMode && surveillanceEnabled) {
+                            if (state == 0 && doorLockListenerArmed && inSentryMode) {
                                 log("Door UNLOCKED via OTA listener — suppressing surveillance (owner returning)");
                                 disableSurveillance();
                                 stopUnlockPollThread();
@@ -2188,11 +2378,11 @@ public class AccSentryDaemon {
             // OR the module woke up (was INVALID, now shows any non-LOCK state).
             int prevState = -1;
             
-            while (inSentryMode && doorLockListenerArmed && surveillanceEnabled) {
+            while (inSentryMode && doorLockListenerArmed) {
                 try {
                     Thread.sleep(UNLOCK_POLL_INTERVAL_MS);
                     
-                    if (!inSentryMode || !doorLockListenerArmed || !surveillanceEnabled) {
+                    if (!inSentryMode || !doorLockListenerArmed) {
                         break;
                     }
                     
@@ -2249,7 +2439,7 @@ public class AccSentryDaemon {
             }
             
             log("Unlock poll thread exiting (sentry=" + inSentryMode + 
-                " armed=" + doorLockListenerArmed + " surveillance=" + surveillanceEnabled + ")");
+                " armed=" + doorLockListenerArmed + ")");
         }, "UnlockPoll");
         unlockPollThread.setDaemon(true);
         unlockPollThread.start();
@@ -2288,7 +2478,7 @@ public class AccSentryDaemon {
             
             // Door UNLOCK while in sentry = owner returning — suppress surveillance
             // to avoid recording yourself getting in. ACC ON will fully exit sentry.
-            if (state == DOOR_STATE_UNLOCK && doorLockListenerArmed && inSentryMode && surveillanceEnabled) {
+            if (state == DOOR_STATE_UNLOCK && doorLockListenerArmed && inSentryMode) {
                 log("Door UNLOCKED via listener event — suppressing surveillance (owner returning)");
                 disableSurveillance();
                 stopUnlockPollThread();

@@ -91,11 +91,17 @@ BYD.performance = {
         // Fetch initial battery health data
         await this.fetchBatteryHealth();
         
+        // Fetch SOH detail status
+        await this.fetchSohStatus();
+        
         // Start SOC polling (less frequent)
         this.socPollInterval = setInterval(() => this.fetchSocHistory(), this.SOC_UPDATE_INTERVAL);
         
         // Battery health polling (every 2 minutes — same as SOC)
         this.batteryHealthPollInterval = setInterval(() => this.fetchBatteryHealth(), this.SOC_UPDATE_INTERVAL);
+        
+        // SOH detail polling (every 2 minutes)
+        this.sohPollInterval = setInterval(() => this.fetchSohStatus(), this.SOC_UPDATE_INTERVAL);
         
         // Handle resize
         window.addEventListener('resize', () => this.resizeCharts());
@@ -2128,6 +2134,120 @@ BYD.performance = {
         if (inCharging) {
             ctx.fillStyle = 'rgba(14, 165, 233, 0.1)';
             ctx.fillRect(startX, padding.top, padding.left + chartWidth - startX, chartHeight);
+        }
+    },
+
+    // ==================== SOH Detail Card ====================
+
+    async fetchSohStatus() {
+        try {
+            const resp = await fetch('/api/performance/soh');
+            const data = await resp.json();
+            if (data.success) {
+                this.updateSohDetailCard(data);
+            }
+        } catch (e) {
+            console.warn('[Performance] SOH fetch error:', e);
+        }
+    },
+
+    updateSohDetailCard(data) {
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+        // Active SOH value
+        if (data.hasEstimate && data.soh > 0) {
+            setEl('sohDetailPercent', data.soh.toFixed(1) + '%');
+        } else {
+            setEl('sohDetailPercent', 'N/A');
+        }
+
+        // EMA value (always show for reference)
+        if (data.emaSoh > 0) {
+            setEl('sohEmaValue', 'EMA: ' + data.emaSoh.toFixed(1) + '%');
+        }
+
+        // Source selector — highlight active button
+        const selectorDiv = document.getElementById('sohSourceSelector');
+        if (selectorDiv && data.preferredSource) {
+            const buttons = selectorDiv.querySelectorAll('.time-btn');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.source === data.preferredSource);
+            });
+        }
+
+        // Raw values from all sources
+        if (data.rawValues) {
+            const rv = data.rawValues;
+            const fmt = (v) => (typeof v === 'number' && v > 0) ? v.toFixed(1) + '%' : '--';
+            setEl('sohRawOem', fmt(rv.oem));
+            setEl('sohRawCapAh', fmt(rv.capacity_ah));
+            setEl('sohRawCalib', fmt(rv.calibration));
+            setEl('sohRawEnergy', fmt(rv.energy));
+        }
+
+        // Metadata
+        setEl('sohDetailNominal', data.nominalCapacityKwh > 0 ? data.nominalCapacityKwh.toFixed(1) + ' kWh' : '--');
+        setEl('sohDetailSamples', data.sampleCount != null ? data.sampleCount.toString() : '--');
+
+        if (data.lastUpdated && data.lastUpdated > 0) {
+            const d = new Date(data.lastUpdated);
+            setEl('sohDetailUpdated', d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+        } else {
+            setEl('sohDetailUpdated', '--');
+        }
+
+        // Hint text
+        const hint = document.getElementById('sohDetailHint');
+        if (hint) {
+            if (!data.hasEstimate) {
+                hint.style.display = 'block';
+                hint.textContent = '⚠ No SOH estimate yet — waiting for data from any source.';
+            } else if (data.preferredSource !== 'auto') {
+                hint.style.display = 'block';
+                hint.textContent = '📌 Pinned to ' + data.preferredSource + ' source. Switch to Auto for EMA-blended value.';
+            } else {
+                hint.style.display = 'none';
+            }
+        }
+    },
+
+    async setSohSource(source) {
+        try {
+            const resp = await fetch('/api/performance/soh/source', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: source })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                this.fetchSohStatus();  // Refresh card with new active value
+            }
+        } catch (e) {
+            console.warn('[Performance] Failed to set SOH source:', e);
+        }
+    },
+
+    async resetSoh() {
+        if (!confirm('Reset SOH estimation?\n\nThis clears all SOH data and forces re-estimation from scratch.\n\nUse if battery was replaced or reading seems incorrect.')) {
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/performance/soh/reset', { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+                if (BYD.utils && BYD.utils.toast) {
+                    BYD.utils.toast('SOH estimation reset — will recalculate from next data', 'success');
+                } else {
+                    alert('SOH estimation reset successfully.');
+                }
+                // Refresh the card
+                this.fetchSohStatus();
+            } else {
+                alert('Reset failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (e) {
+            alert('Reset failed: ' + e.message);
         }
     }
 };

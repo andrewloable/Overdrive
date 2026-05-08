@@ -18,14 +18,9 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.navigation.NavigationView
-import com.google.android.material.switchmaterial.SwitchMaterial
-import com.overdrive.app.BuildConfig
-import com.overdrive.app.R
-import com.overdrive.app.launcher.AdbDaemonLauncher
 import com.overdrive.app.logging.LogLevel
 import com.overdrive.app.logging.LogManager
+// import com.overdrive.app.shell.PrivilegedShellSetup
 import com.overdrive.app.storage.StorageSetup
 import com.overdrive.app.ui.daemon.DaemonStartupManager
 import com.overdrive.app.ui.model.AccessMode
@@ -34,6 +29,12 @@ import com.overdrive.app.ui.model.DaemonType
 import com.overdrive.app.ui.viewmodel.DaemonsViewModel
 import com.overdrive.app.ui.viewmodel.LogsViewModel
 import com.overdrive.app.ui.viewmodel.MainViewModel
+import com.overdrive.app.launcher.AdbDaemonLauncher
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.navigation.NavigationView
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.overdrive.app.BuildConfig
+import com.overdrive.app.R
 import com.overdrive.app.util.BydDataCacheWhitelist
 
 /**
@@ -485,6 +486,41 @@ class MainActivity : AppCompatActivity() {
             }, 1000)
         }
     }
+    
+    /**
+     * Setup the privileged shell (UID 1000) for daemon management.
+     * This must be done before starting any daemons that need elevated privileges.
+     */
+    private fun setupPrivilegedShell() {
+        logsViewModel.info("Shell", "Setting up privileged shell...")
+        
+        // PrivilegedShellSetup disabled — all daemons now run via ADB shell (UID 2000)
+        // PrivilegedShellSetup.init(this)
+        // 
+        // PrivilegedShellSetup.setup(object : PrivilegedShellSetup.SetupCallback {
+        //     override fun onSuccess() {
+        //         runOnUiThread {
+        //             logsViewModel.info("Shell", "✓ Privileged shell ready (UID 1000)")
+        //             daemonStartupManager.checkAllDaemonStatuses()
+        //         }
+        //     }
+        //     
+        //     override fun onFailure(reason: String) {
+        //         runOnUiThread {
+        //             logsViewModel.warn("Shell", "⚠ Privileged shell setup failed: $reason")
+        //             logsViewModel.info("Shell", "Falling back to ADB shell for daemon management")
+        //             daemonStartupManager.checkAllDaemonStatuses()
+        //         }
+        //     }
+        //     
+        //     override fun onProgress(message: String) {
+        //         runOnUiThread {
+        //             logsViewModel.debug("Shell", "→ $message")
+        //         }
+        //     }
+        // })
+    }
+    
     private fun initViews() {
         drawerLayout = findViewById(R.id.drawerLayout)
         toolbar = findViewById(R.id.toolbar)
@@ -551,6 +587,11 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_reconfigure_camera -> {
                     drawerLayout.closeDrawers()
                     onReconfigureCameraClicked()
+                    true
+                }
+                R.id.nav_battery_health -> {
+                    drawerLayout.closeDrawers()
+                    showBatteryHealthDialog()
                     true
                 }
                 else -> {
@@ -729,59 +770,104 @@ class MainActivity : AppCompatActivity() {
             val cameraConfig = config.optJSONObject("camera")
             val savedId = cameraConfig?.optInt("probedCameraId", -1) ?: -1
             val savedMode = cameraConfig?.optInt("probedSurfaceMode", -1) ?: -1
+            val isManual = cameraConfig?.optBoolean("manualOverride", false) ?: false
             
             if (savedId >= 0 && savedMode >= 0) {
-                menuItem.title = "Camera: ID $savedId, Mode $savedMode"
+                val mode = if (isManual) "Manual" else "Auto"
+                menuItem.title = "Camera: ID $savedId ($mode)"
             } else {
-                menuItem.title = "Camera: Not Configured"
+                menuItem.title = "Camera: Auto (detecting...)"
             }
         } catch (e: Exception) {
-            menuItem.title = "Reconfigure Camera"
+            menuItem.title = "Camera Selection"
         }
     }
     
     /**
      * Handle "Reconfigure Camera" menu item click.
-     * Clears the saved camera probe config and restarts the camera daemon
-     * so it performs a full probe of all camera ID × surfaceMode combinations.
+     * Shows a styled dialog to manually select camera ID or use auto-detection.
      */
     private fun onReconfigureCameraClicked() {
-        // Read current saved config for display
-        var currentInfo = "Not configured"
+        var currentId = -1
+        var isManual = false
         try {
             val config = com.overdrive.app.config.UnifiedConfigManager.loadConfig()
             val cameraConfig = config.optJSONObject("camera")
             if (cameraConfig != null) {
-                val savedId = cameraConfig.optInt("probedCameraId", -1)
-                val savedMode = cameraConfig.optInt("probedSurfaceMode", -1)
-                if (savedId >= 0 && savedMode >= 0) {
-                    currentInfo = "Camera ID: $savedId, Surface Mode: $savedMode"
-                }
+                currentId = cameraConfig.optInt("probedCameraId", -1)
+                isManual = cameraConfig.optBoolean("manualOverride", false)
             }
-        } catch (e: Exception) {
-            // Ignore
+        } catch (e: Exception) { /* ignore */ }
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_camera_selection, null)
+        
+        // Set current status
+        val statusText = dialogView.findViewById<TextView>(R.id.tvCurrentCamera)
+        if (isManual && currentId >= 0) {
+            statusText.text = "Current: Camera $currentId (Manual)"
+        } else {
+            statusText.text = "Current: Auto"
         }
         
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Reconfigure Camera")
-            .setMessage(
-                "Current config: $currentInfo\n\n" +
-                "This will clear the saved camera configuration and restart the camera daemon. " +
-                "On restart, the daemon will probe all camera ID (0-5) × surface mode (0-5) " +
-                "combinations to find the one that produces panoramic video.\n\n" +
-                "Recording and streaming are paused during probe and resume automatically " +
-                "once a working camera is found.\n\n" +
-                "This is useful if:\n" +
-                "• Video appears black or frozen\n" +
-                "• You changed vehicle models\n" +
-                "• Camera stopped working after a firmware update\n\n" +
-                "The daemon will restart automatically."
-            )
-            .setPositiveButton("Reconfigure") { _, _ ->
-                performCameraReconfigure()
+        // Set radio button selection
+        val radioGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.rgCameraOptions)
+        val radioIds = arrayOf(
+            R.id.rbCameraAuto, R.id.rbCamera0, R.id.rbCamera1,
+            R.id.rbCamera2, R.id.rbCamera3, R.id.rbCamera4, R.id.rbCamera5
+        )
+        val currentSelection = if (isManual && currentId >= 0) currentId + 1 else 0
+        radioGroup.check(radioIds[currentSelection])
+        
+        val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Overdrive_Dialog)
+            .setView(dialogView)
+            .setPositiveButton("Apply") { dlg, _ ->
+                val checkedId = radioGroup.checkedRadioButtonId
+                val selectedIndex = radioIds.indexOf(checkedId)
+                
+                if (selectedIndex == 0) {
+                    // Auto mode
+                    Thread {
+                        try {
+                            val camCfg = org.json.JSONObject()
+                            camCfg.put("probedCameraId", -1)
+                            camCfg.put("probedSurfaceMode", -1)
+                            camCfg.put("probedAndValidated", false)
+                            camCfg.put("manualOverride", false)
+                            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg)
+                            runOnUiThread {
+                                Toast.makeText(this, "Camera set to Auto — will detect on next restart", Toast.LENGTH_SHORT).show()
+                                updateCameraProbeMenuItem()
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread { Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show() }
+                        }
+                    }.start()
+                } else if (selectedIndex > 0) {
+                    // Manual camera ID
+                    val selectedCamId = selectedIndex - 1
+                    Thread {
+                        try {
+                            val camCfg = org.json.JSONObject()
+                            camCfg.put("probedCameraId", selectedCamId)
+                            camCfg.put("probedSurfaceMode", 0)
+                            camCfg.put("probedAndValidated", true)
+                            camCfg.put("manualOverride", true)
+                            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg)
+                            runOnUiThread {
+                                Toast.makeText(this, "Camera ID $selectedCamId set — restart daemon to apply", Toast.LENGTH_SHORT).show()
+                                updateCameraProbeMenuItem()
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread { Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_SHORT).show() }
+                        }
+                    }.start()
+                }
+                dlg.dismiss()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+        
+        dialog.show()
     }
     
     /**
@@ -846,6 +932,154 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
     
+    // ==================== Battery Health (SOH) Dialog ====================
+
+    /**
+     * Shows a styled dialog with SOH status details and a reset button.
+     * Reads directly from the persisted properties file (no HTTP/auth needed).
+     */
+    private fun showBatteryHealthDialog() {
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        
+        executor.execute {
+            var sohPercent = "--"
+            var source = "--"
+            var method = "--"
+            var nominalKwh = "--"
+            var samples = "--"
+            var lastUpdated = "--"
+            var preferredSource = "auto"
+            var hasEstimate = false
+            
+            try {
+                val sohFile = java.io.File("/data/local/tmp/abrp_soh_estimate.properties")
+                if (sohFile.exists()) {
+                    val props = java.util.Properties()
+                    java.io.FileInputStream(sohFile).use { props.load(it) }
+                    
+                    val soh = props.getProperty("soh_percent")?.toDoubleOrNull()
+                    if (soh != null && soh > 0 && soh <= 100) {
+                        sohPercent = String.format("%.1f%%", soh)
+                        hasEstimate = true
+                    }
+                    
+                    method = props.getProperty("estimation_method") ?: "--"
+                    samples = props.getProperty("sample_count") ?: "0"
+                    preferredSource = props.getProperty("preferred_source") ?: "auto"
+                    
+                    val nominal = props.getProperty("nominal_capacity_kwh")?.toDoubleOrNull()
+                    if (nominal != null && nominal > 0) {
+                        nominalKwh = String.format("%.1f kWh", nominal)
+                    }
+                    
+                    val ts = props.getProperty("last_updated")?.toLongOrNull()
+                    if (ts != null && ts > 0) {
+                        lastUpdated = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(ts))
+                    }
+                    
+                    source = preferredSource
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MainActivity", "SOH file read failed: ${e.message}")
+            }
+            
+            val finalSoh = sohPercent
+            val finalSource = source
+            val finalMethod = method
+            val finalNominal = nominalKwh
+            val finalSamples = samples
+            val finalLastUpdated = lastUpdated
+            val finalHasEstimate = hasEstimate
+            
+            runOnUiThread {
+                val dialogView = layoutInflater.inflate(R.layout.dialog_battery_health, null)
+                
+                // Populate fields
+                dialogView.findViewById<TextView>(R.id.tvSohPercent).text = finalSoh
+                dialogView.findViewById<TextView>(R.id.tvSohSource).text = finalSource
+                dialogView.findViewById<TextView>(R.id.tvSohMethod).text = finalMethod
+                dialogView.findViewById<TextView>(R.id.tvSohCapacity).text = finalNominal
+                dialogView.findViewById<TextView>(R.id.tvSohSamples).text = finalSamples
+                dialogView.findViewById<TextView>(R.id.tvSohLastUpdated).text = finalLastUpdated
+                
+                // Status text
+                val statusView = dialogView.findViewById<TextView>(R.id.tvSohStatus)
+                if (finalHasEstimate) {
+                    statusView.text = "Estimation active"
+                    statusView.setTextColor(resources.getColor(R.color.brand_primary, null))
+                } else {
+                    statusView.text = "⚠ No estimate yet — waiting for data"
+                    statusView.setTextColor(resources.getColor(R.color.text_muted, null))
+                }
+                
+                // SOH percent color based on health
+                val sohView = dialogView.findViewById<TextView>(R.id.tvSohPercent)
+                if (finalHasEstimate) {
+                    val sohVal = finalSoh.replace("%", "").toDoubleOrNull() ?: 0.0
+                    val colorRes = when {
+                        sohVal >= 85 -> R.color.brand_primary   // Good
+                        sohVal >= 70 -> R.color.status_starting // Moderate
+                        else -> R.color.status_error            // Degraded
+                    }
+                    sohView.setTextColor(resources.getColor(colorRes, null))
+                }
+                
+                val dialog = android.app.AlertDialog.Builder(this, R.style.Theme_Overdrive_Dialog)
+                    .setView(dialogView)
+                    .setPositiveButton("Close", null)
+                    .create()
+                
+                // Wire up reset button
+                dialogView.findViewById<TextView>(R.id.btnResetSoh).setOnClickListener {
+                    dialog.dismiss()
+                    confirmSohReset()
+                }
+                
+                dialog.show()
+            }
+        }
+    }
+    
+    /**
+     * Confirmation dialog before resetting SOH estimation.
+     */
+    private fun confirmSohReset() {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Reset SOH Estimation?")
+            .setMessage("This will clear all SOH data and force re-estimation from scratch.\n\nUse this if:\n• Battery was replaced\n• SOH reading seems incorrect\n• You want to recalibrate\n\nThe system will re-seed from the next available data source (OEM, charge calibration, or instantaneous reading).")
+            .setPositiveButton("Reset") { _, _ ->
+                performSohReset()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    /**
+     * Perform the actual SOH reset by deleting the properties file.
+     * The daemon's SohEstimator will detect the missing file and re-seed.
+     */
+    private fun performSohReset() {
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val sohFile = java.io.File("/data/local/tmp/abrp_soh_estimate.properties")
+                if (sohFile.exists()) {
+                    sohFile.delete()
+                }
+                
+                runOnUiThread {
+                    Toast.makeText(this, "✅ SOH estimation reset — will recalculate from next data", Toast.LENGTH_LONG).show()
+                    logsViewModel.info("SOH", "SOH estimation reset by user")
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "❌ Reset failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     // ==================== Traffic Monitor Management ====================
     
     /** Track current traffic monitor state to show correct button */

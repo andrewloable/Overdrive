@@ -461,12 +461,24 @@ public class SurveillanceIpcServer implements Runnable {
                 // Persist to unified config so ACC OFF respects user preference
                 com.overdrive.app.config.UnifiedConfigManager.setSurveillanceEnabled(enabled);
                 if (enabled) {
-                    CameraDaemon.enableSurveillance();
-                    logger.info("Surveillance enabled via IPC");
+                    // RACE CONDITION FIX: Only enable surveillance if ACC is actually OFF.
+                    // AccSentryDaemon's retry loop may send this IPC after ACC turned ON.
+                    if (!com.overdrive.app.monitor.AccMonitor.isAccOn()) {
+                        CameraDaemon.enableSurveillance();
+                        logger.info("Surveillance enabled via IPC");
+                    } else {
+                        logger.info("Surveillance preference saved via IPC — but ACC is ON, not activating");
+                    }
                 } else {
                     CameraDaemon.disableSurveillance();
                     logger.info("Surveillance disabled via IPC");
                 }
+            }
+            
+            // Stop surveillance without persisting preference (battery protection, session stop)
+            if (config.has("stopSurveillance") && config.getBoolean("stopSurveillance")) {
+                CameraDaemon.disableSurveillance();
+                logger.info("Surveillance stopped via IPC (preference preserved)");
             }
             
             // Handle ACC state if provided

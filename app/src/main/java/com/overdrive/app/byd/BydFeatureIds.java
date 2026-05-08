@@ -93,7 +93,6 @@ public final class BydFeatureIds {
     public static final int BODY_BACK_DOOR_OPEN_CONFIRM = resolveOrFallback("Body.BACK_DOOR_OPEN_STATUS_CONFIRM", 654311456);
     public static final int BODY_BACK_DOOR_MAINTENANCE = resolveOrFallback("Body.BACK_DOOR_MAINTENANCE_STATUS", 654311438);
     public static final int BODY_BACK_DOOR_POSITION = resolveOrFallback("Body.BACK_DOOR_POSITION_FEEDBACK", 365953048);
-    public static final int BODY_BACK_DOOR_ACTUATOR_COMMAND = resolveOrFallback("Body.BACK_DOOR_ACTUATOR_COMMAND", 1125122080);
     public static final int BODY_INSIDE_LIGHT_STATE_SET = resolveOrFallback("Body.INSIDE_LIGHT_STATE_SET", 1330643002);
     public static final int BODY_SUNSHADE_PANEL_PERCENT = resolveOrFallback("Body.BODYWORK_SUNSHADE_PANEL_PERCENT", 1101004816);
     public static final int BODY_SUNSHADE_PANEL_PERCENT_SET = resolveOrFallback("Body.BODYWORK_SUNSHADE_PANEL_PERCENT_SET", 1330642984);

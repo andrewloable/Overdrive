@@ -239,6 +239,16 @@ public class AbrpTelemetryService {
             // is_charging
             ChargingStateData chargingState = vehicleDataMonitor.getChargingState();
             boolean isCharging = chargingState != null && chargingState.status == ChargingStateData.ChargingStatus.CHARGING;
+            // Fallback: detect AC charging even if BMS state is stale (reports READY/IDLE)
+            // but the gun is connected (state 2=AC, 3=DC) and power is flowing.
+            if (!isCharging && vd != null) {
+                boolean gunConnected = vd.chargingGunState == 2 || vd.chargingGunState == 3;
+                boolean powerFlowing = (!Double.isNaN(vd.externalChargingPowerKw) && vd.externalChargingPowerKw > 0.15)
+                        || (!Double.isNaN(vd.chargingPowerKw) && vd.chargingPowerKw > 0.15);
+                if (gunConnected && powerFlowing) {
+                    isCharging = true;
+                }
+            }
             payload.put("is_charging", isCharging ? 1 : 0);
 
             // is_dcfc — gun state from collector

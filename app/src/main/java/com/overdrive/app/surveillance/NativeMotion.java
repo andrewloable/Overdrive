@@ -486,6 +486,15 @@ public class NativeMotion {
      */
     public static native int getQuadrantResultSize();
     
+    /**
+     * Set per-quadrant ROI block mask.
+     * 
+     * @param quadrant Quadrant index (0-3: Front, Right, Rear, Left)
+     * @param blockMask byte[70] array where 1=enabled, 0=disabled.
+     *                  Pass null to clear ROI (all blocks enabled).
+     */
+    public static native void setQuadrantRoi(int quadrant, byte[] blockMask);
+    
     // ========================================================================
     // Texture Tracker (YOLO + NCC Hybrid VOT)
     // ========================================================================

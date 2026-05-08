@@ -282,7 +282,8 @@ public class HttpServer {
             String path = parts[1];
             
             // Extend timeout for slow BYD cloud API calls (login + verify can take 10-15s)
-            if (path.startsWith("/api/bydcloud")) {
+            if (path.startsWith("/api/bydcloud") || path.startsWith("/api/vehicle/lock") || 
+                path.startsWith("/api/vehicle/unlock") || path.startsWith("/api/vehicle/flash")) {
                 client.setSoTimeout(60000);
             }
             
@@ -367,6 +368,10 @@ public class HttpServer {
             } else if (path.equals("/trips.html") || path.equals("/trips")) {
                 if (!serveStaticFile(out, "local/trips.html")) {
                     HttpResponse.sendError(out, 404, "trips.html not found");
+                }
+            } else if (path.equals("/vehicle-control.html") || path.equals("/vehicle-control")) {
+                if (!serveStaticFile(out, "local/vehicle-control.html")) {
+                    HttpResponse.sendError(out, 404, "vehicle-control.html not found");
                 }
             } else if (path.startsWith("/shared/") || path.startsWith("/local/")) {
                 String filePath = path.substring(1);
@@ -500,6 +505,16 @@ public class HttpServer {
                 HttpResponse.sendJsonError(out, "Trip analytics not initialized");
                 return true;
             }
+        }
+        
+        // Audio Test API (AVAS speaker test)
+        if (path.startsWith("/api/audio/")) {
+            return AudioTestApiHandler.handle(method, path, body, out);
+        }
+
+        // Vehicle Control API
+        if (path.startsWith("/api/vehicle")) {
+            return VehicleControlApiHandler.handle(method, path, body, out);
         }
         
         // Performance API
@@ -768,8 +783,11 @@ public class HttpServer {
         if (path.endsWith(".wasm")) return "application/wasm";
         if (path.endsWith(".png")) return "image/png";
         if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".webp")) return "image/webp";
         if (path.endsWith(".svg")) return "image/svg+xml";
         if (path.endsWith(".ico")) return "image/x-icon";
+        if (path.endsWith(".glb")) return "model/gltf-binary";
+        if (path.endsWith(".gltf")) return "model/gltf+json";
         return "application/octet-stream";
     }
 

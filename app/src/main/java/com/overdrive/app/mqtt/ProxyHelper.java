@@ -2,12 +2,18 @@ package com.overdrive.app.mqtt;
 
 import com.overdrive.app.logging.DaemonLogger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
+import java.net.SocketAddress;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.HandshakeCompletedListener;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -227,12 +233,20 @@ public class ProxyHelper {
                     new InetSocketAddress(PROXY_HOST, PROXY_PORT));
         }
 
+        /**
+         * No-arg createSocket() — Paho's SSLNetworkModule calls this first, then
+         * either connects it and upgrades via createSocket(Socket, host, port, true),
+         * or (in some versions) casts the result directly to SSLSocket.
+         *
+         * We return a DeferredSslSocket: a plain proxied Socket wrapped in a
+         * delegating SSLSocket shell. This satisfies the cast to SSLSocket
+         * immediately. When Paho calls connect(), the underlying SOCKS tunnel
+         * is established. When Paho calls startHandshake(), we upgrade the
+         * tunnel to real TLS on the fly.
+         */
         @Override
         public Socket createSocket() throws java.io.IOException {
-            // Paho calls createSocket() then connect(). We return a raw proxied socket.
-            // Paho will then call startHandshake() — but we need to intercept connect().
-            // Instead, return a marker socket that we'll upgrade in createSocket(host, port).
-            return new Socket(proxy);
+            return new DeferredSslSocket(new Socket(proxy), sslFactory);
         }
 
         @Override
@@ -273,8 +287,11 @@ public class ProxyHelper {
         @Override
         public Socket createSocket(Socket s, String host, int port, boolean autoClose)
                 throws java.io.IOException {
-            // Paho may call this variant directly — layer TLS on the provided socket
-            return sslFactory.createSocket(s, host, port, autoClose);
+            // Paho may call this variant directly — layer TLS on the provided socket.
+            // If 's' is our DeferredSslSocket, unwrap to the real underlying socket first
+            // so we don't nest SSLSocket inside SSLSocket.
+            Socket raw = (s instanceof DeferredSslSocket) ? ((DeferredSslSocket) s).getInnerSocket() : s;
+            return sslFactory.createSocket(raw, host, port, autoClose);
         }
 
         @Override
@@ -285,6 +302,340 @@ public class ProxyHelper {
         @Override
         public String[] getSupportedCipherSuites() {
             return sslFactory.getSupportedCipherSuites();
+        }
+    }
+
+    /**
+     * A thin SSLSocket wrapper around a plain (SOCKS-proxied) Socket.
+     *
+     * Paho's SSLNetworkModule (via TCPNetworkModule.start()) does:
+     *   1. factory.createSocket()                    → stored in 'socket' field
+     *   2. socket.connect(sockaddr, timeout)          → TCP connect
+     *   3. socket.setSoTimeout(1000)
+     *   4. ((SSLSocket) socket).setEnabledCipherSuites(...)  ← before handshake!
+     *   5. ((SSLSocket) socket).getSSLParameters()           ← before handshake!
+     *   6. ((SSLSocket) socket).setSSLParameters(...)        ← before handshake!
+     *   7. ((SSLSocket) socket).startHandshake()
+     *
+     * Steps 4-6 happen BEFORE startHandshake(), so we must buffer any
+     * configuration (cipher suites, SSL parameters, protocols) and replay
+     * them onto the real SSLSocket when it's created in startHandshake().
+     *
+     * DeferredSslSocket solves this by:
+     *   - Extending SSLSocket so all casts succeed
+     *   - Delegating connect/setSoTimeout to the inner proxied socket
+     *   - Buffering SSL config (ciphers, protocols, parameters) pre-handshake
+     *   - On startHandshake(), creating the real SSLSocket via
+     *     sslFactory.createSocket(innerSocket, host, port, true),
+     *     replaying buffered config, then performing the handshake
+     */
+    static class DeferredSslSocket extends SSLSocket {
+
+        private final Socket innerSocket;
+        private final SSLSocketFactory sslFactory;
+        private SSLSocket realSsl;
+        private String peerHost;
+        private int peerPort;
+
+        // Buffered SSL configuration — applied to realSsl in startHandshake()
+        private String[] pendingEnabledCiphers;
+        private String[] pendingEnabledProtocols;
+        private javax.net.ssl.SSLParameters pendingSSLParameters;
+        private Boolean pendingUseClientMode;
+        private Boolean pendingNeedClientAuth;
+        private Boolean pendingWantClientAuth;
+        private Boolean pendingEnableSessionCreation;
+        private final java.util.List<HandshakeCompletedListener> pendingListeners =
+                new java.util.ArrayList<>();
+
+        DeferredSslSocket(Socket innerSocket, SSLSocketFactory sslFactory) {
+            this.innerSocket = innerSocket;
+            this.sslFactory = sslFactory;
+        }
+
+        /** Expose the raw inner socket for unwrapping in createSocket(Socket,...) */
+        Socket getInnerSocket() {
+            return innerSocket;
+        }
+
+        // --- Connect: delegate to inner socket, remember peer for TLS upgrade ---
+
+        @Override
+        public void connect(SocketAddress endpoint) throws IOException {
+            capturePeer(endpoint);
+            innerSocket.connect(endpoint);
+        }
+
+        @Override
+        public void connect(SocketAddress endpoint, int timeout) throws IOException {
+            capturePeer(endpoint);
+            innerSocket.connect(endpoint, timeout);
+        }
+
+        private void capturePeer(SocketAddress endpoint) {
+            if (endpoint instanceof InetSocketAddress) {
+                InetSocketAddress inet = (InetSocketAddress) endpoint;
+                peerHost = inet.getHostString();
+                peerPort = inet.getPort();
+            }
+        }
+
+        // --- TLS upgrade on startHandshake ---
+
+        @Override
+        public void startHandshake() throws IOException {
+            if (realSsl != null) {
+                realSsl.startHandshake();
+                return;
+            }
+            if (peerHost == null) {
+                peerHost = innerSocket.getInetAddress() != null
+                        ? innerSocket.getInetAddress().getHostName() : "unknown";
+                peerPort = innerSocket.getPort();
+            }
+            realSsl = (SSLSocket) sslFactory.createSocket(innerSocket, peerHost, peerPort, true);
+
+            // Replay buffered configuration onto the real SSLSocket
+            if (pendingEnabledCiphers != null) realSsl.setEnabledCipherSuites(pendingEnabledCiphers);
+            if (pendingEnabledProtocols != null) realSsl.setEnabledProtocols(pendingEnabledProtocols);
+            if (pendingSSLParameters != null) realSsl.setSSLParameters(pendingSSLParameters);
+            if (pendingUseClientMode != null) realSsl.setUseClientMode(pendingUseClientMode);
+            if (pendingNeedClientAuth != null) realSsl.setNeedClientAuth(pendingNeedClientAuth);
+            if (pendingWantClientAuth != null) realSsl.setWantClientAuth(pendingWantClientAuth);
+            if (pendingEnableSessionCreation != null) realSsl.setEnableSessionCreation(pendingEnableSessionCreation);
+            for (HandshakeCompletedListener l : pendingListeners) {
+                realSsl.addHandshakeCompletedListener(l);
+            }
+
+            realSsl.startHandshake();
+        }
+
+        private SSLSocket ensureSsl() throws IOException {
+            if (realSsl == null) startHandshake();
+            return realSsl;
+        }
+
+        // --- I/O: delegate to real SSLSocket after handshake ---
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return ensureSsl().getInputStream();
+        }
+
+        @Override
+        public OutputStream getOutputStream() throws IOException {
+            return ensureSsl().getOutputStream();
+        }
+
+        // --- SSLSocket methods: buffer pre-handshake, delegate post-handshake ---
+
+        @Override
+        public SSLSession getSession() {
+            if (realSsl != null) return realSsl.getSession();
+            return null;
+        }
+
+        @Override
+        public void addHandshakeCompletedListener(HandshakeCompletedListener listener) {
+            if (realSsl != null) {
+                realSsl.addHandshakeCompletedListener(listener);
+            } else {
+                pendingListeners.add(listener);
+            }
+        }
+
+        @Override
+        public void removeHandshakeCompletedListener(HandshakeCompletedListener listener) {
+            if (realSsl != null) {
+                realSsl.removeHandshakeCompletedListener(listener);
+            } else {
+                pendingListeners.remove(listener);
+            }
+        }
+
+        @Override
+        public String[] getSupportedCipherSuites() {
+            if (realSsl != null) return realSsl.getSupportedCipherSuites();
+            // Can't know without a real SSLSocket; return empty — Paho doesn't call this pre-handshake
+            return new String[0];
+        }
+
+        @Override
+        public String[] getEnabledCipherSuites() {
+            if (realSsl != null) return realSsl.getEnabledCipherSuites();
+            if (pendingEnabledCiphers != null) return pendingEnabledCiphers;
+            return new String[0];
+        }
+
+        @Override
+        public void setEnabledCipherSuites(String[] suites) {
+            if (realSsl != null) {
+                realSsl.setEnabledCipherSuites(suites);
+            } else {
+                pendingEnabledCiphers = suites;
+            }
+        }
+
+        @Override
+        public String[] getSupportedProtocols() {
+            if (realSsl != null) return realSsl.getSupportedProtocols();
+            return new String[0];
+        }
+
+        @Override
+        public String[] getEnabledProtocols() {
+            if (realSsl != null) return realSsl.getEnabledProtocols();
+            if (pendingEnabledProtocols != null) return pendingEnabledProtocols;
+            return new String[0];
+        }
+
+        @Override
+        public void setEnabledProtocols(String[] protocols) {
+            if (realSsl != null) {
+                realSsl.setEnabledProtocols(protocols);
+            } else {
+                pendingEnabledProtocols = protocols;
+            }
+        }
+
+        @Override
+        public javax.net.ssl.SSLParameters getSSLParameters() {
+            if (realSsl != null) return realSsl.getSSLParameters();
+            // Pre-handshake: return a fresh SSLParameters that Paho can configure.
+            // Paho calls getSSLParameters(), mutates it, then calls setSSLParameters().
+            // We'll capture the final state in setSSLParameters().
+            if (pendingSSLParameters != null) return pendingSSLParameters;
+            return new javax.net.ssl.SSLParameters();
+        }
+
+        @Override
+        public void setSSLParameters(javax.net.ssl.SSLParameters params) {
+            if (realSsl != null) {
+                realSsl.setSSLParameters(params);
+            } else {
+                pendingSSLParameters = params;
+            }
+        }
+
+        @Override
+        public boolean getUseClientMode() {
+            if (realSsl != null) return realSsl.getUseClientMode();
+            return pendingUseClientMode != null ? pendingUseClientMode : true;
+        }
+
+        @Override
+        public void setUseClientMode(boolean mode) {
+            if (realSsl != null) {
+                realSsl.setUseClientMode(mode);
+            } else {
+                pendingUseClientMode = mode;
+            }
+        }
+
+        @Override
+        public boolean getNeedClientAuth() {
+            if (realSsl != null) return realSsl.getNeedClientAuth();
+            return pendingNeedClientAuth != null ? pendingNeedClientAuth : false;
+        }
+
+        @Override
+        public void setNeedClientAuth(boolean need) {
+            if (realSsl != null) {
+                realSsl.setNeedClientAuth(need);
+            } else {
+                pendingNeedClientAuth = need;
+            }
+        }
+
+        @Override
+        public boolean getWantClientAuth() {
+            if (realSsl != null) return realSsl.getWantClientAuth();
+            return pendingWantClientAuth != null ? pendingWantClientAuth : false;
+        }
+
+        @Override
+        public void setWantClientAuth(boolean want) {
+            if (realSsl != null) {
+                realSsl.setWantClientAuth(want);
+            } else {
+                pendingWantClientAuth = want;
+            }
+        }
+
+        @Override
+        public boolean getEnableSessionCreation() {
+            if (realSsl != null) return realSsl.getEnableSessionCreation();
+            return pendingEnableSessionCreation != null ? pendingEnableSessionCreation : true;
+        }
+
+        @Override
+        public void setEnableSessionCreation(boolean flag) {
+            if (realSsl != null) {
+                realSsl.setEnableSessionCreation(flag);
+            } else {
+                pendingEnableSessionCreation = flag;
+            }
+        }
+
+        // --- Socket state delegation ---
+
+        @Override
+        public boolean isConnected() {
+            return innerSocket.isConnected();
+        }
+
+        @Override
+        public boolean isClosed() {
+            return innerSocket.isClosed();
+        }
+
+        @Override
+        public boolean isBound() {
+            return innerSocket.isBound();
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (realSsl != null) {
+                realSsl.close(); // closes inner socket too (autoClose=true)
+            } else {
+                innerSocket.close();
+            }
+        }
+
+        @Override
+        public void setSoTimeout(int timeout) throws java.net.SocketException {
+            // Pre-handshake: set on inner socket (Paho calls this before startHandshake)
+            // Post-handshake: set on both (realSsl wraps innerSocket, but timeout is on the underlying)
+            innerSocket.setSoTimeout(timeout);
+            if (realSsl != null) {
+                try { realSsl.setSoTimeout(timeout); } catch (java.net.SocketException ignored) {}
+            }
+        }
+
+        @Override
+        public int getSoTimeout() throws java.net.SocketException {
+            return innerSocket.getSoTimeout();
+        }
+
+        @Override
+        public void setTcpNoDelay(boolean on) throws java.net.SocketException {
+            innerSocket.setTcpNoDelay(on);
+        }
+
+        @Override
+        public java.net.InetAddress getInetAddress() {
+            return innerSocket.getInetAddress();
+        }
+
+        @Override
+        public int getPort() {
+            return innerSocket.getPort();
+        }
+
+        @Override
+        public int getLocalPort() {
+            return innerSocket.getLocalPort();
         }
     }
 }

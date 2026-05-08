@@ -201,6 +201,53 @@ public class SurveillanceConfig {
     public void setShadowFilterMode(int mode) { this.shadowFilterMode = Math.max(0, Math.min(3, mode)); }
     
     // ========================================================================
+    // Per-Camera ROI (Region of Interest)
+    // ========================================================================
+    // Each quadrant can have an independent polygon ROI. Vertices are stored as
+    // normalized coordinates (0.0-1.0) relative to quadrant dimensions.
+    // null = no ROI (all blocks enabled, default behavior).
+    @SuppressWarnings("unchecked")
+    private float[][][] roiPolygons = new float[4][][];  // [quadrant][vertex][x,y]
+    private boolean[] roiEnabled = {false, false, false, false};
+    
+    public float[][] getRoiPolygon(int quadrant) {
+        if (quadrant < 0 || quadrant >= 4) return null;
+        return roiPolygons[quadrant];
+    }
+    public void setRoiPolygon(int quadrant, float[][] polygon) {
+        if (quadrant >= 0 && quadrant < 4) {
+            roiPolygons[quadrant] = polygon;
+            roiEnabled[quadrant] = (polygon != null && polygon.length >= 3);
+        }
+    }
+    public boolean isRoiEnabled(int quadrant) {
+        return quadrant >= 0 && quadrant < 4 && roiEnabled[quadrant];
+    }
+    public void clearRoi(int quadrant) {
+        if (quadrant >= 0 && quadrant < 4) {
+            roiPolygons[quadrant] = null;
+            roiEnabled[quadrant] = false;
+        }
+    }
+    
+    /**
+     * Sets only the ROI enabled flag without changing the polygon.
+     * When disabled, the polygon is preserved but not applied to the C++ pipeline.
+     */
+    public void setRoiEnabled(int quadrant, boolean enabled) {
+        if (quadrant >= 0 && quadrant < 4) {
+            roiEnabled[quadrant] = enabled;
+        }
+    }
+    
+    // ========================================================================
+    // Surveillance Schedule
+    // ========================================================================
+    private final SurveillanceSchedule schedule = new SurveillanceSchedule();
+    
+    public SurveillanceSchedule getSchedule() { return schedule; }
+    
+    // ========================================================================
     // Constructors
     // ========================================================================
     

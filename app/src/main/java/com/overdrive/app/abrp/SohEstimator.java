@@ -43,8 +43,21 @@ public class SohEstimator {
 
     private double currentSoh = -1;
     private String estimationMethod = METHOD_INSTANTANEOUS;
-    private String sohSource = "instantaneous"; // "oem", "calibration", or "instantaneous"
+    private String sohSource = "instantaneous"; // "oem", "calibration", "capacity_ah", or "instantaneous"
     private int sampleCount = 0;
+
+    // ==================== RAW SOURCE VALUES ====================
+    // Track the latest raw reading from each source independently.
+    // These are displayed on the UI so the user can see what each method reports.
+    private double rawOemSoh = -1;
+    private double rawCapacityAhSoh = -1;
+    private double rawCalibrationSoh = -1;
+    private double rawEnergySoh = -1;  // instantaneous / remaining-energy based
+
+    // ==================== SOURCE SELECTION MODE ====================
+    // "auto" = EMA blend (default), or user can pin to a specific source
+    private String preferredSource = "auto";  // "auto", "oem", "capacity_ah", "calibration", "energy"
+    private static final String PROP_PREFERRED_SOURCE = "preferred_source";
 
     public void setNominalCapacityKwh(double capacityKwh) {
         if (capacityKwh > 10 && capacityKwh < 200) {
@@ -240,24 +253,26 @@ public class SohEstimator {
             VehicleDataMonitor vdm = VehicleDataMonitor.getInstance();
             double remainingKwh = vdm.getBatteryRemainPowerKwh();
             BatterySocData socData = vdm.getBatterySoc();
-            if (socData != null && socData.socPercent > 20 && socData.socPercent <= 85) {
-                // Try raw kWh first
-                if (remainingKwh > 0) {
+            if (socData != null && socData.socPercent > 20 && socData.socPercent <= 100) {
+                // Detect PHEV firmware bug: BMS returns SOC% value as kWh
+                // (e.g. 90% SOC → getBatteryRemainPowerKwh() returns 90.0 kWh).
+                boolean isPhevKwhBug = Math.abs(remainingKwh - socData.socPercent) < 3.0;
+                
+                // Try raw kWh first (only if not the PHEV bug and SOC is in reliable range)
+                if (!isPhevKwhBug && remainingKwh > 0 && socData.socPercent <= 85) {
                     updateFromInstantaneous(remainingKwh, socData.socPercent);
                 }
-                // If raw kWh didn't produce an estimate (stale/stuck value on PHEVs),
-                // seed directly from SOC × nominal capacity.
+                
+                // If raw kWh didn't produce an estimate (stale/stuck value on PHEVs,
+                // SOC too high, or PHEV firmware bug), seed directly from SOC × nominal.
                 // This gives SOH = 100% as a starting point, which is reasonable for
                 // a new install — calibration charges will refine it over time.
                 if (!hasEstimate()) {
-                    double computedKwh = (socData.socPercent / 100.0) * nominalCapacityKwh;
-                    logger.info("Raw kWh (" + String.format("%.1f", remainingKwh) +
-                        ") gave no estimate — seeding SOH from SOC × nominal: " +
-                        String.format("%.1f", socData.socPercent) + "% × " +
-                        String.format("%.1f", nominalCapacityKwh) + " = " +
-                        String.format("%.1f", computedKwh) + " kWh");
-                    // This will compute SOH ≈ 100% (since computedKwh/SOC = nominal)
-                    // which is the correct starting assumption
+                    logger.info("Seeding SOH at 100% baseline" +
+                        (isPhevKwhBug ? " (PHEV kWh=SOC firmware bug detected)" : 
+                         socData.socPercent > 85 ? " (SOC " + String.format("%.0f", socData.socPercent) + "% above instantaneous threshold)" :
+                         " (instantaneous method gave no result)") +
+                        " — nominal=" + String.format("%.1f", nominalCapacityKwh) + " kWh");
                     currentSoh = 100.0;
                     sampleCount = 1;
                     estimationMethod = METHOD_INSTANTANEOUS;
@@ -285,12 +300,15 @@ public class SohEstimator {
             String sohStr = props.getProperty(PROP_SOH_PERCENT);
             if (sohStr != null) {
                 double persistedSoh = Double.parseDouble(sohStr);
-                // Reject out-of-range persisted values (e.g. 101 from old bogus BMS data).
-                // Valid SOH is 0-100; reject the rest to force re-estimation.
-                if (persistedSoh > 0 && persistedSoh <= 100) {
+                // Valid SOH is 60-110% (allow up to 110% for factory over-provisioned new packs).
+                // Reject everything else to force re-estimation.
+                if (persistedSoh >= 60 && persistedSoh <= 110) {
                     currentSoh = persistedSoh;
+                    logger.info("Restored SOH: " + currentSoh + "%");
                 } else {
-                    logger.info("Discarding persisted SOH " + persistedSoh + " — out of valid range 0-100");
+                    logger.info("Discarding persisted SOH " + persistedSoh + " — out of valid range 60-110");
+                    // Delete the file to prevent this warning on every restart
+                    sohFile.delete();
                 }
             }
 
@@ -299,6 +317,12 @@ public class SohEstimator {
 
             String countStr = props.getProperty(PROP_SAMPLE_COUNT);
             if (countStr != null) sampleCount = Integer.parseInt(countStr);
+
+            // Restore preferred source selection
+            String savedSource = props.getProperty(PROP_PREFERRED_SOURCE);
+            if (savedSource != null && !savedSource.isEmpty()) {
+                preferredSource = savedSource;
+            }
 
             // Restore nominal capacity — this survives bad remainKwh readings
             // that would otherwise cause autoDetectCarModel to fail.
@@ -311,15 +335,8 @@ public class SohEstimator {
                 }
             }
 
-            // Sanity check — reject persisted values outside realistic range
-            // Allow up to 110% for factory over-provisioned new packs
-            if (currentSoh > 110.0 || currentSoh < 60.0) {
-                logger.info("Clearing invalid persisted SOH: " + currentSoh + "%");
-                currentSoh = -1;
-                sampleCount = 0;
-            } else {
-                // EMA doesn't need window priming — the persisted value IS the EMA state
-                logger.info("Restored SOH: " + currentSoh + "% (samples: " + sampleCount + ")");
+            if (currentSoh > 0) {
+                logger.info("SOH init complete: " + currentSoh + "% (samples: " + sampleCount + ")");
             }
         } catch (Exception e) {
             logger.error("Failed to load SOH: " + e.getMessage());
@@ -373,14 +390,13 @@ public class SohEstimator {
      * that changes 1-2% per year. Ongoing SOH updates come exclusively from
      * charge session calibration (updateFromCalibration).
      *
+     * However, the raw energy-based SOH is ALWAYS tracked for UI display,
+     * regardless of whether it's used for the active estimate.
+     *
      * @param remainingKwh Battery remaining energy from BMS
      * @param displaySocPercent Display SOC from dashboard (0-100)
      */
     public void updateFromInstantaneous(double remainingKwh, double displaySocPercent) {
-        // Once we have an estimate, stop accepting instantaneous readings.
-        // SOH should only change from calibration data (charge sessions).
-        if (hasEstimate()) return;
-
         // Need nominal capacity to compute SOH — skip if not yet detected
         if (nominalCapacityKwh <= 0) return;
 
@@ -388,16 +404,11 @@ public class SohEstimator {
         if (remainingKwh <= 1.0) return;
 
         // Prefer mid-range SOC (20-85%) where BMS readings are most stable.
-        // Extremes (<20% or >85%) have nonlinear voltage curves on LFP.
         if (displaySocPercent < 20 || displaySocPercent > 85) {
             return;
         }
 
-        // Sanity check: implied capacity must be in a plausible range for ANY BYD model.
-        // Use absolute bounds (25-120 kWh) rather than nominal-relative bounds,
-        // because nominal detection may have failed (wrong default).
-        // Also check against nominal capacity — if implied is >2x or <0.5x nominal,
-        // the remainKwh reading is likely garbage (PHEV returning SOC as kWh).
+        // Sanity check: implied capacity must be in a plausible range
         double impliedCapacity = remainingKwh / (displaySocPercent / 100.0);
         if (impliedCapacity < 10.0 || impliedCapacity > 120.0) {
             logger.debug("Rejecting seed: implied capacity " + String.format("%.1f", impliedCapacity) +
@@ -419,6 +430,13 @@ public class SohEstimator {
         double instantaneousSoh = (currentTotalCap / nominalCapacityKwh) * 100.0;
 
         if (instantaneousSoh < 60.0 || instantaneousSoh > 110.0) return;
+
+        // Always track raw value for UI display
+        rawEnergySoh = instantaneousSoh;
+
+        // Once we have an estimate, stop accepting instantaneous readings for the active SOH.
+        // SOH should only change from calibration/OEM/capacity-Ah data.
+        if (hasEstimate()) return;
 
         // Accept as initial seed
         currentSoh = instantaneousSoh;
@@ -493,6 +511,7 @@ public class SohEstimator {
         double confidenceWeight = 0.15 + (((Math.min(socDelta, 75.0) - 25.0) / 50.0) * 0.35);
 
         applyWeightedSoh(calibratedSoh, confidenceWeight);
+        rawCalibrationSoh = calibratedSoh;
         estimationMethod = METHOD_CALIBRATION;
         sohSource = "calibration";
 
@@ -512,6 +531,67 @@ public class SohEstimator {
         updateFromCalibration(energyEnteredBatteryKwh, socDelta, 25.0, true);
     }
 
+    // ==================== CAPACITY-AH BASED SOH ====================
+
+    /**
+     * SOTA Method 3: Capacity-Based SOH from BMS-reported Ah vs nominal Ah.
+     *
+     * Formula:
+     *   nominalCapacityAh = (batteryKwh × 1000) ÷ (cellCount × BYD_BLADE_REFERENCE_CELL_VOLTAGE)
+     *   soh% = (bodyworkBatteryCapacityAh ÷ nominalCapacityAh) × 100
+     *
+     * This compares the BMS's current full-charge capacity (Ah) against the factory
+     * nameplate capacity derived from the known pack kWh and cell configuration.
+     * High confidence — the BMS tracks this via coulomb counting over the pack's lifetime.
+     *
+     * @param bodyworkBatteryCapacityAh Current full-charge capacity reported by BMS (Ah)
+     * @param cellCount Number of series cells in the pack (derived from pack voltage)
+     */
+    private static final double BYD_BLADE_REFERENCE_CELL_VOLTAGE = 3.2; // LFP nominal voltage
+    private double lastCapacityAhReading = -1; // Dedup: skip if same reading
+
+    public void updateFromCapacityAh(double bodyworkBatteryCapacityAh, int cellCount) {
+        if (nominalCapacityKwh <= 0) {
+            logger.debug("Capacity-Ah SOH rejected: nominal capacity not yet detected");
+            return;
+        }
+        if (bodyworkBatteryCapacityAh <= 0 || cellCount <= 0) return;
+
+        // Skip if same reading as last time (avoid log spam + redundant EMA updates)
+        if (bodyworkBatteryCapacityAh == lastCapacityAhReading) return;
+        lastCapacityAhReading = bodyworkBatteryCapacityAh;
+
+        // Derive what the factory Ah should be from the known kWh pack size
+        double nominalCapacityAh = (nominalCapacityKwh * 1000.0)
+            / (cellCount * BYD_BLADE_REFERENCE_CELL_VOLTAGE);
+
+        // Sanity: nominal Ah should be in a reasonable range for BYD packs (50-350 Ah)
+        if (nominalCapacityAh < 50 || nominalCapacityAh > 350) {
+            logger.debug("Capacity-Ah SOH rejected: derived nominal " +
+                String.format("%.1f", nominalCapacityAh) + " Ah outside expected range");
+            return;
+        }
+
+        double sohFromAh = (bodyworkBatteryCapacityAh / nominalCapacityAh) * 100.0;
+
+        if (sohFromAh < 60.0 || sohFromAh > 110.0) {
+            logger.debug("Capacity-Ah SOH rejected: " + String.format("%.1f", sohFromAh) +
+                "% outside valid range 60-110");
+            return;
+        }
+
+        // High confidence weight — BMS-reported capacity is reliable
+        applyWeightedSoh(sohFromAh, 0.40);
+        rawCapacityAhSoh = sohFromAh;
+        sohSource = "capacity_ah";
+        estimationMethod = "capacity_ah";
+
+        logger.info("Capacity-Ah SOH: " + String.format("%.1f", sohFromAh) + "% " +
+            "(reported=" + String.format("%.1f", bodyworkBatteryCapacityAh) + " Ah, " +
+            "nominal=" + String.format("%.1f", nominalCapacityAh) + " Ah, " +
+            cellCount + "s cells)");
+    }
+
     // ==================== OEM SOH ====================
 
     /**
@@ -524,18 +604,21 @@ public class SohEstimator {
     public void updateFromOem(double oemSohPercent) {
         if (Double.isNaN(oemSohPercent)) return;
         // Accept only realistic SOH values (60-100%).
-        // BMS sentinels like 101, 110, or 255 indicate "data not ready" —
-        // reject them to prevent bogus OEM values from overriding estimation.
         if (oemSohPercent < 60 || oemSohPercent > 100) {
             logger.debug("Rejecting OEM SOH " + oemSohPercent + " — outside valid range 60-100");
             return;
         }
 
+        // Always track raw value for UI display
+        rawOemSoh = oemSohPercent;
+
+        // Apply via EMA (weight 0.70) instead of direct set — protects against
+        // models that return garbage in the valid range
         if (!"oem".equals(sohSource)) {
             logger.info("SOH source transitioning from " + sohSource + " to OEM: " +
                 String.format("%.1f", oemSohPercent) + "%");
         }
-        currentSoh = oemSohPercent;
+        applyWeightedSoh(oemSohPercent, 0.70);
         sohSource = "oem";
         persistEstimate();
     }
@@ -547,7 +630,31 @@ public class SohEstimator {
 
     // ==================== GETTERS ====================
 
-    public double getCurrentSoh() { return currentSoh; }
+    /**
+     * Returns the active SOH value based on preferred source mode.
+     * - "auto": returns the EMA-blended value (default)
+     * - "oem"/"capacity_ah"/"calibration"/"energy": returns that source's raw value
+     */
+    public double getCurrentSoh() {
+        if ("auto".equals(preferredSource)) {
+            return currentSoh;
+        }
+        // User pinned to a specific source — return its raw value
+        double raw = getRawForSource(preferredSource);
+        return raw > 0 ? raw : currentSoh;  // fallback to EMA if pinned source has no data
+    }
+
+    private double getRawForSource(String source) {
+        switch (source) {
+            case "oem": return rawOemSoh;
+            case "capacity_ah": return rawCapacityAhSoh;
+            case "calibration": return rawCalibrationSoh;
+            case "energy": return rawEnergySoh;
+            default: return -1;
+        }
+    }
+
+    public double getEmaSoh() { return currentSoh; }  // Always returns the blended EMA value
     public boolean hasEstimate() { return currentSoh > 0; }
 
     public double getEstimatedCapacityKwh() {
@@ -555,15 +662,128 @@ public class SohEstimator {
         return (currentSoh / 100.0) * nominalCapacityKwh;
     }
 
+    public int getSampleCount() { return sampleCount; }
+    public String getEstimationMethod() { return estimationMethod; }
+    public String getPreferredSource() { return preferredSource; }
+
+    /**
+     * Set the preferred SOH source mode.
+     * @param source "auto", "oem", "capacity_ah", "calibration", or "energy"
+     */
+    public void setPreferredSource(String source) {
+        if (source == null) source = "auto";
+        switch (source) {
+            case "auto":
+            case "oem":
+            case "capacity_ah":
+            case "calibration":
+            case "energy":
+                this.preferredSource = source;
+                persistEstimate();
+                logger.info("SOH preferred source set to: " + source);
+                break;
+            default:
+                logger.warn("Invalid SOH source: " + source + " — keeping " + preferredSource);
+        }
+    }
+
+    // ==================== RESET ====================
+
+    /**
+     * Reset all SOH estimation state. Clears persisted data and forces re-estimation
+     * from scratch on next available data source. Use when:
+     * - Battery was replaced
+     * - User suspects incorrect SOH reading
+     * - Debugging estimation issues
+     */
+    public void reset() {
+        currentSoh = -1;
+        sampleCount = 0;
+        sohSource = "instantaneous";
+        estimationMethod = METHOD_INSTANTANEOUS;
+        rawOemSoh = -1;
+        rawCapacityAhSoh = -1;
+        rawCalibrationSoh = -1;
+        rawEnergySoh = -1;
+        // Keep preferredSource — user's choice survives reset
+
+        // Delete persisted file
+        File sohFile = new File(SOH_FILE);
+        if (sohFile.exists()) {
+            sohFile.delete();
+        }
+
+        logger.info("SOH estimation RESET — all data cleared. Will re-seed from next available source.");
+    }
+
+    /**
+     * Get full SOH status as JSON for API/UI consumption.
+     * Includes raw values from all sources + the active computed value + mode.
+     */
+    public org.json.JSONObject getStatus() {
+        org.json.JSONObject status = new org.json.JSONObject();
+        try {
+            // Active/computed value
+            double activeSoh = getCurrentSoh();
+            status.put("soh", activeSoh > 0 ? Math.round(activeSoh * 10) / 10.0 : -1);
+            status.put("emaSoh", currentSoh > 0 ? Math.round(currentSoh * 10) / 10.0 : -1);
+            status.put("source", sohSource);
+            status.put("method", estimationMethod);
+            status.put("sampleCount", sampleCount);
+            status.put("nominalCapacityKwh", nominalCapacityKwh);
+            status.put("estimatedCapacityKwh", getEstimatedCapacityKwh() > 0
+                ? Math.round(getEstimatedCapacityKwh() * 10) / 10.0 : -1);
+            status.put("hasEstimate", hasEstimate());
+            status.put("preferredSource", preferredSource);
+
+            // Raw values from each source
+            org.json.JSONObject raw = new org.json.JSONObject();
+            raw.put("oem", rawOemSoh > 0 ? Math.round(rawOemSoh * 10) / 10.0 : org.json.JSONObject.NULL);
+            raw.put("capacity_ah", rawCapacityAhSoh > 0 ? Math.round(rawCapacityAhSoh * 10) / 10.0 : org.json.JSONObject.NULL);
+            raw.put("calibration", rawCalibrationSoh > 0 ? Math.round(rawCalibrationSoh * 10) / 10.0 : org.json.JSONObject.NULL);
+            raw.put("energy", rawEnergySoh > 0 ? Math.round(rawEnergySoh * 10) / 10.0 : org.json.JSONObject.NULL);
+            status.put("rawValues", raw);
+
+            // Last updated from file
+            File sohFile = new File(SOH_FILE);
+            if (sohFile.exists()) {
+                Properties props = new Properties();
+                try (FileInputStream fis = new FileInputStream(sohFile)) {
+                    props.load(fis);
+                }
+                String lastUpdated = props.getProperty(PROP_LAST_UPDATED);
+                if (lastUpdated != null) {
+                    status.put("lastUpdated", Long.parseLong(lastUpdated));
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to build SOH status: " + e.getMessage());
+        }
+        return status;
+    }
+
     // ==================== PERSISTENCE ====================
 
     private void persistEstimate() {
+        // Don't persist invalid/sentinel values — this prevents the -1.0 SOH bug
+        // where reset() sets currentSoh=-1, then a subsequent call to persistEstimate()
+        // (e.g., from setNominalCapacityKwh) writes -1 to disk, causing "Discarding
+        // persisted SOH -1.0" warnings on every startup.
+        if (currentSoh <= 0 && nominalCapacityKwh <= 0) {
+            // Nothing useful to persist — skip
+            return;
+        }
+        
         try {
             Properties props = new Properties();
-            props.setProperty(PROP_SOH_PERCENT, String.valueOf(currentSoh));
+            // Only write SOH if it's a valid estimate
+            if (currentSoh > 0 && currentSoh <= 110) {
+                props.setProperty(PROP_SOH_PERCENT, String.valueOf(currentSoh));
+            }
             props.setProperty(PROP_ESTIMATION_METHOD, estimationMethod);
             props.setProperty(PROP_LAST_UPDATED, String.valueOf(System.currentTimeMillis()));
             props.setProperty(PROP_SAMPLE_COUNT, String.valueOf(sampleCount));
+            props.setProperty(PROP_PREFERRED_SOURCE, preferredSource);
             if (nominalCapacityKwh > 0) {
                 props.setProperty(PROP_NOMINAL_CAPACITY, String.valueOf(nominalCapacityKwh));
             }
@@ -571,6 +791,8 @@ public class SohEstimator {
             try (FileOutputStream fos = new FileOutputStream(SOH_FILE)) {
                 props.store(fos, "ABRP SOH Estimate");
             }
+            // Make world-readable so the app process (UID 10xxx) can read it
+            new File(SOH_FILE).setReadable(true, false);
         } catch (Exception e) {
             logger.error("Failed to persist SOH: " + e.getMessage());
         }
@@ -594,15 +816,19 @@ public class SohEstimator {
             case 176: return 56.4;    // Qin Plus EV
             case 180: return 91.3;    // Sealion 7
             case 110: return 43.2;    // Atto 1 Premium / Atto 2
-            case 50:  return 18.3;    // Sealion 6 DM-i (PHEV)
-            case 56:  return 18.3;    // Sealion 6 DM-i (PHEV) — some units report 56 Ah
+            case 50:  return 18.3;    // Sealion 6 DM-i (PHEV) small battery
+            case 56:  return 18.3;    // Sealion 6 DM-i (PHEV) — confirmed BMS returns 56 Ah
+            case 72:  return 26.6;    // Sealion 6 DM-i (PHEV) large battery
+            case 75:  return 26.6;    // Sealion 6 DM-i (PHEV) large battery — alternate
+            case 79:  return 26.6;    // Sealion 6 DM-i (PHEV) large battery — confirmed from BMS
             default:  return 0;       // Unknown — don't guess
         }
     }
 
     private static double matchNearestCapacity(double estimated) {
         double[] known = {
-            18.3,   // Sealion 6 DM-i (PHEV)
+            18.3,   // Sealion 6 DM-i (PHEV) small battery
+            26.6,   // Sealion 6 DM-i (PHEV) large battery
             30.08,  // Seagull 30 / Atto 1 Essential
             38.0,   // Seagull 38
             43.2,   // Atto 1 Premium
@@ -652,6 +878,7 @@ public class SohEstimator {
      */
     private static double mapCellCountToCapacity(int cellCount) {
         // Allow ±3 cells tolerance (voltage measurement noise, SOC-dependent cell voltage)
+        if (cellCount >= 80 && cellCount <= 86) return 26.6;     // Sealion 6 DM-i large (83s ~266V)
         if (cellCount >= 93 && cellCount <= 99) return 30.08;    // Seagull 30 / Atto 1
         if (cellCount >= 101 && cellCount <= 107) return 44.9;   // Dolphin Standard
         if (cellCount >= 117 && cellCount <= 123) return 60.48;  // Atto 3 / Dolphin Extended
@@ -668,7 +895,7 @@ public class SohEstimator {
     private static double mapCarTypeToCapacity(String carType) {
         String ct = carType.toUpperCase();
         // Order matters: check more specific patterns first
-        if (ct.contains("SEALION 6") || ct.contains("SEALION6") || ct.contains("SEA LION 6")) return 18.3;
+        if (ct.contains("SEALION 6") || ct.contains("SEALION6") || ct.contains("SEA LION 6")) return 26.6;
         if (ct.contains("SEALION") || ct.contains("SEA LION")) return 91.3;  // Sealion 7
         if (ct.contains("SEAL U") || ct.contains("SEALU") || ct.contains("SEAL-U") || ct.contains("S7")) return 71.8;
         if (ct.contains("SEAL")) return 82.56;

@@ -543,6 +543,13 @@
                     </svg>
                     <span>Trips</span>
                 </a>
+                <a href="vehicle-control.html" class="nav-link">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <span>Vehicle Control</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-card">
@@ -809,6 +816,77 @@
                         <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span>Average</div>
                         <div class="legend-item"><span class="legend-dot" style="background:rgba(14,165,233,0.3);"></span>Charging</div>
                     </div>
+                </div>
+
+                <!-- SOH Detail Card -->
+                <div class="chart-card" id="sohDetailCard" style="border: 1px solid rgba(168, 85, 247, 0.3); background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(168, 85, 247, 0.05) 100%);">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;margin-right:8px;stroke:#a855f7;">
+                                <rect x="6" y="7" width="12" height="10" rx="1"/><path d="M6 10H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2"/><path d="M18 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2"/>
+                                <path d="M9 12.5L11 10.5 12 12 13 10.5 15 12.5"/>
+                            </svg>
+                            State of Health (SOH)
+                        </div>
+                        <button class="btn btn-danger" id="btnResetSoh" onclick="BYD.performance.resetSoh()" style="font-size:11px;padding:4px 10px;border-radius:6px;">Reset</button>
+                    </div>
+
+                    <!-- Active SOH + Source Selector -->
+                    <div style="display:flex;align-items:center;gap:16px;margin:16px 0;">
+                        <div style="text-align:center;min-width:100px;">
+                            <div id="sohDetailPercent" style="font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:#a855f7;line-height:1;">--%</div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Active SOH</div>
+                            <div id="sohEmaValue" style="font-size:11px;color:var(--text-muted);margin-top:2px;">EMA: --%</div>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">SOH Source (used by ABRP, Trips, MQTT, Range)</div>
+                            <div class="soc-time-selector" id="sohSourceSelector">
+                                <button class="time-btn active" data-source="auto" onclick="BYD.performance.setSohSource('auto')">Auto</button>
+                                <button class="time-btn" data-source="oem" onclick="BYD.performance.setSohSource('oem')">OEM</button>
+                                <button class="time-btn" data-source="capacity_ah" onclick="BYD.performance.setSohSource('capacity_ah')">Cap-Ah</button>
+                                <button class="time-btn" data-source="calibration" onclick="BYD.performance.setSohSource('calibration')">Calib</button>
+                                <button class="time-btn" data-source="energy" onclick="BYD.performance.setSohSource('energy')">Energy</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Raw Values from All Sources -->
+                    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin:12px 0;">
+                        <div style="background:var(--bg-elevated);padding:10px 8px;border-radius:8px;text-align:center;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">OEM</div>
+                            <div id="sohRawOem" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                        <div style="background:var(--bg-elevated);padding:10px 8px;border-radius:8px;text-align:center;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Cap-Ah</div>
+                            <div id="sohRawCapAh" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                        <div style="background:var(--bg-elevated);padding:10px 8px;border-radius:8px;text-align:center;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Calib</div>
+                            <div id="sohRawCalib" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                        <div style="background:var(--bg-elevated);padding:10px 8px;border-radius:8px;text-align:center;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Energy</div>
+                            <div id="sohRawEnergy" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Metadata row -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                        <div style="background:var(--bg-elevated);padding:8px 10px;border-radius:6px;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Nominal</div>
+                            <div id="sohDetailNominal" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text-primary);margin-top:2px;">-- kWh</div>
+                        </div>
+                        <div style="background:var(--bg-elevated);padding:8px 10px;border-radius:6px;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Samples</div>
+                            <div id="sohDetailSamples" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                        <div style="background:var(--bg-elevated);padding:8px 10px;border-radius:6px;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Updated</div>
+                            <div id="sohDetailUpdated" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--text-primary);margin-top:2px;">--</div>
+                        </div>
+                    </div>
+
+                    <div id="sohDetailHint" style="padding:8px 12px;background:var(--bg-elevated);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-top:10px;display:none;"></div>
                 </div>
 
                 <!-- Quick Stats Grid -->

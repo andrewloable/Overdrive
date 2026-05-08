@@ -195,8 +195,24 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 ## Acknowledgments
 
 - **Native Bangcle Crypto Engine** — Full Java port of BYD's proprietary white-box AES encryption, based on the reverse engineering work by [Niek/BYD-re](https://github.com/Niek/BYD-re) and [jkaberg/pyBYD](https://github.com/jkaberg/pyBYD). Zero new dependencies — uses the existing OkHttp stack and Java crypto libraries.
+- **3D BYD Vehicle Models** — Vehicle Control page uses base models from [ddiaz-design's BYD collection on Sketchfab](https://sketchfab.com/ddiaz-design/collections/byd-base-models-5bf92ab5f2be4ff6be5c3ac49f7099f3).
 
 ## Changelog
+
+### v12 — May 2026: Vehicle Control, ROI Scheduling & Cloud Sync
+
+**✨ New Features**
+- **Vehicle Control Page** — Interactive dashboard featuring a 3D BYD Seal model with customizable body color, real-time remote controls (lock/unlock, trunk, windows, AC, seat heating/cooling via BYD Cloud + local HAL), live state sync with animated indicators, and an experimental 3D surround view using fisheye camera projection (might not work or lag)
+- **Surveillance ROI & Schedule Selection** — Define regions of interest and time-based schedules for surveillance activation, reducing unnecessary recordings and false triggers
+- **MQTT Listener Updates from BYD Cloud** — Real-time push notifications from BYD Cloud via MQTT subscription, enabling state sync
+
+**⚡ Optimizations & Fixes**
+- **Fixed Wrong Camera Bug** — Resolved camera feed mismatch issue; added manual camera ID selection option for vehicles with non-standard configurations
+- **Improved Surveillance Accuracy** — Reduced false positives through refined motion detection and AI gating logic
+- **Improved SOH Calculation** — Enhanced State of Health estimation logic with option to reset SOH for recalibration after battery service or firmware updates
+- **Fixed No Video Signal in OEM Dashcam** — Resolved issue where the OEM dashcam feed would show no signal under certain initialization conditions
+
+---
 
 ### v11 — May 2026: BYD Cloud Deterrent, Sentry Mode Alarm & Pipeline Fixes
 

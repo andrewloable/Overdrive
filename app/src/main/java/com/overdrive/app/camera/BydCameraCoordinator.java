@@ -138,13 +138,10 @@ public class BydCameraCoordinator {
                 logger.warn("Reflection proxy setup failed: " + e.getMessage());
             }
 
-            // Run API discovery FIRST to log all available methods
-            // This runs before registerCameraUser so we always get the method dump
-            // even if registration fails unexpectedly
-            discoverCameraServiceApi();
-
-            // Try to register as camera user (primary mechanism)
-            registerCameraUser();
+            // API discovery and camera user registration DISABLED.
+            // We don't participate in IBYDCameraService arbitration.
+            // discoverCameraServiceApi();
+            // registerCameraUser();
 
         } catch (ClassNotFoundException e) {
             logger.info("IBYDCameraService not found — camera arbitration unavailable");
@@ -550,64 +547,24 @@ public class BydCameraCoordinator {
 
     /**
      * Notify IBYDCameraService before opening camera.
-     * This tells the service we're about to use the camera, allowing it to
-     * arbitrate with other apps (reverse camera, dashcam, AVM parking view).
+     * 
+     * DISABLED — we don't register with the service, so preOpenCamera notifications
+     * would trigger the yield protocol on the native DVR. We open silently.
      */
     public void notifyPreOpenCamera() {
-        if (cameraUser == null) return;
-
-        if (typedServiceProxy != null) {
-            try {
-                typedServiceProxy.preOpenCamera(cameraUser);
-                logger.info("preOpenCamera notified via typed AIDL");
-                return;
-            } catch (Throwable e) {
-                logger.warn("preOpenCamera via typed proxy failed: " + e.getMessage());
-            }
-        }
-
-        if (reflectionServiceProxy != null) {
-            try {
-                Method m = reflectionServiceProxy.getClass()
-                    .getDeclaredMethod("preOpenCamera", IBYDCameraUser.class);
-                m.setAccessible(true);
-                m.invoke(reflectionServiceProxy, cameraUser);
-                logger.info("preOpenCamera notified via reflection");
-            } catch (Exception e) {
-                logger.warn("preOpenCamera via reflection failed: " + e.getMessage());
-            }
-        }
+        // Disabled — not participating in IBYDCameraService arbitration.
+        // Opening camera directly without notifying the service.
     }
 
     /**
      * Notify IBYDCameraService after closing camera.
-     * This tells the service we've released the camera, allowing other apps
-     * to reclaim it without conflict.
+     * 
+     * DISABLED — we don't register with the service, so posCloseCamera notifications
+     * are not needed. We close silently.
      */
     public void notifyPosCloseCamera() {
-        if (cameraUser == null) return;
-
-        if (typedServiceProxy != null) {
-            try {
-                typedServiceProxy.posCloseCamera(cameraUser);
-                logger.info("posCloseCamera notified via typed AIDL");
-                return;
-            } catch (Throwable e) {
-                logger.warn("posCloseCamera via typed proxy failed: " + e.getMessage());
-            }
-        }
-
-        if (reflectionServiceProxy != null) {
-            try {
-                Method m = reflectionServiceProxy.getClass()
-                    .getDeclaredMethod("posCloseCamera", IBYDCameraUser.class);
-                m.setAccessible(true);
-                m.invoke(reflectionServiceProxy, cameraUser);
-                logger.info("posCloseCamera notified via reflection");
-            } catch (Exception e) {
-                logger.warn("posCloseCamera via reflection failed: " + e.getMessage());
-            }
-        }
+        // Disabled — not participating in IBYDCameraService arbitration.
+        // Closing camera directly without notifying the service.
     }
 
     public static void closeCamera(Object cameraObj, int channelId) {
@@ -649,7 +606,8 @@ public class BydCameraCoordinator {
     // ==================== Lifecycle ====================
 
     public void unregister() {
-        unregisterCameraUser();
+        // Camera user unregistration DISABLED — we never register, so nothing to unregister.
+        // unregisterCameraUser();
         serviceAvailable = false;
         typedServiceProxy = null;
         reflectionServiceProxy = null;

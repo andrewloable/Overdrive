@@ -47,6 +47,7 @@ public class BydDataCollector {
     private Object radarDevice;
     private Object powerDevice;
     private Object settingDevice;
+    private Object multimediaDevice;
 
     // Unit conversion: BYD APIs return values in the user's configured unit.
     // If the user set miles on the instrument cluster, mileage/speed/range come back in miles/mph.
@@ -108,6 +109,7 @@ public class BydDataCollector {
         energyDevice = initDevice("android.hardware.bydauto.energy.BYDAutoEnergyDevice", "Energy");
         radarDevice = initDevice("android.hardware.bydauto.radar.BYDAutoRadarDevice", "Radar");
         settingDevice = initDevice("android.hardware.bydauto.setting.BYDAutoSettingDevice", "Setting");
+        multimediaDevice = initMultimediaDevice();
 
         logger.info("Devices available: " + availableDevices.size() + "/" + 
             (availableDevices.size() + unavailableDevices.size()));
@@ -230,6 +232,95 @@ public class BydDataCollector {
         return device;
     }
 
+    /**
+     * Initialize the multimedia device with multiple context strategies.
+     * BYDAutoMultimediaDevice does NOT extend AbsBYDAutoDevice — it's a separate class
+     * that connects to a binder service and may require a specific package identity.
+     */
+    private Object initMultimediaDevice() {
+        String className = "android.hardware.bydauto.multimedia.BYDAutoMultimediaDevice";
+
+        // Strategy 1: Use our normal context (works for all other devices)
+        Object device = BydDeviceHelper.getDevice(className, context);
+        if (device != null) {
+            availableDevices.add("Multimedia");
+            return device;
+        }
+
+        // Strategy 2: Try with a proper app context for com.overdrive.app
+        // The daemon runs via app_process with a synthetic context. But the actual app
+        // is installed — createPackageContext gives us a real app context with proper
+        // service bindings that the multimedia device might need.
+        try {
+            android.content.Context appPkgCtx = context.createPackageContext(
+                "com.overdrive.app",
+                android.content.Context.CONTEXT_INCLUDE_CODE | android.content.Context.CONTEXT_IGNORE_SECURITY);
+            if (appPkgCtx != null) {
+                device = BydDeviceHelper.getDevice(className, appPkgCtx);
+                if (device != null) {
+                    logger.info("Multimedia device OK via com.overdrive.app package context");
+                    availableDevices.add("Multimedia");
+                    return device;
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("Multimedia strategy 2 (overdrive package context) failed: " + e.getMessage());
+        }
+
+        // Strategy 3: Try with system context directly (with timeout — can deadlock)
+        try {
+            final Object[] result = new Object[1];
+            Thread t = new Thread(() -> {
+                try {
+                    Class<?> atClass = Class.forName("android.app.ActivityThread");
+                    java.lang.reflect.Method currentAt = atClass.getMethod("currentActivityThread");
+                    Object at = currentAt.invoke(null);
+                    if (at != null) {
+                        java.lang.reflect.Method getSystemContext = atClass.getMethod("getSystemContext");
+                        android.content.Context sysCtx = (android.content.Context) getSystemContext.invoke(at);
+                        if (sysCtx != null) {
+                            result[0] = BydDeviceHelper.getDevice(className, sysCtx);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("Multimedia strategy 3 inner: " + e.getMessage());
+                }
+            }, "MultimediaInit-SysCtx");
+            t.setDaemon(true);
+            t.start();
+            t.join(3000); // 3s timeout — abort if it hangs
+            if (t.isAlive()) {
+                logger.warn("Multimedia strategy 3 timed out (3s) — skipping to avoid freeze");
+                t.interrupt();
+            } else if (result[0] != null) {
+                device = result[0];
+                logger.info("Multimedia device OK via system context");
+                availableDevices.add("Multimedia");
+                return device;
+            }
+        } catch (Exception e) {
+            logger.debug("Multimedia strategy 3 (system context) failed: " + e.getMessage());
+        }
+
+        // Strategy 4: Try with getApplicationContext() directly
+        try {
+            android.content.Context appCtx = context.getApplicationContext();
+            if (appCtx != null && appCtx != context) {
+                device = BydDeviceHelper.getDevice(className, appCtx);
+                if (device != null) {
+                    logger.info("Multimedia device OK via getApplicationContext()");
+                    availableDevices.add("Multimedia");
+                    return device;
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("Multimedia strategy 4 (app context) failed: " + e.getMessage());
+        }
+
+        unavailableDevices.add("Multimedia");
+        return null;
+    }
+
     // ==================== DATA COLLECTION ====================
 
     // Core data polled every 5s. Display-only data updated via listeners only (no polling).
@@ -322,6 +413,9 @@ public class BydDataCollector {
         collectStatisticExtended(b);   // SOH, driving time, key battery
         collectInstrumentExtended(b);  // cabin temp, tyre temps, trip data, consumption
 
+        // Cloud data merge (when toggle enabled and data is fresh)
+        mergeCloudData(b);
+
         snapshot.set(b.build());
     }
 
@@ -364,6 +458,9 @@ public class BydDataCollector {
         collectChargingExtended(b);    // charging rest time
         collectBodyworkExtended(b);    // steering, auto system, 12V level, sunroof, sunshade
         collectEngineExtended(b);      // coolant, oil, engine code
+
+        // Cloud data merge (when toggle enabled and data is fresh)
+        mergeCloudData(b);
 
         snapshot.set(b.build());
         lastCoreCollectTime = System.currentTimeMillis();
@@ -469,6 +566,49 @@ public class BydDataCollector {
             if (cap instanceof Number) {
                 double capVal = ((Number) cap).doubleValue();
                 if (capVal > 0) b.capacityAh(capVal);
+
+                // SOTA: Feed capacity-Ah SOH estimation.
+                // Only valid if capVal looks like an Ah rating (50-350 range) and we have pack voltage.
+                // If it's in 0.1 kWh units (older models), it'll be <120 and change with SOC — skip those.
+                if (capVal >= 50 && capVal <= 350) {
+                    try {
+                        com.overdrive.app.abrp.SohEstimator sohEst =
+                            com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+                        if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
+                            // Derive cell count from pack voltage (same logic as autoDetectFromPackVoltage)
+                            BydVehicleData currentVd = getData();
+                            int cellCount = 0;
+                            if (currentVd != null && !Double.isNaN(currentVd.hvPackVoltage) && currentVd.hvPackVoltage > 200) {
+                                double cellV = 3.2;
+                                if (!Double.isNaN(currentVd.highCellVoltage) && currentVd.highCellVoltage > 2.5 && currentVd.highCellVoltage < 3.7) {
+                                    cellV = currentVd.highCellVoltage;
+                                } else if (!Double.isNaN(currentVd.lowCellVoltage) && currentVd.lowCellVoltage > 2.5 && currentVd.lowCellVoltage < 3.7) {
+                                    cellV = currentVd.lowCellVoltage;
+                                }
+                                cellCount = (int) Math.round(currentVd.hvPackVoltage / cellV);
+                            }
+                            
+                            // Fallback: derive cell count from nominal capacity and Ah rating.
+                            // On PHEVs, hvPackVoltage may not be reported but we know the pack
+                            // size from BMS capacity detection. Formula:
+                            //   nominalKwh = cellCount × cellVoltage × Ah / 1000
+                            //   cellCount = nominalKwh × 1000 / (Ah × cellVoltage)
+                            if (cellCount < 90 || cellCount > 200) {
+                                double cellV = 3.2;
+                                if (currentVd != null && !Double.isNaN(currentVd.highCellVoltage) && currentVd.highCellVoltage > 2.5 && currentVd.highCellVoltage < 3.7) {
+                                    cellV = currentVd.highCellVoltage;
+                                }
+                                cellCount = (int) Math.round(sohEst.getNominalCapacityKwh() * 1000.0 / (capVal * cellV));
+                            }
+                            
+                            if (cellCount >= 90 && cellCount <= 200) {
+                                sohEst.updateFromCapacityAh(capVal, cellCount);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Capacity-Ah SOH update failed: " + e.getMessage());
+                    }
+                }
 
                 // Fallback for older models where getBatteryPowerHEV() returned negative:
                 // getBatteryCapacity() / 10.0 gives remaining kWh
@@ -848,14 +988,23 @@ public class BydDataCollector {
                 }
             }
 
-            // Clear stale charging power when not actively charging
-            if (b.chargingState != BydVehicleData.UNAVAILABLE && b.chargingState != 1) {
+            // Clear stale charging power when not actively charging AND gun is disconnected.
+            // Previously this cleared power whenever chargingState != 1, but on some BYD models
+            // the BMS reports state 0 (READY) or 15 (IDLE) for several seconds after the AC gun
+            // is plugged in, even though power is already flowing. Only clear if we're confident
+            // the car is truly not charging: BMS says not charging AND gun is disconnected.
+            boolean bmsNotCharging = b.chargingState != BydVehicleData.UNAVAILABLE && b.chargingState != 1;
+            boolean gunDisconnected = b.chargingGunState == 1 || b.chargingGunState == BydVehicleData.UNAVAILABLE;
+            if (bmsNotCharging && gunDisconnected) {
                 b.chargingPowerKw(Double.NaN);
                 b.externalChargingPowerKw(Double.NaN);
             }
 
-            // Charging power via named getter — only accept if charging
-            if (b.chargingState == 1) {
+            // Charging power via named getter — accept if BMS says charging OR gun is connected
+            // (covers the BMS lag scenario during AC charging start)
+            boolean mayBeCharging = b.chargingState == 1
+                    || b.chargingGunState == 2 || b.chargingGunState == 3;
+            if (mayBeCharging) {
                 Object power = BydDeviceHelper.callGetter(chargingDevice, "getChargingPower");
                 if (power instanceof Number) {
                     double kw = ((Number) power).doubleValue();
@@ -954,8 +1103,12 @@ public class BydDataCollector {
                 if (t >= -50 && t <= 60) b.outsideTempC(t);
             }
 
-            // Named getter for external charging power — only accept if charging
-            if (b.chargingState == 1) {
+            // Named getter for external charging power — accept if BMS says charging OR gun is connected.
+            // On some BYD models, the BMS lags behind the actual charger state by several seconds.
+            // The gun state (2=AC, 3=DC) is a reliable indicator that a charger is physically connected.
+            boolean mayBeCharging = b.chargingState == 1
+                    || b.chargingGunState == 2 || b.chargingGunState == 3;
+            if (mayBeCharging) {
                 Object extPower = BydDeviceHelper.callGetter(instrumentDevice, "getExternalChargingPower");
                 if (extPower instanceof Number) {
                     double p = ((Number) extPower).doubleValue();
@@ -965,8 +1118,8 @@ public class BydDataCollector {
                 }
             }
 
-            // Charging power via instrument feature ID (842006552) — only accept if charging
-            if (b.chargingState == 1 && (Double.isNaN(b.chargingPowerKw) || b.chargingPowerKw == 0)) {
+            // Charging power via instrument feature ID (842006552) — accept if may be charging
+            if (mayBeCharging && (Double.isNaN(b.chargingPowerKw) || b.chargingPowerKw == 0)) {
                 try {
                     Object val = BydDeviceHelper.callGet(instrumentDevice,
                             BydFeatureIds.INSTRUMENT_CHARGING_CHARGE_POWER_DD, Double.class);
@@ -981,8 +1134,8 @@ public class BydDataCollector {
                 }
             }
 
-            // Charging percent via instrument feature ID (842006544) — only when charging
-            if (b.chargingState == 1 && b.chargingPercent == BydVehicleData.UNAVAILABLE) {
+            // Charging percent via instrument feature ID (842006544) — accept if may be charging
+            if (mayBeCharging && b.chargingPercent == BydVehicleData.UNAVAILABLE) {
                 try {
                     Object val = BydDeviceHelper.callGet(instrumentDevice,
                             BydFeatureIds.INSTRUMENT_CHARGING_CHARGE_PERCENT_DD, Integer.class);
@@ -1555,6 +1708,66 @@ public class BydDataCollector {
         }
     }
 
+    // ==================== CLOUD DATA MERGE ====================
+
+    /**
+     * Merge cloud data as FALLBACK — only fills fields where SDK returned no value.
+     * SDK is always primary (real-time 5s poll). Cloud fills gaps only.
+     */
+    private void mergeCloudData(BydVehicleData.Builder b) {
+        try {
+            com.overdrive.app.byd.cloud.BydCloudConfig config =
+                    com.overdrive.app.byd.cloud.BydCloudConfig.fromUnifiedConfig();
+            if (!config.cloudDataMerge) return;
+
+            com.overdrive.app.byd.cloud.BydCloudDataProvider provider =
+                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+            if (!provider.isTelemetryFresh()) return;
+
+            com.overdrive.app.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
+            if (cs == null) return;
+
+            // SOC — only if SDK didn't provide it
+            if (Double.isNaN(b.socPercent) && cs.hasSoc()) b.socPercent(cs.socPercent);
+
+            // EV range — only if SDK returned UNAVAILABLE
+            if (b.elecRangeKm == BydVehicleData.UNAVAILABLE && cs.hasElecRange()) b.elecRangeKm(cs.elecRangeKm);
+
+            // Fuel range / percent (PHEV) — only if SDK has nothing
+            if (b.fuelRangeKm == BydVehicleData.UNAVAILABLE && cs.hasFuelRange()) b.fuelRangeKm(cs.fuelRangeKm);
+            if (Double.isNaN(b.fuelPercent) && cs.hasFuelPercent()) b.fuelPercent(cs.fuelPercent);
+
+            // Charging state — only if SDK returned UNAVAILABLE
+            if (b.chargingState == BydVehicleData.UNAVAILABLE && cs.hasChargingState()) {
+                int sdkState = cs.getChargingStateAsSdk();
+                if (sdkState >= 0) b.chargingState(sdkState);
+            }
+
+            // Charge ETA — only if SDK has nothing
+            if (b.chargingRestTimeHours == BydVehicleData.UNAVAILABLE && cs.hasRemainingHours())
+                b.chargingRestTimeHours(cs.remainingHours);
+            if (b.chargingRestTimeMinutes == BydVehicleData.UNAVAILABLE && cs.hasRemainingMinutes())
+                b.chargingRestTimeMinutes(cs.remainingMinutes);
+
+            // Temperatures — only if SDK returned NaN
+            if (Double.isNaN(b.insideTempC) && cs.hasInsideTemp()) b.insideTempC(cs.insideTempC);
+            if (Double.isNaN(b.outsideTempC) && cs.hasOutsideTemp()) b.outsideTempC(cs.outsideTempC);
+
+            // Odometer — only if SDK returned UNAVAILABLE
+            if (b.totalMileageKm == BydVehicleData.UNAVAILABLE && cs.hasTotalMileage())
+                b.totalMileageKm(cs.totalMileageKm);
+
+            // Air quality — only if SDK returned UNAVAILABLE
+            if (b.pm25Inside == BydVehicleData.UNAVAILABLE && cs.hasPm25Inside())
+                b.pm25Inside((int) cs.pm25Inside);
+            if (b.pm25Outside == BydVehicleData.UNAVAILABLE && cs.hasPm25Outside())
+                b.pm25Outside((int) cs.pm25Outside);
+
+        } catch (Exception e) {
+            logger.debug("Cloud data merge error: " + e.getMessage());
+        }
+    }
+
     // ==================== LISTENER REGISTRATION ====================
 
     private void registerAllListeners() {
@@ -1800,6 +2013,22 @@ public class BydDataCollector {
             } catch (Exception e) { /* ignore */ }
             return;
         }
+        // Real-time BMS state change — critical for detecting AC charging start/stop promptly
+        if ("onBatteryManagementDeviceStateChanged".equals(method) && args != null && args.length > 0) {
+            try {
+                int state = ((Number) args[0]).intValue();
+                if (state >= 0 && state <= 15) {
+                    BydVehicleData current = snapshot.get();
+                    if (current != null && current.chargingState != state) {
+                        snapshot.set(current.toBuilder().chargingState(state).build());
+                        logger.info("BMS state changed: " + state + " (" +
+                                (state == 0 ? "READY" : state == 1 ? "CHARGING" : state == 2 ? "FINISHED" :
+                                 state == 3 ? "DISCHARGING" : state == 15 ? "IDLE" : "OTHER") + ")");
+                    }
+                }
+            } catch (Exception e) { /* ignore */ }
+            return;
+        }
         // Handle the new-style BYDAutoEvent callbacks
         if ("onDataEventChanged".equals(method) && args != null && args.length >= 2) {
             try {
@@ -1808,13 +2037,14 @@ public class BydDataCollector {
                 double dVal = BydDeviceHelper.getDoubleValue(eventValue);
                 
                 // If this looks like a charging power value (reasonable kW range)
-                // Only accept if the car is actually charging — phantom 0.1 kW values
-                // come from the CAN bus even when the charger is unplugged.
+                // Accept if the car is charging OR the gun is connected (covers BMS lag).
+                // Phantom 0.1 kW readings are filtered by the > 0.1 threshold.
                 if (!Double.isNaN(dVal) && Math.abs(dVal) > 0.1 && Math.abs(dVal) < 350) {
                     BydVehicleData current = snapshot.get();
                     if (current != null) {
-                        boolean isCharging = current.chargingState == 1;  // CHARGING_BATTERY_STATE_CHARGING
-                        if (isCharging) {
+                        boolean mayBeCharging = current.chargingState == 1
+                                || current.chargingGunState == 2 || current.chargingGunState == 3;
+                        if (mayBeCharging) {
                             snapshot.set(current.toBuilder().chargingPowerKw(dVal).build());
                             long now = System.currentTimeMillis();
                             if (now - lastChargingPowerLogTime > 30_000) {
@@ -1835,7 +2065,11 @@ public class BydDataCollector {
                     BydVehicleData current = snapshot.get();
                     if (current != null) {
                         snapshot.set(current.toBuilder().chargingPowerKw(power).build());
-                        logger.info("Charging power via typed callback: " + power + " kW");
+                        long now = System.currentTimeMillis();
+                        if (now - lastChargingPowerLogTime > 30_000) {
+                            lastChargingPowerLogTime = now;
+                            logger.info("Charging power via typed callback: " + power + " kW");
+                        }
                     }
                 }
             } catch (Exception e) { /* ignore */ }
@@ -2131,45 +2365,155 @@ public class BydDataCollector {
     // --- Tailgate ---
 
     public boolean openTailgate() {
-        try {
-            // Primary: BACK_DOOR_ACTUATOR_COMMAND
-            if (BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_ACTUATOR_COMMAND, 1)) {
-                return true;
+        // Method 1: SettingDevice.voiceCtlBackDoor(1) — official BYD AutoCommander method
+        if (settingDevice != null) {
+            try {
+                Object result = BydDeviceHelper.callGetter(settingDevice, "voiceCtlBackDoor", 1);
+                logger.info("openTailgate voiceCtlBackDoor(1) result: " + result);
+                if (result == null || (result instanceof Integer && ((Integer) result).intValue() == 0)) {
+                    return true;
+                }
+            } catch (Exception e) {
+                logger.debug("openTailgate voiceCtlBackDoor failed: " + e.getMessage());
             }
-            // Fallback: BACK_DOOR_TRIGGER_ATOM
+        }
+        // Method 2: Bodywork BACK_DOOR_TRIGGER
+        try {
             return BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_TRIGGER, 1);
         } catch (Exception e) {
-            logger.debug("openTailgate failed: " + e.getMessage());
+            logger.debug("openTailgate BACK_DOOR_TRIGGER failed: " + e.getMessage());
             return false;
         }
     }
 
     public boolean closeTailgate() {
-        try {
-            // Primary: BACK_DOOR_ACTUATOR_COMMAND
-            if (BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_ACTUATOR_COMMAND, 2)) {
-                return true;
+        // SOTA FIX: Commander app uses value 3 for close via SETTING_VOICE_CTRL_BACK_DOOR_SET
+        // Values: 1=open, 2=stop, 3=close (confirmed from AutoCommander decompilation)
+        
+        // Method 1: SettingDevice sendSetCommand with value 3 (close)
+        if (settingDevice != null) {
+            try {
+                boolean result = BydDeviceHelper.sendSetCommand(settingDevice, 
+                    BydFeatureIds.SETTING_VOICE_CTRL_BACK_DOOR_SET, 3);
+                logger.info("closeTailgate sendSetCommand(VOICE_CTRL_BACK_DOOR, 3) result: " + result);
+                if (result) return true;
+            } catch (Exception e) {
+                logger.debug("closeTailgate sendSetCommand failed: " + e.getMessage());
             }
-            // Fallback: BACK_DOOR_TRIGGER_ATOM
-            return BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_TRIGGER, 2);
+            
+            // Method 1b: Try voiceCtlBackDoor(3) directly
+            try {
+                Object result = BydDeviceHelper.callGetter(settingDevice, "voiceCtlBackDoor", 3);
+                logger.info("closeTailgate voiceCtlBackDoor(3) result: " + result);
+                if (result == null || (result instanceof Integer && ((Integer) result).intValue() == 0)) {
+                    return true;
+                }
+            } catch (Exception e) {
+                logger.debug("closeTailgate voiceCtlBackDoor(3) failed: " + e.getMessage());
+            }
+        }
+        
+        // Method 2: Bodywork BACK_DOOR_TRIGGER with value 3 (close)
+        try {
+            return BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_TRIGGER, 3);
         } catch (Exception e) {
-            logger.debug("closeTailgate failed: " + e.getMessage());
+            logger.debug("closeTailgate BACK_DOOR_TRIGGER(3) failed: " + e.getMessage());
             return false;
         }
     }
 
     public boolean stopTailgate() {
-        try {
-            // Primary: BACK_DOOR_ACTUATOR_COMMAND
-            if (BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_ACTUATOR_COMMAND, 0)) {
-                return true;
+        // SOTA FIX: Commander app uses value 2 for stop
+        // Values: 1=open, 2=stop, 3=close
+        
+        // Method 1: SettingDevice sendSetCommand with value 2 (stop)
+        if (settingDevice != null) {
+            try {
+                boolean result = BydDeviceHelper.sendSetCommand(settingDevice,
+                    BydFeatureIds.SETTING_VOICE_CTRL_BACK_DOOR_SET, 2);
+                logger.info("stopTailgate sendSetCommand(VOICE_CTRL_BACK_DOOR, 2) result: " + result);
+                if (result) return true;
+            } catch (Exception e) {
+                logger.debug("stopTailgate sendSetCommand failed: " + e.getMessage());
             }
-            // Fallback: BACK_DOOR_TRIGGER_ATOM
+            
+            // Fallback: voiceCtlBackDoor(2)
+            try {
+                Object result = BydDeviceHelper.callGetter(settingDevice, "voiceCtlBackDoor", 2);
+                if (result == null || (result instanceof Integer && ((Integer) result).intValue() == 0)) {
+                    return true;
+                }
+            } catch (Exception e) {
+                logger.debug("stopTailgate voiceCtlBackDoor(2) failed: " + e.getMessage());
+            }
+        }
+        try {
             return BydDeviceHelper.sendSetCommand(bodyworkDevice, BydFeatureIds.BODY_BACK_DOOR_TRIGGER, 0);
         } catch (Exception e) {
-            logger.debug("stopTailgate failed: " + e.getMessage());
+            logger.debug("stopTailgate BACK_DOOR_TRIGGER failed: " + e.getMessage());
             return false;
         }
+    }
+
+    // --- AVAS / Exterior Speaker ---
+
+    /** Get the multimedia device (for direct access by audio test handler). */
+    public Object getMultimediaDevice() {
+        return multimediaDevice;
+    }
+
+    /** Get exterior speaker state: 1=enabled, 0=disabled, null=unavailable. */
+    public Integer getExteriorSpeakerState() {
+        if (multimediaDevice == null) return null;
+        try {
+            Object result = BydDeviceHelper.callGetter(multimediaDevice, "getExteriorSpeakerState");
+            return (result instanceof Integer) ? (Integer) result : null;
+        } catch (Exception e) {
+            logger.debug("getExteriorSpeakerState failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /** Set exterior speaker state: 1=enable, 0=disable. */
+    public boolean setExteriorSpeakerState(int state) {
+        if (multimediaDevice == null) return false;
+        try {
+            // callGetter works for any single-int method (invokes and returns result)
+            BydDeviceHelper.callGetter(multimediaDevice, "setExteriorSpeakerState", state);
+            return true;
+        } catch (Exception e) {
+            logger.debug("setExteriorSpeakerState failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Get AVAS sound source type. */
+    public Integer getAVASSoundSource() {
+        if (multimediaDevice == null) return null;
+        try {
+            Object result = BydDeviceHelper.callGetter(multimediaDevice, "getAVASSoundSource");
+            return (result instanceof Integer) ? (Integer) result : null;
+        } catch (Exception e) {
+            logger.debug("getAVASSoundSource failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /** Set AVAS sound source type. */
+    public boolean setAVASSoundSource(int sourceType) {
+        if (multimediaDevice == null) return false;
+        try {
+            BydDeviceHelper.callGetter(multimediaDevice, "setAVASSoundSource", sourceType);
+            return true;
+        } catch (Exception e) {
+            logger.debug("setAVASSoundSource failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Check if multimedia device is available. */
+    public boolean isMultimediaAvailable() {
+        return multimediaDevice != null;
     }
 
     // --- Charging ---

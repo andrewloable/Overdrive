@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/bg_surface">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_camera_select"
+            android:contentDescription="Camera"
+            app:tint="@color/brand_primary" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Camera Selection"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:id="@+id/tvCameraSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select panoramic camera source"
+                android:textColor="@color/text_muted"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Current status card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/bg_elevated"
+        app:cardCornerRadius="12dp"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp"
+        app:cardElevation="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:id="@+id/dotCameraStatus"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/status_dot_online" />
+
+            <TextView
+                android:id="@+id/tvCurrentCamera"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:text="Current: Auto"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Camera options -->
+    <RadioGroup
+        android:id="@+id/rgCameraOptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rbCameraAuto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Auto (detect on startup)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 0"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 1"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 2"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 3"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 4"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+
+        <RadioButton
+            android:id="@+id/rbCamera5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Camera 5"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:buttonTint="@color/brand_primary" />
+    </RadioGroup>
+
+    <!-- Hint text -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Restart the daemon after changing camera ID for the setting to take effect."
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+</LinearLayout>
+</ScrollView>

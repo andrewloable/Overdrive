@@ -55,6 +55,15 @@ public class SurveillanceApiHandler {
             sendHeatmap(out);
             return true;
         }
+        if (cleanPath.startsWith("/api/surveillance/snapshot/")) {
+            try {
+                int quadrant = Integer.parseInt(cleanPath.substring("/api/surveillance/snapshot/".length()));
+                sendQuadrantSnapshot(out, quadrant);
+            } catch (NumberFormatException e) {
+                HttpResponse.sendJsonError(out, "Invalid quadrant ID");
+            }
+            return true;
+        }
         if (cleanPath.equals("/api/surveillance/filterlog")) {
             sendFilterLog(out);
             return true;
@@ -208,6 +217,51 @@ public class SurveillanceApiHandler {
             config.put("motionHeatmap", sentryConfig.isMotionHeatmapEnabled());
             config.put("filterDebugLog", sentryConfig.isFilterDebugLogEnabled());
             config.put("shadowFilter", sentryConfig.getShadowFilterMode());
+            
+            // ROI polygons and enabled flags
+            org.json.JSONObject roiObj = new org.json.JSONObject();
+            String[] qKeys = {"Q0", "Q1", "Q2", "Q3"};
+            for (int q = 0; q < 4; q++) {
+                // Always include polygon if it exists (even when disabled)
+                float[][] poly = sentryConfig.getRoiPolygon(q);
+                if (poly != null && poly.length >= 3) {
+                    org.json.JSONArray polyArr = new org.json.JSONArray();
+                    for (float[] vertex : poly) {
+                        org.json.JSONObject pt = new org.json.JSONObject();
+                        pt.put("x", vertex[0]);
+                        pt.put("y", vertex[1]);
+                        polyArr.put(pt);
+                    }
+                    roiObj.put(qKeys[q], polyArr);
+                }
+                // Per-quadrant enabled flag
+                config.put("roiEnabled_" + qKeys[q], sentryConfig.isRoiEnabled(q));
+                // Per-quadrant block mask (if stored in unified config)
+                try {
+                    org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                    org.json.JSONArray blocks = survCfg.optJSONArray("roiBlocks_" + qKeys[q]);
+                    if (blocks != null) config.put("roiBlocks_" + qKeys[q], blocks);
+                } catch (Exception ignored) {}
+            }
+            config.put("roiPolygons", roiObj);
+            
+            // Schedule
+            config.put("scheduleEnabled", sentryConfig.getSchedule().isEnabled());
+            org.json.JSONArray schedRules = new org.json.JSONArray();
+            for (com.overdrive.app.surveillance.SurveillanceSchedule.Rule rule : sentryConfig.getSchedule().getRules()) {
+                schedRules.put(rule.toJson());
+            }
+            config.put("scheduleRules", schedRules);
+            
+            // Camera ID info
+            try {
+                org.json.JSONObject camCfg = com.overdrive.app.config.UnifiedConfigManager
+                    .loadConfig().optJSONObject("camera");
+                if (camCfg != null) {
+                    config.put("cameraId", camCfg.optInt("probedCameraId", -1));
+                    config.put("cameraManualOverride", camCfg.optBoolean("manualOverride", false));
+                }
+            } catch (Exception ignored) {}
         } else {
             config.put("environmentPreset", "outdoor");
             config.put("sensitivityLevel", 3);
@@ -525,6 +579,197 @@ public class SurveillanceApiHandler {
                 configChanged = true;
             }
             
+            // Per-quadrant ROI polygons
+            if (configJson.has("roiPolygons")) {
+                try {
+                    org.json.JSONObject roiObj = configJson.getJSONObject("roiPolygons");
+                    String[] quadrantKeys = {"Q0", "Q1", "Q2", "Q3"};
+                    for (int q = 0; q < 4; q++) {
+                        if (roiObj.has(quadrantKeys[q])) {
+                            org.json.JSONArray polyArr = roiObj.optJSONArray(quadrantKeys[q]);
+                            if (polyArr != null && polyArr.length() >= 3) {
+                                float[][] polygon = new float[polyArr.length()][2];
+                                for (int v = 0; v < polyArr.length(); v++) {
+                                    org.json.JSONObject pt = polyArr.getJSONObject(v);
+                                    polygon[v][0] = (float) pt.getDouble("x");
+                                    polygon[v][1] = (float) pt.getDouble("y");
+                                }
+                                sentryConfig.setRoiPolygon(q, polygon);
+                                // Only apply to C++ if ROI is enabled for this quadrant
+                                if (sentryConfig.isRoiEnabled(q) && sentry != null) {
+                                    sentry.applyQuadrantRoi(q, polygon);
+                                }
+                            } else if (polyArr == null) {
+                                // Explicit null = clear polygon data
+                                sentryConfig.clearRoi(q);
+                                if (sentry != null) sentry.clearQuadrantRoi(q);
+                            }
+                        }
+                    }
+                    configChanged = true;
+                } catch (Exception e) {
+                    CameraDaemon.log("ROI parse error: " + e.getMessage());
+                }
+            }
+            
+            // Per-quadrant ROI enabled/disabled toggle (separate from polygon data)
+            {
+                String[] quadrantKeys = {"Q0", "Q1", "Q2", "Q3"};
+                for (int q = 0; q < 4; q++) {
+                    String enabledKey = "roiEnabled_" + quadrantKeys[q];
+                    if (configJson.has(enabledKey)) {
+                        boolean enabled = configJson.optBoolean(enabledKey, false);
+                        if (enabled && sentryConfig.getRoiPolygon(q) != null) {
+                            // Enable ROI — apply the persisted polygon to C++
+                            sentryConfig.setRoiEnabled(q, true);
+                            if (sentry != null) sentry.applyQuadrantRoi(q, sentryConfig.getRoiPolygon(q));
+                        } else {
+                            // Disable ROI — clear C++ mask but keep polygon in config
+                            sentryConfig.setRoiEnabled(q, false);
+                            if (sentry != null) sentry.clearQuadrantRoi(q);
+                        }
+                        configChanged = true;
+                    }
+                }
+            }
+            
+            // Direct block mask per quadrant (from block-tap UI)
+            // Accepts roiBlocks_Q0: [1,1,0,0,...] (70 elements, 1=active 0=inactive)
+            {
+                String[] quadrantKeys = {"Q0", "Q1", "Q2", "Q3"};
+                for (int q = 0; q < 4; q++) {
+                    String blocksKey = "roiBlocks_" + quadrantKeys[q];
+                    if (configJson.has(blocksKey)) {
+                        org.json.JSONArray arr = configJson.optJSONArray(blocksKey);
+                        if (arr != null && arr.length() == 70) {
+                            byte[] blockMask = new byte[70];
+                            boolean anyActive = false;
+                            for (int i = 0; i < 70; i++) {
+                                blockMask[i] = (byte)(arr.optInt(i, 1) != 0 ? 1 : 0);
+                                if (blockMask[i] != 0) anyActive = true;
+                            }
+                            if (anyActive) {
+                                sentryConfig.setRoiEnabled(q, true);
+                                // Store block mask as a synthetic polygon (not used, blocks are direct)
+                                // Apply directly to C++ via JNI
+                                try {
+                                    com.overdrive.app.surveillance.NativeMotion.setQuadrantRoi(q, blockMask);
+                                    CameraDaemon.log("ROI blocks applied to Q" + q + " via direct mask");
+                                } catch (Exception e) {
+                                    CameraDaemon.log("ROI blocks apply failed Q" + q + ": " + e.getMessage());
+                                }
+                            } else {
+                                sentryConfig.setRoiEnabled(q, false);
+                                if (sentry != null) sentry.clearQuadrantRoi(q);
+                            }
+                            // Persist the block array in unified config
+                            try {
+                                org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                                survCfg.put(blocksKey, arr);
+                                survCfg.put("roiEnabled_" + quadrantKeys[q], anyActive);
+                                com.overdrive.app.config.UnifiedConfigManager.setSurveillance(survCfg);
+                            } catch (Exception e) {
+                                CameraDaemon.log("ROI blocks persist failed: " + e.getMessage());
+                            }
+                            configChanged = true;
+                        }
+                    }
+                }
+            }
+            
+            // Surveillance schedule
+            if (configJson.has("scheduleEnabled") || configJson.has("scheduleRules")) {
+                try {
+                    com.overdrive.app.surveillance.SurveillanceSchedule schedule = sentryConfig.getSchedule();
+                    if (configJson.has("scheduleEnabled")) {
+                        schedule.setEnabled(configJson.optBoolean("scheduleEnabled", false));
+                    }
+                    if (configJson.has("scheduleRules")) {
+                        schedule.getRules().clear();
+                        org.json.JSONArray rulesArr = configJson.getJSONArray("scheduleRules");
+                        for (int i = 0; i < rulesArr.length(); i++) {
+                            com.overdrive.app.surveillance.SurveillanceSchedule.Rule rule =
+                                com.overdrive.app.surveillance.SurveillanceSchedule.Rule.fromJson(rulesArr.getJSONObject(i));
+                            if (rule != null) schedule.getRules().add(rule);
+                        }
+                    }
+                    // Persist schedule to unified config
+                    org.json.JSONObject survConfig = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                    org.json.JSONObject scheduleJson = schedule.toJson();
+                    survConfig.put("scheduleEnabled", scheduleJson.optBoolean("scheduleEnabled", false));
+                    survConfig.put("scheduleRules", scheduleJson.optJSONArray("scheduleRules"));
+                    com.overdrive.app.config.UnifiedConfigManager.setSurveillance(survConfig);
+                    CameraDaemon.log("Schedule updated: " + schedule.getSummary());
+                    configChanged = true;
+                    
+                    // IMMEDIATE ENFORCEMENT: If surveillance is currently active and the
+                    // new schedule says we're outside the window, stop it now. Don't wait
+                    // for the 5-minute periodic checker.
+                    // Conversely, if surveillance is inactive and the schedule now allows it,
+                    // start it (respecting safe zone and other gates).
+                    if (schedule.isEnabled()) {
+                        boolean withinWindow = schedule.isActiveNow();
+                        boolean currentlyActive = sentry != null && sentry.isActive();
+                        
+                        if (!withinWindow && currentlyActive) {
+                            CameraDaemon.log("SCHEDULE: Immediately stopping surveillance (outside new schedule window)");
+                            CameraDaemon.disableSurveillance();
+                        } else if (withinWindow && !currentlyActive 
+                                && !com.overdrive.app.monitor.AccMonitor.isAccOn()
+                                && !CameraDaemon.isSafeZoneSuppressed()) {
+                            CameraDaemon.log("SCHEDULE: Immediately enabling surveillance (within new schedule window)");
+                            CameraDaemon.enableSurveillance();
+                        }
+                    } else {
+                        // Schedule just disabled — if surveillance was suppressed by schedule,
+                        // resume it now (respecting safe zone and ACC state)
+                        boolean currentlyActive = sentry != null && sentry.isActive();
+                        if (!currentlyActive 
+                                && !com.overdrive.app.monitor.AccMonitor.isAccOn()
+                                && !CameraDaemon.isSafeZoneSuppressed()
+                                && com.overdrive.app.config.UnifiedConfigManager.isSurveillanceEnabled()) {
+                            CameraDaemon.log("SCHEDULE: Disabled — resuming surveillance immediately");
+                            CameraDaemon.enableSurveillance();
+                        }
+                    }
+                } catch (Exception e) {
+                    CameraDaemon.log("Schedule parse error: " + e.getMessage());
+                }
+            }
+            
+            // Manual camera ID override
+            if (configJson.has("manualCameraId")) {
+                int camId = configJson.optInt("manualCameraId", -1);
+                if (camId >= 0 && camId <= 5) {
+                    try {
+                        org.json.JSONObject camCfg = new org.json.JSONObject();
+                        camCfg.put("probedCameraId", camId);
+                        camCfg.put("probedSurfaceMode", 0);
+                        camCfg.put("probedAndValidated", true);
+                        camCfg.put("manualOverride", true);
+                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                        CameraDaemon.log("Manual camera ID set: " + camId + " (will take effect on next restart)");
+                    } catch (Exception e) {
+                        CameraDaemon.log("Failed to save manual camera ID: " + e.getMessage());
+                    }
+                    configChanged = true;
+                }
+            }
+            if (configJson.has("clearManualCameraId") && configJson.optBoolean("clearManualCameraId", false)) {
+                try {
+                    org.json.JSONObject camCfg = new org.json.JSONObject();
+                    camCfg.put("probedCameraId", -1);
+                    camCfg.put("probedSurfaceMode", -1);
+                    camCfg.put("probedAndValidated", false);
+                    camCfg.put("manualOverride", false);
+                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    CameraDaemon.log("Manual camera ID cleared — will auto-detect on next restart");
+                } catch (Exception e) {
+                    CameraDaemon.log("Failed to clear manual camera ID: " + e.getMessage());
+                }
+                configChanged = true;
+            }
+            
             if (configChanged) {
                 try {
                     SurveillanceConfigManager configManager = new SurveillanceConfigManager();
@@ -698,5 +943,151 @@ public class SurveillanceApiHandler {
         response.put("entries", entries);
         response.put("count", entries.length());
         HttpResponse.sendJson(out, response.toString());
+    }
+    
+    /**
+     * Serves a JPEG snapshot of a specific camera quadrant for the ROI drawing UI.
+     * 
+     * Strategy:
+     * 1. Try live mosaic frame from surveillance engine (available when sentry is running)
+     * 2. Fall back to extracting a frame from the most recent event video on disk
+     */
+    private static void sendQuadrantSnapshot(OutputStream out, int quadrant) throws Exception {
+        if (quadrant < 0 || quadrant > 3) {
+            HttpResponse.sendJsonError(out, "Invalid quadrant: " + quadrant);
+            return;
+        }
+        
+        // Try live mosaic frame first
+        byte[] mosaicRgb = null;
+        GpuSurveillancePipeline gpuPipeline = CameraDaemon.getGpuPipeline();
+        if (gpuPipeline != null && gpuPipeline.getSentry() != null) {
+            mosaicRgb = gpuPipeline.getSentry().getLatestMosaicFrame();
+        }
+        
+        if (mosaicRgb != null) {
+            // Live frame available — crop quadrant from 640x480 mosaic
+            sendQuadrantFromMosaic(out, mosaicRgb, quadrant, 640, 480);
+            return;
+        }
+        
+        // Fallback: extract frame from most recent event video on disk
+        android.graphics.Bitmap frameBitmap = getFrameFromLatestEvent();
+        if (frameBitmap != null) {
+            try {
+                // Event videos are mosaic (all 4 cameras) — crop the quadrant
+                int fullW = frameBitmap.getWidth();
+                int fullH = frameBitmap.getHeight();
+                int qW = fullW / 2;
+                int qH = fullH / 2;
+                int startX = (quadrant % 2) * qW;
+                int startY = (quadrant / 2) * qH;
+                
+                android.graphics.Bitmap cropped = android.graphics.Bitmap.createBitmap(
+                        frameBitmap, startX, startY, qW, qH);
+                
+                java.io.ByteArrayOutputStream jpegOut = new java.io.ByteArrayOutputStream();
+                cropped.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, jpegOut);
+                if (cropped != frameBitmap) cropped.recycle();
+                frameBitmap.recycle();
+                
+                byte[] jpegBytes = jpegOut.toByteArray();
+                String header = "HTTP/1.1 200 OK\r\n" +
+                        "Content-Type: image/jpeg\r\n" +
+                        "Content-Length: " + jpegBytes.length + "\r\n" +
+                        "Cache-Control: no-cache\r\n" +
+                        "Access-Control-Allow-Origin: *\r\n" +
+                        "\r\n";
+                out.write(header.getBytes());
+                out.write(jpegBytes);
+                out.flush();
+            } catch (Exception e) {
+                frameBitmap.recycle();
+                HttpResponse.sendJsonError(out, "Failed to process event frame: " + e.getMessage());
+            }
+            return;
+        }
+        
+        HttpResponse.sendJsonError(out, "No frame available — start surveillance or record an event first");
+    }
+    
+    /**
+     * Crops a quadrant from a raw RGB mosaic byte array and sends as JPEG.
+     */
+    private static void sendQuadrantFromMosaic(OutputStream out, byte[] mosaicRgb, int quadrant, int mosaicW, int mosaicH) throws Exception {
+        int qW = mosaicW / 2, qH = mosaicH / 2;
+        int startX = (quadrant % 2) * qW;
+        int startY = (quadrant / 2) * qH;
+        
+        int[] pixels = new int[qW * qH];
+        for (int y = 0; y < qH; y++) {
+            for (int x = 0; x < qW; x++) {
+                int srcIdx = ((startY + y) * mosaicW + (startX + x)) * 3;
+                if (srcIdx + 2 < mosaicRgb.length) {
+                    int r = mosaicRgb[srcIdx] & 0xFF;
+                    int g = mosaicRgb[srcIdx + 1] & 0xFF;
+                    int b = mosaicRgb[srcIdx + 2] & 0xFF;
+                    pixels[y * qW + x] = 0xFF000000 | (r << 16) | (g << 8) | b;
+                }
+            }
+        }
+        
+        android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(
+                pixels, qW, qH, android.graphics.Bitmap.Config.ARGB_8888);
+        
+        java.io.ByteArrayOutputStream jpegOut = new java.io.ByteArrayOutputStream();
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, jpegOut);
+        bitmap.recycle();
+        
+        byte[] jpegBytes = jpegOut.toByteArray();
+        String header = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: image/jpeg\r\n" +
+                "Content-Length: " + jpegBytes.length + "\r\n" +
+                "Cache-Control: no-cache\r\n" +
+                "Access-Control-Allow-Origin: *\r\n" +
+                "\r\n";
+        out.write(header.getBytes());
+        out.write(jpegBytes);
+        out.flush();
+    }
+    
+    /**
+     * Extracts a frame from the most recent event video in the surveillance directory.
+     * Returns a Bitmap or null if no events exist.
+     */
+    private static android.graphics.Bitmap getFrameFromLatestEvent() {
+        try {
+            com.overdrive.app.storage.StorageManager storage = com.overdrive.app.storage.StorageManager.getInstance();
+            java.io.File survDir = storage.getSurveillanceDir();
+            if (survDir == null || !survDir.exists()) return null;
+            
+            java.io.File[] events = survDir.listFiles((dir, name) -> 
+                    name.startsWith("event_") && name.endsWith(".mp4"));
+            if (events == null || events.length == 0) return null;
+            
+            // Sort by name descending (newest first — filenames contain timestamp)
+            java.util.Arrays.sort(events, (a, b) -> b.getName().compareTo(a.getName()));
+            
+            // Try the most recent file (fall back to next if extraction fails)
+            for (int i = 0; i < Math.min(3, events.length); i++) {
+                android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+                try {
+                    retriever.setDataSource(events[i].getAbsolutePath());
+                    android.graphics.Bitmap frame = retriever.getFrameAtTime(
+                            1000000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    if (frame == null) {
+                        frame = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    }
+                    if (frame != null) return frame;
+                } catch (Exception e) {
+                    // Try next file
+                } finally {
+                    try { retriever.release(); } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception e) {
+            // Storage not available
+        }
+        return null;
     }
 }

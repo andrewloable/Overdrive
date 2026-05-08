@@ -599,7 +599,26 @@ static int stage5_behaviorClassification(
         return THREAT_MEDIUM;
     }
     
-    // Passing or receding
+    // FIX: Proximity mass override for side cameras (left/right).
+    // The "approaching = moving toward center" heuristic works for front/rear
+    // cameras where a person walks toward the car (centroid moves from top/far
+    // to bottom/close = toward center). But side cameras see lateral motion:
+    // a person walking along the car moves across the FOV, not toward center.
+    // This was classified as THREAT_LOW (passing), causing left/right cameras
+    // to never trigger recording even with a person right next to the car.
+    //
+    // The BYD's side mirror cameras use ultra-wide fisheye lenses where the
+    // centroid Y-coordinate does NOT reliably indicate physical distance.
+    // Instead, use the connected component size (active motion area) as a
+    // proxy for proximity: a person right next to the car door fills 15-25%
+    // of the block grid, while a distant pedestrian fills only 3-5%.
+    // This is invariant to camera orientation and fisheye distortion.
+    float activeAreaFraction = (float)componentSize / V2_TOTAL_BLOCKS;
+    if (activeAreaFraction > 0.15f) {
+        return THREAT_MEDIUM;
+    }
+    
+    // Passing or receding at distance
     return THREAT_LOW;
 }
 
@@ -1060,6 +1079,44 @@ Java_com_overdrive_app_surveillance_NativeMotion_getQuadrantResultSize(
     JNIEnv* env, jclass clazz)
 {
     return (jint)sizeof(QuadrantResultV2);
+}
+
+// Set per-quadrant ROI block mask from Java.
+// blockMask is a byte[70] array where 1=enabled, 0=disabled.
+// Passing null or empty array clears the ROI (all blocks enabled).
+extern "C" JNIEXPORT void JNICALL
+Java_com_overdrive_app_surveillance_NativeMotion_setQuadrantRoi(
+    JNIEnv* env, jclass clazz,
+    jint quadrant, jbyteArray blockMask)
+{
+    if (quadrant < 0 || quadrant >= V2_NUM_QUADRANTS) return;
+    
+    QuadrantState& qs = g_pipeline.quadrants[quadrant];
+    
+    if (blockMask == nullptr) {
+        // Clear ROI — all blocks enabled
+        qs.hasCustomRoi = false;
+        for (int i = 0; i < V2_TOTAL_BLOCKS; i++) {
+            qs.blockRoiMask[i] = true;
+        }
+        return;
+    }
+    
+    jsize len = env->GetArrayLength(blockMask);
+    if (len != V2_TOTAL_BLOCKS) {
+        LOGE_V2("Invalid ROI mask size: %d (expected %d)", len, V2_TOTAL_BLOCKS);
+        return;
+    }
+    
+    jbyte* mask = env->GetByteArrayElements(blockMask, nullptr);
+    if (!mask) return;
+    
+    qs.hasCustomRoi = true;
+    for (int i = 0; i < V2_TOTAL_BLOCKS; i++) {
+        qs.blockRoiMask[i] = (mask[i] != 0);
+    }
+    
+    env->ReleaseByteArrayElements(blockMask, mask, JNI_ABORT);
 }
 
 // ============================================================================

@@ -1501,6 +1501,80 @@ window.BydCloud = {
 
         BYD.surveillance.config.bydCloudEnabled = status.verified || false;
         BYD.surveillance.updateDeterrentUI();
+
+        // Cloud push status
+        var pushSection = document.getElementById('bydCloudPushSection');
+        var mergeSection = document.getElementById('bydCloudMergeSection');
+        if (status.verified && status.cloudPush) {
+            var cp = status.cloudPush;
+            if (pushSection) pushSection.style.display = 'block';
+            if (mergeSection) mergeSection.style.display = 'block';
+
+            var pushBadge = document.getElementById('bydPushBadge');
+            var pushAge = document.getElementById('bydPushAge');
+            var pushLock = document.getElementById('bydPushLock');
+            var pushSoc = document.getElementById('bydPushSoc');
+            var pushCharging = document.getElementById('bydPushCharging');
+
+            if (pushBadge) {
+                if (cp.connected && cp.lastMessageAge >= 0 && cp.lastMessageAge < 120) {
+                    pushBadge.textContent = 'LIVE';
+                    pushBadge.className = 'status-badge active';
+                } else if (cp.connected && cp.lastMessageAge >= 0 && cp.lastMessageAge < 600) {
+                    pushBadge.textContent = 'OK';
+                    pushBadge.className = 'status-badge active';
+                } else if (cp.connected && cp.lastMessageAge >= 600) {
+                    pushBadge.textContent = 'STALE';
+                    pushBadge.className = 'status-badge inactive';
+                } else if (cp.connected) {
+                    pushBadge.textContent = 'WAITING';
+                    pushBadge.className = 'status-badge inactive';
+                } else {
+                    pushBadge.textContent = 'OFFLINE';
+                    pushBadge.className = 'status-badge inactive';
+                }
+            }
+
+            if (pushAge) {
+                if (cp.lastMessageAge >= 0) {
+                    var age = cp.lastMessageAge;
+                    pushAge.textContent = age < 60 ? age + 's ago' : Math.floor(age / 60) + 'm ago';
+                } else {
+                    pushAge.textContent = cp.connected ? 'waiting for data' : '';
+                }
+            }
+
+            if (pushLock) {
+                if (cp.lockState && cp.lockState !== 'unknown') {
+                    var lockIcon = cp.lockState === 'locked' ? '\uD83D\uDD12' : '\uD83D\uDD13';
+                    pushLock.textContent = lockIcon + ' ' + cp.lockState;
+                } else if (cp.connected && cp.lastMessageAge < 0) {
+                    pushLock.textContent = 'Waiting for T-Box push...';
+                } else {
+                    pushLock.textContent = '';
+                }
+            }
+            if (pushSoc && cp.socPercent != null) {
+                pushSoc.textContent = '\uD83D\uDD0B ' + cp.socPercent + '%';
+            } else if (pushSoc) {
+                pushSoc.textContent = '';
+            }
+            if (pushCharging) {
+                if (cp.chargingState && cp.chargingState !== 'unknown') {
+                    var chgLabel = { 'not_charging': 'Not charging', 'charging': 'Charging' };
+                    pushCharging.textContent = '\u26A1 ' + (chgLabel[cp.chargingState] || cp.chargingState);
+                } else {
+                    pushCharging.textContent = '';
+                }
+            }
+
+            // Merge toggle
+            var mergeToggle = document.getElementById('bydCloudMergeToggle');
+            if (mergeToggle) mergeToggle.checked = cp.cloudDataMerge || false;
+        } else {
+            if (pushSection) pushSection.style.display = 'none';
+            if (mergeSection) mergeSection.style.display = 'none';
+        }
     },
 
     async saveCredentials() {
@@ -1641,6 +1715,18 @@ window.BydCloud = {
         } else {
             input.type = 'password';
             btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        }
+    },
+
+    async toggleCloudDataMerge(enabled) {
+        try {
+            await fetch('/api/bydcloud/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cloudDataMerge: enabled })
+            });
+        } catch (e) {
+            console.warn('Failed to update cloud data merge:', e);
         }
     }
 };

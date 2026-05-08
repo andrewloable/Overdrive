@@ -46,6 +46,8 @@ public class PanoramicCameraGpu {
     // SOTA: Full-matrix auto-probe — sweeps camera IDs 0-5 × surface modes 0-5
     // to find the first combination that produces panoramic image data.
     private boolean autoProbeCameras = false;
+    // When true, skip frame-15/50 validation entirely (user manually set camera ID)
+    private boolean skipFrameValidation = false;
     private int probeStartId = -1;  // Tracks where probe started for wrap-around detection
     private int probeNextCameraId = 0;    // Next camera ID to try
     private int probeNextSurfaceMode = 0; // Next surface mode to try
@@ -54,6 +56,11 @@ public class PanoramicCameraGpu {
     // Without this, the encoder records BLACK frames and the stream shows garbage during probe.
     // Defaults to true (no gate) — only set to false when setAutoProbeCameras(true) is called.
     private volatile boolean probeComplete = true;
+    
+    // Track the last camera ID that delivered non-black data during probe.
+    // If the probe exhausts all IDs without finding a verified strip, fall back
+    // to this camera — it's better to record from a real camera than nothing.
+    private int lastDataCameraId = -1;
     
     // Callback when auto-probe discovers a working camera config
     public interface CameraProbeCallback {
@@ -129,6 +136,9 @@ public class PanoramicCameraGpu {
     // Require consecutive stalls before yielding — a single stall could be transient
     private static final int CONTENTION_STALL_COUNT_TO_YIELD = 2;
     private volatile int consecutiveContentionStalls = 0;
+    
+    // Flag to indicate camera restart is in progress — watchdog uses extended timeout
+    private volatile boolean restartInProgress = false;
     
     // SOTA: Pre-yield listener — pipeline registers this to finalize recordings before yield
     public interface CameraYieldListener {
@@ -500,8 +510,11 @@ public class PanoramicCameraGpu {
      * Notifies IBYDCameraService before opening so the service can arbitrate
      * with native apps (reverse camera, dashcam, AVM parking view).
      *
-     * Cooperative sharing: if native app already has the camera, we join as
-     * SECONDARY (skip startPreview/setCameraFps since preview is already running).
+     * The BYD AVMCamera HAL supports multiple consumers simultaneously —
+     * both our daemon and the native DVR can call open() + startPreview()
+     * on the same camera. The key is timing: the AVC HAL warmup (launching
+     * com.byd.avc before we open) ensures the HAL is initialized in
+     * multi-consumer mode before we attach.
      */
     private void startCameraViaAvmReflection(int cameraId) throws Exception {
         // Notify camera service we're about to open
@@ -528,9 +541,10 @@ public class PanoramicCameraGpu {
         // Set FPS (may return false on some HAL versions — non-fatal)
         AvmCameraHelper.setCameraFps(cameraObj, targetFps);
         
-        // Start preview — required on BYD Seal HAL for real frame data.
-        // Without startPreview, the HAL delivers buffer notifications but
-        // the actual pixel data is BLACK (uninitialized).
+        // Start preview — required for real frame data on BYD Seal HAL.
+        // The HAL supports multiple consumers calling startPreview simultaneously.
+        // The AVC warmup (com.byd.avc launch + 4s delay) ensures the native DVR
+        // has already initialized before we reach here, preventing race conditions.
         Method mStart = avmClass.getDeclaredMethod("startPreview");
         mStart.setAccessible(true);
         mStart.invoke(cameraObj);
@@ -590,7 +604,7 @@ public class PanoramicCameraGpu {
             // Sweeps camera IDs 0-5 × surface modes 0-5 to find the first
             // combination that produces panoramic image data. Each combo gets
             // 15 frames to warm up before pixel readback.
-            if (frameCounter == 15 && downscaler != null) {
+            if (frameCounter == 15 && downscaler != null && !skipFrameValidation) {
                 try {
                     byte[] probe = downscaler.readPixels(cameraTextureId, 8, 8);
                     boolean hasData = false;
@@ -608,35 +622,91 @@ public class PanoramicCameraGpu {
                         " | surfaceMode=" + cameraSurfaceMode);
                     
                     if (hasData && isPanoramic) {
-                        // Found a working panoramic camera — use it
-                        logger.info("Auto-probe: SELECTED camera ID " + currentId + 
-                            " (panoramic, has image data, surfaceMode=" + cameraSurfaceMode + ")");
-                        autoProbeCameras = false;
-                        probeStartId = -1;
-                        probeComplete = true;
-                        logger.info("Probe complete — recording/streaming/AI lanes now active");
-                        // Notify pipeline to persist this config
-                        if (probeCallback != null) {
-                            probeCallback.onCameraFound(currentId, cameraSurfaceMode);
+                        // Track this camera as having real data (for fallback if strip check fails)
+                        lastDataCameraId = currentId;
+                        
+                        // During auto-probe: accept the first camera with non-black panoramic data.
+                        // The 5120x960 resolution IS the panoramic strip identifier on BYD — no other
+                        // camera output uses this resolution with real image data. The luma-based
+                        // strip check was producing false negatives in low-light/uniform scenes.
+                        if (autoProbeCameras) {
+                            logger.info("Auto-probe: SELECTED camera ID " + currentId + 
+                                " (panoramic data confirmed, surfaceMode=" + cameraSurfaceMode + ")");
+                            autoProbeCameras = false;
+                            probeStartId = -1;
+                            probeComplete = true;
+                            lastDataCameraId = -1;
+                            logger.info("Probe complete — recording/streaming/AI lanes now active");
+                            if (probeCallback != null) {
+                                probeCallback.onCameraFound(currentId, cameraSurfaceMode);
+                            }
+                        } else {
+                            // Not in auto-probe mode — this is the frame-15 check for a saved config.
+                            // Camera has data at panoramic resolution — it's working correctly.
+                            // No further validation needed (skipFrameValidation handles saved configs,
+                            // but this path covers the default camera ID 1 on first boot).
+                            probeComplete = true;
                         }
                     } else if (autoProbeCameras) {
                         // Advance to next combination in the matrix
                         advanceProbeToNext(currentId);
                     } else if (!hasData) {
-                        // Saved config gave black frames. Log for diagnostics but do NOT re-probe —
-                        // black frames at frame 15 can be caused by HAL warmup, OEM dashcam
-                        // contention, or a genuinely dark scene (night), none of which warrant
-                        // disrupting the HAL with a 36-slot probe sweep. A runtime re-probe also
-                        // aggressively opens/closes the shared camera HAL which starves the OEM
-                        // dashcam of video for 30+ seconds. The saved config was validated
-                        // previously; trust it. If it ever becomes genuinely wrong, a manual
-                        // re-probe can still be forced via setAutoProbeCameras(true).
+                        // Saved config gave black frames at frame 15. This could be:
+                        // 1. HAL warmup (normal — wait longer)
+                        // 2. OEM dashcam contention (transient)
+                        // 3. Genuinely wrong camera ID (BmmCameraInfo returned wrong value)
+                        //
+                        // Don't re-probe immediately (causes OEM dashcam "no signal").
+                        // Instead, schedule a second check at frame 50 (~5s). If still black
+                        // at that point, the saved config is genuinely wrong and we re-probe.
                         logger.warn("Frame 15 readback BLACK for cam=" + currentId +
                             ", surfaceMode=" + cameraSurfaceMode +
-                            " — NOT re-probing (saved config is authoritative, frames may warm up later)");
+                            " — will recheck at frame 50 before deciding");
                     }
                 } catch (Exception e) {
                     logger.warn("Camera probe failed: " + e.getMessage());
+                }
+            }
+            
+            // Frame 50 recheck (~5s): if frame 15 was black, verify again.
+            // By frame 50 the HAL has definitely warmed up. If still black, the saved
+            // config is genuinely wrong (BmmCameraInfo returned incorrect ID).
+            // Only then trigger a re-probe — this is rare and justified.
+            if (frameCounter == 50 && !autoProbeCameras && !skipFrameValidation && downscaler != null) {
+                try {
+                    byte[] probe = downscaler.readPixels(cameraTextureId, 8, 8);
+                    boolean hasData = false;
+                    if (probe != null) {
+                        for (int i = 0; i < Math.min(probe.length, 192); i++) {
+                            if ((probe[i] & 0xFF) > 10) { hasData = true; break; }
+                        }
+                    }
+                    if (!hasData) {
+                        int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+                        logger.warn("Frame 50 STILL BLACK for cam=" + currentId +
+                            " — saved config is wrong, starting re-probe");
+                        autoProbeCameras = true;
+                        probeComplete = false;
+                        probeNextCameraId = 0;
+                        probeNextSurfaceMode = 0;
+                        lastDataCameraId = -1;
+                        advanceProbeToNext(currentId);
+                    } else {
+                        // Camera has non-black data at frame 50 — it's working.
+                        // Persist as validated so next restart skips all frame checks.
+                        int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+                        logger.info("Frame 50 recheck: camera ID " + currentId + " confirmed working");
+                        probeComplete = true;
+                        try {
+                            org.json.JSONObject camCfg = new org.json.JSONObject();
+                            camCfg.put("probedCameraId", currentId);
+                            camCfg.put("probedSurfaceMode", cameraSurfaceMode);
+                            camCfg.put("probedAndValidated", true);
+                            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                        } catch (Exception ignored) {}
+                    }
+                } catch (Exception e) {
+                    logger.warn("Frame 50 recheck failed: " + e.getMessage());
                 }
             }
 
@@ -769,6 +839,71 @@ public class PanoramicCameraGpu {
     }
     
     /**
+     * Verifies that the camera is producing a real panoramic strip (4 distinct views)
+     * rather than a single camera stretched or AVM bird's-eye view.
+     *
+     * A real panoramic strip has 4 cameras stitched side by side. Each quadrant shows
+     * a different scene. We verify by reading pixel samples from each quadrant and
+     * checking that they have significantly different luma values.
+     *
+     * Uses the downscaler's 8x8 readback. Columns 0-1=Q0, 2-3=Q1, 4-5=Q2, 6-7=Q3.
+     */
+    private boolean verifyPanoramicStrip(byte[] probe8x8) {
+        if (probe8x8 == null || probe8x8.length < 192) return false;
+        int[] qLuma = new int[4];
+        int[] qCnt = new int[4];
+        int[] qMin = {255, 255, 255, 255};
+        int[] qMax = {0, 0, 0, 0};
+        int totalNonBlack = 0;
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                int idx = (y * 8 + x) * 3;
+                int r = probe8x8[idx] & 0xFF, g = probe8x8[idx+1] & 0xFF, b = probe8x8[idx+2] & 0xFF;
+                int luma = (r + g*2 + b) / 4;
+                int q = x / 2;
+                qLuma[q] += luma; qCnt[q]++;
+                if (luma < qMin[q]) qMin[q] = luma;
+                if (luma > qMax[q]) qMax[q] = luma;
+                if (luma > 10) totalNonBlack++;
+            }
+        }
+        for (int q = 0; q < 4; q++) { if (qCnt[q] > 0) qLuma[q] /= qCnt[q]; }
+        
+        // Primary check: luma difference between quadrant pairs.
+        // A real panoramic strip has 4 cameras showing different scenes.
+        int diffPairs = 0;
+        for (int i = 0; i < 4; i++) for (int j = i+1; j < 4; j++) if (Math.abs(qLuma[i]-qLuma[j]) > 15) diffPairs++;
+        boolean isStrip = diffPairs >= 2;
+        
+        // Secondary check: if all quadrants have real (non-black) data with internal
+        // variance, this is a real camera feed even if the scenes look similar.
+        // This handles the common case of a parked car in a garage/at night where
+        // all 4 cameras see similar dark scenes (low inter-quadrant difference)
+        // but each quadrant still has texture/detail (intra-quadrant variance).
+        if (!isStrip && totalNonBlack >= 48) {  // At least 75% of pixels are non-black
+            int quadrantsWithVariance = 0;
+            for (int q = 0; q < 4; q++) {
+                // Each quadrant has internal texture (not a flat solid color)
+                if (qMax[q] - qMin[q] >= 3) quadrantsWithVariance++;
+            }
+            // Accept if all quadrants have real data (non-black) and at least 3 have
+            // internal variance. This distinguishes a real 4-camera feed from a
+            // synthetic AVM bird's-eye view (which would have large inter-quadrant
+            // differences) or a single stretched camera (which would have identical
+            // min/max patterns across all quadrants).
+            if (quadrantsWithVariance >= 3) {
+                isStrip = true;
+                logger.info("Strip accepted via secondary check: " + quadrantsWithVariance + 
+                    " quadrants with variance, " + totalNonBlack + "/64 non-black pixels");
+            }
+        }
+        
+        logger.info("Strip check: Q0=" + qLuma[0] + " Q1=" + qLuma[1] + " Q2=" + qLuma[2] + " Q3=" + qLuma[3] +
+                " diffPairs=" + diffPairs + " → " + (isStrip ? "STRIP" : "NOT_STRIP"));
+        return isStrip;
+    }
+
+    /**
      * SOTA: Advance to the next camera ID during probe.
      * Surface mode 0 is confirmed working on all tested models — only probe camera IDs 0-5.
      * 
@@ -844,15 +979,50 @@ public class PanoramicCameraGpu {
         }
         
         if (!found) {
-            logger.error("Auto-probe: exhausted all " + 
-                (MAX_CAMERA_ID + 1) + 
-                " camera IDs — no working panoramic camera found");
+            // If we found at least one camera with data during probe, switch back to it.
+            // This prevents the "probe failed" state from leaving us on a black camera.
+            if (lastDataCameraId >= 0 && lastDataCameraId != cameraIdOverride) {
+                logger.info("Auto-probe: no verified strip found, falling back to camera ID " + 
+                    lastDataCameraId + " (last known data source)");
+                cameraIdOverride = lastDataCameraId;
+                cameraSurfaceMode = 0;
+                frameCounter = 0;
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+                recreateCameraSurface();
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+                try {
+                    Thread.sleep(500);
+                    startCamera();
+                    if (cameraCoordinator != null && cameraObj != null) {
+                        cameraCoordinator.setupEventCallback(cameraObj);
+                    }
+                } catch (Exception e) {
+                    logger.error("Fallback camera open failed: " + e.getMessage());
+                }
+                // Persist this as a fallback so next restart doesn't re-probe
+                try {
+                    org.json.JSONObject camCfg = new org.json.JSONObject();
+                    camCfg.put("probedCameraId", lastDataCameraId);
+                    camCfg.put("probedSurfaceMode", 0);
+                    camCfg.put("probedAndValidated", true);
+                    camCfg.put("fallbackFromProbe", true);
+                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    logger.info("Persisted fallback camera ID " + lastDataCameraId + " for next launch");
+                } catch (Exception ex) {
+                    logger.warn("Failed to persist fallback camera config: " + ex.getMessage());
+                }
+            } else {
+                logger.error("Auto-probe: exhausted all " + 
+                    (MAX_CAMERA_ID + 1) + 
+                    " camera IDs — no working panoramic camera found");
+            }
             autoProbeCameras = false;
             probeStartId = -1;
+            lastDataCameraId = -1;
             // Ungate consumers even on failure — better to record whatever we have
             // than to stay permanently blocked
             probeComplete = true;
-            logger.warn("Probe failed but unblocking consumers — frames may be black");
+            logger.warn("Probe complete (fallback mode) — unblocking consumers");
         }
     }
 
@@ -883,7 +1053,10 @@ public class PanoramicCameraGpu {
                     // (e.g., I/O contention from MediaScanner broadcasts), the
                     // heartbeat can stall. Killing the process here just causes a
                     // restart loop that makes things worse.
-                    long effectiveTimeout = firstFrameReceived 
+                    // Also use extended timeout during camera restart — the GL thread
+                    // is busy with close/reopen operations and heartbeat updates are
+                    // interleaved but may not be frequent enough for the normal timeout.
+                    long effectiveTimeout = (firstFrameReceived && !restartInProgress)
                             ? GL_THREAD_TIMEOUT_MS 
                             : GL_THREAD_WARMUP_TIMEOUT_MS;
                     
@@ -1047,6 +1220,7 @@ public class PanoramicCameraGpu {
      */
     private void restartCameraAfterError() {
         logger.info("Restarting camera after error/stall...");
+        restartInProgress = true;
         
         try {
             // CRITICAL: Finalize active recording BEFORE closing camera.
@@ -1102,8 +1276,52 @@ public class PanoramicCameraGpu {
             // present in the auto-probe path in renderLoop().
             recreateCameraSurface();
             
-            // Reopen
-            startCamera();
+            // Update heartbeat again after surface recreation
+            lastGlThreadHeartbeat = System.currentTimeMillis();
+            
+            // CRITICAL FIX: Open camera on a separate thread with a timeout.
+            // startCamera() calls into the BYD HAL which can block indefinitely
+            // if the HAL is in a bad state. Running it on the GL thread causes
+            // the watchdog to kill the process (GL heartbeat stops updating).
+            // By opening on a worker thread, the GL thread stays alive and the
+            // watchdog heartbeat keeps ticking. If the open times out, we let
+            // the watchdog handle it on the next stall cycle instead of crash-looping.
+            final boolean[] openSuccess = {false};
+            final Exception[] openError = {null};
+            Thread cameraOpenThread = new Thread(() -> {
+                try {
+                    startCamera();
+                    openSuccess[0] = true;
+                } catch (Exception e) {
+                    openError[0] = e;
+                }
+            }, "CameraReopen");
+            cameraOpenThread.start();
+            
+            // Wait up to 2 seconds for camera to open, updating heartbeat periodically
+            long openStart = System.currentTimeMillis();
+            long openTimeout = 2000;
+            while (cameraOpenThread.isAlive() && 
+                   (System.currentTimeMillis() - openStart) < openTimeout) {
+                Thread.sleep(200);
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+            }
+            
+            if (!openSuccess[0]) {
+                if (cameraOpenThread.isAlive()) {
+                    logger.warn("Camera open timed out after " + openTimeout + 
+                        "ms — will retry on next stall cycle");
+                    // Don't interrupt — let it finish in background, watchdog won't kill us
+                    // because heartbeat is still updating
+                    return;
+                }
+                if (openError[0] != null) {
+                    throw openError[0];
+                }
+            }
+            
+            // Update heartbeat after successful open
+            lastGlThreadHeartbeat = System.currentTimeMillis();
             
             // Restart encoder drainer now that camera is open again
             if (encoder != null) {
@@ -1130,6 +1348,9 @@ public class PanoramicCameraGpu {
         } catch (Exception e) {
             logger.error("Camera restart failed: " + e.getMessage());
             // If restart fails, the watchdog will eventually kill the process
+            // but at least we won't crash-loop immediately
+        } finally {
+            restartInProgress = false;
         }
     }
     
@@ -1144,11 +1365,6 @@ public class PanoramicCameraGpu {
         if (watchdogThread != null) {
             watchdogThread.interrupt();
             watchdogThread = null;
-        }
-        
-        // SOTA: Unregister from IBYDCameraService
-        if (cameraCoordinator != null) {
-            cameraCoordinator.unregister();
         }
         
         // FORTIFY FIX: Stop encoder drainer threads BEFORE closing camera
@@ -1171,6 +1387,14 @@ public class PanoramicCameraGpu {
         // Binder backend cleanup
         if (binderBackend != null) {
             binderBackend.stopCamera();
+        }
+        
+        // Unregister from IBYDCameraService AFTER notifying posCloseCamera.
+        // Must keep the service proxy alive until the close notification is sent,
+        // otherwise the native camera app never receives the "camera released" signal
+        // and hangs waiting for it.
+        if (cameraCoordinator != null) {
+            cameraCoordinator.unregister();
         }
         
         // Cleanup on GL thread
@@ -1475,12 +1699,19 @@ public class PanoramicCameraGpu {
     public void setAutoProbeCameras(boolean enabled) {
         this.autoProbeCameras = enabled;
         if (enabled) {
-            // Reset probe state — consumers are gated until probe completes
             probeComplete = false;
             probeNextCameraId = 0;
             probeNextSurfaceMode = 0;
         }
         logger.info("Camera auto-probe: " + (enabled ? "ENABLED" : "DISABLED"));
+    }
+    
+    /**
+     * When true, skip frame-15/50 validation. Used when user manually set camera ID.
+     */
+    public void setSkipFrameValidation(boolean skip) {
+        this.skipFrameValidation = skip;
+        if (skip) logger.info("Frame validation SKIPPED (manual camera override)");
     }
     
     /**

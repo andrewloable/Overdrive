@@ -102,6 +102,13 @@
                     </svg>
                     <span>Trips</span>
                 </a>
+                <a href="vehicle-control.html" class="nav-link">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <span>Vehicle Control</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-card">
@@ -341,7 +348,7 @@
 
                             <!-- Map with live edit circle -->
                             <div style="margin-top:12px;">
-                                <div id="safeLocMap" style="height:260px; border-radius:12px; border:1px solid var(--card-border);"></div>
+                                <div id="safeLocMap" style="height:260px; border-radius:12px; border:1px solid var(--card-border); position:relative; overflow:hidden; z-index:1;"></div>
                             </div>
 
                             <!-- Radius Slider -->
@@ -560,6 +567,101 @@
                     </div>
                 </div>
 
+                <!-- Detection Zones (Per-Camera ROI) -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>
+                            Detection Zones
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-hint" style="margin-bottom:12px;">Limit motion detection to specific areas of each camera. When off, the full camera frame is used for detection.</div>
+                        
+                        <!-- Camera tabs + unsaved indicator -->
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                            <div class="btn-group" id="roiCameraTabs" style="flex:1;">
+                                <button class="btn-toggle active" onclick="RoiEditor.selectCamera(0)">Front</button>
+                                <button class="btn-toggle" onclick="RoiEditor.selectCamera(1)">Right</button>
+                                <button class="btn-toggle" onclick="RoiEditor.selectCamera(2)">Rear</button>
+                                <button class="btn-toggle" onclick="RoiEditor.selectCamera(3)">Left</button>
+                            </div>
+                            <span class="unsaved-indicator" id="roiUnsaved" style="display:none;flex-shrink:0;">● unsaved</span>
+                        </div>
+                        
+                        <!-- Per-camera ROI toggle -->
+                        <div class="setting-row" style="border-bottom:none;">
+                            <div class="setting-info">
+                                <div class="setting-name">Enable Zone</div>
+                                <div class="setting-desc">Draw a detection zone for this camera</div>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="roiEnabled" onchange="RoiEditor.toggleRoi()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Drawing content (hidden when ROI disabled) -->
+                        <div id="roiDrawingContent" style="display:none;">
+                            <!-- Canvas container — 4:3 aspect ratio, responsive -->
+                            <div id="roiCanvasContainer" style="position:relative; width:100%; height:0; padding-bottom:75%; background:#0d1117; border-radius:8px; overflow:hidden; border:1px solid var(--card-border); z-index:0;">
+                                <canvas id="roiCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; display:block; touch-action:none; cursor:crosshair;"></canvas>
+                            </div>
+                            
+                            <!-- Buttons -->
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <button class="btn btn-primary" style="flex:1;" onclick="RoiEditor.save()">Save Zone</button>
+                                <button class="btn" style="flex:0 0 auto; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--card-border); padding:8px 12px; font-size:12px;" onclick="RoiEditor.selectAll()">All</button>
+                                <button class="btn" style="flex:0 0 auto; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--card-border); padding:8px 12px; font-size:12px;" onclick="RoiEditor.clear()">None</button>
+                            </div>
+                        </div>
+                        
+                        <!-- ROI status (always visible) -->
+                        <div style="margin-top:8px; font-size:12px; color:var(--text-muted);" id="roiStatus">Front: Full frame (ROI off)</div>
+                    </div>
+                </div>
+
+                <!-- Surveillance Schedule -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Surveillance Schedule
+                            <span class="status-badge inactive" id="scheduleBadge">OFF</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-row" style="border-bottom:none;">
+                            <div class="setting-info">
+                                <div class="setting-name">Enable Schedule</div>
+                                <div class="setting-desc">Only activate sentry during specific days and hours</div>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="scheduleEnabled" onchange="ScheduleEditor.toggle()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="scheduleContent" style="display:none;">
+                            <div class="setting-hint" style="margin-bottom:12px;">Add time windows when surveillance should be active. Outside these windows, sentry mode won't start even if ACC is off.</div>
+                            
+                            <div id="scheduleRulesList"></div>
+                            
+                            <button class="btn" style="width:100%; margin-top:8px; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--card-border);" onclick="ScheduleEditor.addRule()">+ Add Time Window</button>
+                            
+                            <div style="margin-top:12px;">
+                                <button class="btn btn-primary" id="scheduleSaveBtn" style="width:100%;" onclick="ScheduleEditor.save()">Save Schedule</button>
+                            </div>
+                            
+                            <div style="margin-top:8px; font-size:12px; color:var(--text-muted);" id="scheduleSummary"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Deterrent Action -->
                 <div class="card">
                     <div class="card-header">
@@ -677,6 +779,39 @@
                         </div>
                         <div id="bydCloudStatus" style="display:none; margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px;"></div>
                         
+                        <!-- Cloud Push Status (only shown when verified) -->
+                        <div id="bydCloudPushSection" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border-default);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text-primary);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                    Cloud Push
+                                    <span id="bydPushBadge" class="status-badge inactive" style="font-size:11px; padding:2px 8px;">—</span>
+                                </div>
+                                <span id="bydPushAge" style="font-size:12px; color:var(--text-muted);">—</span>
+                            </div>
+                            <div id="bydPushData" style="display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary);">
+                                <span id="bydPushLock">—</span>
+                                <span id="bydPushSoc">—</span>
+                                <span id="bydPushCharging">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Cloud Data Merge Toggle (only shown when verified) -->
+                        <div id="bydCloudMergeSection" style="display:none; margin-top:12px;">
+                            <div class="setting-row" style="border-bottom:none;">
+                                <div class="setting-info">
+                                    <div class="setting-name">Use cloud for vehicle data</div>
+                                    <div class="setting-desc">SOC, charging, and temperature from BYD cloud — may be more accurate when parked</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="bydCloudMergeToggle" onchange="BydCloud.toggleCloudDataMerge(this.checked)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Clear button (only shown when configured) -->
                         <div id="bydClearSection" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-subtle);">
                             <button class="btn btn-danger" onclick="BydCloud.clearCredentials()" style="width:100%;">
@@ -941,6 +1076,7 @@
     <script src="../shared/pip.js"></script>
     <script src="../shared/surveillance.js"></script>
     <script src="../shared/safe-locations.js"></script>
+    <script src="../shared/roi-schedule.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -950,6 +1086,8 @@
         BYD.pip.init();
         SurvSettings.init();
         SafeLocations.init();
+        RoiEditor.init();
+        ScheduleEditor.init();
     </script>
 </body>
 </html>

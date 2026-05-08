@@ -99,6 +99,21 @@ public class PerformanceApiHandler {
             return handleBatteryHealth(path, out);
         }
         
+        // GET /api/performance/soh - SOH detailed status
+        if (path.equals("/api/performance/soh") && method.equals("GET")) {
+            return handleSohStatus(out);
+        }
+        
+        // POST /api/performance/soh/reset - Reset SOH estimation
+        if (path.equals("/api/performance/soh/reset") && method.equals("POST")) {
+            return handleSohReset(out);
+        }
+        
+        // POST /api/performance/soh/source - Set preferred SOH source
+        if (path.equals("/api/performance/soh/source") && method.equals("POST")) {
+            return handleSohSetSource(body, out);
+        }
+        
         return false;
     }
     
@@ -422,6 +437,98 @@ public class PerformanceApiHandler {
         } catch (Exception e) {
             logger.error("Failed to get battery health", e);
             HttpResponse.sendJson(out, "{\"error\": \"" + e.getMessage() + "\"}");
+            return true;
+        }
+    }
+
+    // ==================== SOH STATUS & RESET ====================
+
+    /**
+     * GET /api/performance/soh - Detailed SOH status with source, confidence, capacity info.
+     */
+    private static boolean handleSohStatus(OutputStream out) throws Exception {
+        try {
+            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
+            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+
+            if (sohEst != null) {
+                JSONObject status = sohEst.getStatus();
+                status.put("success", true);
+                HttpResponse.sendJson(out, status.toString());
+            } else {
+                JSONObject response = new JSONObject();
+                response.put("success", false);
+                response.put("error", "SohEstimator not initialized");
+                HttpResponse.sendJson(out, response.toString());
+            }
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to get SOH status", e);
+            HttpResponse.sendJson(out, "{\"success\":false,\"error\":\"" + e.getMessage() + "\"}");
+            return true;
+        }
+    }
+
+    /**
+     * POST /api/performance/soh/reset - Reset SOH estimation.
+     * Clears all persisted SOH data and forces re-estimation from scratch.
+     */
+    private static boolean handleSohReset(OutputStream out) throws Exception {
+        try {
+            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
+            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+
+            if (sohEst != null) {
+                sohEst.reset();
+                JSONObject response = new JSONObject();
+                response.put("success", true);
+                response.put("message", "SOH estimation reset. Will re-seed from next available data source.");
+                HttpResponse.sendJson(out, response.toString());
+            } else {
+                JSONObject response = new JSONObject();
+                response.put("success", false);
+                response.put("error", "SohEstimator not initialized");
+                HttpResponse.sendJson(out, response.toString());
+            }
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to reset SOH", e);
+            HttpResponse.sendJson(out, "{\"success\":false,\"error\":\"" + e.getMessage() + "\"}");
+            return true;
+        }
+    }
+
+    /**
+     * POST /api/performance/soh/source - Set preferred SOH source.
+     * Body: {"source": "auto"|"oem"|"capacity_ah"|"calibration"|"energy"}
+     */
+    private static boolean handleSohSetSource(String body, OutputStream out) throws Exception {
+        try {
+            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
+            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+
+            if (sohEst == null) {
+                HttpResponse.sendJson(out, "{\"success\":false,\"error\":\"SohEstimator not initialized\"}");
+                return true;
+            }
+
+            String source = "auto";
+            if (body != null && !body.isEmpty()) {
+                JSONObject json = new JSONObject(body);
+                source = json.optString("source", "auto");
+            }
+
+            sohEst.setPreferredSource(source);
+
+            JSONObject response = new JSONObject();
+            response.put("success", true);
+            response.put("preferredSource", sohEst.getPreferredSource());
+            response.put("activeSoh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
+            HttpResponse.sendJson(out, response.toString());
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to set SOH source", e);
+            HttpResponse.sendJson(out, "{\"success\":false,\"error\":\"" + e.getMessage() + "\"}");
             return true;
         }
     }

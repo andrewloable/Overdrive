@@ -44,6 +44,8 @@ public class AppUpdater {
     private static final String PREF_UPDATED_VERSION = "updated_version";
     // Also persist to filesystem (survives app reinstall, unlike SharedPreferences)
     private static final String UPDATE_TIMESTAMP_FILE = "/data/local/tmp/overdrive_update_timestamp";
+    // Version file readable by daemon process (SharedPreferences are per-process)
+    public static final String VERSION_FILE = "/data/local/tmp/overdrive_version";
 
     private final Context context;
     private volatile boolean cancelled = false;
@@ -220,6 +222,7 @@ public class AppUpdater {
                         saveLastUpdateTimestamp(updatedAt);
                         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                                 .edit().putString(PREF_UPDATED_VERSION, remoteVersion).apply();
+                        persistVersionToFile(remoteVersion);
                         Log.i(TAG, "First run — saved baseline timestamp: " + updatedAt + ", version: " + remoteVersion);
                         mainHandler.post(() -> callback.onNoUpdate(currentVersion));
                         return;
@@ -249,6 +252,7 @@ public class AppUpdater {
                             saveLastUpdateTimestamp(updatedAt);
                             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                                     .edit().putString(PREF_UPDATED_VERSION, remoteVersion).apply();
+                            persistVersionToFile(remoteVersion);
                             Log.i(TAG, "Fresh deploy detected (app install " + appInstallTime + 
                                     " > remote asset " + remoteAssetTime + ") — updated baseline");
                             mainHandler.post(() -> callback.onNoUpdate(currentVersion));
@@ -381,6 +385,7 @@ public class AppUpdater {
                         .putBoolean(PREF_JUST_UPDATED, true)
                         .putString(PREF_UPDATED_VERSION, remoteVersion)
                         .commit();
+                persistVersionToFile(remoteVersion);
                 saveLastUpdateTimestamp(remoteUpdatedAt);
 
                 // Step 5: Install and relaunch
@@ -465,11 +470,50 @@ public class AppUpdater {
     private void stopAllDaemons() {
         Log.i(TAG, "Stopping all daemons...");
         
-        // Stop each daemon individually — same as UI stop button
+        com.overdrive.app.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
+        
+        // Step 1: Kill ALL watchdog scripts and write sentinels FIRST.
+        // This prevents watchdogs from respawning daemons between kills.
+        // Must happen before any daemon kill — otherwise the watchdog sees the
+        // daemon die and immediately relaunches it.
+        Log.i(TAG, "Killing watchdog scripts and writing sentinels...");
+        String killWatchdogsCmd =
+                // Camera daemon: sentinel + watchdog + lock
+                "echo 'disabled for update at $(date)' > /data/local/tmp/camera_daemon.disabled; " +
+                "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+                "rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid 2>/dev/null; " +
+                // ACC sentry daemon: watchdog + lock
+                "pkill -9 -f 'start_acc_sentry' 2>/dev/null; " +
+                "rm -f /data/local/tmp/start_acc_sentry.sh /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null; " +
+                "echo done";
+        
+        final boolean[] wdDone = {false};
+        launcher.executeShellCommand(killWatchdogsCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+            @Override public void onLog(String m) {}
+            @Override public void onLaunched() {
+                Log.i(TAG, "Watchdog scripts killed");
+                wdDone[0] = true;
+                synchronized (wdDone) { wdDone.notify(); }
+            }
+            @Override public void onError(String e) {
+                Log.w(TAG, "Watchdog kill: " + e);
+                wdDone[0] = true;
+                synchronized (wdDone) { wdDone.notify(); }
+            }
+        });
+        try {
+            synchronized (wdDone) {
+                if (!wdDone[0]) wdDone.wait(5000);
+            }
+        } catch (InterruptedException ignored) {}
+        
+        // Brief pause to let watchdog processes fully exit before killing daemons
+        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        
+        // Step 2: Kill all daemon processes.
+        // Watchdogs are already dead so nothing will respawn these.
         String[] daemons = {"acc_sentry_daemon", "byd_cam_daemon", "sentry_daemon", 
                 "telegram_bot_daemon", "sentry_proxy", "cloudflared", "zrok", "sing-box"};
-        
-        com.overdrive.app.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
         
         for (String daemon : daemons) {
             final boolean[] done = {false};
@@ -494,7 +538,44 @@ public class AppUpdater {
             } catch (InterruptedException ignored) {}
         }
         
-        Log.i(TAG, "All daemons stopped");
+        // Step 3: Final sweep — catch any stragglers that slipped through.
+        // This handles edge cases where a watchdog respawned a daemon in the
+        // brief window between step 1 and step 2, or orphaned shell processes.
+        Log.i(TAG, "Final sweep for remaining processes...");
+        String finalSweepCmd =
+                "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+                "pkill -9 -f 'start_acc_sentry' 2>/dev/null; " +
+                "pkill -9 -f 'byd_cam_daemon' 2>/dev/null; " +
+                "pkill -9 -f 'acc_sentry_daemon' 2>/dev/null; " +
+                "pkill -9 -f 'sentry_daemon' 2>/dev/null; " +
+                "rm -f /data/local/tmp/camera_daemon.lock 2>/dev/null; " +
+                "rm -f /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null; " +
+                // Clean up sentinel — the new app version's daemon launcher clears it
+                // on startup anyway, but remove it here too in case the install fails
+                // and the user manually restarts. Without this, the watchdog would
+                // refuse to start the camera daemon.
+                "rm -f /data/local/tmp/camera_daemon.disabled 2>/dev/null; " +
+                "echo done";
+        
+        final boolean[] sweepDone = {false};
+        launcher.executeShellCommand(finalSweepCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+            @Override public void onLog(String m) {}
+            @Override public void onLaunched() {
+                sweepDone[0] = true;
+                synchronized (sweepDone) { sweepDone.notify(); }
+            }
+            @Override public void onError(String e) {
+                sweepDone[0] = true;
+                synchronized (sweepDone) { sweepDone.notify(); }
+            }
+        });
+        try {
+            synchronized (sweepDone) {
+                if (!sweepDone[0]) sweepDone.wait(5000);
+            }
+        } catch (InterruptedException ignored) {}
+        
+        Log.i(TAG, "All daemons and watchdogs stopped");
     }
 
     /**
@@ -576,6 +657,24 @@ public class AppUpdater {
         } catch (Exception ignored) {}
     }
 
+    /**
+     * Persist version string to filesystem so the daemon process can read it.
+     * SharedPreferences are per-process and may not be accessible from the daemon.
+     */
+    private void persistVersionToFile(String version) {
+        if (version == null || version.isEmpty()) return;
+        try {
+            getAdbLauncher().executeShellCommand("echo '" + version + "' > " + VERSION_FILE,
+                    new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                @Override public void onLog(String m) {}
+                @Override public void onLaunched() {}
+                @Override public void onError(String error) {
+                    Log.w(TAG, "Failed to save version to file: " + error);
+                }
+            });
+        } catch (Exception ignored) {}
+    }
+
     private void postError(UpdateCallback cb, String msg) {
         mainHandler.post(() -> cb.onError(msg));
     }
@@ -611,5 +710,26 @@ public class AppUpdater {
         String stored = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(PREF_UPDATED_VERSION, null);
         return stored != null ? stored : BuildConfig.VERSION_NAME;
+    }
+
+    /**
+     * Get the display version without requiring a Context.
+     * Reads from the persisted version file (written by the app process via ADB shell).
+     * Falls back to BuildConfig.VERSION_NAME if the file doesn't exist.
+     * Used by the daemon process (HttpServer) where SharedPreferences may not be accessible.
+     */
+    public static String getDisplayVersionFromFile() {
+        try {
+            java.io.File f = new java.io.File(VERSION_FILE);
+            if (f.exists()) {
+                java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(f));
+                String version = reader.readLine();
+                reader.close();
+                if (version != null && !version.trim().isEmpty()) {
+                    return version.trim();
+                }
+            }
+        } catch (Exception ignored) {}
+        return BuildConfig.VERSION_NAME;
     }
 }

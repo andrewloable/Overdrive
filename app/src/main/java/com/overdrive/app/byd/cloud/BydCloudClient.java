@@ -66,6 +66,12 @@ public final class BydCloudClient {
         String code = response.optString("code", "");
         if (!"0".equals(code)) {
             String msg = response.optString("message", "Unknown error");
+            // 1009 = server temporarily unavailable (rate limit or overload)
+            // Don't throw a hard error — the session will be retried on next command
+            if ("1009".equals(code)) {
+                logger.warn("Login got server error 1009 — BYD cloud temporarily unavailable");
+                throw new IOException("BYD cloud temporarily unavailable (1009)");
+            }
             throw new IOException("Login failed: code=" + code + " message=" + msg);
         }
 
@@ -93,10 +99,21 @@ public final class BydCloudClient {
 
     /**
      * Ensure we have a valid session, re-authenticating if needed.
+     * Retries login once with a short backoff on transient server errors (1009).
      */
     public BydCloudSession ensureSession() throws IOException {
         if (session == null || session.isExpired()) {
-            login();
+            try {
+                login();
+            } catch (IOException e) {
+                // On transient server error, retry once after a brief pause
+                if (e.getMessage() != null && e.getMessage().contains("1009")) {
+                    try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+                    login();  // Second attempt — if this fails, propagate the exception
+                } else {
+                    throw e;
+                }
+            }
         }
         return session;
     }
@@ -107,6 +124,14 @@ public final class BydCloudClient {
      * Fetch all vehicles and return the first VIN.
      */
     public String fetchFirstVin() throws IOException {
+        String[] result = fetchFirstVinAndEnergyType();
+        return result[0];
+    }
+
+    /**
+     * Fetch all vehicles and return [VIN, energyType].
+     */
+    public String[] fetchFirstVinAndEnergyType() throws IOException {
         BydCloudSession s = ensureSession();
         long nowMs = System.currentTimeMillis();
 
@@ -119,7 +144,6 @@ public final class BydCloudClient {
             throw new IOException("Vehicle list failed: code=" + code);
         }
 
-        // Decrypt respondData — overseas returns a JSON array directly
         String respondDataHex = response.optString("respondData", "");
         if (respondDataHex.isEmpty()) {
             throw new IOException("Vehicle list: empty respondData");
@@ -128,12 +152,10 @@ public final class BydCloudClient {
         String plain = BydCryptoUtils.aesDecryptUtf8(respondDataHex, env.contentKey);
         plain = plain.trim();
 
-        // Parse as array (overseas) or object with diLinkAutoInfoList (CN)
         JSONArray list = null;
         try {
             list = new JSONArray(plain);
         } catch (Exception e) {
-            // Not an array — try as object
             try {
                 JSONObject obj = new JSONObject(plain);
                 list = obj.optJSONArray("diLinkAutoInfoList");
@@ -151,8 +173,10 @@ public final class BydCloudClient {
             if (vehicle != null) {
                 String vin = vehicle.optString("vin", "");
                 if (!vin.isEmpty()) {
-                    logger.info("Found vehicle: VIN=***" + vin.substring(Math.max(0, vin.length() - 4)));
-                    return vin;
+                    String energyType = vehicle.optString("energyType", "");
+                    logger.info("Found vehicle: VIN=***" + vin.substring(Math.max(0, vin.length() - 4))
+                            + " energyType=" + energyType);
+                    return new String[]{vin, energyType};
                 }
             }
         }
@@ -290,7 +314,7 @@ public final class BydCloudClient {
 
         // Poll for result (up to 5 attempts) — only if caller wants to wait
         if (requestSerial != null && waitForResult) {
-            return pollRemoteControlResult(vin, requestSerial, s);
+            return pollRemoteControlResult(vin, requestSerial, commandType, s);
         }
 
         logger.info("Remote command " + commandType + " dispatched" + (waitForResult ? " (no serial)" : " (fire-and-forget)"));
@@ -298,10 +322,16 @@ public final class BydCloudClient {
     }
 
     private boolean pollRemoteControlResult(String vin, String requestSerial,
-                                            BydCloudSession s) throws IOException {
+                                            String commandType, BydCloudSession s) throws IOException {
+        int consecutiveServerErrors = 0;
+        
         for (int attempt = 1; attempt <= 5; attempt++) {
             try {
-                Thread.sleep(2000);
+                // Use exponential backoff on server errors to avoid spamming
+                long delay = consecutiveServerErrors > 0 
+                    ? Math.min(2000L * (1L << consecutiveServerErrors), 10000L)  // 4s, 8s, 10s...
+                    : 2000L;
+                Thread.sleep(delay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
@@ -310,6 +340,12 @@ public final class BydCloudClient {
             long nowMs = System.currentTimeMillis();
             JSONObject inner = new JSONObject();
             try {
+                // CRITICAL: The result poll must mirror the trigger request structure.
+                // Per pyBYD reference (jkaberg/pyBYD _api/control.py), the poll uses
+                // the same _build_control_inner as the trigger — including commandPwd
+                // and commandType. Without these, the BYD cloud returns 1009.
+                inner.put("commandPwd", config.commandPwd);
+                inner.put("commandType", commandType);
                 inner.put("deviceType", "0");
                 inner.put("imeiMD5", config.imeiMd5);
                 inner.put("networkType", "wifi");
@@ -326,6 +362,21 @@ public final class BydCloudClient {
             try {
                 JSONObject response = transport.postSecure("/control/remoteControlResult", env.outer);
                 String code = response.optString("code", "");
+                
+                // Server-side errors — back off and retry
+                if ("1008".equals(code) || "1009".equals(code)) {
+                    consecutiveServerErrors++;
+                    if (consecutiveServerErrors >= 3) {
+                        logger.info("Remote command result polling stopped after " + 
+                            consecutiveServerErrors + " server errors (code=" + code + 
+                            ") — command was dispatched successfully");
+                        return true;  // Optimistic: command was dispatched
+                    }
+                    continue;
+                }
+                
+                consecutiveServerErrors = 0;
+                
                 if (!"0".equals(code)) continue;
 
                 String rd = response.optString("respondData", "");
@@ -351,7 +402,170 @@ public final class BydCloudClient {
         return true; // Optimistic: command was dispatched
     }
 
+    // ── Vehicle Realtime Data ──────────────────────────────────────────
+
+    /**
+     * Fetch vehicle realtime data via request/poll pattern.
+     * Wakes the T-Box and polls until data is ready (up to 10 attempts, 1.5s apart).
+     */
+    public JSONObject fetchVehicleRealtime(String vin) throws IOException {
+        BydCloudSession s = ensureSession();
+        long nowMs = System.currentTimeMillis();
+
+        JSONObject inner = buildInner(nowMs);
+        try {
+            inner.put("energyType", "0");
+            inner.put("tboxVersion", "3");
+            inner.put("vin", vin);
+        } catch (Exception e) {
+            throw new IOException("Failed to build realtime request", e);
+        }
+
+        TokenEnvelope env = buildTokenOuterEnvelope(nowMs, s, inner);
+        JSONObject response = transport.postSecure(
+                "/vehicleInfo/vehicle/vehicleRealTimeRequest", env.outer);
+
+        String code = response.optString("code", "");
+        if (!"0".equals(code)) {
+            throw new IOException("Realtime request failed: code=" + code);
+        }
+
+        String respondData = response.optString("respondData", "");
+        JSONObject vehicleInfo = null;
+        String requestSerial = null;
+
+        if (!respondData.isEmpty()) {
+            JSONObject decoded = BydCloudTransport.decryptRespondData(respondData, env.contentKey);
+            requestSerial = decoded.optString("requestSerial", null);
+            if (isRealtimeReady(decoded)) return decoded;
+            vehicleInfo = decoded;
+        }
+
+        if (requestSerial == null || requestSerial.isEmpty()) return vehicleInfo;
+
+        for (int attempt = 1; attempt <= 10; attempt++) {
+            try { Thread.sleep(1500); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return vehicleInfo;
+            }
+
+            nowMs = System.currentTimeMillis();
+            JSONObject pollInner = buildInner(nowMs);
+            try {
+                pollInner.put("energyType", "0");
+                pollInner.put("tboxVersion", "3");
+                pollInner.put("vin", vin);
+                pollInner.put("requestSerial", requestSerial);
+            } catch (Exception e) { continue; }
+
+            TokenEnvelope pollEnv = buildTokenOuterEnvelope(nowMs, s, pollInner);
+            try {
+                JSONObject pollResp = transport.postSecure(
+                        "/vehicleInfo/vehicle/vehicleRealTimeResult", pollEnv.outer);
+                if (!"0".equals(pollResp.optString("code", ""))) continue;
+
+                String pollData = pollResp.optString("respondData", "");
+                if (pollData.isEmpty()) continue;
+
+                JSONObject decoded = BydCloudTransport.decryptRespondData(pollData, pollEnv.contentKey);
+                String newSerial = decoded.optString("requestSerial", null);
+                if (newSerial != null && !newSerial.isEmpty()) requestSerial = newSerial;
+
+                if (isRealtimeReady(decoded)) {
+                    logger.info("Realtime data ready (attempt " + attempt + ")");
+                    return decoded;
+                }
+                vehicleInfo = decoded;
+            } catch (Exception e) {
+                logger.debug("Realtime poll " + attempt + " failed: " + e.getMessage());
+            }
+        }
+
+        return vehicleInfo;
+    }
+
+    private boolean isRealtimeReady(JSONObject vi) {
+        if (vi == null) return false;
+        if (vi.optInt("onlineState", -1) == 2) return false;
+        if (vi.optDouble("leftFrontTirepressure", 0) > 0) return true;
+        if (vi.optDouble("rightFrontTirepressure", 0) > 0) return true;
+        if (vi.optLong("time", 0) > 0) return true;
+        if (vi.optDouble("enduranceMileage", 0) > 0) return true;
+        return false;
+    }
+
     // ── Request Builders ────────────────────────────────────────────────
+
+    /**
+     * Fetch the EMQ MQTT broker hostname for real-time push subscription.
+     */
+    public String fetchEmqBrokerHost() throws IOException {
+        BydCloudSession s = ensureSession();
+        long nowMs = System.currentTimeMillis();
+
+        JSONObject inner = buildInner(nowMs);
+        TokenEnvelope env = buildTokenOuterEnvelope(nowMs, s, inner);
+        JSONObject response = transport.postSecure("/app/emqAuth/getEmqBrokerIp", env.outer);
+
+        String code = response.optString("code", "");
+        if (!"0".equals(code)) {
+            throw new IOException("Broker lookup failed: code=" + code
+                    + " message=" + response.optString("message", ""));
+        }
+
+        String respondData = response.optString("respondData", "");
+        if (respondData.isEmpty()) {
+            throw new IOException("Broker lookup: empty respondData");
+        }
+
+        JSONObject decoded = BydCloudTransport.decryptRespondData(respondData, env.contentKey);
+        // BYD API has a typo: "emqBorker" (sic) — check both spellings
+        String broker = decoded.optString("emqBorker", "");
+        if (broker.isEmpty()) broker = decoded.optString("emqBroker", "");
+        if (broker.isEmpty()) {
+            throw new IOException("Broker lookup response missing broker hostname");
+        }
+
+        logger.info("EMQ broker resolved: " + broker);
+        return broker;
+    }
+
+    /**
+     * Build MQTT credentials for connecting to BYD's EMQ broker.
+     * Returns [clientId, username, password].
+     */
+    public String[] buildMqttCredentials() throws IOException {
+        BydCloudSession s = ensureSession();
+        String clientId = "oversea_" + config.imeiMd5.toUpperCase();
+        String username = s.userId;
+        long tsSeconds = System.currentTimeMillis() / 1000;
+        String passwordBase = s.signToken + clientId + s.userId + tsSeconds;
+        String password = tsSeconds + com.overdrive.app.byd.cloud.crypto.BydCryptoUtils.md5Hex(passwordBase);
+        return new String[]{clientId, username, password};
+    }
+
+    /**
+     * Get the MQTT topic for vehicle push messages.
+     */
+    public String getMqttTopic() throws IOException {
+        BydCloudSession s = ensureSession();
+        return "oversea/res/" + s.userId;
+    }
+
+    /**
+     * Get the content key for decrypting MQTT messages.
+     */
+    public String getMqttDecryptKey() throws IOException {
+        BydCloudSession s = ensureSession();
+        return s.contentKey();
+    }
+
+    /**
+     * Get the current session (for reconnection credential rebuilding).
+     */
+    public BydCloudSession getSession() {
+        return session;
+    }
 
     private JSONObject buildLoginRequest(long nowMs) {
         try {

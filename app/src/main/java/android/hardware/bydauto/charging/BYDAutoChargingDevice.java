@@ -8,8 +8,11 @@ import java.util.List;
 public class BYDAutoChargingDevice extends AbsBYDAutoDevice {
 
     // Charging gun state constants
-    public static final int CHARGING_GUN_STATE_NONE = 0;
-    public static final int CHARGING_GUN_STATE_CONNECTED_AC = 1;
+    // NOTE: Per decompiled BYDCarController (ground truth from actual BYD APK):
+    //   1=NONE (no gun), 2=AC, 3=DC, 4=AC_DC, 5=VTOL
+    // The HAL returns these values directly from getChargingGunState().
+    public static final int CHARGING_GUN_STATE_NONE = 1;
+    public static final int CHARGING_GUN_STATE_CONNECTED_AC = 2;
     public static final int CHARGING_GUN_STATE_CONNECTED_DC = 3;
     public static final int CHARGING_GUN_STATE_CONNECTED_AC_DC = 4;
     public static final int CHARGING_GUN_STATE_CONNECTED_VTOL = 5;

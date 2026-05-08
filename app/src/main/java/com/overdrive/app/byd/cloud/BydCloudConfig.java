@@ -1,14 +1,13 @@
 package com.overdrive.app.byd.cloud;
 
+import com.overdrive.app.byd.cloud.crypto.CredentialCipher;
 import com.overdrive.app.config.UnifiedConfigManager;
 
 import org.json.JSONObject;
 
 /**
  * BYD Cloud API configuration.
- * Reads derived credentials from the bydCloud section of UnifiedConfigManager.
- * 
- * Only stores derived keys (MD5 hashes), never raw passwords.
+ * Reads credentials from the bydCloud section of UnifiedConfigManager.
  */
 public final class BydCloudConfig {
 
@@ -19,10 +18,10 @@ public final class BydCloudConfig {
 
     public final boolean enabled;
     public final String username;
-    public final String loginKey;      // MD5(MD5(password))
-    public final String signPassword;  // MD5(password)
-    public final String commandPwd;    // MD5(pin).toUpperCase()
-    public final String rawPassword;   // Raw password — needed for login signKey field
+    public final String loginKey;
+    public final String signPassword;
+    public final String commandPwd;
+    public final String rawPassword;
     public final String vin;
     public final String countryCode;
     public final String language;
@@ -30,10 +29,13 @@ public final class BydCloudConfig {
     public final String imeiMd5;
     public final String appInnerVersion;
     public final String appVersion;
+    public final boolean cloudDataMerge; // Toggle: merge cloud telemetry into vehicle data
+    public final String energyType;      // From vehicle list: PHEV/BEV identifier
 
     private BydCloudConfig(boolean enabled, String username, String loginKey,
                            String signPassword, String commandPwd, String rawPassword,
-                           String vin, String countryCode, String language, String region) {
+                           String vin, String countryCode, String language, String region,
+                           boolean cloudDataMerge, String energyType) {
         this.enabled = enabled;
         this.username = username;
         this.loginKey = loginKey;
@@ -44,6 +46,8 @@ public final class BydCloudConfig {
         this.countryCode = countryCode;
         this.language = language;
         this.region = (region != null && !region.isEmpty()) ? region : DEFAULT_REGION;
+        this.cloudDataMerge = cloudDataMerge;
+        this.energyType = energyType != null ? energyType : "";
         // Device fingerprint derived from username (matches Niek/BYD-re)
         this.imeiMd5 = (username != null && !username.isEmpty())
                 ? com.overdrive.app.byd.cloud.crypto.BydCryptoUtils.md5Hex(username)
@@ -54,25 +58,50 @@ public final class BydCloudConfig {
 
     /**
      * Load config from UnifiedConfigManager.
+     * Handles legacy plaintext values transparently.
      */
     public static BydCloudConfig fromUnifiedConfig() {
         JSONObject config = UnifiedConfigManager.loadConfig();
         JSONObject bydCloud = config.optJSONObject("bydCloud");
         if (bydCloud == null) {
-            return new BydCloudConfig(false, "", "", "", "", "", "", "NL", "en", DEFAULT_REGION);
+            return new BydCloudConfig(false, "", "", "", "", "", "", "NL", "en", DEFAULT_REGION, false, "");
         }
+
+        String storedRawPassword = bydCloud.optString("rawPassword", "");
+        String rawPassword = CredentialCipher.decrypt(storedRawPassword);
+
+        // Migrate legacy plaintext to protected form on first read
+        if (!storedRawPassword.isEmpty() && !CredentialCipher.isEncrypted(storedRawPassword)) {
+            migrateRawPassword(bydCloud, rawPassword);
+        }
+
         return new BydCloudConfig(
                 bydCloud.optBoolean("enabled", false),
                 bydCloud.optString("username", ""),
                 bydCloud.optString("loginKey", ""),
                 bydCloud.optString("signPassword", ""),
                 bydCloud.optString("commandPwd", ""),
-                bydCloud.optString("rawPassword", ""),
+                rawPassword,
                 bydCloud.optString("vin", ""),
                 bydCloud.optString("countryCode", "NL"),
                 bydCloud.optString("language", "en"),
-                bydCloud.optString("region", DEFAULT_REGION)
+                bydCloud.optString("region", DEFAULT_REGION),
+                bydCloud.optBoolean("cloudDataMerge", false),
+                bydCloud.optString("energyType", "")
         );
+    }
+
+    /**
+     * Migrate a legacy plaintext value to protected form.
+     */
+    private static void migrateRawPassword(JSONObject bydCloud, String plainPassword) {
+        try {
+            String encrypted = CredentialCipher.encrypt(plainPassword);
+            bydCloud.put("rawPassword", encrypted);
+            UnifiedConfigManager.updateSection("bydCloud", bydCloud);
+        } catch (Exception e) {
+            // Best-effort — plaintext still works, will migrate on next save
+        }
     }
 
     /**
@@ -103,13 +132,22 @@ public final class BydCloudConfig {
 
     /**
      * Save credentials to UnifiedConfigManager.
-     * Called from the settings UI after deriving keys from raw password/PIN.
      */
     public static void saveCredentials(String username, String loginKey,
                                        String signPassword, String commandPwd,
                                        String rawPassword,
                                        String vin, String countryCode, String language,
                                        String region) {
+        saveCredentials(username, loginKey, signPassword, commandPwd, rawPassword,
+                vin, countryCode, language, region, "", false);
+    }
+
+    public static void saveCredentials(String username, String loginKey,
+                                       String signPassword, String commandPwd,
+                                       String rawPassword,
+                                       String vin, String countryCode, String language,
+                                       String region, String energyType,
+                                       boolean cloudDataMerge) {
         JSONObject bydCloud = new JSONObject();
         try {
             bydCloud.put("enabled", true);
@@ -117,11 +155,15 @@ public final class BydCloudConfig {
             bydCloud.put("loginKey", loginKey);
             bydCloud.put("signPassword", signPassword);
             bydCloud.put("commandPwd", commandPwd);
-            bydCloud.put("rawPassword", rawPassword);
+            bydCloud.put("rawPassword", CredentialCipher.encrypt(rawPassword));
             bydCloud.put("vin", vin);
             bydCloud.put("countryCode", countryCode);
             bydCloud.put("language", language);
             bydCloud.put("region", region);
+            bydCloud.put("cloudDataMerge", cloudDataMerge);
+            if (energyType != null && !energyType.isEmpty()) {
+                bydCloud.put("energyType", energyType);
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to build config JSON", e);
         }
@@ -139,6 +181,7 @@ public final class BydCloudConfig {
             bydCloud.put("loginKey", "");
             bydCloud.put("signPassword", "");
             bydCloud.put("commandPwd", "");
+            bydCloud.put("rawPassword", "");
             bydCloud.put("vin", "");
         } catch (Exception ignored) {}
         UnifiedConfigManager.updateSection("bydCloud", bydCloud);

@@ -53,9 +53,20 @@
             android:title="Trips" />
 
         <item
+            android:id="@+id/vehicleControlFragment"
+            android:icon="@drawable/ic_vehicle_control"
+            android:title="Vehicle Control" />
+
+        <item
             android:id="@+id/nav_reconfigure_camera"
             android:icon="@drawable/ic_camera_probe"
             android:title="Reconfigure Camera"
+            android:checkable="false" />
+
+        <item
+            android:id="@+id/nav_battery_health"
+            android:icon="@drawable/ic_battery_health"
+            android:title="Battery Health (SOH)"
             android:checkable="false" />
 
         <item

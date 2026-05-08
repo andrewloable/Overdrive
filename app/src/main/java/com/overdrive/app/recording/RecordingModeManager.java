@@ -2,7 +2,9 @@ package com.overdrive.app.recording;
 
 import android.content.Context;
 
+import com.overdrive.app.camera.AvcHalWarmup;
 import com.overdrive.app.config.UnifiedConfigManager;
+import com.overdrive.app.daemon.CameraDaemon;
 import com.overdrive.app.logging.DaemonLogger;
 import com.overdrive.app.proximity.ProximityGuardController;
 import com.overdrive.app.surveillance.GpuSurveillancePipeline;
@@ -51,6 +53,7 @@ public class RecordingModeManager {
     private final Context context;
     private final GpuSurveillancePipeline pipeline;
     private final ProximityGuardController proximityController;
+    private final AvcHalWarmup avcWarmup;
     
     private volatile Mode currentMode = Mode.NONE;  // Default: no recording
     private volatile boolean accIsOn = false;  // Default: ACC OFF — wait for AccSentryDaemon to confirm
@@ -60,6 +63,7 @@ public class RecordingModeManager {
         this.context = context;
         this.pipeline = pipeline;
         this.proximityController = new ProximityGuardController(context, pipeline);
+        this.avcWarmup = new AvcHalWarmup();
         
         // Load persisted mode from config
         loadPersistedMode();
@@ -176,24 +180,33 @@ public class RecordingModeManager {
         accIsOn = isOn;
         
         if (isOn) {
-            // ACC is ON — stop pipeline completely. The delayed thread will restart it.
-            // Don't call onAccOn() — it tries to reopen the camera which is pointless
-            // since stop() will tear everything down immediately after.
-            if (pipeline.isRunning()) {
-                pipeline.stop();
+            if (wasOn) {
+                // Duplicate notification — ACC was already ON, skip re-activation.
+                // The IPC layer can deliver the same state change multiple times within
+                // milliseconds, causing a race where the second activation stops the
+                // recording that the first activation just started.
+                logger.debug("ACC already ON, ignoring duplicate notification");
+                return;
             }
             
-            // Delay mode activation to let BYD native app finish camera init
+            // ACC is ON — if pipeline is already running, keep it running.
+            // No need to stop and restart — the camera is already open and the
+            // mode will continue using it. Stopping causes a HAL teardown
+            // (stopPreview + close) that disrupts the native DVR.
+            // If surveillance was active, CameraDaemon.onAccStateChanged handles
+            // disabling it separately.
+            
+            // Start AVC keep-alive and activate mode after warmup
             final Mode modeToActivate = currentMode;
             new Thread(() -> {
-                try {
-                    // Give OEM dashcam / AVM / reverse camera time to initialize their camera
-                    // session before we reopen. BYD native camera apps typically need 3-6s after
-                    // ACC ON to bind to the panoramic HAL; use 10s for margin. This prevents
-                    // simultaneous open/close contention at the HAL during the ACC transition
-                    // which can leave the OEM dashcam with "no video signal" until reboot.
-                    Thread.sleep(10000);
-                } catch (InterruptedException ignored) {}
+                // Only warmup if pipeline isn't already running
+                // (if it's running, camera is already open — no need to poke com.byd.avc)
+                if (!pipeline.isRunning()) {
+                    if (!avcWarmup.warmupAndWait()) {
+                        logger.warn("AVC warmup interrupted — skipping mode activation");
+                        return;
+                    }
+                }
                 
                 synchronized (RecordingModeManager.this) {
                     if (!accIsOn) {
@@ -202,7 +215,7 @@ public class RecordingModeManager {
                     }
                     
                     // Use CURRENT gear, not the gear at ACC ON time — gear may have changed
-                    // during the 5-second delay (e.g., P→D or D→P)
+                    // during the delay (e.g., P→D or D→P)
                     int gearNow = currentGear;
                     
                     if (modeToActivate == Mode.DRIVE_MODE && !isDrivingGear(gearNow)) {
@@ -221,8 +234,14 @@ public class RecordingModeManager {
             }, "AccOnReacquire").start();
             
         } else if (!isOn && wasOn) {
-            // ACC turned OFF - deactivate current mode
-            deactivateMode(currentMode);
+            // ACC turned OFF — always stop the pipeline regardless of mode.
+            // Recording modes only operate when ACC is ON. Surveillance (if enabled)
+            // will be started separately by CameraDaemon.onAccStateChanged.
+            CameraDaemon.stopAvcKeepAlive();
+            if (pipeline.isRunning()) {
+                pipeline.stopRecording();
+                pipeline.stop();
+            }
         }
     }
     
@@ -343,6 +362,7 @@ public class RecordingModeManager {
                 if (pipeline.isRunning()) {
                     logger.info("Stopping pipeline for NONE mode (resource saving)");
                     pipeline.stop();
+                    CameraDaemon.stopAvcKeepAlive();
                 }
                 break;
                 
@@ -357,6 +377,8 @@ public class RecordingModeManager {
                     if (pipeline.isRunning() && !pipeline.isRecording()) {
                         pipeline.startRecording();
                     }
+                    // Start AVC keep-alive (pipeline is now running with ACC ON)
+                    CameraDaemon.startAvcKeepAliveIfNeeded();
                 } catch (Exception e) {
                     logger.error("Failed to start CONTINUOUS mode: " + e.getMessage());
                 }
@@ -374,6 +396,8 @@ public class RecordingModeManager {
                         logger.info("Starting DRIVE_MODE recording");
                         pipeline.startRecording();
                     }
+                    // Start AVC keep-alive (pipeline is now running with ACC ON)
+                    CameraDaemon.startAvcKeepAliveIfNeeded();
                 } catch (Exception e) {
                     logger.error("Failed to start DRIVE_MODE: " + e.getMessage());
                 }
@@ -387,6 +411,8 @@ public class RecordingModeManager {
                         pipeline.start(false);  // Don't auto-start recording
                     }
                     proximityController.start();
+                    // Start AVC keep-alive (pipeline is now running with ACC ON)
+                    CameraDaemon.startAvcKeepAliveIfNeeded();
                 } catch (Exception e) {
                     logger.error("Failed to start PROXIMITY_GUARD mode: " + e.getMessage());
                 }
@@ -415,6 +441,7 @@ public class RecordingModeManager {
                 pipeline.stopRecording();
                 if (pipeline.isRunning() && !keepPipelineRunning) {
                     pipeline.stop();
+                    CameraDaemon.stopAvcKeepAlive();
                 }
                 break;
                 
@@ -430,6 +457,7 @@ public class RecordingModeManager {
                 proximityController.stop();
                 if (pipeline.isRunning() && !keepPipelineRunning) {
                     pipeline.stop();
+                    CameraDaemon.stopAvcKeepAlive();
                 }
                 break;
         }
@@ -508,6 +536,7 @@ public class RecordingModeManager {
      */
     public void shutdown() {
         logger.info("Shutting down RecordingModeManager...");
+        CameraDaemon.stopAvcKeepAlive();
         deactivateMode(currentMode);
         if (proximityController != null) {
             proximityController.shutdown();

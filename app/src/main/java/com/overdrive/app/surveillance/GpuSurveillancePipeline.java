@@ -494,9 +494,9 @@ public class GpuSurveillancePipeline {
         }
         
         // Camera config strategy:
-        // 1. BmmCameraInfo discovery → instant lookup, use if valid
-        // 2. Saved config from previous probe → use directly (no probe)
-        // 3. No saved config → use vehicle model defaults (Seal=ID1, Atto3=ID0)
+        // 1. Saved config from previous VALIDATED probe → use directly (highest trust)
+        // 2. Vehicle model defaults (Seal=ID1, Atto3=ID0) → known-good for each model
+        // 3. BmmCameraInfo discovery → can return wrong ID on some firmware, lowest trust
         // 4. Full auto-probe only when all above fail
         String model = getVehicleModel();
         logger.info("Vehicle model: " + model);
@@ -504,55 +504,34 @@ public class GpuSurveillancePipeline {
         boolean configured = false;
         
         // When binder backend is enabled, skip saved config and force auto-probe.
-        // The binder service may use different camera IDs than AVMCamera for panoramic.
-        // TODO: Remove this override after binder backend testing — save working binder IDs separately.
         if (camera.isUseBinderBackend()) {
             logger.info("Binder backend active — forcing auto-probe to discover panoramic camera ID");
             camera.setAutoProbeCameras(true);
-            configured = true;  // Skip saved config / model defaults
+            configured = true;
         }
         
-        // Step 1: BmmCameraInfo discovery — instant camera ID lookup via HAL metadata
-        if (!configured) {
-            try {
-                int discoveredId = com.overdrive.app.camera.AvmCameraHelper.discoverPanoCameraId();
-                if (discoveredId >= 0) {
-                    logger.info("Camera discovered via BmmCameraInfo: ID " + discoveredId);
-                    camera.setCameraId(discoveredId);
-                    camera.setCameraSurfaceMode(0);
-                    camera.setAutoProbeCameras(false);
-                    configured = true;
-                    
-                    // Save discovered ID so subsequent startups can use saved config path
-                    try {
-                        org.json.JSONObject camCfg = new org.json.JSONObject();
-                        camCfg.put("probedCameraId", discoveredId);
-                        camCfg.put("probedSurfaceMode", 0);
-                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
-                        logger.info("Saved BmmCameraInfo discovery: id=" + discoveredId + ", surfaceMode=0");
-                    } catch (Exception ex) {
-                        logger.warn("Failed to save discovered camera config: " + ex.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                logger.warn("BmmCameraInfo discovery error: " + e.getMessage());
-            }
-        }
-        
-        // Step 2: Saved config from previous probe/discovery
+        // Step 1: Validated saved config (probedAndValidated=true OR manualOverride=true)
         if (!configured) {
             try {
                 org.json.JSONObject cameraConfig = com.overdrive.app.config.UnifiedConfigManager
                     .loadConfig().optJSONObject("camera");
                 int savedId = cameraConfig != null ? cameraConfig.optInt("probedCameraId", -1) : -1;
                 int savedMode = cameraConfig != null ? cameraConfig.optInt("probedSurfaceMode", -1) : -1;
+                boolean validated = cameraConfig != null && cameraConfig.optBoolean("probedAndValidated", false);
+                boolean manual = cameraConfig != null && cameraConfig.optBoolean("manualOverride", false);
+                boolean fallback = cameraConfig != null && cameraConfig.optBoolean("fallbackFromProbe", false);
                 
-                if (savedId >= 0 && savedMode >= 0) {
-                    // Use saved config directly — no probe, no HAL cycling
-                    logger.info("Using saved camera config: id=" + savedId + ", surfaceMode=" + savedMode);
+                if (savedId >= 0 && savedMode >= 0 && (validated || manual)) {
+                    logger.info("Using " + (manual ? "MANUAL" : fallback ? "fallback" : "validated") + 
+                        " camera config: id=" + savedId + ", surfaceMode=" + savedMode);
                     camera.setCameraId(savedId);
                     camera.setCameraSurfaceMode(savedMode);
                     camera.setAutoProbeCameras(false);
+                    // Skip frame validation for ALL saved configs. The strip check uses
+                    // an 8x8 luma heuristic that produces false negatives when all 4 cameras
+                    // see similar scenes (parked in garage, night, uniform lighting).
+                    // A saved config was already validated — no need to re-check every startup.
+                    camera.setSkipFrameValidation(true);
                     configured = true;
                 }
             } catch (Exception e) {
@@ -560,39 +539,17 @@ public class GpuSurveillancePipeline {
             }
         }
         
-        // Step 3: Vehicle model defaults
+        // Step 2: Default camera ID 1 (correct for Seal, most common model).
+        // If wrong for other models, frame-50 recheck will detect and re-probe.
         if (!configured) {
-            // No saved config — use vehicle model defaults
-            // Seal / Seal U / Song Plus: camera ID 1, surfaceMode 0
-            // Atto 3 / Yuan Plus / Dolphin: camera ID 0, surfaceMode 0
-            int defaultId;
-            if (model.toLowerCase().contains("seal") || model.toLowerCase().contains("song")) {
-                defaultId = 1;
-                logger.info("Seal/Song detected — using default camera ID 1");
-            } else {
-                defaultId = 0;
-                logger.info("Atto 3/Yuan/Dolphin/other — using default camera ID 0");
-            }
-            
-            camera.setCameraId(defaultId);
+            logger.info("Using default camera ID 1");
+            camera.setCameraId(1);
             camera.setCameraSurfaceMode(0);
             camera.setAutoProbeCameras(false);
             configured = true;
-            
-            // Save this default so it's used on next launch
-            try {
-                org.json.JSONObject camCfg = new org.json.JSONObject();
-                camCfg.put("probedCameraId", defaultId);
-                camCfg.put("probedSurfaceMode", 0);
-                com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
-                logger.info("Saved default camera config: id=" + defaultId + ", surfaceMode=0");
-            } catch (Exception ex) {
-                logger.warn("Failed to save default camera config: " + ex.getMessage());
-            }
         }
         
-        // Step 4: If still not configured (shouldn't happen — model defaults always apply),
-        // enable auto-probe as last resort
+        // Step 3: Full auto-probe as last resort (shouldn't reach here)
         if (!configured) {
             logger.warn("All camera config strategies failed — enabling auto-probe");
             camera.setAutoProbeCameras(true);

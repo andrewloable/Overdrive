@@ -182,6 +182,31 @@ class SurveillanceConfigManager(
             put(KEY_MOTION_HEATMAP, config.isMotionHeatmapEnabled)
             put(KEY_FILTER_DEBUG_LOG, config.isFilterDebugLogEnabled)
             put(KEY_SHADOW_FILTER, config.shadowFilterMode)
+            
+            // ROI polygons (per-quadrant) — always persist polygon even when disabled
+            val roiObj = org.json.JSONObject()
+            val qKeys = arrayOf("Q0", "Q1", "Q2", "Q3")
+            for (q in 0..3) {
+                val poly = config.getRoiPolygon(q)
+                if (poly != null && poly.size >= 3) {
+                    val polyArr = org.json.JSONArray()
+                    for (vertex in poly) {
+                        val pt = org.json.JSONObject()
+                        pt.put("x", vertex[0].toDouble())
+                        pt.put("y", vertex[1].toDouble())
+                        polyArr.put(pt)
+                    }
+                    roiObj.put(qKeys[q], polyArr)
+                }
+                put("roiEnabled_${qKeys[q]}", config.isRoiEnabled(q))
+            }
+            put("roiPolygons", roiObj)
+            
+            // Schedule
+            val scheduleJson = config.schedule.toJson()
+            put("scheduleEnabled", scheduleJson.optBoolean("scheduleEnabled", false))
+            val schedRules = scheduleJson.optJSONArray("scheduleRules")
+            if (schedRules != null) put("scheduleRules", schedRules)
         }
     }
     
@@ -227,6 +252,30 @@ class SurveillanceConfigManager(
         if (json.has(KEY_MOTION_HEATMAP)) config.setMotionHeatmapEnabled(json.optBoolean(KEY_MOTION_HEATMAP, false))
         if (json.has(KEY_FILTER_DEBUG_LOG)) config.setFilterDebugLogEnabled(json.optBoolean(KEY_FILTER_DEBUG_LOG, false))
         if (json.has(KEY_SHADOW_FILTER)) config.setShadowFilterMode(json.optInt(KEY_SHADOW_FILTER, 2))
+        
+        // ROI polygons (per-quadrant)
+        val roiPolygons = json.optJSONObject("roiPolygons")
+        if (roiPolygons != null) {
+            val qKeys = arrayOf("Q0", "Q1", "Q2", "Q3")
+            for (q in 0..3) {
+                val polyArr = roiPolygons.optJSONArray(qKeys[q])
+                if (polyArr != null && polyArr.length() >= 3) {
+                    val polygon = Array(polyArr.length()) { i ->
+                        val pt = polyArr.getJSONObject(i)
+                        floatArrayOf(pt.getDouble("x").toFloat(), pt.getDouble("y").toFloat())
+                    }
+                    config.setRoiPolygon(q, polygon)
+                }
+                // Load enabled flag (separate from polygon existence)
+                val enabledKey = "roiEnabled_${qKeys[q]}"
+                if (json.has(enabledKey)) {
+                    config.setRoiEnabled(q, json.optBoolean(enabledKey, false))
+                }
+            }
+        }
+        
+        // Schedule
+        config.schedule.loadFromJson(json)
         
         return config
     }
