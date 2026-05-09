@@ -282,6 +282,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Process Revival Receiver - AlarmManager-driven watchdog that revives
+             the process if it has been killed (force-stop, OOM, OEM cleanup).
+             No intent-filter: only invoked via explicit PendingIntent. -->
+        <receiver
+            android:name="com.overdrive.app.receiver.ProcessRevivalReceiver"
+            android:enabled="true"
+            android:exported="false"
+            android:directBootAware="true" />
+
         <!-- Location Boot Receiver - Auto-start Location service after device reboot -->
         <receiver
             android:name="com.overdrive.app.receiver.LocationBootReceiver"
