@@ -268,10 +268,11 @@
         </com.google.android.material.card.MaterialCardView>
 
         <!-- ==============================================================
-             Support development — three tiered ways to help, ordered from
-             zero-cost (Star) → social (Spread) → monetary (Ko-fi). The Ko-fi
-             card uses primaryContainer so the most committed CTA reads as a
-             positive accent without becoming aggressive.
+             "Powered by people like you" — recognition (Thanks card) leads,
+             then three tiered ways to help: zero-cost (Star) → social (Spread)
+             → monetary (Ko-fi). The Ko-fi card uses primaryContainer so the
+             most committed CTA reads as a positive accent without becoming
+             aggressive.
              ============================================================== -->
         <TextView
             android:layout_width="wrap_content"
@@ -283,6 +284,92 @@
             android:textAllCaps="true"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <!-- Thanks card: contributors + supporters from credits.json. Sits
+             at the top of this section because recognition should lead the
+             asks. -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/card_gap_vertical"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/card_radius_standard"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding_hero">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_about_thanks_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/settings_about_thanks_subtitle"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/settings_about_contributors_title"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textAllCaps="true" />
+
+                <!-- ScrollView caps the contributor list at ~6 rows so a
+                     growing list scrolls inside the card instead of pushing
+                     the whole About page down. android:nestedScrollingEnabled
+                     keeps gestures playing nicely with the outer NestedScrollView. -->
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:maxHeight="280dp"
+                    android:fillViewport="false"
+                    android:nestedScrollingEnabled="true">
+
+                    <LinearLayout
+                        android:id="@+id/containerContributors"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/settings_about_supporters_title"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textAllCaps="true" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:maxHeight="280dp"
+                    android:fillViewport="false"
+                    android:nestedScrollingEnabled="true">
+
+                    <LinearLayout
+                        android:id="@+id/containerSupporters"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Tier 1 — free, instant: Star on GitHub -->
         <com.google.android.material.card.MaterialCardView
@@ -446,5 +533,6 @@
                     app:tint="?attr/colorOnPrimaryContainer" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

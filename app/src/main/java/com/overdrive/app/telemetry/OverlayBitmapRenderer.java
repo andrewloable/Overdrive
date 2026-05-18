@@ -33,6 +33,7 @@ public class OverlayBitmapRenderer {
     private static final int HEIGHT = 80;
     private static final String ICON_DIR = "/data/local/tmp/overlay/";
     private static final int ICON_SIZE = 40;
+    private static final double KM_TO_MI = 0.621371;
 
     private final DaemonLogger logger;
     private final OverlayDoubleBuffer doubleBuffer;
@@ -153,9 +154,21 @@ public class OverlayBitmapRenderer {
             // RIGHT TURN — fixed at right edge of bar
             drawIcon(c, alphaRight, barR - ICON_SIZE - 10, iy, snap.rightTurnSignal && blink ? 0xFFFF8800 : 0xFF555555);
 
-            // Calculate content width for centering (between the two arrows)
-            String spd = String.valueOf(snap.speedKmh);
-            float spdW = speedPaint.measureText(spd) + 4 + unitPaint.measureText("km/h");
+            // Calculate content width for centering (between the two arrows).
+            // Display speed in the user's selected unit. snap.speedKmh is the
+            // canonical km/h value; convert to mph if the user / vehicle is in
+            // miles mode (BydDataCollector.isMilesMode reflects this).
+            boolean milesMode = false;
+            try {
+                com.overdrive.app.byd.BydDataCollector collector =
+                        com.overdrive.app.byd.BydDataCollector.getInstance();
+                milesMode = collector != null && collector.isMilesMode();
+            } catch (Throwable ignored) {}
+            String spd = milesMode
+                ? String.valueOf((int) Math.round(snap.speedKmh * KM_TO_MI))
+                : String.valueOf(snap.speedKmh);
+            String spdUnit = milesMode ? "mph" : "km/h";
+            float spdW = speedPaint.measureText(spd) + 4 + unitPaint.measureText(spdUnit);
             float gearW = 44;
             float brakeW = ICON_SIZE + 8;
             float accelW = ICON_SIZE + 10;
@@ -173,8 +186,8 @@ public class OverlayBitmapRenderer {
             // SPEED
             c.drawText(spd, x, 54, speedPaint);
             x += speedPaint.measureText(spd) + 4;
-            c.drawText("km/h", x, 54, unitPaint);
-            x += unitPaint.measureText("km/h") + 8;
+            c.drawText(spdUnit, x, 54, unitPaint);
+            x += unitPaint.measureText(spdUnit) + 8;
 
             // GEAR
             gearPaint.setColor(getGearColorForDarkBg(snap.gearMode));

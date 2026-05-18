@@ -1275,6 +1275,10 @@
                     </svg>
                     <span data-i18n="nav.vehicle_control">Vehicle Control</span>
                 </a>
+                <a href="about.html" class="nav-link">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span data-i18n="nav.about">About</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-card">
@@ -1340,7 +1344,7 @@
                         <span class="ev-soh-val" id="evSohValue">--%</span>
                     </div>
                     <div class="ev-personalized-range" id="evPersonalizedRow" style="display:none;">
-                        <span class="ev-personalized-label">⚡ Personalized</span>
+                        <span class="ev-personalized-label" data-i18n="vehicle.personalized_label">⚡ Personalized</span>
                         <span class="ev-personalized-val" id="evPersonalizedRange">-- km</span>
                     </div>
                 </div>
@@ -1532,11 +1536,11 @@
                         </div>
                         <div class="summary-grid" id="weeklySummary">
                             <div class="summary-stat"><div class="summary-stat-value" id="summaryTrips">--</div><div class="summary-stat-label" data-i18n="trip.summary.trips">Trips</div></div>
-                            <div class="summary-stat"><div class="summary-stat-value" id="summaryDistance">--</div><div class="summary-stat-label">km</div></div>
+                            <div class="summary-stat"><div class="summary-stat-value" id="summaryDistance">--</div><div class="summary-stat-label" id="summaryDistanceLabel">km</div></div>
                             <div class="summary-stat"><div class="summary-stat-value" id="summaryTime">--</div><div class="summary-stat-label" data-i18n="trip.summary.hours">Hours</div></div>
                             <div class="summary-stat"><div class="summary-stat-value" id="summaryEfficiency">--</div><div class="summary-stat-label" data-i18n="trip.summary.avg_score">Avg Score</div></div>
                             <div class="summary-stat"><div class="summary-stat-value" id="summaryEnergy">--</div><div class="summary-stat-label" data-i18n="trip.summary.kwh">kWh</div></div>
-                            <div class="summary-stat"><div class="summary-stat-value" id="summaryConsumption" style="color:var(--brand-primary);">--</div><div class="summary-stat-label">kWh/100km</div></div>
+                            <div class="summary-stat"><div class="summary-stat-value" id="summaryConsumption" style="color:var(--brand-primary);">--</div><div class="summary-stat-label" id="summaryConsumptionLabel">kWh/100km</div></div>
                             <div class="summary-stat"><div class="summary-stat-value" id="summaryCost">--</div><div class="summary-stat-label" data-i18n="trip.summary.cost">Cost</div></div>
                         </div>
                     </div>
@@ -1756,13 +1760,13 @@
                         <div style="font-size:18px;font-weight:600;color:var(--text-primary);" id="detailTitle">--</div>
                         <div style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="detailSubtitle">--</div>
                         <div class="detail-summary-grid">
-                            <div class="detail-stat"><div class="detail-stat-value" id="detailDistance">--</div><div class="detail-stat-label">km</div></div>
+                            <div class="detail-stat"><div class="detail-stat-value" id="detailDistance">--</div><div class="detail-stat-label" id="detailDistanceLabel">km</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailDuration">--</div><div class="detail-stat-label" data-i18n="trip.detail.duration">Duration</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailSocDelta">--</div><div class="detail-stat-label" data-i18n="trip.detail.soc_used">SoC Used</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailEfficiency">--</div><div class="detail-stat-label" data-i18n="trip.detail.energy">Energy</div></div>
-                            <div class="detail-stat"><div class="detail-stat-value" id="detailConsumption" style="color:var(--brand-primary);">--</div><div class="detail-stat-label">kWh/100km</div></div>
-                            <div class="detail-stat"><div class="detail-stat-value" id="detailAvgSpeed">--</div><div class="detail-stat-label" data-i18n="trip.detail.avg_kmh">Avg km/h</div></div>
-                            <div class="detail-stat"><div class="detail-stat-value" id="detailMaxSpeed">--</div><div class="detail-stat-label" data-i18n="trip.detail.max_kmh">Max km/h</div></div>
+                            <div class="detail-stat"><div class="detail-stat-value" id="detailConsumption" style="color:var(--brand-primary);">--</div><div class="detail-stat-label" id="detailConsumptionLabel">kWh/100km</div></div>
+                            <div class="detail-stat"><div class="detail-stat-value" id="detailAvgSpeed">--</div><div class="detail-stat-label" id="detailAvgSpeedLabel" data-i18n="trip.detail.avg_kmh">Avg km/h</div></div>
+                            <div class="detail-stat"><div class="detail-stat-value" id="detailMaxSpeed">--</div><div class="detail-stat-label" id="detailMaxSpeedLabel" data-i18n="trip.detail.max_kmh">Max km/h</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailSocStart">--</div><div class="detail-stat-label" data-i18n="trip.detail.start_soc">Start SoC</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailTemp">--</div><div class="detail-stat-label" data-i18n="trip.detail.temp_c">Temp °C</div></div>
                             <div class="detail-stat"><div class="detail-stat-value" id="detailCost" style="color:var(--warning);">--</div><div class="detail-stat-label" data-i18n="trip.detail.cost">Cost</div></div>
@@ -1780,7 +1784,7 @@
                                 <span data-i18n="trip.timeline.title">Trip Timeline</span>
                             </div>
                             <div class="timeline-slider-info" id="sliderInfo">
-                                <span class="timeline-slider-stat"><span data-i18n="trip.timeline.speed">Speed</span>: <span class="tval" id="sliderSpeed">--</span> km/h</span>
+                                <span class="timeline-slider-stat"><span data-i18n="trip.timeline.speed">Speed</span>: <span class="tval" id="sliderSpeed">--</span> <span id="sliderSpeedUnit">km/h</span></span>
                                 <span class="timeline-slider-stat"><span data-i18n="trip.timeline.accel">Accel</span>: <span class="tval" id="sliderAccel">--</span>%</span>
                                 <span class="timeline-slider-stat"><span data-i18n="trip.timeline.brake">Brake</span>: <span class="tval" id="sliderBrake">--</span>%</span>
                                 <span class="timeline-slider-stat" style="color:rgba(245,158,11,0.7);"><span data-i18n="trip.timeline.soc">SoC</span>: <span class="tval" id="sliderSoc" style="color:rgba(245,158,11,0.9);">--</span>%</span>
@@ -1804,9 +1808,9 @@
                         </div>
                         <div id="tripMap"></div>
                         <div class="map-speed-legend">
-                            <span><span class="legend-dot" style="background:var(--success)"></span> <span data-i18n="trip.route.speed_low">&lt;40 km/h</span></span>
-                            <span><span class="legend-dot" style="background:var(--warning)"></span> <span data-i18n="trip.route.speed_mid">40–80 km/h</span></span>
-                            <span><span class="legend-dot" style="background:var(--danger)"></span> <span data-i18n="trip.route.speed_high">&gt;80 km/h</span></span>
+                            <span><span class="legend-dot" style="background:var(--success)"></span> <span id="routeSpeedLow" data-i18n="trip.route.speed_low">&lt;40 km/h</span></span>
+                            <span><span class="legend-dot" style="background:var(--warning)"></span> <span id="routeSpeedMid" data-i18n="trip.route.speed_mid">40–80 km/h</span></span>
+                            <span><span class="legend-dot" style="background:var(--danger)"></span> <span id="routeSpeedHigh" data-i18n="trip.route.speed_high">&gt;80 km/h</span></span>
                         </div>
                     </div>
 
@@ -1843,9 +1847,9 @@
                             <canvas id="speedHistogram"></canvas>
                         </div>
                         <div class="speed-hist-legend">
-                            <span><span class="legend-dot" style="background:var(--warning);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span data-i18n="trip.speed_dist.low">Low (&lt;40)</span></span>
-                            <span><span class="legend-dot" style="background:var(--success);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span data-i18n="trip.speed_dist.normal">Normal (40–80)</span></span>
-                            <span><span class="legend-dot" style="background:var(--danger);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span data-i18n="trip.speed_dist.high">High (&gt;80)</span></span>
+                            <span><span class="legend-dot" style="background:var(--warning);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span id="speedDistLow" data-i18n="trip.speed_dist.low">Low (&lt;40)</span></span>
+                            <span><span class="legend-dot" style="background:var(--success);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span id="speedDistNormal" data-i18n="trip.speed_dist.normal">Normal (40–80)</span></span>
+                            <span><span class="legend-dot" style="background:var(--danger);width:8px;height:8px;border-radius:50%;display:inline-block"></span> <span id="speedDistHigh" data-i18n="trip.speed_dist.high">High (&gt;80)</span></span>
                         </div>
                         <div class="speed-hist-summary" id="speedHistSummary"></div>
                     </div>

@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">版本</string>
     <string name="settings_about_package_label">建设</string>
     <string name="settings_about_support_section">由像你这样的人来推动</string>
-    <string name="settings_about_support_share_title">告诉一个同行司机</string>
+    <string name="settings_about_support_share_title">告诉另一位车主</string>
     <string name="settings_about_support_share_value">每个共享的链接都能帮助另一个BYD的所有者发现Overdrive.</string>
     <string name="settings_about_support_share_message">查看BYD的开源监控和仪表摄像头: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">分享过度驱动</string>
     <string name="settings_about_support_kofi_title">在下一个版本中加油</string>
     <string name="settings_about_support_kofi_value">一杯咖啡让晚上的承诺持续下去.</string>
-    <string name="settings_about_support_kofi_url">其他国家:</string>
     <string name="settings_about_license_title">许可证</string>
     <string name="settings_about_license_value">开源. 点击查看全文.</string>
     <string name="settings_about_source_title">源代码</string>
     <string name="settings_about_source_value">其他类型的设备:</string>
-    <string name="settings_about_license_url">其他类型的产品:</string>
-    <string name="settings_about_source_url">现在,我们已经开始使用了它.</string>
     <string name="settings_about_star_title">在 GitHub 上放一个⭐</string>
     <string name="settings_about_star_value">需要一秒钟,这意味着很多.</string>
-    <string name="settings_about_star_url">现在,我们已经开始使用了它.</string>
     <string name="settings_theme_label">主题</string>
     <string name="settings_theme_auto">自动 (跟踪系统)</string>
     <string name="settings_theme_light">灯光</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">致谢</string>
+    <string name="settings_about_thanks_subtitle">在贡献者和支持者的帮助下打造。</string>
+    <string name="settings_about_contributors_title">贡献者</string>
+    <string name="settings_about_supporters_title">支持者</string>
+    <string name="settings_about_thanks_empty">随着大家加入,这里会被填满。</string>
 </resources>

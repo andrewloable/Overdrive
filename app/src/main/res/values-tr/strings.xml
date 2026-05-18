@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Versiyon</string>
     <string name="settings_about_package_label">İnşaat</string>
     <string name="settings_about_support_section">Senin gibi insanlar tarafından güçlendirilmiş.</string>
-    <string name="settings_about_support_share_title">Bir sürücü arkadaşına söyle .</string>
+    <string name="settings_about_support_share_title">Başka bir araç sahibine bahset</string>
     <string name="settings_about_support_share_value">Paylaşılan her bağlantı başka bir BYD sahibinin Overdrive\'i keşfetmesine yardımcı olur.</string>
     <string name="settings_about_support_share_message">BYD için Overdrive  açık kaynaklı gözetim &amp; dashcam\'ı kontrol edin: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Paylaşım Aşırı Sürüş</string>
     <string name="settings_about_support_kofi_title">Sonraki versiyon için yakıt </string>
     <string name="settings_about_support_kofi_value">Ko-Fi\'de kahve içmek gece geç saatleri bekliyor.</string>
-    <string name="settings_about_support_kofi_url">https://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">Lisans</string>
     <string name="settings_about_license_value">MIT  açık kaynak. Tam metni görüntülemek için dokunun.</string>
     <string name="settings_about_source_title">Kaynak kodu</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yashsriv/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">GitHub\'da bir ⭐ bırak</string>
     <string name="settings_about_star_value">Bir saniye sürer, çok şey ifade eder.</string>
-    <string name="settings_about_star_url">https://github.com/yashsriv/Overdrive-release</string>
     <string name="settings_theme_label">Tema</string>
     <string name="settings_theme_auto">Otomatik (önderleme sistemi)</string>
     <string name="settings_theme_light">Işık</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Teşekkürler</string>
+    <string name="settings_about_thanks_subtitle">Katkıda bulunanların ve destekçilerin yardımıyla kuruldu.</string>
+    <string name="settings_about_contributors_title">Katkıda bulunanlar</string>
+    <string name="settings_about_supporters_title">Destekçiler</string>
+    <string name="settings_about_thanks_empty">İnsanlar katıldıkça liste dolmaya başlar.</string>
 </resources>

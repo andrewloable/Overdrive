@@ -34,7 +34,7 @@ var VC = {
         acOn: false,
         acTemp: 22,
         acFan: 3,
-        seatHeat: [0, 0],  // 0=off, 1=low, 2=high
+        seatHeat: [0, 0],  // [driver, passenger]; 0=off, 1=low, 2=high
         seatCool: [0, 0]
     },
 
@@ -1632,8 +1632,8 @@ var VC = {
             if (data.lights) self.vehicleState.lights = data.lights;
             if (data.adas) self.vehicleState.adas = data.adas;
 
-            if (data.seats?.heat) self.vehicleState.seatHeat = data.seats.heat;
-            if (data.seats?.cool) self.vehicleState.seatCool = data.seats.cool;
+            if (data.seats && data.seats.heat) self.vehicleState.seatHeat = data.seats.heat;
+            if (data.seats && data.seats.cool) self.vehicleState.seatCool = data.seats.cool;
 
             // Update UI
             self.updateHUD();
@@ -1782,7 +1782,7 @@ var VC = {
         if (socFill) socFill.style.width = Math.min(100, Math.max(0, this.vehicleState.soc)) + '%';
 
         var rangeEl = document.getElementById('rangeValue');
-        if (rangeEl) rangeEl.textContent = Math.round(this.vehicleState.rangeKm) + ' km';
+        if (rangeEl) rangeEl.textContent = BYD.units.dist(this.vehicleState.rangeKm);
 
         this.updateLockUI(this.vehicleState.locked);
     },
@@ -2005,11 +2005,11 @@ var VC = {
     },
 
     updateSeatUI: function() {
-        for (var pos = 0; pos < 2; pos++) {
-            var heatBtn = document.getElementById('btnSeatHeat' + (pos + 1));
-            var coolBtn = document.getElementById('btnSeatCool' + (pos + 1));
-            var heatLvl = this.vehicleState.seatHeat[pos] || 0;
-            var coolLvl = this.vehicleState.seatCool[pos] || 0;
+        for (var i = 0; i < 2; i++) {
+            var heatBtn = document.getElementById('btnSeatHeat' + (i + 1));
+            var coolBtn = document.getElementById('btnSeatCool' + (i + 1));
+            var heatLvl = this.vehicleState.seatHeat[i] || 0;
+            var coolLvl = this.vehicleState.seatCool[i] || 0;
 
             if (heatBtn) {
                 heatBtn.classList.remove('on1', 'on2');

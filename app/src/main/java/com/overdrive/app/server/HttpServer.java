@@ -461,6 +461,14 @@ public class HttpServer {
                 if (!serveStaticFile(out, "local/notifications.html")) {
                     HttpResponse.sendError(out, 404, "notifications.html not found");
                 }
+            } else if (path.equals("/about.html") || path.equals("/about")) {
+                if (!serveStaticFile(out, "local/about.html")) {
+                    HttpResponse.sendError(out, 404, "about.html not found");
+                }
+            } else if (path.equals("/credits.json")) {
+                if (!serveStaticFile(out, "local/credits.json")) {
+                    HttpResponse.sendError(out, 404, "credits.json not found");
+                }
             } else if (path.equals("/api/i18n/lang")) {
                 // GET → current locale; POST {"lang":"zh-CN"} → persist + echo
                 if (method.equals("GET")) {

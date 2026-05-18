@@ -92,10 +92,17 @@ const TRIPS = {
                 const currSelect = document.getElementById('currencySelect');
                 if (rateInput && this.electricityRate > 0) rateInput.value = this.electricityRate;
                 if (currSelect) currSelect.value = this.currency;
-                // Load distance unit preference
+                // Load distance unit preference, refresh button + all labels
                 var distUnit = data.config.distanceUnit || 'km';
                 BYD.units.mode = distUnit;
                 this.updateDistanceUnitButtons(distUnit);
+                // If trips/summary already rendered before config arrived,
+                // re-render so values pick up the persisted unit on first load.
+                if (this.currentTrips && this.currentTrips.length > 0) {
+                    this.renderTripCards(this.currentTrips);
+                }
+                this.updatePeriodSummary();
+                this.updateCostHero();
                 // Update currency icons
                 this.updateCurrencyIcons();
             }
@@ -164,19 +171,84 @@ const TRIPS = {
                 miBtn.classList.remove('active');
             }
         }
-        // Update the cost card labels
+
+        var distLbl = BYD.units.distLabel();
+        var speedLbl = BYD.units.speedLabel();
+        var consLbl = BYD.units.consumptionLabel();
+        var perDistLbl = BYD.units.perDistLabel();
+
+        // Cost card
         var costUnitEl = document.getElementById('costPerKmUnit');
-        if (costUnitEl) costUnitEl.textContent = BYD.units.perDistLabel();
+        if (costUnitEl) costUnitEl.textContent = perDistLbl;
         var costTitleEl = document.getElementById('costPerDistLabel');
-        if (costTitleEl) costTitleEl.textContent = BYD.units.distLabel();
-        // Update the summary consumption label
-        var consLabel = document.getElementById('summaryConsumption');
-        if (consLabel) {
-            var labelEl = consLabel.closest('.summary-stat');
-            if (labelEl) {
-                var lbl = labelEl.querySelector('.summary-stat-label');
-                if (lbl) lbl.textContent = BYD.units.consumptionLabel();
-            }
+        if (costTitleEl) costTitleEl.textContent = distLbl;
+
+        // Summary card
+        var summaryDistLbl = document.getElementById('summaryDistanceLabel');
+        if (summaryDistLbl) summaryDistLbl.textContent = distLbl;
+        var summaryConsLbl = document.getElementById('summaryConsumptionLabel');
+        if (summaryConsLbl) summaryConsLbl.textContent = consLbl;
+
+        // Trip detail card
+        var detailDistLbl = document.getElementById('detailDistanceLabel');
+        if (detailDistLbl) detailDistLbl.textContent = distLbl;
+        var detailConsLbl = document.getElementById('detailConsumptionLabel');
+        if (detailConsLbl) detailConsLbl.textContent = consLbl;
+        // For Avg/Max speed labels we keep the localized prefix (Avg / Max) and
+        // swap only the unit. The HTML default ("Avg km/h") works as a template
+        // we can derive from — fall back to data-i18n value, then replace the
+        // unit suffix.
+        this._setSpeedLabel('detailAvgSpeedLabel', 'trip.detail.avg_kmh', speedLbl);
+        this._setSpeedLabel('detailMaxSpeedLabel', 'trip.detail.max_kmh', speedLbl);
+
+        // Timeline slider speed unit
+        var sliderSpeedUnit = document.getElementById('sliderSpeedUnit');
+        if (sliderSpeedUnit) sliderSpeedUnit.textContent = speedLbl;
+
+        // Route map speed legend (thresholds + label)
+        var lowEl = document.getElementById('routeSpeedLow');
+        var midEl = document.getElementById('routeSpeedMid');
+        var highEl = document.getElementById('routeSpeedHigh');
+        var lowT = BYD.units.speedThreshold(40);
+        var highT = BYD.units.speedThreshold(80);
+        if (lowEl) lowEl.textContent = '<' + lowT + ' ' + speedLbl;
+        if (midEl) midEl.textContent = lowT + '–' + highT + ' ' + speedLbl;
+        if (highEl) highEl.textContent = '>' + highT + ' ' + speedLbl;
+
+        // Speed-distribution histogram legend — keep the localized "Low/Normal/High"
+        // prefix (everything before the threshold parens) and swap only the
+        // numeric thresholds.
+        this._setBucketLabel('speedDistLow', 'trip.speed_dist.low', '<' + lowT);
+        this._setBucketLabel('speedDistNormal', 'trip.speed_dist.normal', lowT + '–' + highT);
+        this._setBucketLabel('speedDistHigh', 'trip.speed_dist.high', '>' + highT);
+    },
+
+    /**
+     * Replace the unit suffix on a "Avg km/h" / "Max km/h" style label.
+     * Falls back to the i18n value if the element's current text doesn't
+     * end in a recognized unit.
+     */
+    _setSpeedLabel: function(elementId, i18nKey, unitLabel) {
+        var el = document.getElementById(elementId);
+        if (!el) return;
+        var base = (BYD.i18n && BYD.i18n.t) ? BYD.i18n.t(i18nKey) : el.textContent;
+        // Strip any trailing "km/h" / "mph" (case-insensitive, may have leading space)
+        var stripped = base.replace(/\s*(km\/h|kmh|kph|mph)\s*$/i, '').trim();
+        el.textContent = stripped + ' ' + unitLabel;
+    },
+
+    /**
+     * Replace the threshold inside parens on a "Low (<40)" style label.
+     */
+    _setBucketLabel: function(elementId, i18nKey, threshold) {
+        var el = document.getElementById(elementId);
+        if (!el) return;
+        var base = (BYD.i18n && BYD.i18n.t) ? BYD.i18n.t(i18nKey) : el.textContent;
+        // Replace whatever is inside the parens with our threshold
+        if (/\(.*?\)/.test(base)) {
+            el.textContent = base.replace(/\(.*?\)/, '(' + threshold + ')');
+        } else {
+            el.textContent = base + ' (' + threshold + ')';
         }
     },
 
@@ -790,7 +862,9 @@ const TRIPS = {
         const dur = this.formatDuration(trip.durationSeconds || trip.duration_seconds || 0);
         const avgScore = this.getAvgScore(trip);
         const scoreClass = avgScore >= 70 ? '' : avgScore >= 40 ? 'mid' : 'low';
-        const eff = (trip.efficiencySocPerKm || trip.efficiency_soc_per_km || 0).toFixed(2);
+        // efficiency is "% per km" stored — convert to per-mi when needed
+        const effRaw = trip.efficiencySocPerKm || trip.efficiency_soc_per_km || 0;
+        const eff = (BYD.units.mode === 'mi' ? effRaw / BYD.units.KM_TO_MI : effRaw).toFixed(2);
         const avgSpd = Math.round(trip.avgSpeedKmh || trip.avg_speed_kmh || 0);
         const socStart = (trip.socStart || trip.soc_start || 0).toFixed(1);
         const socEnd = (trip.socEnd || trip.soc_end || 0).toFixed(1);
@@ -831,7 +905,7 @@ const TRIPS = {
             '<div class="trip-capsules">' +
                 '<span class="trip-capsule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/><circle cx="12" cy="12" r="10"/></svg> ' + BYD.units.dist(parseFloat(dist)) + '</span>' +
                 '<span class="trip-capsule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + dur + '</span>' +
-                '<span class="trip-capsule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> ' + (energyUsed > 0 ? energyUsed.toFixed(1) + ' kWh' : eff + ' %/km') + '</span>' +
+                '<span class="trip-capsule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> ' + (energyUsed > 0 ? energyUsed.toFixed(1) + ' kWh' : eff + BYD.units.socPerDistLabel()) + '</span>' +
                 '<span class="trip-capsule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="7" width="12" height="10" rx="1"/><path d="M18 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2"/></svg> ' + socStart + '→' + socEnd + '%</span>' +
                 (elevStr ? '<span class="trip-capsule" style="color:#0EA5E9;">' + elevStr + '</span>' : '') +
                 (costStr ? '<span class="trip-capsule" style="color:var(--warning);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> ' + costStr + '</span>' : '') +
@@ -916,15 +990,15 @@ const TRIPS = {
         this.setEl('summaryEfficiency', trips.length > 0 ? Math.floor(scoreSum / trips.length) : '--');
         this.setEl('summaryEnergy', totalEnergy > 0 ? totalEnergy.toFixed(1) : '--');
 
-        // Average consumption: kWh/100km (works for both BEV and PHEV)
-        // Prefer direct kWh measurement, fall back to SOC-based estimate
+        // Average consumption: kWh/100km or kWh/100mi (works for BEV and PHEV)
+        // Prefer direct kWh measurement, fall back to SOC-based estimate.
         if (totalDist > 0.5) {
             if (totalEnergy > 0) {
                 const kwhPer100km = (totalEnergy / totalDist) * 100;
-                this.setEl('summaryConsumption', kwhPer100km.toFixed(1));
+                this.setEl('summaryConsumption', BYD.units.per100Val(kwhPer100km).toFixed(1));
             } else if (totalSocDelta > 0) {
                 const socPer100km = (totalSocDelta / totalDist) * 100;
-                this.setEl('summaryConsumption', socPer100km.toFixed(1) + '%');
+                this.setEl('summaryConsumption', BYD.units.per100Val(socPer100km).toFixed(1) + '%');
             } else {
                 this.setEl('summaryConsumption', '--');
             }
@@ -980,23 +1054,26 @@ const TRIPS = {
         if (totalDist > 0 && totalEnergy > 0) {
             const kwhPerKm = totalEnergy / totalDist;
             const costPerKm = kwhPerKm * this.electricityRate;
+            // Cost-per-distance shown in user's unit: cost/km × KM_TO_MI gives cost/mi
+            const costPerDist = BYD.units.mode === 'mi' ? costPerKm / BYD.units.KM_TO_MI : costPerKm;
+            const kwhPerDist = BYD.units.mode === 'mi' ? kwhPerKm / BYD.units.KM_TO_MI : kwhPerKm;
             noRate.style.display = 'none';
             dataDiv.style.display = 'block';
-            this.setEl('costPerKmValue', this.currency + costPerKm.toFixed(2));
-            this.setEl('costPerKmUnit', '/km');
+            this.setEl('costPerKmValue', this.currency + costPerDist.toFixed(2));
+            this.setEl('costPerKmUnit', BYD.units.perDistLabel());
             // Formula capsule below circle (single source of truth — no duplicate text)
             const formulaCapsule = document.getElementById('costFormulaCapsule');
             if (formulaCapsule) {
                 formulaCapsule.textContent = BYD.i18n.t('trip.card.cost_formula', {
-                    kwh: kwhPerKm.toFixed(3),
+                    kwh: kwhPerDist.toFixed(3),
                     rate: this.currency + this.electricityRate
                 });
                 formulaCapsule.style.display = '';
             }
             const infoEl = document.getElementById('costPerKwhInfo');
             if (infoEl) infoEl.style.display = 'none';
-            // Gauge: lower cost = better. Map 0-5 ₹/km to 100-0%
-            const pct = Math.max(0, Math.min(100, (1 - costPerKm / 5) * 100));
+            // Gauge: lower cost = better. Map 0-5 currency/distance to 100-0%
+            const pct = Math.max(0, Math.min(100, (1 - costPerDist / 5) * 100));
             this.renderCircleGauge('costCircleCanvasActive', pct, '#F59E0B');
         } else {
             noRate.style.display = 'none';
@@ -1067,10 +1144,16 @@ const TRIPS = {
             if (data.success && data.range && data.range !== null) {
                 const r = data.range;
                 this.rangeCache = r;
-                const predicted = Math.round(r.predictedRangeKm || r.predicted_range_km || 0);
-                const lower = Math.round(r.lowerBoundKm || r.lower_bound_km || 0);
-                const upper = Math.round(r.upperBoundKm || r.upper_bound_km || 0);
-                const builtIn = Math.round(r.builtInRangeKm || r.built_in_range_km || 0);
+                // Backend always returns km; convert to user's display unit.
+                const predictedKm = r.predictedRangeKm || r.predicted_range_km || 0;
+                const lowerKm = r.lowerBoundKm || r.lower_bound_km || 0;
+                const upperKm = r.upperBoundKm || r.upper_bound_km || 0;
+                const builtInKm = r.builtInRangeKm || r.built_in_range_km || 0;
+                const predicted = BYD.units.distVal(predictedKm);
+                const lower = BYD.units.distVal(lowerKm);
+                const upper = BYD.units.distVal(upperKm);
+                const builtIn = BYD.units.distVal(builtInKm);
+                const distLbl = BYD.units.distLabel();
 
                 content.innerHTML = '';
 
@@ -1084,11 +1167,11 @@ const TRIPS = {
                 if (capsule && builtIn > 0) {
                     const delta = predicted - builtIn;
                     const deltaSign = delta >= 0 ? '+' : '';
-                    capsule.innerHTML = predicted + ' vs ' + builtIn + ' km <span style="opacity:0.7;margin-left:2px;">(' + deltaSign + delta + ')</span>';
+                    capsule.innerHTML = predicted + ' vs ' + builtIn + ' ' + distLbl + ' <span style="opacity:0.7;margin-left:2px;">(' + deltaSign + delta + ')</span>';
                     capsule.className = 'range-delta-capsule ' + (delta >= 0 ? 'better' : 'worse');
                     capsule.style.display = '';
                 } else if (capsule) {
-                    capsule.textContent = lower + ' – ' + upper + ' km range';
+                    capsule.textContent = lower + ' – ' + upper + ' ' + distLbl + ' range';
                     capsule.className = 'range-delta-capsule neutral';
                     capsule.style.display = '';
                 }
@@ -1099,7 +1182,7 @@ const TRIPS = {
                     tooltip.style.display = '';
                     let tt = '<div class="range-tooltip-title">' + BYD.i18n.t('trip.range_tooltip_title') + '</div>';
 
-                    tt += '<div class="range-tooltip-row"><span class="range-tooltip-label">' + BYD.i18n.t('trip.range_confidence') + '</span><span class="range-tooltip-value">' + lower + ' – ' + upper + ' km</span></div>';
+                    tt += '<div class="range-tooltip-row"><span class="range-tooltip-label">' + BYD.i18n.t('trip.range_confidence') + '</span><span class="range-tooltip-value">' + lower + ' – ' + upper + ' ' + distLbl + '</span></div>';
 
                     // Conditions pills
                     const bucketKey = r.bucketKey || r.bucket_key || '';
@@ -1161,28 +1244,31 @@ const TRIPS = {
             this.setEl('detailTitle', start.toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' }));
             this.setEl('detailSubtitle', start.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }) +
                 ' – ' + new Date(trip.endTime || trip.end_time).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }));
-            this.setEl('detailDistance', BYD.units.distVal(trip.distanceKm || trip.distance_km || 0).toFixed(1));
             this.setEl('detailDuration', this.formatDuration(trip.durationSeconds || trip.duration_seconds || 0));
             this.setEl('detailSocDelta', ((trip.socStart || trip.soc_start || 0) - (trip.socEnd || trip.soc_end || 0)).toFixed(1) + '%');
             // Show energy kWh or efficiency
             const detailEnergy = trip.energyUsedKwh || trip.energy_used_kwh || 0;
             this.setEl('detailEfficiency', detailEnergy > 0 ? detailEnergy.toFixed(1) + ' kWh' : (trip.efficiencySocPerKm || trip.efficiency_soc_per_km || 0).toFixed(2));
-            // Average consumption: kWh/100km or %/100km
+            // Average consumption: kWh/100km or %/100km — convert per-100 rate
+            // when the user is on miles (kWh/100mi = kWh/100km / KM_TO_MI).
             const tripDist = trip.distanceKm || trip.distance_km || 0;
             if (tripDist > 0.1 && detailEnergy > 0) {
-                this.setEl('detailConsumption', ((detailEnergy / tripDist) * 100).toFixed(1));
+                const per100km = (detailEnergy / tripDist) * 100;
+                this.setEl('detailConsumption', BYD.units.per100Val(per100km).toFixed(1));
             } else if (tripDist > 0.1) {
                 const socDelta = (trip.socStart || trip.soc_start || 0) - (trip.socEnd || trip.soc_end || 0);
                 if (socDelta > 0) {
-                    this.setEl('detailConsumption', ((socDelta / tripDist) * 100).toFixed(1) + '%');
+                    const socPer100km = (socDelta / tripDist) * 100;
+                    this.setEl('detailConsumption', BYD.units.per100Val(socPer100km).toFixed(1) + '%');
                 } else {
                     this.setEl('detailConsumption', '--');
                 }
             } else {
                 this.setEl('detailConsumption', '--');
             }
-            this.setEl('detailAvgSpeed', Math.round(trip.avgSpeedKmh || trip.avg_speed_kmh || 0));
-            this.setEl('detailMaxSpeed', trip.maxSpeedKmh || trip.max_speed_kmh || 0);
+            this.setEl('detailDistance', BYD.units.distVal(trip.distanceKm || trip.distance_km || 0).toFixed(1));
+            this.setEl('detailAvgSpeed', Math.round(BYD.units.speedVal(trip.avgSpeedKmh || trip.avg_speed_kmh || 0)));
+            this.setEl('detailMaxSpeed', Math.round(BYD.units.speedVal(trip.maxSpeedKmh || trip.max_speed_kmh || 0)));
             this.setEl('detailSocStart', (trip.socStart || trip.soc_start || 0).toFixed(1) + '%');
             this.setEl('detailTemp', (trip.extTempC || trip.ext_temp_c || '--') + (trip.extTempC || trip.ext_temp_c ? '°C' : ''));
             // Elevation data
@@ -1316,8 +1402,8 @@ const TRIPS = {
         const min = Math.floor(elapsed / 60);
         const sec = Math.floor(elapsed % 60);
 
-        // 1. Sync Text HUD
-        this.setEl('sliderSpeed', s.s || 0);
+        // 1. Sync Text HUD — speed sample is km/h, convert to user's unit
+        this.setEl('sliderSpeed', Math.round(BYD.units.speedVal(s.s || 0)));
         this.setEl('sliderAccel', s.a || 0);
         this.setEl('sliderBrake', s.b || 0);
         this.setEl('sliderCurrentTime', min + ':' + (sec < 10 ? '0' : '') + sec);
@@ -2324,11 +2410,23 @@ const TRIPS = {
             ctx.fill();
             ctx.globalAlpha = 1;
 
-            // Label
+            // Label — buckets are km/h ranges; convert to user's unit if mi
             ctx.fillStyle = this.colors.text;
             ctx.font = '10px Inter, sans-serif';
             ctx.textAlign = 'right';
-            ctx.fillText(label + ' ' + BYD.units.speedLabel(), pad.left - 6, y + barH / 2 + 3);
+            var displayLabel;
+            if (BYD.units.mode === 'mi') {
+                if (label === '140+') {
+                    displayLabel = Math.round(140 * BYD.units.KM_TO_MI) + '+';
+                } else {
+                    var lo = parseInt(label.split('-')[0]);
+                    var hi = parseInt(label.split('-')[1]);
+                    displayLabel = Math.round(lo * BYD.units.KM_TO_MI) + '-' + Math.round(hi * BYD.units.KM_TO_MI);
+                }
+            } else {
+                displayLabel = label;
+            }
+            ctx.fillText(displayLabel + ' ' + BYD.units.speedLabel(), pad.left - 6, y + barH / 2 + 3);
 
             // Percentage
             ctx.fillStyle = 'rgba(255,255,255,0.7)';

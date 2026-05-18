@@ -312,7 +312,7 @@ const MQTT = {
             tlm_gear:        t.gear || '--',
             tlm_ext_temp:    t.ext_temp != null ? t.ext_temp.toFixed(1) + ' °C' : '-- °C',
             tlm_batt_temp:   t.batt_temp != null ? t.batt_temp.toFixed(1) + ' °C' : '-- °C',
-            tlm_odometer:    t.odometer != null ? t.odometer.toFixed(1) + ' km' : '-- km',
+            tlm_odometer:    t.odometer != null ? BYD.units.dist(t.odometer, 1) : '-- ' + BYD.units.distLabel(),
             tlm_soh:         t.soh != null ? t.soh.toFixed(1) + '%' : '--%'
         };
 

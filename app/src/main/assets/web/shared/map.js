@@ -391,14 +391,21 @@ BYD.map = {
     },
     
     /**
-     * Format distance for display
+     * Format distance for display. Sub-1km values stay in meters/feet for
+     * precision; longer distances go through BYD.units to honor mi mode.
      */
     formatDistance(meters) {
+        if (typeof BYD !== 'undefined' && BYD.units && BYD.units.mode === 'mi') {
+            // 1 ft = 0.3048 m, 1 mi = 1609.344 m
+            if (meters < 1609.344) {
+                return Math.round(meters / 0.3048) + ' ft';
+            }
+            return BYD.units.dist(meters / 1000, 1);
+        }
         if (meters < 1000) {
             return Math.round(meters) + ' m';
-        } else {
-            return (meters / 1000).toFixed(1) + ' km';
         }
+        return (meters / 1000).toFixed(1) + ' km';
     },
     
     /**

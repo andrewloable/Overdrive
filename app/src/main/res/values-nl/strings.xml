@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Versie</string>
     <string name="settings_about_package_label">Bouwen</string>
     <string name="settings_about_support_section">Aangedreven door mensen als jij.</string>
-    <string name="settings_about_support_share_title">Vertel het een collega chauffeur.</string>
+    <string name="settings_about_support_share_title">Vertel het een andere eigenaar</string>
     <string name="settings_about_support_share_value">Elke gedeelde link helpt een andere eigenaar van BYD om Overdrive te ontdekken.</string>
     <string name="settings_about_support_share_message">Bekijk Overdrive  open source surveillance &amp; dashcam voor BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Deel Overdrive</string>
     <string name="settings_about_support_kofi_title">Brandstof voor de volgende release </string>
     <string name="settings_about_support_kofi_value">Een koffie op Ko-Fi houdt de late-night commits aan de komst.</string>
-    <string name="settings_about_support_kofi_url">Het is een van de belangrijkste onderdelen van de Europese Unie.</string>
     <string name="settings_about_license_title">Vergunning</string>
     <string name="settings_about_license_value">MIT  open source. Tik om de volledige tekst te bekijken.</string>
     <string name="settings_about_source_title">Broncode</string>
-    <string name="settings_about_source_value">Github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">Het is een van de belangrijkste programma\'s van de Europese Unie.</string>
-    <string name="settings_about_source_url">Het is een van de belangrijkste onderdelen van het programma.</string>
+    <string name="settings_about_source_value">Github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Geef een ⭐ op GitHub</string>
     <string name="settings_about_star_value">Het duurt even, het betekent veel.</string>
-    <string name="settings_about_star_url">Het is een van de belangrijkste onderdelen van het programma.</string>
     <string name="settings_theme_label">Thema</string>
     <string name="settings_theme_auto">Automatisch (volgensysteem)</string>
     <string name="settings_theme_light">Licht</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Met dank aan</string>
+    <string name="settings_about_thanks_subtitle">Gebouwd met hulp van bijdragers en ondersteuners.</string>
+    <string name="settings_about_contributors_title">Bijdragers</string>
+    <string name="settings_about_supporters_title">Ondersteuners</string>
+    <string name="settings_about_thanks_empty">De lijst vult zich naarmate mensen meedoen.</string>
 </resources>

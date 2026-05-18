@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Turer",
     "notifications": "Varsler",
-    "vehicle_control": "Kjøretøykontroll"
+    "vehicle_control": "Kjøretøykontroll",
+    "about": "Om"
   },
   "status": {
     "device": "Enhet",
@@ -1361,5 +1362,27 @@
     "dark": "Mørk",
     "light": "Lys",
     "auto": "Auto"
+  },
+  "about": {
+    "page_title": "Om — OverDrive",
+    "page_title_short": "Om",
+    "contributors_title": "Bidragsytere",
+    "contributors_sub": "Folk som har bidratt med kode til OverDrive.",
+    "supporters_title": "Støttespillere",
+    "supporters_sub": "De som holder de sene nattens commits koffeinerte.",
+    "empty": "Listen fylles opp etter hvert som folk bidrar.",
+    "support": {
+      "section": "Drevet av folk som deg",
+      "star_title": "Gi en ⭐ på GitHub",
+      "star_value": "Tar et sekund. Betyr mye.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Si ifra til en annen eier",
+      "share_value": "Hver delt lenke hjelper en annen BYD-eier å finne Overdrive.",
+      "share_message": "Sjekk ut Overdrive — open source-overvåkning og dashcam for BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Bidra til neste utgivelse ☕",
+      "kofi_value": "En kaffe på Ko-fi holder de sene nattens commits i gang.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Bygget med hjelp fra bidragsytere og støttespillere."
   }
 }

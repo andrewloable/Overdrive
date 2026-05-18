@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">버전</string>
     <string name="settings_about_package_label">건설</string>
     <string name="settings_about_support_section">당신 같은 사람들로부터</string>
-    <string name="settings_about_support_share_title">동료 운전자에게</string>
+    <string name="settings_about_support_share_title">다른 차주에게도 알려주세요</string>
     <string name="settings_about_support_share_value">공유된 모든 링크는 다른 BYD 소유자가 오버드라이브를 발견하는 데 도움이 됩니다.</string>
     <string name="settings_about_support_share_message">BYD에 대한 오픈소스 감시 및 대시캠을 확인하세요: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">공유 과장</string>
     <string name="settings_about_support_kofi_title">다음 발매에 연료</string>
     <string name="settings_about_support_kofi_value">Ko-Fi에 커피 한잔하면 늦은 밤의 약속이 올 수 있습니다.</string>
-    <string name="settings_about_support_kofi_url">[http://ko-fi.com/E1E71XALHX]</string>
     <string name="settings_about_license_title">라이센스</string>
     <string name="settings_about_license_value">MIT  오픈소스. 전체 텍스트를 보기 위해 누르십시오.</string>
     <string name="settings_about_source_title">소스 코드</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">[http://github.com/yashsriv/Overdrive-release/blob/main/license]</string>
-    <string name="settings_about_source_url">[http://github.com/yashsriv/Overdrive-release]</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">GitHub에 ⭐를 던지십시오</string>
     <string name="settings_about_star_value">잠깐만요, 많은 것을 의미하죠</string>
-    <string name="settings_about_star_url">[http://github.com/yashsriv/Overdrive-release]</string>
     <string name="settings_theme_label">주제</string>
     <string name="settings_theme_auto">자동 (따르기 시스템)</string>
     <string name="settings_theme_light">빛</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">감사합니다</string>
+    <string name="settings_about_thanks_subtitle">기여자와 후원자의 도움으로 만들어졌습니다.</string>
+    <string name="settings_about_contributors_title">기여자</string>
+    <string name="settings_about_supporters_title">후원자</string>
+    <string name="settings_about_thanks_empty">사람들이 참여하면 목록이 채워집니다.</string>
 </resources>

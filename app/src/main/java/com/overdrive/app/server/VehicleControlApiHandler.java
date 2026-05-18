@@ -226,16 +226,16 @@ public class VehicleControlApiHandler {
         adas.put("speedLimitWarning", data.speedLimitWarning);
         response.put("adas", adas);
 
-        // Seats
+        // Seats — heating/cooling levels for driver/passenger ([0-2], 0=off)
         JSONObject seats = new JSONObject();
         if (data.seatHeat != null && data.seatHeat.length > 0) {
             JSONArray heat = new JSONArray();
-            for (int item : data.seatHeat) heat.put(item);
+            for (int v : data.seatHeat) heat.put(v);
             seats.put("heat", heat);
         }
         if (data.seatCool != null && data.seatCool.length > 0) {
             JSONArray cool = new JSONArray();
-            for (int item : data.seatCool) cool.put(item);
+            for (int v : data.seatCool) cool.put(v);
             seats.put("cool", cool);
         }
         response.put("seats", seats);

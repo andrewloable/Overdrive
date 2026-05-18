@@ -156,7 +156,7 @@ const ABRP = {
             tlm_heading:     t.heading != null ? t.heading.toFixed(1) + '°' : '--°',
             tlm_ext_temp:    t.ext_temp != null ? t.ext_temp.toFixed(1) + ' °C' : '-- °C',
             tlm_batt_temp:   t.batt_temp != null ? t.batt_temp.toFixed(1) + ' °C' : '-- °C',
-            tlm_odometer:    t.odometer != null ? t.odometer.toFixed(1) + ' km' : '-- km',
+            tlm_odometer:    t.odometer != null ? BYD.units.dist(t.odometer, 1) : '-- ' + BYD.units.distLabel(),
             tlm_soh:         t.soh != null ? t.soh.toFixed(1) + '%' : '--%',
             tlm_capacity:    t.capacity != null ? t.capacity.toFixed(2) + ' kWh' : '-- kWh'
         };
@@ -193,7 +193,7 @@ const ABRP = {
         setEl('vehicleBattTemp', t.batt_temp != null ? t.batt_temp.toFixed(1) + ' °C' : '-- °C');
 
         // Odometer
-        setEl('vehicleOdometer', t.odometer != null ? t.odometer.toFixed(0) + ' km' : '-- km');
+        setEl('vehicleOdometer', t.odometer != null ? BYD.units.dist(t.odometer) : '-- ' + BYD.units.distLabel());
 
         // SOH
         setEl('vehicleSoh', t.soh != null ? BYD.i18n.t('abrp.soh_value', {value: t.soh.toFixed(1)}) : BYD.i18n.t('abrp.soh_unknown'));

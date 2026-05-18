@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Trips",
     "notifications": "Notifications",
-    "vehicle_control": "Vehicle Control"
+    "vehicle_control": "Vehicle Control",
+    "about": "About"
   },
   "status": {
     "device": "Device",
@@ -1361,5 +1362,27 @@
     "dark": "Dark",
     "light": "Light",
     "auto": "Auto"
+  },
+  "about": {
+    "page_title": "About — OverDrive",
+    "page_title_short": "About",
+    "contributors_title": "Contributors",
+    "contributors_sub": "People who've shipped code to OverDrive.",
+    "supporters_title": "Supporters",
+    "supporters_sub": "Folks who've kept the late-night commits caffeinated.",
+    "empty": "List populates as people pitch in.",
+    "support": {
+      "section": "Powered by people like you",
+      "star_title": "Drop a ⭐ on GitHub",
+      "star_value": "Takes a second. Means a lot.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Tell a fellow owner",
+      "share_value": "Every shared link helps another BYD owner discover Overdrive.",
+      "share_message": "Check out Overdrive — open-source surveillance & dashcam for BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Fuel the next release ☕",
+      "kofi_value": "A coffee on Ko-fi keeps the late-night commits coming.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Built with the help of contributors and supporters."
   }
 }

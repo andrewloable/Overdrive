@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Version</string>
     <string name="settings_about_package_label">Bauen Sie</string>
     <string name="settings_about_support_section">Von Leuten wie dir angetrieben.</string>
-    <string name="settings_about_support_share_title">Sagen Sie es einem Fahrer.</string>
+    <string name="settings_about_support_share_title">Sag es einem anderen Besitzer</string>
     <string name="settings_about_support_share_value">Jeder gemeinsame Link hilft einem anderen BYD-Besitzer, Overdrive zu entdecken.</string>
     <string name="settings_about_support_share_message">Überprüfen Sie Overdrive  Open-Source-Überwachung &amp; Dashcam für BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Teilen Sie Übertreibung</string>
     <string name="settings_about_support_kofi_title">Brennstoff für die nächste Veröffentlichung </string>
     <string name="settings_about_support_kofi_value">Ein Kaffee auf Ko-Fi hält die späten Nachtverpflichtungen an.</string>
-    <string name="settings_about_support_kofi_url">Die Kommission hat die Kommission mit dem Vorschlag für eine Verordnung (EG) Nr. 1233/2009 über die Einführung von Maßnahmen zur Verbesserung der Sicherheit und des Gesundheitsschutzes (ABl.</string>
     <string name="settings_about_license_title">Lizenz</string>
     <string name="settings_about_license_value">MIT  Open Source. Tippen Sie, um den vollständigen Text anzuzeigen.</string>
     <string name="settings_about_source_title">Quellcode</string>
-    <string name="settings_about_source_value">Github.com/yashsriv/Overdrive-Veröffentlichung</string>
-    <string name="settings_about_license_url">Die Kommission hat die Kommission in ihrem Amt zur Verfügung gestellt.</string>
-    <string name="settings_about_source_url">Das ist ein sehr schönes Beispiel.</string>
+    <string name="settings_about_source_value">Github.com/yash-srivastava/Overdrive-Veröffentlichung</string>
     <string name="settings_about_star_title">Werfen Sie einen ⭐ auf GitHub</string>
     <string name="settings_about_star_value">Es dauert nur eine Sekunde.</string>
-    <string name="settings_about_star_url">Das ist ein sehr schönes Beispiel.</string>
     <string name="settings_theme_label">Thema</string>
     <string name="settings_theme_auto">Automatisches (Follow-System)</string>
     <string name="settings_theme_light">Licht</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Danke</string>
+    <string name="settings_about_thanks_subtitle">Mit Hilfe von Mitwirkenden und Unterstützern entstanden.</string>
+    <string name="settings_about_contributors_title">Mitwirkende</string>
+    <string name="settings_about_supporters_title">Unterstützer</string>
+    <string name="settings_about_thanks_empty">Die Liste füllt sich, sobald jemand mitmacht.</string>
 </resources>

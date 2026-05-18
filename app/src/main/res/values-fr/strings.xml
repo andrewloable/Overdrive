@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">La version</string>
     <string name="settings_about_package_label">Construire</string>
     <string name="settings_about_support_section">Poussé par des gens comme toi</string>
-    <string name="settings_about_support_share_title">Dis-le à un chauffeur.</string>
+    <string name="settings_about_support_share_title">Parlez-en à un autre propriétaire</string>
     <string name="settings_about_support_share_value">Chaque lien partagé aide un autre propriétaire de BYD à découvrir Overdrive.</string>
     <string name="settings_about_support_share_message">Consultez Overdrive  surveillance open source et dashcam pour BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Partagez le surpoids</string>
     <string name="settings_about_support_kofi_title">Fuel la prochaine version </string>
     <string name="settings_about_support_kofi_value">Un café sur Ko-Fi fait venir les engagements de fin de soirée.</string>
-    <string name="settings_about_support_kofi_url">Les résultats de l\'enquête ont été obtenus au cours de l\'enquête.</string>
     <string name="settings_about_license_title">Licence</string>
     <string name="settings_about_license_value">MIT  open source. Appuyez pour voir le texte complet.</string>
     <string name="settings_about_source_title">Code source</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">Le projet de loi sur les droits de l\'Homme et les droits de l\'Homme et les droits de l\'Homme et les droits de l\'Homme</string>
-    <string name="settings_about_source_url">Le projet de loi sur les droits de l\'Homme</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Faites une ⭐ sur GitHub</string>
     <string name="settings_about_star_value">Ça prend une seconde, ça veut dire beaucoup.</string>
-    <string name="settings_about_star_url">Le projet de loi sur les droits de l\'Homme</string>
     <string name="settings_theme_label">Thème</string>
     <string name="settings_theme_auto">Automobile (système de suivi)</string>
     <string name="settings_theme_light">Lumière</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Merci</string>
+    <string name="settings_about_thanks_subtitle">Conçu avec l\'aide de contributeurs et de soutiens.</string>
+    <string name="settings_about_contributors_title">Contributeurs</string>
+    <string name="settings_about_supporters_title">Soutiens</string>
+    <string name="settings_about_thanks_empty">La liste se remplit au fur et à mesure que des gens participent.</string>
 </resources>

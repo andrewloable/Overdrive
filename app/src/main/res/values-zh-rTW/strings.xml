@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">版本</string>
     <string name="settings_about_package_label">建構</string>
     <string name="settings_about_support_section">靠像你這樣的人動力</string>
-    <string name="settings_about_support_share_title">告訴一個同行司機</string>
+    <string name="settings_about_support_share_title">告訴另一位車主</string>
     <string name="settings_about_support_share_value">每個共享的連結都幫助另一位BYD老板發現Overdrive.</string>
     <string name="settings_about_support_share_message">查看Overdrive 開放源監控和Dashcam的BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">分享過度驅動</string>
     <string name="settings_about_support_kofi_title">在下次發行中,</string>
     <string name="settings_about_support_kofi_value">咖啡讓晚上的約定持續.</string>
-    <string name="settings_about_support_kofi_url">沒有任何樓盤符合您的搜尋 -</string>
     <string name="settings_about_license_title">授權使用</string>
     <string name="settings_about_license_value">開源. 按下來查看全文.</string>
     <string name="settings_about_source_title">源代碼</string>
     <string name="settings_about_source_value">沒有任何相關資訊,</string>
-    <string name="settings_about_license_url">沒有任何樓盤符合您的搜尋 -</string>
-    <string name="settings_about_source_url">沒有任何樓盤符合您的搜尋 -</string>
     <string name="settings_about_star_title">在 GitHub 上放一個⭐</string>
     <string name="settings_about_star_value">需要一秒, 這意味著很多.</string>
-    <string name="settings_about_star_url">沒有任何樓盤符合您的搜尋 -</string>
     <string name="settings_theme_label">主題:</string>
     <string name="settings_theme_auto">自動 (跟蹤系統)</string>
     <string name="settings_theme_light">燈光</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">致謝</string>
+    <string name="settings_about_thanks_subtitle">在貢獻者和支持者的幫助下打造。</string>
+    <string name="settings_about_contributors_title">貢獻者</string>
+    <string name="settings_about_supporters_title">支持者</string>
+    <string name="settings_about_thanks_empty">隨著大家加入,這裡會被填滿。</string>
 </resources>

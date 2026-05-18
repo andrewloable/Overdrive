@@ -76,13 +76,14 @@ class WebViewFragment : Fragment() {
 
         // === Live View (index.html) tweaks ===
         // The mini-preview is the only Map ↔ Cameras toggle on this page,
-        // so we MUST keep it visible — but its default top: 80px / left:
-        // 24px lands underneath the camera-top-bar pill at narrow widths.
-        // Move it to the top-right corner clear of everything else.
-        '[data-app-shell="1"] .mini-preview { top: auto !important; left: auto !important;',
-        '   bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;',
-        '   right: 20px !important; width: 64px !important; height: 64px !important;',
-        '   z-index: 60 !important; }',
+        // so we MUST keep it visible. Match the web-tunnel placement
+        // (top-left) — earlier injection moved it bottom-right because the
+        // page-internal mobile-header pushed content down, but we hide that
+        // header above so the original top: 80px / left: 24px works fine
+        // and the in-app WebView matches what users see on the tunnel.
+        '[data-app-shell="1"] .mini-preview { top: 80px !important; left: 24px !important;',
+        '   right: auto !important; bottom: auto !important;',
+        '   width: 64px !important; height: 64px !important; z-index: 60 !important; }',
         '[data-app-shell="1"] .mini-preview-content svg { width: 22px !important; height: 22px !important; }',
         '[data-app-shell="1"] .mini-preview-label { font-size: 9px !important; padding: 3px 0 !important; }',
         // Hide the in-page fullscreen button — the WebView already fills

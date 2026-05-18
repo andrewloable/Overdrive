@@ -1524,11 +1524,19 @@ public class BydDataCollector {
         try {
             int[] seatHeat = new int[2];
             int[] seatCool = new int[2];
+            // SDK returns 1=off, 2=low, 3=high — normalize to 0/1/2 for the wire format.
+            // On unsupported firmwares the getter returns null/throws → leave entry as 0.
             for (int i = 0; i < 2; i++) {
                 Object heat = BydDeviceHelper.callGetter(settingDevice, "getSeatHeatingState", i + 1);
-                seatHeat[i] = (heat instanceof Number) ? ((Number) heat).intValue() - 1 : -1;
+                if (heat instanceof Number) {
+                    int v = ((Number) heat).intValue() - 1;
+                    seatHeat[i] = (v >= 0 && v <= 2) ? v : 0;
+                }
                 Object cool = BydDeviceHelper.callGetter(settingDevice, "getSeatVentilatingState", i + 1);
-                seatCool[i] = (cool instanceof Number) ? ((Number) cool).intValue() - 1 : -1;
+                if (cool instanceof Number) {
+                    int v = ((Number) cool).intValue() - 1;
+                    seatCool[i] = (v >= 0 && v <= 2) ? v : 0;
+                }
             }
             b.seatHeat(seatHeat).seatCool(seatCool);
         } catch (Exception e) {
@@ -3263,34 +3271,28 @@ public class BydDataCollector {
     }
 
     private void onSettingsCallback(String method, Object[] args) {
-        if ("onDataEventChanged".equals(method) && args != null && args.length >= 2) {
-            try {
-                int eventId = ((Number) args[0]).intValue();
-                Object eventValue = args[1];
-                int iVal = BydDeviceHelper.getIntValue(eventValue);
+        if (!"onDataEventChanged".equals(method) || args == null || args.length < 2) return;
+        try {
+            int eventId = ((Number) args[0]).intValue();
+            int iVal = BydDeviceHelper.getIntValue(args[1]);
+            // SDK reports 1=off, 2=low, 3=high. Anything else is unknown — ignore.
+            if (iVal < 1 || iVal > 3) return;
 
-                List<Integer> seatEventTypes = List.of(
-                        BydFeatureIds.SET_DRIVER_SEAT_HEATING_STATE,
-                        BydFeatureIds.SET_DRIVER_SEAT_VENTILATING_STATE,
-                        BydFeatureIds.SET_PASSENGER_SEAT_HEATING_STATE,
-                        BydFeatureIds.SET_PASSENGER_SEAT_VENTILATING_STATE
-                );
+            int normalized = iVal - 1;
+            BydVehicleData current = snapshot.get();
+            if (current == null) return;
+            BydVehicleData.Builder b = current.toBuilder();
+            int[] heat = (current.seatHeat == null) ? new int[2] : current.seatHeat.clone();
+            int[] cool = (current.seatCool == null) ? new int[2] : current.seatCool.clone();
 
-                int seatEventType = seatEventTypes.indexOf(eventId);
-                if (seatEventType >= 0 && iVal > 0 && iVal < 4) {
-                    BydVehicleData.Builder current = snapshot.get().toBuilder();
-                    int[] seatHeat = current.seatHeat == null ? new int[2] : current.seatHeat;
-                    int[] seatCool = current.seatCool == null ? new int[2] : current.seatCool;
-                    switch (seatEventType) {
-                        case 0: seatHeat[0] = iVal - 1; break;
-                        case 1: seatCool[0] = iVal - 1; break;
-                        case 2: seatHeat[1] = iVal - 1; break;
-                        case 3: seatCool[1] = iVal - 1; break;
-                    }
-                    snapshot.set(current.seatCool(seatHeat).seatCool(seatCool).build());
-                }
-            } catch (Exception ignored) {}
-        }
+            if (eventId == BydFeatureIds.SET_DRIVER_SEAT_HEATING_STATE)         heat[0] = normalized;
+            else if (eventId == BydFeatureIds.SET_DRIVER_SEAT_VENTILATING_STATE) cool[0] = normalized;
+            else if (eventId == BydFeatureIds.SET_PASSENGER_SEAT_HEATING_STATE) heat[1] = normalized;
+            else if (eventId == BydFeatureIds.SET_PASSENGER_SEAT_VENTILATING_STATE) cool[1] = normalized;
+            else return;
+
+            snapshot.set(b.seatHeat(heat).seatCool(cool).build());
+        } catch (Exception ignored) {}
     }
 
     // ==================== EXTENDED LISTENER HANDLERS ====================

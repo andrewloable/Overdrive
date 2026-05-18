@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">संस्करण</string>
     <string name="settings_about_package_label">निर्माण</string>
     <string name="settings_about_support_section">आप जैसे लोगों द्वारा संचालित</string>
-    <string name="settings_about_support_share_title">एक साथी चालक को बताओ</string>
+    <string name="settings_about_support_share_title">किसी और मालिक को बताएं</string>
     <string name="settings_about_support_share_value">प्रत्येक साझा लिंक एक और BYD मालिक ओवरड्राइव की खोज करने में मदद करता है।</string>
     <string name="settings_about_support_share_message">BYD के लिए ओवरड्राइव  ओपन सोर्स निगरानी और डैशकैम देखेंः https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">शेयर ओवरड्राइव</string>
     <string name="settings_about_support_kofi_title">अगले रिलीज को ईंधन </string>
     <string name="settings_about_support_kofi_value">Ko-fi पर एक कॉफी देर रात प्रतिबद्धताओं को आगे बढ़ाती है।</string>
-    <string name="settings_about_support_kofi_url">https://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">लाइसेंस</string>
     <string name="settings_about_license_value">MIT  ओपन सोर्स. पूर्ण पाठ देखने के लिए टैप करें.</string>
     <string name="settings_about_source_title">स्रोत कोड</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yashsriv/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">GitHub पर ⭐ छोड़ें</string>
     <string name="settings_about_star_value">यह एक सेकंड लेता है. यह बहुत मायने रखता है.</string>
-    <string name="settings_about_star_url">https://github.com/yashsriv/Overdrive-release</string>
     <string name="settings_theme_label">विषय</string>
     <string name="settings_theme_auto">ऑटो (फॉलो सिस्टम)</string>
     <string name="settings_theme_light">प्रकाश</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">धन्यवाद</string>
+    <string name="settings_about_thanks_subtitle">योगदानकर्ताओं और समर्थकों की मदद से निर्मित।</string>
+    <string name="settings_about_contributors_title">योगदानकर्ता</string>
+    <string name="settings_about_supporters_title">समर्थक</string>
+    <string name="settings_about_thanks_empty">जैसे-जैसे लोग योगदान देंगे, सूची भरती जाएगी।</string>
 </resources>

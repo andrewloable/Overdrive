@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "यात्राएँ",
     "notifications": "सूचनाएँ",
-    "vehicle_control": "वाहन नियंत्रण"
+    "vehicle_control": "वाहन नियंत्रण",
+    "about": "के बारे में"
   },
   "status": {
     "device": "डिवाइस",
@@ -1361,5 +1362,27 @@
     "dark": "डार्क",
     "light": "लाइट",
     "auto": "ऑटो"
+  },
+  "about": {
+    "page_title": "के बारे में — OverDrive",
+    "page_title_short": "के बारे में",
+    "contributors_title": "योगदानकर्ता",
+    "contributors_sub": "जिन्होंने OverDrive में कोड भेजा है।",
+    "supporters_title": "समर्थक",
+    "supporters_sub": "जिन्होंने देर रात के कमिट्स को कैफीनयुक्त रखा।",
+    "empty": "जैसे-जैसे लोग योगदान देंगे, सूची भरती जाएगी।",
+    "support": {
+      "section": "आप जैसे लोगों से संचालित",
+      "star_title": "GitHub पर ⭐ दें",
+      "star_value": "एक सेकंड लगेगा। बहुत मायने रखता है।",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "किसी और मालिक को बताएं",
+      "share_value": "हर शेयर किया गया लिंक किसी अन्य BYD मालिक को Overdrive खोजने में मदद करता है।",
+      "share_message": "Overdrive देखें — BYD के लिए ओपन-सोर्स निगरानी और डैशकैम: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "अगले रिलीज़ को बढ़ावा दें ☕",
+      "kofi_value": "Ko-fi पर एक कॉफी देर रात के commits जारी रखती है।",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "योगदानकर्ताओं और समर्थकों की मदद से निर्मित।"
   }
 }

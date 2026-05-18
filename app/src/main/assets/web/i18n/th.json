@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "การเดินทาง",
     "notifications": "การแจ้งเตือน",
-    "vehicle_control": "ควบคุมรถ"
+    "vehicle_control": "ควบคุมรถ",
+    "about": "เกี่ยวกับ"
   },
   "status": {
     "device": "อุปกรณ์",
@@ -1361,5 +1362,27 @@
     "dark": "มืด",
     "light": "สว่าง",
     "auto": "อัตโนมัติ"
+  },
+  "about": {
+    "page_title": "เกี่ยวกับ — OverDrive",
+    "page_title_short": "เกี่ยวกับ",
+    "contributors_title": "ผู้ร่วมพัฒนา",
+    "contributors_sub": "ผู้ที่ส่งโค้ดให้ OverDrive",
+    "supporters_title": "ผู้สนับสนุน",
+    "supporters_sub": "ผู้ที่เลี้ยงคาเฟอีนให้คอมมิตดึก ๆ",
+    "empty": "รายชื่อจะปรากฏเมื่อมีคนเข้าร่วม",
+    "support": {
+      "section": "ขับเคลื่อนโดยคนอย่างคุณ",
+      "star_title": "ให้ ⭐ บน GitHub",
+      "star_value": "ใช้เวลาแค่วินาทีเดียว มีความหมายมาก",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "บอกเจ้าของรถคนอื่นด้วย",
+      "share_value": "ทุกลิงก์ที่แบ่งปันช่วยให้เจ้าของ BYD คนอื่นได้รู้จัก Overdrive",
+      "share_message": "ลองดู Overdrive — ระบบเฝ้าระวังและดาชแคมโอเพนซอร์สสำหรับ BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "สนับสนุนรีลีสถัดไป ☕",
+      "kofi_value": "กาแฟหนึ่งแก้วบน Ko-fi ช่วยคอมมิตดึก ๆ ดำเนินต่อไป",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "สร้างขึ้นด้วยความช่วยเหลือของผู้ร่วมพัฒนาและผู้สนับสนุน"
   }
 }

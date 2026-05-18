@@ -579,23 +579,29 @@
          personality without being corny — short, warm, specific. -->
     <string name="settings_about_support_section">Powered by people like you</string>
 
-    <string name="settings_about_support_share_title">Tell a fellow driver</string>
+    <string name="settings_about_support_share_title">Tell a fellow owner</string>
     <string name="settings_about_support_share_value">Every shared link helps another BYD owner discover Overdrive.</string>
     <string name="settings_about_support_share_message">Check out Overdrive — open-source surveillance &amp; dashcam for BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Share Overdrive</string>
 
     <string name="settings_about_support_kofi_title">Fuel the next release ☕</string>
     <string name="settings_about_support_kofi_value">A coffee on Ko-fi keeps the late-night commits coming.</string>
-    <string name="settings_about_support_kofi_url">https://ko-fi.com/E1E71XALHX</string>
+    <string name="settings_about_support_kofi_url" translatable="false">https://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">License</string>
     <string name="settings_about_license_value">MIT — open source. Tap to view full text.</string>
     <string name="settings_about_source_title">Source code</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yashsriv/Overdrive-release/blob/main/LICENSE</string>
-    <string name="settings_about_source_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE</string>
+    <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Drop a ⭐ on GitHub</string>
     <string name="settings_about_star_value">Takes a second. Means a lot.</string>
-    <string name="settings_about_star_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
+
+    <string name="settings_about_thanks_title">Thanks</string>
+    <string name="settings_about_thanks_subtitle">Built with the help of contributors and supporters.</string>
+    <string name="settings_about_contributors_title">Contributors</string>
+    <string name="settings_about_supporters_title">Supporters</string>
+    <string name="settings_about_thanks_empty">List populates as people pitch in.</string>
 
     <!-- Settings → General -->
     <string name="settings_theme_label">Theme</string>

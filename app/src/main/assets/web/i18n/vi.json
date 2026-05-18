@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Chuyến đi",
     "notifications": "Thông báo",
-    "vehicle_control": "Điều khiển xe"
+    "vehicle_control": "Điều khiển xe",
+    "about": "Giới thiệu"
   },
   "status": {
     "device": "Thiết bị",
@@ -1361,5 +1362,27 @@
     "dark": "Tối",
     "light": "Sáng",
     "auto": "Tự động"
+  },
+  "about": {
+    "page_title": "Giới thiệu — OverDrive",
+    "page_title_short": "Giới thiệu",
+    "contributors_title": "Người đóng góp",
+    "contributors_sub": "Những người đã đóng góp mã cho OverDrive.",
+    "supporters_title": "Người ủng hộ",
+    "supporters_sub": "Những người tiếp caffeine cho các commit đêm khuya.",
+    "empty": "Danh sách sẽ được điền khi có người tham gia.",
+    "support": {
+      "section": "Được tạo bởi những người như bạn",
+      "star_title": "Tặng một ⭐ trên GitHub",
+      "star_value": "Mất một giây. Ý nghĩa rất lớn.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Hãy nói với chủ xe khác",
+      "share_value": "Mỗi liên kết được chia sẻ giúp một chủ xe BYD khác khám phá Overdrive.",
+      "share_message": "Xem thử Overdrive — giám sát và dashcam mã nguồn mở cho BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Tiếp sức cho bản phát hành tiếp theo ☕",
+      "kofi_value": "Một ly cà phê trên Ko-fi giữ cho những commit đêm khuya tiếp tục.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Được xây dựng với sự giúp đỡ của những người đóng góp và ủng hộ."
   }
 }

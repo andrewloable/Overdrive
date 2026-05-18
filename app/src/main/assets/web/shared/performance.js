@@ -1200,7 +1200,7 @@ BYD.performance = {
         // Update EV Battery Card
         this.updateElement('evSocValue', current != null ? current.toFixed(0) : '--');
         this.updateElement('evKwhValue', currentKwh != null ? currentKwh.toFixed(1) : '--');
-        this.updateElement('evRangeValue', currentRange != null ? currentRange.toFixed(0) + ' km' : '-- km');
+        this.updateElement('evRangeValue', currentRange != null ? BYD.units.dist(currentRange) : '-- ' + BYD.units.distLabel());
         this.updateElement('evChargingStatus', isCharging ? BYD.i18n.t('performance.status_charging') : BYD.i18n.t('performance.status_idle'));
         
         // Update EV SOC bar

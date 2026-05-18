@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "行程",
     "notifications": "通知",
-    "vehicle_control": "車輛控制"
+    "vehicle_control": "車輛控制",
+    "about": "關於"
   },
   "status": {
     "device": "裝置",
@@ -1361,5 +1362,27 @@
     "dark": "深色",
     "light": "淺色",
     "auto": "自動"
+  },
+  "about": {
+    "page_title": "關於 — OverDrive",
+    "page_title_short": "關於",
+    "contributors_title": "貢獻者",
+    "contributors_sub": "為 OverDrive 提交程式碼的人。",
+    "supporters_title": "支持者",
+    "supporters_sub": "在深夜程式碼提交時為咖啡因續命的人。",
+    "empty": "隨著大家加入,這裡會被填滿。",
+    "support": {
+      "section": "由像你一樣的人推動",
+      "star_title": "在 GitHub 上點 ⭐",
+      "star_value": "只要一秒,意義重大。",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "告訴另一位車主",
+      "share_value": "每一次分享都幫助另一位 BYD 車主發現 Overdrive。",
+      "share_message": "看看 Overdrive — 面向 BYD 的開源監控與行車記錄:https://overdrive-5lc.pages.dev/",
+      "kofi_title": "支持下一個版本 ☕",
+      "kofi_value": "Ko-fi 上一杯咖啡,讓深夜提交不停歇。",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "在貢獻者和支持者的幫助下打造。"
   }
 }

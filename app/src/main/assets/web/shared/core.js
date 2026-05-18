@@ -465,11 +465,29 @@ BYD.units = {
         return this.mode === 'mi' ? kmh * this.KM_TO_MI : kmh;
     },
 
+    /**
+     * Convert a "per-100km" rate (kWh/100km, %/100km, anything-per-100km)
+     * to "per-100mi". Same rate over a longer distance unit, so the
+     * numerator scales by 1/KM_TO_MI ≈ 1.609.
+     */
+    per100Val(perKm) {
+        if (perKm == null || isNaN(perKm)) return 0;
+        return this.mode === 'mi' ? perKm / this.KM_TO_MI : perKm;
+    },
+
     /** Per-100 consumption label: "kWh/100km" or "kWh/100mi". */
     consumptionLabel() { return this.mode === 'mi' ? 'kWh/100mi' : 'kWh/100km'; },
 
     /** "per km" or "per mi" for cost display. */
-    perDistLabel() { return this.mode === 'mi' ? '/mi' : '/km'; }
+    perDistLabel() { return this.mode === 'mi' ? '/mi' : '/km'; },
+
+    /** "%/km" or "%/mi" for SoC-based efficiency. */
+    socPerDistLabel() { return this.mode === 'mi' ? ' %/mi' : ' %/km'; },
+
+    /** Round a km/h threshold (40, 80) to the user's unit for legend labels. */
+    speedThreshold(kmh) {
+        return this.mode === 'mi' ? Math.round(kmh * this.KM_TO_MI) : kmh;
+    }
 };
 
 BYD.core = {

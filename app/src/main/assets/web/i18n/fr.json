@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Trajets",
     "notifications": "Notifications",
-    "vehicle_control": "Contrôle du véhicule"
+    "vehicle_control": "Contrôle du véhicule",
+    "about": "À propos"
   },
   "status": {
     "device": "Appareil",
@@ -476,7 +477,7 @@
     "overlay_update_failed": "Échec de la mise à jour de la superposition",
     "bitrate": "Enregistrement du taux de débit",
     "bitrate_desc": "Moins = fichiers plus petits, Plus = meilleure qualité",
-    "camera_fps": "IPS de la caméro",
+    "camera_fps": "IPS de la caméra",
     "camera_fps_desc": "Fréquence d'image pour la surveillance",
     "cdr_auto_delete": "Supprimer automatiquement les anciens fichiers Dashcam",
     "cdr_auto_delete_desc": "Libérez de l'espace de la carte SD en supprimant les enregistrements de la dashcam BYD les plus anciens",
@@ -594,7 +595,7 @@
     "batch_deleted_with_failures": "{deleted} supprimés, {failed} échoués",
     "batch_delete_failed": "Échec de suppression par lots: {error}",
     "batch_delete_failed_generic": "Échec de suppression des enregistrements",
-    "filter_what": "Object :",
+    "filter_what": "Objet :",
     "filter_severity": "Gravité :",
     "filter_distance": "Distances :",
     "actor_any": "Tous",
@@ -615,7 +616,7 @@
     "prev": "Précédent",
     "next": "Suivant",
     "video_title": "Enregistrement",
-    "legend_motion": "Movement",
+    "legend_motion": "Mouvement",
     "thumbnail_alt": "Miniature",
     "videos_count_initial": "0 vidéos",
     "selected_count_initial": "0 sélectionné",
@@ -1059,7 +1060,7 @@
     "ema_placeholder": "EMA: --%",
     "soh_source_caption": "SOH Source (utilisée par ABRP, Voyage, MQTT, Range)",
     "src_auto": "Auto",
-    "src_oem": "OEM"
+    "src_oem": "OEM",
     "src_cap_ah": "Cap-Ah",
     "src_calib": "Calibre",
     "src_energy": "Énergie",
@@ -1114,8 +1115,8 @@
     "status_low_voltage": "⚠ Basse tension",
     "status_normal": "● Normal",
     "tooltip_range_km": "Distance: {km} km",
-    "tooltip_temp_hi": "Min: {value}°C",
-    "tooltip_temp_lo": "Max: {value}°C",
+    "tooltip_temp_hi": "Haute: {value}°C",
+    "tooltip_temp_lo": "Basse: {value}°C",
     "tooltip_temp_avg": "Moy: {value}°C",
     "time_now": "maintenant",
     "time_seconds_ago": "il y a {n} secondes",
@@ -1361,5 +1362,27 @@
     "dark": "Sombre",
     "light": "Clair",
     "auto": "Auto"
+  },
+  "about": {
+    "page_title": "À propos — OverDrive",
+    "page_title_short": "À propos",
+    "contributors_title": "Contributeurs",
+    "contributors_sub": "Les personnes qui ont contribué du code à OverDrive.",
+    "supporters_title": "Soutiens",
+    "supporters_sub": "Ceux qui maintiennent les commits nocturnes caféinés.",
+    "empty": "La liste se remplit au fur et à mesure que des gens participent.",
+    "support": {
+      "section": "Propulsé par des gens comme vous",
+      "star_title": "Mettez une ⭐ sur GitHub",
+      "star_value": "Une seconde. Beaucoup de sens.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Parlez-en à un autre propriétaire",
+      "share_value": "Chaque lien partagé aide un autre propriétaire BYD à découvrir Overdrive.",
+      "share_message": "Découvrez Overdrive — surveillance et dashcam open-source pour BYD : https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Financez la prochaine version ☕",
+      "kofi_value": "Un café sur Ko-fi maintient les commits nocturnes.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Conçu avec l'aide de contributeurs et de soutiens."
   }
 }

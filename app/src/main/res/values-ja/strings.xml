@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">バージョン</string>
     <string name="settings_about_package_label">建設する</string>
     <string name="settings_about_support_section">あなたのような人々によって動かす</string>
-    <string name="settings_about_support_share_title">運転手に言って</string>
+    <string name="settings_about_support_share_title">他のオーナーにも伝えよう</string>
     <string name="settings_about_support_share_value">共有されたリンクは 他のBYDのオーナーがOverdriveを発見するのに役立ちます</string>
     <string name="settings_about_support_share_message">BYDのOverdrive オープンソース監視とダッシュカメラをチェックしてください: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">シェア 過剰運転</string>
     <string name="settings_about_support_kofi_title">次のリリースに燃料</string>
     <string name="settings_about_support_kofi_value">カフェは夜明けの約束を支える</string>
-    <string name="settings_about_support_kofi_url">株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 株式会社 </string>
     <string name="settings_about_license_title">ライセンス</string>
     <string name="settings_about_license_value">MIT オープンソース. 完全テキストを表示するにはタップします.</string>
     <string name="settings_about_source_title">ソースコード</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">販売開始開始開始</string>
-    <string name="settings_about_source_url">コンピュータを操作する</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">⭐ を GitHub に 落とす</string>
     <string name="settings_about_star_value">ちょっと待って 沢山の意味がある</string>
-    <string name="settings_about_star_url">コンピュータを操作する</string>
     <string name="settings_theme_label">テーマ</string>
     <string name="settings_theme_auto">自動 (フォローシステム)</string>
     <string name="settings_theme_light">ライト</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">ありがとう</string>
+    <string name="settings_about_thanks_subtitle">コントリビューターとサポーターの皆さんに支えられています。</string>
+    <string name="settings_about_contributors_title">コントリビューター</string>
+    <string name="settings_about_supporters_title">サポーター</string>
+    <string name="settings_about_thanks_empty">参加してくれる人が増えると、ここに表示されます。</string>
 </resources>

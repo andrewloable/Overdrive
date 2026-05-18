@@ -485,7 +485,7 @@ input, select { font-family: inherit; }
     }
 }
 
-/* IOS PWA makes the height too small with svh */
+/* iOS PWA makes the height too small with svh */
 @supports (-webkit-touch-callout: none) {
     @media (display-mode: standalone) {
         body, .app-layout, .main-content {

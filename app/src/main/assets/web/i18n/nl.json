@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Ritten",
     "notifications": "Meldingen",
-    "vehicle_control": "Voertuigbediening"
+    "vehicle_control": "Voertuigbediening",
+    "about": "Over"
   },
   "status": {
     "device": "Apparaat",
@@ -1361,5 +1362,27 @@
     "dark": "Donker",
     "light": "Licht",
     "auto": "Auto"
+  },
+  "about": {
+    "page_title": "Over — OverDrive",
+    "page_title_short": "Over",
+    "contributors_title": "Bijdragers",
+    "contributors_sub": "Mensen die code voor OverDrive hebben aangeleverd.",
+    "supporters_title": "Ondersteuners",
+    "supporters_sub": "Mensen die de late commits van cafeïne hebben voorzien.",
+    "empty": "De lijst vult zich naarmate mensen meedoen.",
+    "support": {
+      "section": "Aangedreven door mensen zoals jij",
+      "star_title": "Geef een ⭐ op GitHub",
+      "star_value": "Duurt een seconde. Betekent veel.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Vertel het een andere eigenaar",
+      "share_value": "Elke gedeelde link helpt een andere BYD-eigenaar Overdrive te ontdekken.",
+      "share_message": "Bekijk Overdrive — open-source bewaking & dashcam voor BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Steun de volgende release ☕",
+      "kofi_value": "Een koffie op Ko-fi houdt de late commits gaande.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Gebouwd met hulp van bijdragers en ondersteuners."
   }
 }

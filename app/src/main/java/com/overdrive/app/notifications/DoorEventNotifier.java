@@ -65,7 +65,7 @@ public final class DoorEventNotifier {
         String areaLabel = areaLabel(area);
 
         // Append the user-defined safe-zone name when available so a buzz on
-        // the phone reads "Front-left door opened — While parked at Home"
+        // the phone reads "Driver front door opened — While parked at Home"
         // instead of an anonymous "While parked". When the car is outside any
         // configured zone, the "at <zone>" suffix is omitted entirely; we
         // never make up a location.

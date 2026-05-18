@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Seyahatler",
     "notifications": "Bildirimler",
-    "vehicle_control": "Araç Kontrolü"
+    "vehicle_control": "Araç Kontrolü",
+    "about": "Hakkında"
   },
   "status": {
     "device": "Cihaz",
@@ -1361,5 +1362,27 @@
     "dark": "Koyu",
     "light": "Açık",
     "auto": "Otomatik"
+  },
+  "about": {
+    "page_title": "Hakkında — OverDrive",
+    "page_title_short": "Hakkında",
+    "contributors_title": "Katkıda bulunanlar",
+    "contributors_sub": "OverDrive'a kod katkısında bulunanlar.",
+    "supporters_title": "Destekçiler",
+    "supporters_sub": "Gece yarısı commitlerini kafeinli tutanlar.",
+    "empty": "İnsanlar katıldıkça liste dolmaya başlar.",
+    "support": {
+      "section": "Sizin gibi insanlarla güçleniyor",
+      "star_title": "GitHub'da ⭐ bırak",
+      "star_value": "Bir saniye sürer. Çok şey ifade eder.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Başka bir araç sahibine bahset",
+      "share_value": "Paylaşılan her bağlantı başka bir BYD sahibinin Overdrive'ı keşfetmesine yardım eder.",
+      "share_message": "Overdrive'a bir göz at — BYD için açık kaynak gözetim ve kayıt: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Bir sonraki sürümü destekle ☕",
+      "kofi_value": "Ko-fi'da bir kahve gece commitlerini sürdürür.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Katkıda bulunanların ve destekçilerin yardımıyla kuruldu."
   }
 }

@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Versjon</string>
     <string name="settings_about_package_label">Bygg</string>
     <string name="settings_about_support_section">Styret av folk som deg</string>
-    <string name="settings_about_support_share_title">Fortell en med sjåfør</string>
+    <string name="settings_about_support_share_title">Si ifra til en annen eier</string>
     <string name="settings_about_support_share_value">Hver delte lenke hjelper en annen BYD eier oppdage Overdrive.</string>
     <string name="settings_about_support_share_message">Sjekk Overdrive  åpen kildekode overvåking &amp; dashcam for BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Del overdrive</string>
     <string name="settings_about_support_kofi_title">Brensel til neste utgivelse </string>
     <string name="settings_about_support_kofi_value">En kaffe på Ko-Fi holder sent natt forpliktelser kommer.</string>
-    <string name="settings_about_support_kofi_url">HTTPS://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">Lisense</string>
     <string name="settings_about_license_value">MIT  åpen kildekode. Trykk for å se full tekst.</string>
     <string name="settings_about_source_title">Kildekode</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">HTTPS://github.com/yashsriv/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Drop en ⭐ på GitHub</string>
     <string name="settings_about_star_value">Det tar et øyeblikk, det betyr mye.</string>
-    <string name="settings_about_star_url">https://github.com/yashsriv/Overdrive-release</string>
     <string name="settings_theme_label">Tema</string>
     <string name="settings_theme_auto">Automatisk (folge system)</string>
     <string name="settings_theme_light">Lys</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Takk</string>
+    <string name="settings_about_thanks_subtitle">Bygget med hjelp fra bidragsytere og støttespillere.</string>
+    <string name="settings_about_contributors_title">Bidragsytere</string>
+    <string name="settings_about_supporters_title">Støttespillere</string>
+    <string name="settings_about_thanks_empty">Listen fylles opp etter hvert som folk bidrar.</string>
 </resources>

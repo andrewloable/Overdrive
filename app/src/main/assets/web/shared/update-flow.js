@@ -92,7 +92,12 @@
             // initial t() call returns the literal key ("update.check_for_updates")
             // when run before BYD.i18n.init() resolves, and there's nothing to
             // re-evaluate later.
-            '<span data-i18n="update.check_for_updates">' + (window.BYD && BYD.i18n ? BYD.i18n.t('update.check_for_updates') : 'Check for Updates') + '</span>';
+            // BYD.i18n.t() returns null if the catalog hasn't finished
+            // loading (per core.js: `return state.loaded ? key : null;`).
+            // Guard against that to avoid rendering the literal string
+            // "null" in the sidebar — fall back to English copy and let the
+            // next hydrate() pass replace it.
+            '<span data-i18n="update.check_for_updates">' + ((window.BYD && BYD.i18n && BYD.i18n.t('update.check_for_updates')) || 'Check for Updates') + '</span>';
         a.addEventListener('click', function (e) {
             e.preventDefault();
             startCheckFlow();

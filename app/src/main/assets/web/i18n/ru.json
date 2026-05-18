@@ -30,7 +30,8 @@
     "mqtt": "MQTT",
     "trips": "Поездки",
     "notifications": "Уведомления",
-    "vehicle_control": "Управление автомобилем"
+    "vehicle_control": "Управление автомобилем",
+    "about": "О приложении"
   },
   "status": {
     "device": "Устройство",
@@ -1361,5 +1362,27 @@
     "dark": "Тёмная",
     "light": "Светлая",
     "auto": "Авто"
+  },
+  "about": {
+    "page_title": "О приложении — OverDrive",
+    "page_title_short": "О приложении",
+    "contributors_title": "Контрибьюторы",
+    "contributors_sub": "Те, кто отправил код в OverDrive.",
+    "supporters_title": "Сторонники",
+    "supporters_sub": "Те, кто поддерживал ночные коммиты кофеином.",
+    "empty": "Список заполнится, когда подключатся люди.",
+    "support": {
+      "section": "Создаётся такими, как вы",
+      "star_title": "Поставьте ⭐ на GitHub",
+      "star_value": "Займёт секунду. Значит многое.",
+      "star_url": "https://github.com/yash-srivastava/Overdrive-release",
+      "share_title": "Расскажите другому владельцу",
+      "share_value": "Каждая отправленная ссылка помогает ещё одному владельцу BYD открыть Overdrive.",
+      "share_message": "Загляните в Overdrive — open-source наблюдение и видеорегистратор для BYD: https://overdrive-5lc.pages.dev/",
+      "kofi_title": "Поддержите следующий релиз ☕",
+      "kofi_value": "Кофе на Ko-fi поддерживает ночные коммиты.",
+      "kofi_url": "https://ko-fi.com/E1E71XALHX"
+    },
+    "thanks_subtitle": "Создано с помощью контрибьюторов и сторонников."
   }
 }

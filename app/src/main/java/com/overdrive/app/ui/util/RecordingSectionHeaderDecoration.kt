@@ -116,6 +116,10 @@ class RecordingSectionHeaderDecoration(
         val firstVisible = lm.findFirstVisibleItemPosition()
         if (firstVisible == RecyclerView.NO_POSITION) return
 
+        // The section label that the sticky pass will paint at the top — skip
+        // the per-row paint for the same label to avoid drawing it twice.
+        val stickyLabel = if (firstVisible < data.size) labelFor(data[firstVisible]) else null
+
         // Paint section labels above each section-start row.
         val seenInDraw = HashSet<Int>()
         for (i in 0 until parent.childCount) {
@@ -130,13 +134,13 @@ class RecordingSectionHeaderDecoration(
             if (!seenInDraw.add(rowKey)) continue
 
             val label = labelFor(data[pos]) ?: continue
+            if (label == stickyLabel) continue
             val top = (child.top - headerHeightPx).toFloat()
             drawLabel(c, parent, label, top)
         }
 
         // Sticky top: the label of the section that owns the first visible row.
-        if (firstVisible < data.size) {
-            val stickyLabel = labelFor(data[firstVisible]) ?: return
+        if (stickyLabel != null) {
             // If the next section's first item is ABOVE the sticky region,
             // push the sticky upward so the new label slides in.
             var stickyTop = 0f

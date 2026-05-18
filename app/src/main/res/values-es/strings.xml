@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Versión</string>
     <string name="settings_about_package_label">Construir</string>
     <string name="settings_about_support_section">Alimentado por gente como tú</string>
-    <string name="settings_about_support_share_title">Dile a un compañero de conducir</string>
+    <string name="settings_about_support_share_title">Cuéntaselo a otro propietario</string>
     <string name="settings_about_support_share_value">Cada enlace compartido ayuda a otro propietario de BYD a descubrir Overdrive.</string>
     <string name="settings_about_support_share_message">Consulte Overdrive  vigilancia de código abierto y dashcam para BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Compartir el exceso</string>
     <string name="settings_about_support_kofi_title">Combustible para el próximo lanzamiento </string>
     <string name="settings_about_support_kofi_value">Un café en Ko-Fi mantiene los compromisos nocturnos.</string>
-    <string name="settings_about_support_kofi_url">El objetivo de la investigación es mejorar la calidad de vida de las personas.</string>
     <string name="settings_about_license_title">Licencia</string>
     <string name="settings_about_license_value">MIT  código abierto. Toque para ver el texto completo.</string>
     <string name="settings_about_source_title">Código fuente</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">El proyecto de ley de la ley de licencia para el uso de la licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de licencia de lic</string>
-    <string name="settings_about_source_url">La versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión.</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Deja un ⭐ en GitHub</string>
     <string name="settings_about_star_value">Toma un segundo, significa mucho.</string>
-    <string name="settings_about_star_url">La versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión de la versión.</string>
     <string name="settings_theme_label">Temática</string>
     <string name="settings_theme_auto">Automático (sistema de seguimiento)</string>
     <string name="settings_theme_light">La luz</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Gracias</string>
+    <string name="settings_about_thanks_subtitle">Construido con la ayuda de colaboradores y patrocinadores.</string>
+    <string name="settings_about_contributors_title">Colaboradores</string>
+    <string name="settings_about_supporters_title">Patrocinadores</string>
+    <string name="settings_about_thanks_empty">La lista se completa a medida que la gente colabora.</string>
 </resources>

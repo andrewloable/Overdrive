@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Versione</string>
     <string name="settings_about_package_label">Costruire</string>
     <string name="settings_about_support_section">Spinto da persone come te.</string>
-    <string name="settings_about_support_share_title">Dillo a un compagno di guida.</string>
+    <string name="settings_about_support_share_title">Parlane a un altro proprietario</string>
     <string name="settings_about_support_share_value">Ogni link condiviso aiuta un altro proprietario di BYD a scoprire Overdrive.</string>
     <string name="settings_about_support_share_message">Controlla Overdrive  monitoraggio open source e dashcam per BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Condividere eccessivo</string>
     <string name="settings_about_support_kofi_title">Fuel il prossimo rilascio </string>
     <string name="settings_about_support_kofi_value">Un caffè su Ko-Fi fa arrivare gli impegni notturni.</string>
-    <string name="settings_about_support_kofi_url">La Commissione ha adottato una proposta di regolamento (CE) n.</string>
     <string name="settings_about_license_title">Licenza</string>
     <string name="settings_about_license_value">MIT  open source. Tocca per visualizzare il testo completo.</string>
     <string name="settings_about_source_title">Codice sorgente</string>
-    <string name="settings_about_source_value">github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">Il progetto è stato pubblicato su http://github.com/yashsriv/Overdrive-release/blob/main/license.</string>
-    <string name="settings_about_source_url">Il programma è stato pubblicato su http://github.com/yashsriv/Overdrive-release.</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Lanciare un ⭐ su GitHub</string>
     <string name="settings_about_star_value">Ci vuole un secondo, significa molto.</string>
-    <string name="settings_about_star_url">Il programma è stato pubblicato su http://github.com/yashsriv/Overdrive-release.</string>
     <string name="settings_theme_label">Tema</string>
     <string name="settings_theme_auto">Auto (sistema di seguimento)</string>
     <string name="settings_theme_light">Luce</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Grazie</string>
+    <string name="settings_about_thanks_subtitle">Realizzato con l\'aiuto di collaboratori e sostenitori.</string>
+    <string name="settings_about_contributors_title">Collaboratori</string>
+    <string name="settings_about_supporters_title">Sostenitori</string>
+    <string name="settings_about_thanks_empty">L\'elenco si popola man mano che le persone partecipano.</string>
 </resources>

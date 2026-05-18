@@ -387,22 +387,18 @@
     <string name="settings_about_version_label">Версия</string>
     <string name="settings_about_package_label">Построение</string>
     <string name="settings_about_support_section">Поддерживаются такими людьми, как ты.</string>
-    <string name="settings_about_support_share_title">Скажите другому водителю .</string>
+    <string name="settings_about_support_share_title">Расскажите другому владельцу</string>
     <string name="settings_about_support_share_value">Каждый общий ссылка помогает другому владельцу BYD обнаружить Overdrive.</string>
     <string name="settings_about_support_share_message">Проверьте Overdrive  открытый код наблюдения и дашкамы для BYD: https://overdrive-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Распределяйте сверхвыгоду</string>
     <string name="settings_about_support_kofi_title">Заправляйте следующий выпуск </string>
     <string name="settings_about_support_kofi_value">Кофе на Ко-Фи заставляет задерживаться поздней ночи.</string>
-    <string name="settings_about_support_kofi_url">https://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">Лицензия</string>
     <string name="settings_about_license_value">MIT  открытый код. Нажмите, чтобы просмотреть полный текст.</string>
     <string name="settings_about_source_title">Исходный код</string>
-    <string name="settings_about_source_value">Github.com/yashsriv/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yashsriv/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yashsriv/Overdrive-release</string>
+    <string name="settings_about_source_value">Github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_star_title">Отпустить ⭐ на GitHub</string>
     <string name="settings_about_star_value">Это много значит.</string>
-    <string name="settings_about_star_url">https://github.com/yashsriv/Overdrive-release</string>
     <string name="settings_theme_label">Тема</string>
     <string name="settings_theme_auto">Автомобильная (последующая система)</string>
     <string name="settings_theme_light">Свет</string>
@@ -546,4 +542,9 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+    <string name="settings_about_thanks_title">Спасибо</string>
+    <string name="settings_about_thanks_subtitle">Создано с помощью контрибьюторов и сторонников.</string>
+    <string name="settings_about_contributors_title">Контрибьюторы</string>
+    <string name="settings_about_supporters_title">Сторонники</string>
+    <string name="settings_about_thanks_empty">Список заполнится, когда подключатся люди.</string>
 </resources>

@@ -110,8 +110,8 @@ public class BydVehicleData {
     public final int[] seatbeltStatus;    // [1-5]
 
     // ==================== SEATS ====================
-    public final int[] seatHeat;    // [1-2]
-    public final int[] seatCool;    // [1-2]
+    public final int[] seatHeat;    // [driver, passenger] — 0=off, 1=low, 2=high
+    public final int[] seatCool;    // [driver, passenger] — 0=off, 1=low, 2=high
 
     // ==================== CLIMATE ====================
     public final int acStartState;
@@ -486,14 +486,14 @@ public class BydVehicleData {
                 j.put("seatbeltStatus", sb);
             }
             if (seatHeat != null) {
-                JSONArray sb = new JSONArray();
-                for (int s : seatHeat) sb.put(s);
-                j.put("seatHeat", sb);
+                JSONArray sh = new JSONArray();
+                for (int s : seatHeat) sh.put(s);
+                j.put("seatHeat", sh);
             }
             if (seatCool != null) {
-                JSONArray sb = new JSONArray();
-                for (int s : seatCool) sb.put(s);
-                j.put("seatCool", sb);
+                JSONArray sc = new JSONArray();
+                for (int s : seatCool) sc.put(s);
+                j.put("seatCool", sc);
             }
 
             // Climate
