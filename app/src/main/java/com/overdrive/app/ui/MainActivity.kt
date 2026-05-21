@@ -193,8 +193,8 @@ class MainActivity : AppCompatActivity() {
                             }
                             // Plant the Telegram post-update hint file so when
                             // the cloudflared tunnel comes back with a NEW URL,
-                            // the user sees "🔄 Updated to vX — new tunnel URL"
-                            // instead of the generic "URL changed" message.
+                            // the user sees the post-update bot message instead
+                            // of the generic "URL changed" message.
                             // The daemon deletes the hint after one read, so
                             // subsequent (non-update) tunnel restarts go back
                             // to the normal copy.
@@ -323,7 +323,7 @@ class MainActivity : AppCompatActivity() {
             
             override fun onAuthGranted() {
                 runOnUiThread {
-                    logsViewModel.info("ADB", "✓ ADB authorization granted!")
+                    logsViewModel.info("ADB", "ADB authorization granted")
                     logsViewModel.info("ADB", "Re-initializing daemons...")
                     
                     // Re-run daemon initialization now that ADB is authorized
@@ -343,7 +343,7 @@ class MainActivity : AppCompatActivity() {
             
             override fun onAuthFailed(error: String) {
                 runOnUiThread {
-                    logsViewModel.error("ADB", "⚠ ADB connection failed: $error")
+                    logsViewModel.error("ADB", "ADB connection failed: $error")
                 }
             }
         })
@@ -547,13 +547,13 @@ class MainActivity : AppCompatActivity() {
                 android.util.Log.i("MainActivity", "Storage permission granted! Creating directories...")
                 val success = StorageSetup.setupDirectories()
                 if (success) {
-                    logsViewModel.info("Storage", "✓ Storage directories created (App is owner)")
+                    logsViewModel.info("Storage", "Storage directories created (App is owner)")
                 } else {
                     logsViewModel.warn("Storage", "Some directories could not be created")
                 }
             } else {
                 android.util.Log.e("MainActivity", "Storage permission denied by user")
-                logsViewModel.error("Storage", "⚠ Storage permission denied - recordings may not work")
+                logsViewModel.error("Storage", "Storage permission denied - recordings may not work")
                 Toast.makeText(this, getString(R.string.toast_storage_permission_required), Toast.LENGTH_LONG).show()
             }
         }
@@ -571,13 +571,13 @@ class MainActivity : AppCompatActivity() {
                 android.util.Log.i("MainActivity", "Storage permission granted! Creating directories...")
                 val success = StorageSetup.setupDirectories()
                 if (success) {
-                    logsViewModel.info("Storage", "✓ Storage directories created (App is owner)")
+                    logsViewModel.info("Storage", "Storage directories created (App is owner)")
                 } else {
                     logsViewModel.warn("Storage", "Some directories could not be created")
                 }
             } else {
                 android.util.Log.e("MainActivity", "Storage permission denied by user")
-                logsViewModel.error("Storage", "⚠ Storage permission denied - recordings may not work")
+                logsViewModel.error("Storage", "Storage permission denied - recordings may not work")
                 Toast.makeText(this, getString(R.string.toast_storage_permission_required), Toast.LENGTH_LONG).show()
             }
         }
@@ -791,17 +791,19 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Navigate to a rail destination, popping any sub-pages so the tab
-     * resets to its root. Cross-fade animation keeps the switch soft.
+     * resets to its root. Uses M3 expressive fade-through (the incoming
+     * destination scales up slightly while the outgoing fades) so the
+     * switch reads as motion, not just a cross-fade.
      */
     private fun navigateToRailDestination(destinationId: Int) {
         val options = androidx.navigation.NavOptions.Builder()
             .setLaunchSingleTop(true)
             .setRestoreState(false)
             .setPopUpTo(destinationId, /* inclusive = */ false, /* saveState = */ false)
-            .setEnterAnim(R.anim.fade_in)
-            .setExitAnim(R.anim.fade_out)
-            .setPopEnterAnim(R.anim.fade_in)
-            .setPopExitAnim(R.anim.fade_out)
+            .setEnterAnim(R.anim.m3_fade_through_enter)
+            .setExitAnim(R.anim.m3_fade_through_exit)
+            .setPopEnterAnim(R.anim.m3_fade_through_enter)
+            .setPopExitAnim(R.anim.m3_fade_through_exit)
             .build()
         try {
             navController.navigate(destinationId, /* args = */ null, options)
@@ -918,12 +920,19 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateStatusIndicator(status: DaemonStatus?) {
+        // Single status pill replaced the standalone toolbar dot. Both the
+        // legacy `statusIndicator` and the in-pill `urlStatusDot` IDs are
+        // updated for safety: the legacy dot is now a 0×0 invisible View
+        // (so updates are no-ops visually) and the pill dot is what users
+        // actually see. Keeping both write paths means future layout swaps
+        // don't need MainActivity edits.
         val drawableRes = when (status) {
             DaemonStatus.RUNNING -> R.drawable.status_dot_online
             DaemonStatus.STARTING, DaemonStatus.STOPPING -> R.drawable.status_dot_starting
             else -> R.drawable.status_dot_offline
         }
         statusIndicator.setBackgroundResource(drawableRes)
+        urlStatusDot.setBackgroundResource(drawableRes)
     }
     
     override fun onSupportNavigateUp(): Boolean {
@@ -1120,50 +1129,84 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showBatteryHealthDialog() {
         val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
-        
+
         executor.execute {
             var sohPercent = "--"
             var source = "--"
-            var method = "--"
+            var method = "live"
             var nominalKwh = "--"
             var samples = "--"
             var lastUpdated = "--"
-            var preferredSource = "auto"
             var hasEstimate = false
-            
+
+            // Vehicle section state. Populated from /api/performance/soh status JSON
+            // when available; falls back to legacy properties-file values otherwise.
+            var modelId: String? = null
+            var nominalKwhValue = 0.0
+            var nominalSourceVal = "unset"
+            var estimatedKwhValue = 0.0
+            var calibrationSoh = 0.0
+            var calibrationTs = 0L
+
             try {
                 val sohFile = java.io.File("/data/local/tmp/abrp_soh_estimate.properties")
                 if (sohFile.exists()) {
                     val props = java.util.Properties()
                     java.io.FileInputStream(sohFile).use { props.load(it) }
-                    
+
                     val soh = props.getProperty("soh_percent")?.toDoubleOrNull()
-                    if (soh != null && soh > 0 && soh <= 100) {
+                    if (soh != null && soh > 0 && soh <= 110) {
                         sohPercent = String.format("%.1f%%", soh)
                         hasEstimate = true
                     }
-                    
-                    method = props.getProperty("estimation_method") ?: "--"
-                    samples = props.getProperty("sample_count") ?: "0"
-                    preferredSource = props.getProperty("preferred_source") ?: "auto"
-                    
+
+                    // Shape B: live formula + calibration anchor (separate, not blended).
+                    val cal = props.getProperty("calibration_soh")?.toDoubleOrNull()
+                    samples = if (cal != null && cal > 0) String.format("calib %.1f%%", cal) else "—"
+
                     val nominal = props.getProperty("nominal_capacity_kwh")?.toDoubleOrNull()
                     if (nominal != null && nominal > 0) {
                         nominalKwh = String.format("%.1f kWh", nominal)
+                        nominalKwhValue = nominal
                     }
-                    
+
                     val ts = props.getProperty("last_updated")?.toLongOrNull()
                     if (ts != null && ts > 0) {
                         lastUpdated = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
                             .format(java.util.Date(ts))
                     }
-                    
-                    source = preferredSource
+
+                    source = props.getProperty("nominal_source") ?: "unset"
+                    nominalSourceVal = source
                 }
             } catch (e: Exception) {
                 android.util.Log.w("MainActivity", "SOH file read failed: ${e.message}")
             }
-            
+
+            // Fetch full SOH status (modelId, calibration anchor, estimated capacity) —
+            // properties file alone doesn't carry modelId or live calibration shape.
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    if (!json.isNull("modelId")) {
+                        modelId = json.optString("modelId", "").ifEmpty { null }
+                    }
+                    nominalKwhValue = json.optDouble("nominalCapacityKwh", nominalKwhValue)
+                    nominalSourceVal = json.optString("nominalSource", nominalSourceVal)
+                    val est = json.optDouble("estimatedCapacityKwh", -1.0)
+                    if (est > 0) estimatedKwhValue = est
+                    val calObj = json.optJSONObject("calibration")
+                    if (calObj != null) {
+                        calibrationSoh = calObj.optDouble("soh", -1.0)
+                        calibrationTs = calObj.optLong("timestampMs", 0L)
+                    }
+                }
+                conn.disconnect()
+            } catch (_: Throwable) { /* keep legacy file fallback values */ }
+
             val finalSoh = sohPercent
             val finalSource = source
             val finalMethod = method
@@ -1171,10 +1214,16 @@ class MainActivity : AppCompatActivity() {
             val finalSamples = samples
             val finalLastUpdated = lastUpdated
             val finalHasEstimate = hasEstimate
-            
+            val finalModelId = modelId
+            val finalNominalKwh = nominalKwhValue
+            val finalNominalSource = nominalSourceVal
+            val finalEstimatedKwh = estimatedKwhValue
+            val finalCalSoh = calibrationSoh
+            val finalCalTs = calibrationTs
+
             runOnUiThread {
                 val dialogView = layoutInflater.inflate(R.layout.dialog_battery_health, null)
-                
+
                 // Populate fields
                 dialogView.findViewById<TextView>(R.id.tvSohPercent).text = finalSoh
                 dialogView.findViewById<TextView>(R.id.tvSohSource).text = finalSource
@@ -1182,7 +1231,52 @@ class MainActivity : AppCompatActivity() {
                 dialogView.findViewById<TextView>(R.id.tvSohCapacity).text = finalNominal
                 dialogView.findViewById<TextView>(R.id.tvSohSamples).text = finalSamples
                 dialogView.findViewById<TextView>(R.id.tvSohLastUpdated).text = finalLastUpdated
-                
+
+                // Vehicle section
+                dialogView.findViewById<TextView>(R.id.tvSohModel).text =
+                    if (finalModelId != null) modelDisplayName(finalModelId)
+                    else getString(R.string.soh_dialog_model_not_selected)
+
+                val packCapView = dialogView.findViewById<TextView>(R.id.tvSohPackCapacity)
+                val packBadgeView = dialogView.findViewById<TextView>(R.id.tvSohPackCapacityBadge)
+                if (finalNominalKwh > 0) {
+                    packCapView.text = String.format("%.1f kWh", finalNominalKwh)
+                    val badgeText = when (finalNominalSource) {
+                        "user" -> getString(R.string.soh_dialog_source_user)
+                        "auto" -> getString(R.string.soh_dialog_source_auto)
+                        else -> null
+                    }
+                    if (badgeText != null) {
+                        packBadgeView.text = "(" + badgeText + ")"
+                        packBadgeView.visibility = View.VISIBLE
+                    } else {
+                        packBadgeView.visibility = View.GONE
+                    }
+                } else {
+                    packCapView.text = getString(R.string.soh_dialog_capacity_not_detected)
+                    packBadgeView.visibility = View.GONE
+                }
+
+                val rowEst = dialogView.findViewById<View>(R.id.rowSohEstimatedCapacity)
+                if (finalEstimatedKwh > 0) {
+                    dialogView.findViewById<TextView>(R.id.tvSohEstimatedCapacity).text =
+                        String.format("%.1f kWh", finalEstimatedKwh)
+                    rowEst.visibility = View.VISIBLE
+                } else {
+                    rowEst.visibility = View.GONE
+                }
+
+                val rowCal = dialogView.findViewById<View>(R.id.rowSohCalibrationAnchor)
+                if (finalCalSoh > 0 && finalCalTs > 0) {
+                    val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        .format(java.util.Date(finalCalTs))
+                    dialogView.findViewById<TextView>(R.id.tvSohCalibrationAnchor).text =
+                        getString(R.string.soh_dialog_calibration_format, finalCalSoh, date)
+                    rowCal.visibility = View.VISIBLE
+                } else {
+                    rowCal.visibility = View.GONE
+                }
+
                 // Status text
                 val statusView = dialogView.findViewById<TextView>(R.id.tvSohStatus)
                 if (finalHasEstimate) {
@@ -1192,7 +1286,7 @@ class MainActivity : AppCompatActivity() {
                     statusView.text = getString(R.string.soh_no_estimate_yet)
                     statusView.setTextColor(resources.getColor(R.color.text_muted, null))
                 }
-                
+
                 // SOH percent color based on health
                 val sohView = dialogView.findViewById<TextView>(R.id.tvSohPercent)
                 if (finalHasEstimate) {
@@ -1204,20 +1298,40 @@ class MainActivity : AppCompatActivity() {
                     }
                     sohView.setTextColor(resources.getColor(colorRes, null))
                 }
-                
+
                 val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
                     .setView(dialogView)
                     .setPositiveButton(getString(R.string.dialog_close), null)
                     .create()
-                
+
                 // Wire up reset button
                 dialogView.findViewById<TextView>(R.id.btnResetSoh).setOnClickListener {
                     dialog.dismiss()
                     confirmSohReset()
                 }
-                
+
                 dialog.show()
             }
+        }
+    }
+
+    private fun modelDisplayName(modelId: String?): String {
+        return when (modelId?.lowercase()) {
+            null -> "—"
+            "seal" -> "BYD Seal"
+            "atto3", "atto-3" -> "BYD Atto 3"
+            "atto2", "atto-2" -> "BYD Atto 2"
+            "atto1", "atto-1" -> "BYD Atto 1"
+            "han" -> "BYD Han"
+            "tang" -> "BYD Tang"
+            "song" -> "BYD Song"
+            "qin" -> "BYD Qin"
+            "dolphin" -> "BYD Dolphin"
+            "seagull" -> "BYD Seagull"
+            "sealion6" -> "BYD Sealion 6"
+            "sealion7" -> "BYD Sealion 7"
+            "sealu", "seal-u" -> "BYD Seal U"
+            else -> modelId.replaceFirstChar { it.uppercase() }
         }
     }
     
@@ -1226,6 +1340,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun confirmSohReset() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_reset_soh_title))
             .setMessage(getString(R.string.dialog_reset_soh_message))
             .setPositiveButton(getString(R.string.dialog_reset)) { _, _ ->
@@ -1346,6 +1461,7 @@ class MainActivity : AppCompatActivity() {
         )
         val list = categories.joinToString("\n") { "• " + (labels[it] ?: it) }
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_reset_following_title))
             .setMessage(getString(R.string.dialog_reset_following_message, list))
             .setPositiveButton(getString(R.string.dialog_reset)) { _, _ -> performReset(categories, labels) }
@@ -1391,13 +1507,14 @@ class MainActivity : AppCompatActivity() {
                                     r.has("filesDeleted") -> " (${r.optLong("filesDeleted")} files)"
                                     else -> ""
                                 }
-                                lines.append("✓ ").append(label).append(detail).append("\n")
+                                lines.append("• ").append(label).append(detail).append("\n")
                             } else {
                                 val err = r?.optString("error", "failed") ?: "failed"
-                                lines.append("✗ ").append(label).append(": ").append(err).append("\n")
+                                lines.append("• ").append(label).append(" — ").append(err).append("\n")
                             }
                         }
                         com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                            .setIcon(R.drawable.ic_check_circle)
                             .setTitle(getString(R.string.dialog_reset_complete_title))
                             .setMessage(lines.toString().trim())
                             .setPositiveButton(getString(R.string.dialog_ok), null)
@@ -1486,6 +1603,7 @@ class MainActivity : AppCompatActivity() {
             checkTrafficMonitorStatus()
             
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                .setIcon(R.drawable.ic_warning)
                 .setTitle(getString(R.string.dialog_traffic_cannot_check_title))
                 .setMessage(getString(R.string.dialog_traffic_cannot_check_message))
                 .setPositiveButton(getString(R.string.dialog_ok), null)
@@ -1496,6 +1614,7 @@ class MainActivity : AppCompatActivity() {
         if (currentlyEnabled) {
             // Currently enabled — offer to disable with full explanation
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                .setIcon(R.drawable.ic_traffic_monitor)
                 .setTitle(getString(R.string.dialog_traffic_disable_title))
                 .setMessage(getString(R.string.dialog_traffic_disable_message))
                 .setPositiveButton(getString(R.string.dialog_disable)) { _, _ ->
@@ -1506,6 +1625,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Currently disabled — offer to re-enable
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                .setIcon(R.drawable.ic_traffic_monitor)
                 .setTitle(getString(R.string.dialog_traffic_enable_title))
                 .setMessage(getString(R.string.dialog_traffic_enable_message))
                 .setPositiveButton(getString(R.string.dialog_enable)) { _, _ ->
@@ -1545,6 +1665,7 @@ class MainActivity : AppCompatActivity() {
                     
                     // Show reboot reminder
                     com.google.android.material.dialog.MaterialAlertDialogBuilder(this@MainActivity, R.style.Theme_Overdrive_M3_Dialog)
+                        .setIcon(R.drawable.ic_check_circle)
                         .setTitle(getString(R.string.dialog_traffic_status_title, state.replaceFirstChar { it.uppercase() }))
                         .setMessage(getString(R.string.dialog_traffic_reboot_message))
                         .setPositiveButton(getString(R.string.dialog_ok), null)

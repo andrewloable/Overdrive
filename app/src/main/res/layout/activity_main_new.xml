@@ -143,32 +143,87 @@
                     android:background="?attr/colorSurface"
                     app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
 
-                    <!-- Toolbar end-cluster: tunnel status dot + language picker.
-                         Both live in a single horizontal row pinned to the
-                         end so the language affordance is reachable from the
-                         top-right at every screen size, not buried under the
-                         rail header where users had been missing it. -->
+                    <!--
+                      Toolbar end-cluster: status pill + language picker.
+
+                      The pill replaces both the previous tiny status dot and the
+                      full-width tunnel URL strip below the toolbar. It collapses
+                      three signals (tunnel state, label, URL preview) into one
+                      tappable surface, taps to copy the URL, long-pressed text
+                      stays selectable for power users.
+
+                      `statusIndicator`, `urlStatusDot`, `tvCurrentUrl`,
+                      `btnCopyUrl`, `urlBar` IDs are preserved here even though
+                      the bottom URL strip is gone — MainActivity reads them
+                      to update tunnel state. `urlStatusDot` is the dot inside
+                      the pill (same drawable swap logic). `urlBar` is now the
+                      pill's outer LinearLayout so the same visibility toggling
+                      keeps working.
+                    -->
                     <LinearLayout
+                        android:id="@+id/urlBar"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="end"
                         android:layout_marginEnd="12dp"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="6dp">
+                        android:orientation="horizontal">
 
-                        <View
-                            android:id="@+id/statusIndicator"
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:background="@drawable/status_dot_offline" />
+                        <LinearLayout
+                            android:id="@+id/statusPill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/status_pill_background"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="14dp"
+                            android:paddingVertical="8dp">
+
+                            <View
+                                android:id="@+id/urlStatusDot"
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/status_dot_offline" />
+
+                            <View
+                                android:id="@+id/statusIndicator"
+                                android:layout_width="0dp"
+                                android:layout_height="0dp"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/tvCurrentUrl"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:ellipsize="middle"
+                                android:fontFamily="monospace"
+                                android:maxWidth="280dp"
+                                android:singleLine="true"
+                                android:text="@string/url_connecting"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textColor="?attr/colorPrimary"
+                                android:textIsSelectable="true" />
+
+                            <ImageButton
+                                android:id="@+id/btnCopyUrl"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="@string/cd_copy_url"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_copy"
+                                app:tint="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
 
                         <ImageButton
                             android:id="@+id/toolbarLanguageButton"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="8dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="@string/settings_language_label"
                             android:src="@drawable/ic_language"
@@ -177,56 +232,15 @@
                     </LinearLayout>
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- URL bar: tunnel URL preview, only shown when one exists. -->
-                <LinearLayout
-                    android:id="@+id/urlBar"
+                <!--
+                  Overdrive accent stripe. 3dp gradient under the toolbar
+                  (primary → tertiary), mirroring the same stripe on the
+                  WebView side. Same identity, different content area.
+                -->
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="?attr/colorSurfaceContainerLow"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="20dp"
-                    android:paddingVertical="10dp">
-
-                    <View
-                        android:id="@+id/urlStatusDot"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:background="@drawable/status_dot_online" />
-
-                    <TextView
-                        android:id="@+id/tvUrlLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="@string/url_label"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvCurrentUrl"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:ellipsize="middle"
-                        android:fontFamily="monospace"
-                        android:singleLine="true"
-                        android:text="@string/url_connecting"
-                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                        android:textColor="?attr/colorPrimary"
-                        android:textIsSelectable="true" />
-
-                    <ImageButton
-                        android:id="@+id/btnCopyUrl"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginStart="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/cd_copy_url"
-                        android:src="@drawable/ic_copy"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
+                    android:layout_height="3dp"
+                    android:background="@drawable/toolbar_accent_stripe" />
             </com.google.android.material.appbar.AppBarLayout>
 
             <androidx.fragment.app.FragmentContainerView

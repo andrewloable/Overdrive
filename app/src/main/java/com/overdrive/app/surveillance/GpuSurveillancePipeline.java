@@ -61,6 +61,13 @@ public class GpuSurveillancePipeline {
     private boolean initialized = false;
     private boolean running = false;
     private boolean recordingMode = false;  // true = recording, false = viewing only
+
+    // Serializes runtime reconfig methods (applyFpsChange, applyBitrateChange,
+    // applyCodecChange). Without this, two web-UI changes arriving back-to-back
+    // can interleave reinitializeEncoder() calls — one observes encoder=null
+    // mid-tear-down and silently no-ops, or worse, both threads tear down
+    // recorder surfaces concurrently.
+    private final Object reconfigLock = new Object();
     
     // Saved init params — needed for re-initialization after stop/start cycle (ACC OFF→ON)
     private android.content.res.AssetManager savedAssetManager;
@@ -132,6 +139,18 @@ public class GpuSurveillancePipeline {
         // Don't restart the active stream to avoid disrupting the live view.
         logger.info(String.format("Streaming quality saved: %s (%dx%d @ %dfps)",
                 quality, quality.width, quality.height, quality.fps));
+        // GL budget warning: if the stream encoder rate exceeds the
+        // recording encoder rate, both run inside the same GL render loop
+        // iteration — at 30+30 fps the GL thread may not have headroom.
+        // Not a hard error (encoder backpressure / reactive AI-skip will
+        // handle it), but worth flagging so the operator knows why
+        // performance might dip.
+        int recordingFps = encoder != null ? encoder.getFps() : 0;
+        if (recordingFps > 0 && quality.fps > recordingFps) {
+            logger.warn("Stream fps " + quality.fps
+                + " > recording fps " + recordingFps
+                + " — GL thread budget may be tight on heavy frames");
+        }
     }
     
     /**
@@ -142,6 +161,12 @@ public class GpuSurveillancePipeline {
      * @param bitrate New bitrate in bps
      */
     public void applyBitrateChange(int bitrate) {
+        synchronized (reconfigLock) {
+            applyBitrateChangeLocked(bitrate);
+        }
+    }
+
+    private void applyBitrateChangeLocked(int bitrate) {
         // Update config first
         config.setCustomBitrate(bitrate);
         
@@ -208,11 +233,103 @@ public class GpuSurveillancePipeline {
     }
     
     /**
+     * Applies a recording FPS change at runtime. Persists the new fps to
+     * UnifiedConfigManager (camera.targetFps), propagates it to the camera
+     * (so the HAL clamps emission to that rate), and reinitializes the
+     * encoder so KEY_FRAME_RATE matches.
+     *
+     * Range: 10-30 fps. Values outside this range are clamped — the panoramic
+     * HAL on this device tops out at ~26 fps and the V2 motion pipeline is
+     * tuned for 10 fps minimum (aiFrameSkip handles the higher rates).
+     *
+     * If recording is active, it is stopped, the encoder reinitialized, and
+     * recording resumes at the new rate. If the requested fps already matches
+     * the current value, no-ops.
+     */
+    public void applyFpsChange(int fps) {
+        synchronized (reconfigLock) {
+            applyFpsChangeLocked(fps);
+        }
+    }
+
+    private void applyFpsChangeLocked(int fps) {
+        int clamped = Math.max(10, Math.min(30, fps));
+        if (clamped != fps) {
+            logger.warn("FPS " + fps + " out of range [10..30] — clamped to " + clamped);
+        }
+
+        // Persist to config first so reinitializeEncoder picks it up via loadTargetFps().
+        try {
+            org.json.JSONObject cameraCfg = com.overdrive.app.config.UnifiedConfigManager
+                .loadConfig().optJSONObject("camera");
+            if (cameraCfg == null) cameraCfg = new org.json.JSONObject();
+            cameraCfg.put("targetFps", clamped);
+            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", cameraCfg);
+        } catch (Exception e) {
+            logger.warn("Failed to persist targetFps: " + e.getMessage());
+        }
+
+        // Propagate to camera so the HAL emission rate also tracks the new target.
+        if (camera != null) {
+            camera.setTargetFps(clamped);
+        }
+
+        if (encoder == null) {
+            logger.info("FPS setting saved (encoder not initialized yet): " + clamped + " fps");
+            return;
+        }
+        if (encoder.getFps() == clamped) {
+            logger.info("FPS already set to: " + clamped + " fps");
+            return;
+        }
+
+        logger.info("FPS change requested: " + clamped + " fps - reinitializing encoder");
+
+        boolean wasSurveillance = currentMode == Mode.SURVEILLANCE;
+        boolean wasNormalRecording = currentMode == Mode.NORMAL_RECORDING;
+        boolean wasRecording = isRecording();
+
+        try {
+            if (wasRecording && recorder != null && recorder.isRecording()) {
+                logger.info("Stopping recording for FPS change");
+                recorder.stopRecording();
+                Thread.sleep(500);
+            }
+
+            // reinitializeEncoder reads loadTargetFps() internally — picks up our persist.
+            reinitializeEncoder();
+
+            if (wasRecording) {
+                if (wasSurveillance) {
+                    enableSurveillance();
+                } else if (wasNormalRecording) {
+                    startRecording();
+                }
+            }
+            logger.info("FPS change applied successfully: " + clamped + " fps");
+        } catch (Exception e) {
+            logger.error("Failed to apply FPS change: " + e.getMessage(), e);
+            try {
+                if (wasSurveillance) enableSurveillance();
+                else if (wasNormalRecording) startRecording();
+            } catch (Exception e2) {
+                logger.error("Failed to recover after FPS change error", e2);
+            }
+        }
+    }
+
+    /**
      * Applies a codec change. Requires encoder restart.
-     * 
+     *
      * @param codec New video codec
      */
     public void applyCodecChange(GpuPipelineConfig.VideoCodec codec) {
+        synchronized (reconfigLock) {
+            applyCodecChangeLocked(codec);
+        }
+    }
+
+    private void applyCodecChangeLocked(GpuPipelineConfig.VideoCodec codec) {
         // Store the new codec setting
         config.setVideoCodec(codec);
         
@@ -573,7 +690,7 @@ public class GpuSurveillancePipeline {
         // 4. Full auto-probe only when all above fail
         String model = getVehicleModel();
         logger.info("Vehicle model: " + model);
-        
+
         boolean configured = false;
         
         // Step 1: Validated saved config (probedAndValidated=true OR manualOverride=true)

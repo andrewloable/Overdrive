@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Aufnahme - {0}s",
     "proximity_alert": " Nähewarnzeit: {0} Auslöser: {1} ({2}) Aufnahme begann..."
   },
+  "vehicle_control": {
+    "cloud_required": "Verbinden Sie ein BYD-Konto in Einstellungen, um diese Steuerung zu verwenden",
+    "cloud_sent": "Über die Wolke gesendet",
+    "cloud_unavailable_used_local": "Cloud nicht verfügbar  Direktverbindung verwendet",
+    "local_sent": "Über die direkte Verbindung gesendet",
+    "cloud_offline_used_local": "Cloud Offline  Direktverbindung verwendet",
+    "local_unavailable_used_cloud": "Direktverbindung nicht verfügbar — über die Cloud gesendet",
+    "cloud_failed": "Ich konnte das Auto nicht erreichen  Versuchen Sie noch einmal, wenn das Fahrzeug wach ist",
+    "rate_limited": "Ein Befehl ist noch im Gange  Warten Sie ein paar Sekunden",
+    "not_supported": "Die Steuerung ist nicht verfügbar.",
+    "find_car_label": "Finden Sie ein Auto .",
+    "battery_heat_label": "Heizung Battery",
+    "close_all_windows_label": "Alle Fenster schließen"
+  },
   "messages": {
     "logged_out": "Sie sind ausgerufen .",
     "bydcloud_connected": "Erfolgreich verbunden",

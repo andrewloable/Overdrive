@@ -7,15 +7,7 @@
 
     <!-- Recording Mode Labels -->
 
-
-
-
-
     <!-- Proximity Guard Settings Labels -->
-
-
-
-
 
     <!-- Quality Settings Labels -->
 
@@ -68,6 +60,10 @@
     <string name="cd_play">Play</string>
     <string name="cd_back">Back</string>
     <string name="cd_play_pause">Play/Pause</string>
+    <string name="cd_player_prev">Previous recording</string>
+    <string name="cd_player_next">Next recording</string>
+    <string name="cd_player_maximize">Maximize player</string>
+    <string name="cd_player_minimize">Exit fullscreen</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_expand">Expand</string>
     <string name="cd_configure">Configure</string>
@@ -78,8 +74,8 @@
     <string name="cd_permission_granted">Permission granted</string>
 
     <!-- overlay_status -->
-    <string name="overlay_rec_inactive_label">REC ✗</string>
-    <string name="overlay_trip_inactive_label">TRIP ✗</string>
+    <string name="overlay_rec_inactive_label">REC</string>
+    <string name="overlay_trip_inactive_label">TRIP</string>
 
     <!-- item_log_entry placeholders (timestamp/tag/message are runtime, but these are
          placeholder/preview text used at design time and visible in some empty states) -->
@@ -100,7 +96,6 @@
     <string name="logs_panel_title">Logs</string>
 
     <!-- activity_main_new / activity_main-land -->
-    <string name="url_label">URL:</string>
     <string name="url_connecting">Connecting…</string>
 
     <!-- dialog_tailscale_settings -->
@@ -109,7 +104,7 @@
     <string name="tailscale_qr_waiting">Waiting for login URL…</string>
     <string name="tailscale_enable_proxy">Enable Tailscale Proxy</string>
     <string name="tailscale_proxy_explainer">Routes MQTT through Tailscale so you can reach a private broker on your tailnet without port forwarding.</string>
-    <string name="tailscale_proxy_warning">⚠️ While enabled, MQTT to public brokers (HiveMQ, AWS IoT, etc.) will fail — Tailscale only routes to your tailnet. Saving will restart the daemon.</string>
+    <string name="tailscale_proxy_warning">While enabled, MQTT to public brokers (HiveMQ, AWS IoT, etc.) will fail — Tailscale only routes to your tailnet. Saving will restart the daemon.</string>
 
     <!-- dialog_camera_selection -->
     <string name="camera_selection_title">Camera Selection</string>
@@ -177,46 +172,21 @@
 
     <!-- fragment_webview -->
     <string name="webview_loading">Loading…</string>
-    <string name="webview_unreachable_emoji">📡</string>
     <string name="webview_camera_daemon_not_running">Camera Daemon Not Running</string>
     <string name="webview_start_camera_daemon">Start the Camera Daemon from the Daemons screen to access this page.</string>
 
     <!-- dialog_roi_drawing -->
 
-    <!-- fragment_telegram_settings -->
-    <string name="telegram_hero_title">Telegram bot integration</string>
-    <string name="telegram_hero_subtitle">Pair your Telegram account to receive alerts and control the camera daemon remotely.</string>
-    <string name="telegram_bot_config_title">🤖 Bot Configuration</string>
-    <string name="telegram_bot_config_desc">Paste a bot token from @BotFather. The token is stored locally and shared with the daemon.</string>
-    <string name="telegram_bot_token_hint">Bot Token</string>
-    <string name="telegram_connect_test">Connect &amp; Test</string>
-    <string name="telegram_not_connected">Not connected</string>
-    <string name="telegram_owner_pairing_title">🔗 Owner Pairing</string>
-    <string name="telegram_pairing_instructions">Generate a PIN and send /pair &lt;PIN&gt; to your bot in Telegram</string>
-    <string name="telegram_generate_pin">Generate PIN</string>
-    <string name="telegram_unpair">Unpair</string>
-    <string name="telegram_notifications_title">🔔 Notifications</string>
-    <string name="telegram_critical_alerts">Critical Alerts</string>
-    <string name="telegram_tunnel_url_updates">Tunnel URL Updates</string>
-    <string name="telegram_motion_alerts">Motion Alerts (Text)</string>
-    <string name="telegram_auto_upload_videos">Auto-upload event videos</string>
-    <string name="telegram_auto_upload_warning">⚠️ Automatically upload videos after surveillance events (uses mobile data)</string>
-    <string name="telegram_daemon_title">⚙️ Telegram Bot Daemon</string>
-    <string name="telegram_autostart_off">Auto-start when vehicle is off</string>
-    <string name="telegram_autostart_off_desc">Bot will start on vehicle off and stop on vehicle on</string>
-    <string name="telegram_status_label">Status</string>
-    <string name="telegram_status_stopped">🔴 Stopped</string>
-
     <!-- dialog_zrok_token -->
     <string name="zrok_enable_token_hint">Enable Token</string>
     <string name="zrok_token_storage_note">Token is stored securely and shared between app and daemon processes.</string>
-    <string name="zrok_reset_environment">⚠️ Reset Zrok Environment</string>
+    <string name="zrok_reset_environment">Reset Zrok Environment</string>
     <string name="zrok_reset_environment_desc">Removes environment and token. You will need to re-enable with your token (uses a device slot).</string>
 
     <!-- dialog_reset_data -->
     <string name="reset_title">Reset Data</string>
     <string name="reset_subtitle">Wipe accumulated data by category</string>
-    <string name="reset_warning">⚠ This cannot be undone. Recordings, trips, and battery history will be permanently deleted.</string>
+    <string name="reset_warning">This cannot be undone. Recordings, trips, and battery history will be permanently deleted.</string>
     <string name="reset_cat_trips">Trips</string>
     <string name="reset_cat_trips_desc">Trip history, routes, weekly/monthly rollups</string>
     <string name="reset_cat_soc_history">SoC &amp; 12V history</string>
@@ -247,7 +217,6 @@
     <string name="recording_lib_chip_alert">Alert</string>
     <string name="recording_lib_chip_critical">Critical</string>
     <string name="recording_lib_selected_count_zero">0 selected</string>
-    <string name="recording_lib_empty_emoji">📹</string>
     <string name="recording_lib_no_recordings">No recordings</string>
 
     <!-- v4 redesign: collapsible filter bar + single-row date jump -->
@@ -258,11 +227,16 @@
     <string name="recording_lib_filter_reset">Reset</string>
     <string name="recording_lib_filter_section_what">What</string>
     <string name="recording_lib_filter_section_severity">Severity</string>
+    <string name="recording_lib_filter_section_type">Type</string>
+    <string name="recording_lib_chip_type_normal">Normal</string>
+    <string name="recording_lib_chip_type_proximity">Proximity</string>
     <string name="recording_lib_date_today">Today</string>
     <string name="recording_lib_date_yesterday">Yesterday</string>
     <string name="recording_lib_clip_count">%1$d clips</string>
     <string name="recording_lib_clip_count_one">%1$d clip</string>
     <string name="recording_lib_pick_date">Pick a date</string>
+    <string name="recording_lib_date_all_days">All days</string>
+    <string name="cd_clear_date_filter">Show all days</string>
     <string name="recording_lib_section_morning">Morning</string>
     <string name="recording_lib_section_afternoon">Afternoon</string>
     <string name="recording_lib_section_evening">Evening</string>
@@ -302,8 +276,17 @@
     <string name="battery_health_capacity">Capacity</string>
     <string name="battery_health_samples">Samples</string>
     <string name="battery_health_last_updated">Last Updated</string>
-    <string name="battery_health_reset">⚠️ Reset SOH Estimation</string>
+    <string name="battery_health_reset">Reset SOH Estimation</string>
     <string name="battery_health_reset_desc">Clears all data and re-estimates from scratch. Use if battery was replaced or reading seems incorrect.</string>
+    <string name="soh_dialog_model_label">Model</string>
+    <string name="soh_dialog_pack_capacity_label">Pack capacity</string>
+    <string name="soh_dialog_estimated_capacity_label">Effective capacity</string>
+    <string name="soh_dialog_calibration_anchor_label">Last calibrated</string>
+    <string name="soh_dialog_source_user">user-set</string>
+    <string name="soh_dialog_source_auto">auto-detected</string>
+    <string name="soh_dialog_model_not_selected">Not selected</string>
+    <string name="soh_dialog_capacity_not_detected">Not detected</string>
+    <string name="soh_dialog_calibration_format">%1$.1f%% on %2$s</string>
 
     <!-- ============================================================
          Step 2: Kotlin / Java UI literal extraction
@@ -336,25 +319,25 @@
          ============================================================ -->
 
     <!-- MainActivity -->
-    <string name="toast_updated_to">✅ Updated to %1$s</string>
-    <string name="toast_update_install_failed">❌ Update install failed: %1$s</string>
+    <string name="toast_updated_to">Updated to %1$s</string>
+    <string name="toast_update_install_failed">Update install failed: %1$s</string>
     <string name="toast_checking_for_updates">Checking for updates…</string>
-    <string name="toast_app_up_to_date">✅ App is up to date (v%1$s)</string>
-    <string name="toast_update_check_failed">❌ Update check failed: %1$s</string>
+    <string name="toast_app_up_to_date">App is up to date (v%1$s)</string>
+    <string name="toast_update_check_failed">Update check failed: %1$s</string>
     <string name="toast_storage_permission_required">Storage permission required for recordings</string>
     <string name="toast_url_copied_short">URL copied!</string>
-    <string name="toast_camera_set_to_auto">✓ Camera set to Auto</string>
+    <string name="toast_camera_set_to_auto">Camera set to Auto</string>
     <string name="toast_failed_to_save_short">Failed to save</string>
     <string name="toast_failed_with_message">Failed: %1$s</string>
-    <string name="toast_camera_id_set">✓ Camera %1$d set — next ACC cycle</string>
+    <string name="toast_camera_id_set">Camera %1$d set — next ACC cycle</string>
     <string name="toast_clearing_camera_config">Clearing camera config…</string>
     <string name="toast_restarting_camera_daemon">Restarting camera daemon…</string>
-    <string name="toast_camera_daemon_restarting">✅ Camera daemon restarting with full probe</string>
-    <string name="toast_camera_restart_failed">⚠ Config cleared but daemon restart failed. Please restart manually.</string>
-    <string name="toast_failed_with_message_x">❌ Failed: %1$s</string>
-    <string name="toast_soh_reset_success">✅ SOH estimation reset — will recalculate from next data</string>
-    <string name="toast_soh_reset_failed_no_daemon">❌ Reset failed — daemon not responding and file not writable</string>
-    <string name="toast_soh_reset_failed_with_message">❌ Reset failed: %1$s</string>
+    <string name="toast_camera_daemon_restarting">Camera daemon restarting with full probe</string>
+    <string name="toast_camera_restart_failed">Config cleared but daemon restart failed. Please restart manually.</string>
+    <string name="toast_failed_with_message_x">Failed: %1$s</string>
+    <string name="toast_soh_reset_success">SOH estimation reset — will recalculate from next data</string>
+    <string name="toast_soh_reset_failed_no_daemon">Reset failed — daemon not responding and file not writable</string>
+    <string name="toast_soh_reset_failed_with_message">Reset failed: %1$s</string>
     <string name="toast_select_at_least_one_category">Select at least one category</string>
     <string name="toast_reset_failed_with_error">Reset failed: %1$s</string>
     <string name="toast_traffic_monitor_changing">%1$s traffic monitor…</string>
@@ -377,20 +360,20 @@
     <string name="dialog_reset_following_message">This cannot be undone.\n\n%1$s</string>
     <string name="dialog_reset_complete_title">Reset complete</string>
 
-    <string name="dialog_traffic_cannot_check_title">⚠️ Cannot Check Status</string>
+    <string name="dialog_traffic_cannot_check_title">Cannot Check Status</string>
     <string name="dialog_traffic_cannot_check_message">ADB connection is not ready yet.\n\nThe app needs ADB access to manage system packages. Please ensure:\n\n• USB Debugging is enabled in Developer Options\n• The ADB authorization prompt has been accepted\n\nThe status will update automatically once connected.</string>
 
     <string name="dialog_traffic_disable_title">Disable BYD Traffic Monitor?</string>
-    <string name="dialog_traffic_disable_message">The BYD Traffic Monitor (com.byd.trafficmonitor) is a built-in system app that continuously monitors road traffic conditions in the background.\n\n⚠️ Why disable it?\n\n• Consumes mobile data (even when parked)\n• Uses CPU and battery in the background\n• Not needed if you use a separate navigation app\n• Can interfere with the dashcam\'s network usage\n\nThis is safe to disable — it only affects the built-in traffic overlay on the map. Your navigation, Bluetooth, and all other car functions remain unaffected.\n\nA hard reboot is required after disabling (hold center console button 5 seconds).</string>
+    <string name="dialog_traffic_disable_message">The BYD Traffic Monitor (com.byd.trafficmonitor) is a built-in system app that continuously monitors road traffic conditions in the background.\n\nWhy disable it?\n\n• Consumes mobile data (even when parked)\n• Uses CPU and battery in the background\n• Not needed if you use a separate navigation app\n• Can interfere with the dashcam\'s network usage\n\nThis is safe to disable — it only affects the built-in traffic overlay on the map. Your navigation, Bluetooth, and all other car functions remain unaffected.\n\nA hard reboot is required after disabling (hold center console button 5 seconds).</string>
 
     <string name="dialog_traffic_enable_title">Re-enable BYD Traffic Monitor?</string>
     <string name="dialog_traffic_enable_message">The BYD Traffic Monitor is currently disabled.\n\nRe-enabling it will restore the built-in traffic overlay on the navigation map. Note that it will run in the background and consume mobile data.\n\nA hard reboot is required after enabling (hold center console button 5 seconds).</string>
 
-    <string name="dialog_traffic_status_title">✅ Traffic Monitor %1$s</string>
+    <string name="dialog_traffic_status_title">Traffic Monitor %1$s</string>
     <string name="dialog_traffic_reboot_message">The change has been applied.\n\nPlease perform a hard reboot now:\nPress and hold the central console button for 5 seconds.</string>
 
-    <string name="traffic_monitor_loading">🔄 Traffic Monitor: Checking…</string>
-    <string name="traffic_monitor_tap_to_check">⚠️ Traffic Monitor (tap to check)</string>
+    <string name="traffic_monitor_loading">Traffic Monitor: Checking…</string>
+    <string name="traffic_monitor_tap_to_check">Traffic Monitor (tap to check)</string>
 
     <!-- Reset categories -->
     <string name="reset_label_trips">Trips</string>
@@ -429,60 +412,43 @@
     <string name="clip_label_access_code">Access Code</string>
     <string name="clip_label_url">URL</string>
 
-    <!-- Telegram -->
-    <string name="toast_enter_bot_token">Enter bot token</string>
-    <string name="telegram_status_testing">Testing…</string>
-    <string name="telegram_status_connected">🟢 Connected</string>
-    <string name="telegram_status_failed">🔴 Failed</string>
-    <string name="telegram_status_running">🟢 Running</string>
-    <string name="telegram_status_starting">⏳ Starting…</string>
-    <string name="telegram_bot_username_format">@%1$s</string>
-    <string name="toast_bot_connected_starting">Bot connected! Starting daemon for pairing…</string>
-    <string name="toast_daemon_running_send_pair">Daemon running. Send /pair &lt;PIN&gt; to your bot.</string>
-    <string name="toast_daemon_start_failed">Failed to start daemon: %1$s</string>
-    <string name="toast_config_saved_for_daemon">Config saved for daemon</string>
-    <string name="toast_warning_daemon_config_failed">Warning: Could not save daemon config: %1$s</string>
-    <string name="telegram_pin_expiry_format">(%1$d:%2$02d)</string>
-    <string name="toast_pin_expired">PIN expired</string>
-    <string name="toast_owner_unpaired">Owner unpaired</string>
-
     <!-- ABRP -->
 
     <!-- Daemons fragment -->
     <string name="toast_no_config_needed">No configuration needed for %1$s</string>
-    <string name="dialog_zrok_token_title">🌐 Zrok Tunnel Token</string>
+    <string name="dialog_zrok_token_title">Zrok Tunnel Token</string>
     <string name="dialog_zrok_token_message">Enter your Zrok enable token.\nGet one at: zrok.io</string>
     <string name="toast_token_cannot_be_empty">Token cannot be empty</string>
-    <string name="dialog_tailscale_settings_title">📡 Tailscale Tunnel Settings</string>
+    <string name="dialog_tailscale_settings_title">Tailscale Tunnel Settings</string>
     <string name="dialog_tailscale_settings_message">Configure tailscale</string>
     <string name="tailscale_failed_login_url">Failed to generate login url</string>
     <string name="tailscale_logged_in_relogin">Logged in. Click to login to a different account</string>
     <string name="dialog_tailscale_proxy_enable_title">Enable Tailscale Proxy?</string>
     <string name="dialog_tailscale_proxy_enable_message">This routes MQTT through Tailscale so you can reach a private broker on your tailnet without port forwarding.\n\nWhile enabled:\n• MQTT to a tailnet broker works (e.g. Mosquitto on a device on your tailnet)\n• MQTT to public brokers (HiveMQ, AWS IoT, etc.) will fail — Tailscale only routes to your tailnet\n• The Tailscale daemon will restart to apply the change\n• Other app traffic and the rest of the device are not affected\n\nYou can turn this off anytime.</string>
-    <string name="dialog_zrok_reset_title">⚠️ Reset Zrok Environment</string>
+    <string name="dialog_zrok_reset_title">Reset Zrok Environment</string>
     <string name="dialog_zrok_reset_message">This will:\n• Stop the zrok tunnel if running\n• Remove the zrok environment from this device\n• Delete the saved token\n\nYou will need to re-enter your token and re-enable. This uses one of your 5 device slots on zrok.io.\n\nAre you sure?</string>
     <string name="toast_resetting_zrok">Resetting zrok environment…</string>
-    <string name="toast_zrok_reset_success">✅ Zrok environment reset. Enter a new token to set up again.</string>
-    <string name="toast_zrok_reset_partial">✅ Environment reset (token file may need manual cleanup)</string>
+    <string name="toast_zrok_reset_success">Zrok environment reset. Enter a new token to set up again.</string>
+    <string name="toast_zrok_reset_partial">Environment reset (token file may need manual cleanup)</string>
     <string name="toast_zrok_reset_warnings">Environment reset (with warnings: %1$s)</string>
     <string name="zrok_no_token_configured">No token configured. Tap to set up.</string>
-    <string name="dialog_tailscale_reset_title">⚠️ Reset Tailscale Environment</string>
+    <string name="dialog_tailscale_reset_title">Reset Tailscale Environment</string>
     <string name="dialog_tailscale_reset_message">This will:\n• Stop the tailscale tunnel if running\n• Remove the tailscale environment from this device\n• You will still need to remove the device from the tailscale console\n\nYou will need to log in again.\n\nAre you sure?</string>
     <string name="toast_resetting_tailscale">Resetting tailscale environment…</string>
-    <string name="toast_tailscale_reset_success">✅ Tailscale environment reset. Login to set up again.</string>
+    <string name="toast_tailscale_reset_success">Tailscale environment reset. Login to set up again.</string>
     <string name="toast_tailscale_reset_warnings">Tailscale environment reset (with warnings: %1$s)</string>
     <string name="toast_tailscale_proxy_enabled">Tailscale proxy enabled</string>
     <string name="toast_tailscale_proxy_disabled">Tailscale proxy disabled</string>
     <string name="toast_tailscale_proxy_save_failed">Failed to save proxy settings</string>
-    <string name="toast_zrok_token_saved">✅ Token saved</string>
-    <string name="toast_zrok_token_save_failed">❌ Failed to save token</string>
+    <string name="toast_zrok_token_saved">Token saved</string>
+    <string name="toast_zrok_token_save_failed">Failed to save token</string>
     <string name="toast_zrok_token_deleted">Token deleted</string>
-    <string name="toast_zrok_token_delete_failed">❌ Failed to delete token</string>
+    <string name="toast_zrok_token_delete_failed">Failed to delete token</string>
     <string name="toast_fetching_log">Fetching %1$s log…</string>
     <string name="toast_log_empty_or_missing">Log file is empty or not found</string>
     <string name="toast_log_empty">Log file is empty</string>
-    <string name="toast_log_save_failed">❌ Failed to save log: %1$s</string>
-    <string name="toast_log_not_found">❌ Log file not found or unreadable</string>
+    <string name="toast_log_save_failed">Failed to save log: %1$s</string>
+    <string name="toast_log_not_found">Log file not found or unreadable</string>
     <string name="log_share_title">%1$s Log - %2$s</string>
     <string name="log_share_chooser">Share %1$s Log</string>
     <string name="log_header_title">=== %1$s Log ===</string>
@@ -502,23 +468,16 @@
     <string name="play_with_chooser">Play with</string>
 
     <!-- Setup guide -->
-    <string name="setup_version_banner">🔄 Updated to v%1$s — re-confirm autostart, BYD wipes it on every install</string>
-    <string name="setup_overlay_already_granted">✓ Already Granted</string>
+    <string name="setup_version_banner">Updated to v%1$s — re-confirm autostart, BYD wipes it on every install</string>
+    <string name="setup_overlay_already_granted">Already Granted</string>
 
     <!-- Recording storage path -->
-
-    <!-- Telegram extras -->
-    <string name="telegram_status_restored">⚠️ Restored from config</string>
-    <string name="telegram_click_connect_to_verify">Click \'Connect &amp; Test\' to verify</string>
-    <string name="telegram_paired_with">✅ Paired with %1$s (@%2$s)</string>
-
-    <!-- ABRP extras -->
 
     <!-- MainActivity status -->
     <string name="camera_current_manual">Current: Camera %1$d (Manual)</string>
     <string name="camera_current_auto_label">Current: Auto</string>
     <string name="soh_estimation_active">Estimation active</string>
-    <string name="soh_no_estimate_yet">⚠ No estimate yet — waiting for data</string>
+    <string name="soh_no_estimate_yet">No estimate yet — waiting for data</string>
 
     <!-- Recording tabs -->
 
@@ -527,13 +486,14 @@
     <string name="video_player_playback_error">Playback error</string>
     <string name="video_player_no_events">No events</string>
     <string name="daemon_configuration_required">Configuration required</string>
-    <string name="daemon_configuration_message">%1$s ⚙️</string>
+    <string name="daemon_configuration_message">%1$s</string>
 
     <!-- Navigation graph fragment labels (shown as toolbar/ActionBar titles) -->
     <string name="nav_page_video_player">Video Player</string>
     <string name="nav_page_telegram">Telegram</string>
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
+    <string name="nav_page_byd_cloud">BYD Cloud</string>
 
     <!-- StatusOverlayService persistent notification (foreground service) -->
     <string name="status_overlay_notif_title">OverDrive Status</string>
@@ -559,6 +519,12 @@
     <string name="settings_section_surveillance">Surveillance</string>
     <string name="settings_section_daemons">Daemons</string>
     <string name="settings_section_privacy">Privacy &amp; data</string>
+    <string name="settings_section_overlay">Status overlay</string>
+    <string name="settings_overlay_subtitle">Choose which segments of the floating status pill stay visible.</string>
+    <string name="settings_overlay_camera_title">Camera indicator</string>
+    <string name="settings_overlay_camera_subtitle">Show the REC / PROX badge while recording is active.</string>
+    <string name="settings_overlay_trip_title">Trip indicator</string>
+    <string name="settings_overlay_trip_subtitle">Show the TRIP badge while trip detection is running.</string>
     <!-- Was "About & updates" — Check for Updates row was removed from
          the About page, so the menu / rail label is now just "About". -->
     <string name="settings_section_about">About</string>
@@ -577,6 +543,7 @@
     <string name="settings_about_title">About OverDrive</string>
     <string name="settings_about_version_label">Version</string>
     <string name="settings_about_package_label">Build</string>
+    <string name="settings_about_check_update_value">Check the latest GitHub release and install if newer.</string>
     <!-- Support-development section: tiered options, low-cost first.
          star → spread → coffee, in that visual order. Copy aims for
          personality without being corny — short, warm, specific. -->
@@ -589,7 +556,7 @@
     <string name="settings_about_open_link_failed">Couldn\'t open link.</string>
     <string name="settings_about_open_link_copied">No browser found. URL copied: %1$s</string>
 
-    <string name="settings_about_support_kofi_title">Fuel the next release ☕</string>
+    <string name="settings_about_support_kofi_title">Fuel the next release</string>
     <string name="settings_about_support_kofi_value">A coffee on Ko-fi keeps the late-night commits coming.</string>
     <string name="settings_about_support_kofi_url" translatable="false">https://ko-fi.com/E1E71XALHX</string>
     <string name="settings_about_license_title">License</string>
@@ -598,7 +565,7 @@
     <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
     <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE</string>
     <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_star_title">Drop a ⭐ on GitHub</string>
+    <string name="settings_about_star_title">Star us on GitHub</string>
     <string name="settings_about_star_value">Takes a second. Means a lot.</string>
     <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
 
@@ -681,6 +648,7 @@
     <string name="integrations_telegram_desc">Send drive summaries, motion alerts, and SOS notifications to your private Telegram bot.</string>
     <string name="integrations_abrp_desc">Push live battery and route data to A Better Routeplanner for charging predictions.</string>
     <string name="integrations_mqtt_desc">Publish vehicle telemetry to Home Assistant or any MQTT broker.</string>
+    <string name="integrations_byd_cloud_desc">Connect your BYD app account to enable remote commands like door lock, flash lights, and horn.</string>
     <string name="integrations_configure_button">Configure</string>
 
     <!-- Settings → About / Privacy actions (rows) -->
@@ -695,10 +663,10 @@
     <!-- ============================================================== -->
 
     <!-- Hero card -->
-    <string name="dashboard_greeting_morning">Good morning</string>
-    <string name="dashboard_greeting_afternoon">Good afternoon</string>
-    <string name="dashboard_greeting_evening">Good evening</string>
-    <string name="dashboard_greeting_night">Good night</string>
+    <!-- SOTA hero headline. Static identity statement (not a time-of-day
+         greeting) — pairs with the OVERDRIVE overline above and the live
+         status row of chips below. Locale catalogs auto-translate. -->
+    <string name="dashboard_hero_headline">On watch</string>
     <string name="dashboard_subtitle_all_systems">All systems online</string>
     <string name="dashboard_subtitle_some_offline">%1$d of %2$d services online</string>
     <string name="dashboard_subtitle_no_tunnel">Remote access offline</string>
@@ -709,6 +677,28 @@
     <string name="dashboard_metric_tunnel">Remote access</string>
     <string name="dashboard_metric_services">Background services</string>
     <string name="dashboard_metric_value_pending">—</string>
+    <string name="dashboard_metric_vehicle">Vehicle</string>
+
+    <!-- Hero chips: at-a-glance pills under the greeting that summarize the
+         three most important live signals (tunnel, services, recording). -->
+    <string name="dashboard_chip_recording_active">Recording</string>
+    <string name="dashboard_chip_recording_idle">Idle</string>
+    <string name="dashboard_vehicle_tap_to_set">Tap to set</string>
+    <string name="dashboard_vehicle_summary">%1$.1f kWh · %2$s</string>
+    <string name="vehicle_dialog_title">Set battery capacity</string>
+    <string name="vehicle_dialog_capacity_label">Capacity</string>
+    <string name="vehicle_dialog_capacity_suffix">kWh</string>
+    <string name="vehicle_dialog_capacity_helper">15 to 120 kWh. Leave to use the model default.</string>
+    <string name="vehicle_dialog_model_label">Model</string>
+    <string name="vehicle_dialog_save">Save</string>
+    <string name="vehicle_dialog_reset">Reset to auto-detect</string>
+    <string name="vehicle_dialog_invalid_capacity">Capacity must be 15 - 120 kWh</string>
+    <string name="vehicle_dialog_summary_capacity">Capacity: %1$s</string>
+    <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
+    <string name="vehicle_dialog_summary_effective">Effective: %1$.1f kWh</string>
+    <string name="vehicle_dialog_summary_model">Model: %1$s</string>
+    <string name="vehicle_dialog_summary_calibration">Last calibrated: %1$.1f%% on %2$s</string>
+    <string name="vehicle_dialog_soh_unavailable">unavailable</string>
     <!-- Combined Recordings+Storage chip: e.g. "8.4 GB used · 12 GB free" -->
     <string name="dashboard_metric_storage_chip">%1$s used · %2$s free</string>
     <string name="dashboard_metric_storage_chip_pending">Storage —</string>

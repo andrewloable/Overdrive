@@ -183,14 +183,23 @@ public class StreamingApiHandler {
     
     private static void handleSetStreamQuality(OutputStream out, String quality) throws Exception {
         GpuPipelineConfig.StreamingQuality newQuality = GpuPipelineConfig.StreamingQuality.fromString(quality);
-        
+
         streamingQuality = newQuality.name();
         CameraDaemon.setStreamingQuality(quality);
-        
+
+        // Persist to UnifiedConfigManager (streaming.quality) so the choice
+        // survives daemon restart. Mirrors the recording-side flow where
+        // QualitySettingsApiHandler.persistSettings is the single canonical
+        // writer for both recording and streaming sections — without this
+        // call the in-memory `streamingQuality` field is the only record of
+        // the user's pick, and a kill/restart silently reverts to whatever
+        // the on-disk default seeded (MEDIUM).
+        QualitySettingsApiHandler.persistSettings();
+
         // Save quality preference — it will be applied on next stream start.
         // Don't restart the active stream to avoid disrupting the live view.
         // The /ws handler applies the quality when the client reconnects.
-        CameraDaemon.log("Streaming quality set to: " + newQuality.displayName);
+        CameraDaemon.log("Streaming quality set to: " + newQuality.displayName + " (persisted)");
         
         JSONObject response = new JSONObject();
         response.put("success", true);
@@ -282,10 +291,28 @@ public class StreamingApiHandler {
     public static String getStreamingQuality() { return streamingQuality; }
     
     public static void setStreamingQuality(String quality) {
-        if (quality.equals("ULTRA_LOW") || quality.equals("LOW") || 
-            quality.equals("MEDIUM") || quality.equals("HIGH") || 
-            quality.equals("ULTRA_HIGH") || quality.equals("LQ") || quality.equals("HQ")) {
-            streamingQuality = quality;
+        if (quality == null) return;
+        String q = quality.toUpperCase();
+        // Mirror the StreamingQuality enum (GpuPipelineConfig). SMOOTH and MAX
+        // are recent additions; the cold-start loader (QualitySettingsApiHandler.
+        // loadPersistedSettings) calls this with whatever tag is on disk, so if
+        // we silently reject MAX here the persisted user pick decays to the
+        // hard-coded default after every daemon restart.
+        switch (q) {
+            case "ULTRA_LOW":
+            case "LOW":
+            case "MEDIUM":
+            case "HIGH":
+            case "ULTRA_HIGH":
+            case "SMOOTH":
+            case "MAX":
+            case "LQ":
+            case "HQ":
+                streamingQuality = q;
+                break;
+            default:
+                // Unknown tag — leave previous value intact.
+                break;
         }
     }
 }

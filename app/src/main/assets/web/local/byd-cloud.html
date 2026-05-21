@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title data-i18n="app.byd_cloud_title">BYD Cloud - OverDrive</title>
+    <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00876C">
+    <script src="../shared/theme.js?v=3"></script>
+    <script src="../shared/app-shell.js"></script>
+    <!--
+      Bottom-tab manifest. Three task-based tabs:
+        Account  — credential form (region, email, password, PIN, Save / Test)
+        Status   — verified state, VIN, cloud-push observability, data-merge toggle
+        Advanced — destructive actions (Clear credentials)
+    -->
+    <script>
+        window.OT_TABS = [
+            { id: 'account',  label: 'Account',  i18n: 'byd_cloud.tab_account',  svg: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
+            { id: 'status',   label: 'Status',   i18n: 'byd_cloud.tab_status',   svg: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', readOnly: true },
+            { id: 'advanced', label: 'Advanced', i18n: 'byd_cloud.tab_advanced', svg: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' }
+        ];
+    </script>
+    <script src="../shared/app-tabs.js"></script>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="app-shell-mount"></div>
+        <main class="main-content">
+            <div class="mobile-header">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
+                    </svg>
+                </button>
+                <span style="font-weight:600;" data-i18n="nav.byd_cloud">BYD Cloud</span>
+                <div style="width:40px;"></div>
+            </div>
+
+            <header class="page-header">
+                <h1 class="page-title" data-i18n="byd_cloud.page_title">BYD Cloud</h1>
+                <div class="header-actions">
+                    <span class="status-badge inactive" id="bydCloudBadge" data-i18n="surveillance.byd_badge_not_set">NOT SET</span>
+                </div>
+            </header>
+
+            <div class="page-body">
+                <!-- ===== ACCOUNT TAB ===== -->
+                <div class="card" data-tab="account">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                            <span data-i18n="byd_cloud.account_title">BYD Cloud Account</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-hint" style="margin-bottom:14px;" data-i18n="surveillance.byd_cloud_hint">Connect your BYD app account to enable remote commands (door lock, flash lights, horn). Only derived key hashes are stored — your raw password is never saved.</div>
+
+                        <!-- SOTA recommendation callout — guides users to set up an
+                             Alternate Vehicle Authorization profile in the BYD app
+                             instead of using their primary credentials here. Click
+                             the header to expand the 8 numbered steps. -->
+                        <details class="recommend-callout" id="bydRecommendCallout">
+                            <summary class="recommend-callout-summary">
+                                <span class="recommend-callout-icon" aria-hidden="true">
+                                    <!-- Lightbulb — universal "tip / recommendation" glyph. Matches
+                                         the M3 expressive icon set used elsewhere in the shell. -->
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.8.7 1.3 1.6 1.5 2.6.1.4.4.7.8.7h3.4c.4 0 .7-.3.8-.7.2-1 .7-1.9 1.5-2.6A7 7 0 0 0 12 2z"/></svg>
+                                </span>
+                                <span class="recommend-callout-text">
+                                    <span class="recommend-callout-title" data-i18n="byd_cloud.recommend_title">Use an alternate vehicle authorization profile</span>
+                                    <span class="recommend-callout-sub" data-i18n="byd_cloud.recommend_sub">Recommended — keeps your main BYD account isolated. Tap to view setup steps.</span>
+                                </span>
+                                <span class="recommend-callout-chevron" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                </span>
+                            </summary>
+                            <ol class="recommend-steps">
+                                <li data-i18n="byd_cloud.recommend_step_1">Open the official BYD app on your phone.</li>
+                                <li data-i18n="byd_cloud.recommend_step_2">Go to Vehicle Authorization.</li>
+                                <li data-i18n="byd_cloud.recommend_step_3">Tap New Authorization.</li>
+                                <li data-i18n="byd_cloud.recommend_step_4">Enter a secondary email — it must be different from your main account email.</li>
+                                <li data-i18n="byd_cloud.recommend_step_5">Choose an authorization period that fits how long you want this profile to stay active.</li>
+                                <li data-i18n="byd_cloud.recommend_step_6">Log out of the BYD app, then sign up with the secondary email using the verification code and create a password.</li>
+                                <li data-i18n="byd_cloud.recommend_step_7">Tap Lock or Unlock in the BYD app — it will prompt you to set a Control Pin.</li>
+                                <li data-i18n="byd_cloud.recommend_step_8">Enter the secondary email, password, and Control Pin here in OverDrive.</li>
+                            </ol>
+                        </details>
+
+                        <!-- Region selector — same outlined + floating-label
+                             treatment as Email / Password / Pin so the four
+                             rows read as one consistent stack. -->
+                        <div class="md-field">
+                            <div class="md-field-box">
+                                <select class="md-input" id="bydRegion">
+                                    <option value="eu" data-i18n="surveillance.byd_region_eu">🇪🇺 Europe (default)</option>
+                                    <option value="in" data-i18n="surveillance.byd_region_in">🇮🇳 India</option>
+                                    <option value="au" data-i18n="surveillance.byd_region_au">🇦🇺 Australia</option>
+                                    <option value="sg" data-i18n="surveillance.byd_region_sg">🇸🇬 Singapore</option>
+                                    <option value="br" data-i18n="surveillance.byd_region_br">🇧🇷 Brazil</option>
+                                    <option value="jp" data-i18n="surveillance.byd_region_jp">🇯🇵 Japan</option>
+                                    <option value="kr-ali" data-i18n="surveillance.byd_region_kr">🇰🇷 Korea</option>
+                                    <option value="sa" data-i18n="surveillance.byd_region_sa">🇸🇦 Saudi Arabia</option>
+                                    <option value="tr" data-i18n="surveillance.byd_region_tr">🇹🇷 Turkey</option>
+                                    <option value="mx" data-i18n="surveillance.byd_region_mx">🇲🇽 Mexico</option>
+                                    <option value="id" data-i18n="surveillance.byd_region_id">🇮🇩 Indonesia</option>
+                                    <option value="vn" data-i18n="surveillance.byd_region_vn">🇻🇳 Vietnam</option>
+                                    <option value="no" data-i18n="surveillance.byd_region_no">🇳🇴 Norway</option>
+                                    <option value="uz" data-i18n="surveillance.byd_region_uz">🇺🇿 Uzbekistan</option>
+                                </select>
+                                <label class="md-label" for="bydRegion" data-i18n="surveillance.byd_region">Server Region</label>
+                            </div>
+                            <span class="md-supporting" data-i18n="byd_cloud.region_supporting">Match your BYD app registration region. Try EU first if unsure.</span>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="md-field">
+                            <div class="md-field-box">
+                                <input type="email" class="md-input" id="bydEmail" placeholder=" " autocomplete="username">
+                                <label class="md-label" for="bydEmail" data-i18n="surveillance.byd_email">Email</label>
+                            </div>
+                        </div>
+
+                        <!-- Password — outlined + trailing reveal-eye -->
+                        <div class="md-field md-field-trailing">
+                            <div class="md-field-box">
+                                <input type="password" class="md-input" id="bydPassword" placeholder=" " autocomplete="current-password">
+                                <label class="md-label" for="bydPassword" data-i18n="surveillance.byd_password">Password</label>
+                                <button type="button" class="md-trailing-btn" onclick="BydCloud.togglePasswordVisibility('bydPassword', this)" data-i18n-attr="title:surveillance.byd_password_toggle_title" title="Show / hide password" aria-label="Show password">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                            <span class="md-supporting" id="bydPasswordHint" data-i18n="surveillance.byd_pwd_hint">Your BYD app login password</span>
+                        </div>
+
+                        <!-- PIN — monospace centered, 6 chars max -->
+                        <div class="md-field">
+                            <div class="md-field-box">
+                                <input type="password" class="md-input md-input-pin" id="bydPin" placeholder=" " maxlength="6" inputmode="numeric" autocomplete="off">
+                                <label class="md-label" for="bydPin" data-i18n="surveillance.byd_pin">Control Pin</label>
+                            </div>
+                            <span class="md-supporting" id="bydPinHint" data-i18n="surveillance.byd_pin_hint">The 4–6 digit Pin you set in the official BYD app</span>
+                        </div>
+
+                        <div class="byd-action-row">
+                            <button class="btn btn-primary" onclick="BydCloud.saveCredentials()" id="bydSaveBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                <span data-i18n="surveillance.save_credentials">Save Credentials</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="BydCloud.testConnection()" id="bydTestBtn" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                <span data-i18n="surveillance.test_connection">Test Connection</span>
+                            </button>
+                        </div>
+                        <div id="bydCloudStatus" style="display:none; margin-top:12px; padding:10px 14px; border-radius:10px; font-size:13px;"></div>
+                    </div>
+                </div>
+
+                <!-- ===== STATUS TAB ===== -->
+                <div class="card" data-tab="status" id="bydAccountInfoCard">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <span data-i18n="byd_cloud.account_info_title">Connection</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="bydCloudInfo" style="display:none;">
+                            <div class="info-box">
+                                <div class="info-row"><span class="label" data-i18n="surveillance.byd_vin">VIN</span><span class="value" id="bydVinDisplay">—</span></div>
+                                <div class="info-row"><span class="label" data-i18n="surveillance.byd_account">Account</span><span class="value" id="bydAccountDisplay">—</span></div>
+                            </div>
+                        </div>
+                        <div id="bydCloudInfoEmpty" class="empty-state" style="text-align:center; padding:24px 16px; color:var(--text-muted); font-size:13px;" data-i18n="byd_cloud.empty_status">Connect on the Account tab to see your VIN and last cloud push here.</div>
+                    </div>
+                </div>
+
+                <!-- Cloud Push Status -->
+                <div class="card" data-tab="status" id="bydCloudPushCard" style="display:none;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <span data-i18n="surveillance.byd_cloud_push">Cloud Push</span>
+                            <span id="bydPushBadge" class="status-badge inactive" style="font-size:11px; padding:2px 8px;">—</span>
+                        </div>
+                        <span id="bydPushAge" style="font-size:12px; color:var(--text-muted);">—</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="bydCloudPushSection">
+                            <div id="bydPushData" style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--text-secondary);">
+                                <span id="bydPushLock">—</span>
+                                <span id="bydPushSoc">—</span>
+                                <span id="bydPushCharging">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Data Source -->
+                <div class="card" data-tab="status" id="bydCloudMergeCard" style="display:none;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l3-9 3 18 3-9h2"/></svg>
+                            <span data-i18n="surveillance.byd_cloud_merge_card">Vehicle Data Source</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="bydCloudMergeSection">
+                            <div class="setting-row" style="border-bottom:none;">
+                                <div class="setting-info">
+                                    <div class="setting-name" data-i18n="surveillance.byd_cloud_merge">Use cloud for vehicle data</div>
+                                    <div class="setting-desc" data-i18n="surveillance.byd_cloud_merge_desc">SOC, charging, and temperature from BYD cloud — may be more accurate when parked</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="bydCloudMergeToggle" onchange="BydCloud.toggleCloudDataMerge(this.checked)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ADVANCED TAB ===== -->
+                <div class="card" data-tab="advanced" id="bydClearCard" style="display:none;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            <span data-i18n="byd_cloud.danger_zone">Danger zone</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="bydClearSection">
+                            <div class="setting-hint" style="margin-bottom:14px;" data-i18n="byd_cloud.clear_hint">Removes the saved credentials from this device. You'll need to re-enter your BYD app login + PIN to use cloud commands again.</div>
+                            <button class="btn btn-danger" onclick="BydCloud.clearCredentials()" style="width:100%;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                <span data-i18n="surveillance.byd_clear">Clear Credentials</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty-state for Advanced tab when nothing's configured -->
+                <div class="card" data-tab="advanced" id="bydAdvancedEmpty">
+                    <div class="card-body">
+                        <div class="empty-state" style="text-align:center; padding:24px 16px; color:var(--text-muted); font-size:13px;" data-i18n="byd_cloud.empty_advanced">No advanced actions available until credentials are saved on the Account tab.</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="../shared/auth.js"></script>
+    <script src="../shared/pwa-init.js"></script>
+    <script src="../shared/core.js"></script>
+    <script src="../shared/update-flow.js"></script>
+    <!-- BydCloud module + SurvSettings stubs live in surveillance.js. -->
+    <script src="../shared/surveillance.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        }
+
+        // Mirror legacy section-level visibility (set by BydCloud.updateStatusUI)
+        // onto the wrapper cards so that clearCard / mergeCard / pushCard hide
+        // when their inner section hides — without us having to monkey-patch
+        // the shared module.
+        (function () {
+            function mirror(sectionId, cardId) {
+                var sec = document.getElementById(sectionId);
+                var card = document.getElementById(cardId);
+                if (!sec || !card || typeof MutationObserver === 'undefined') return;
+                var apply = function () {
+                    var hidden = sec.style.display === 'none';
+                    card.style.display = hidden ? 'none' : '';
+                };
+                new MutationObserver(apply).observe(sec, { attributes: true, attributeFilter: ['style'] });
+                apply();
+            }
+            // bydCloudInfoEmpty inverts bydCloudInfo's visibility — show empty
+            // text only when info is hidden.
+            function invertMirror(sectionId, hostId) {
+                var sec = document.getElementById(sectionId);
+                var host = document.getElementById(hostId);
+                if (!sec || !host || typeof MutationObserver === 'undefined') return;
+                var apply = function () {
+                    host.style.display = sec.style.display === 'none' ? '' : 'none';
+                };
+                new MutationObserver(apply).observe(sec, { attributes: true, attributeFilter: ['style'] });
+                apply();
+            }
+            document.addEventListener('app-shell:ready', function () {
+                mirror('bydCloudPushSection', 'bydCloudPushCard');
+                mirror('bydCloudMergeSection', 'bydCloudMergeCard');
+                mirror('bydClearSection',     'bydClearCard');
+                invertMirror('bydCloudInfo',  'bydCloudInfoEmpty');
+                // Hide the Advanced empty-state once any clear-card etc. shows up.
+                var clearCard = document.getElementById('bydClearCard');
+                var emptyAdv  = document.getElementById('bydAdvancedEmpty');
+                if (clearCard && emptyAdv) {
+                    var sync = function () {
+                        emptyAdv.style.display = clearCard.style.display === 'none' ? '' : 'none';
+                    };
+                    new MutationObserver(sync).observe(clearCard, { attributes: true, attributeFilter: ['style'] });
+                    sync();
+                }
+            });
+        }());
+
+        document.addEventListener('DOMContentLoaded', function () {
+            BYD.i18n.init().then(function () {
+                BYD.core.init();
+                if (window.BydCloud && BydCloud.loadStatus) BydCloud.loadStatus();
+            });
+        });
+    </script>
+</body>
+</html>

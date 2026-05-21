@@ -1,33 +1,126 @@
 /**
  * OverDrive Service Worker
  *
- * Receives Web Push payloads from the head unit, renders notifications,
- * and routes taps back into the PWA.
+ * Two responsibilities:
  *
- * Auth model: the page postMessages its JWT to the SW on each load. SW caches
- * it (in-memory only, deliberately not persisted) for any auth-required fetch
- * the SW itself needs to make — for example, snapshot enrichment.
+ *  1. Web Push fanout — receives Web Push payloads from the head unit,
+ *     renders notifications, and routes taps back into the PWA.
+ *
+ *  2. EV-card 3D pipeline precache — the sidebar EV card mounts on every
+ *     page and pulls in three.js (~600KB) + GLTFLoader + DRACOLoader +
+ *     draco WASM + the user's selected GLB (~1.6MB). Without precache,
+ *     each cold cache (or after the daemon's 24h max-age expires) costs
+ *     a re-fetch on the very next page navigation. Precaching during
+ *     install means the first installed-PWA cold start does the heavy
+ *     fetch ONCE, and every page from then on hits the SW cache —
+ *     three.js boot drops to ~tens of ms instead of hundreds.
+ *
+ * Snapshot model: the head unit mints a single-purpose, short-TTL signed
+ * token (HS256 over the device secret) and embeds it in the snapshot URL
+ * as ?t=<jws>. The SW sets options.image directly to that URL — Chrome
+ * fetches it browser-internally for the OS banner without an Authorization
+ * header. iOS Safari ignores options.image, so on click we append the
+ * snapshot URL as ?hero= to the click target, and events.js renders an
+ * inline hero banner so iOS users still see the picture.
  */
 
-let cachedToken = null;
+// Bump CACHE_VERSION whenever any precached asset changes (vendor JS bump,
+// new GLB, ev-card-3d.js logic change). The activate handler deletes any
+// cache whose name doesn't match, so old assets are reclaimed.
+const CACHE_VERSION = 'overdrive-3d-v1';
+
+// Static, APK-bundled assets that the EV card needs on every page.
+// Same-origin only — the daemon serves these with public, max-age=86400,
+// so a SW cache layer underneath gives us "always fast" rather than
+// "fast for 24h then re-fetch". Don't precache HTML or sw.js itself
+// (the daemon explicitly serves those no-store).
+const PRECACHE_URLS = [
+  '/shared/ev-card-3d.js',
+  '/shared/ev-card-sprite-cache.js',
+  '/shared/vendor/three.min.js',
+  '/shared/vendor/GLTFLoader.js',
+  '/shared/vendor/DRACOLoader.js',
+  '/shared/vendor/draco/draco_decoder.js',
+  '/shared/vendor/draco/draco_wasm_wrapper.js',
+  '/shared/vendor/draco/draco_decoder.wasm',
+  '/shared/models/seal.glb'
+];
 
 self.addEventListener('install', (event) => {
-  // Activate this SW immediately on install — there's nothing to precache.
-  event.waitUntil(self.skipWaiting());
+  // Precache the 3D pipeline alongside skipWaiting. Use addAll on a
+  // fresh cache so a partial failure (one asset missing) drops the
+  // whole batch rather than leaving the cache half-populated — better
+  // to fall through to the daemon's max-age=1d than serve a stale mix.
+  event.waitUntil((async () => {
+    try {
+      const cache = await caches.open(CACHE_VERSION);
+      // {cache: 'reload'} so the install fetch bypasses HTTP cache and
+      // pulls fresh bytes — important for GLB/manifest swaps shipped
+      // inside an APK update where the on-disk assets changed but the
+      // browser cache might still be holding the old copy.
+      await cache.addAll(PRECACHE_URLS.map((u) => new Request(u, { cache: 'reload' })));
+    } catch (e) {
+      // Precache failure is non-fatal — fetch handler falls back to
+      // network-first for any URL that's missing from the cache.
+      // Common causes: offline at install time, asset path renamed.
+      // eslint-disable-next-line no-console
+      if (self.console) self.console.warn('[sw] precache failed:', e);
+    }
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    // Reap any caches from earlier CACHE_VERSION values. Without this
+    // the user accumulates stale GLBs / vendor JS across app updates
+    // until the browser-level Cache Storage quota evicts them.
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter((n) => n !== CACHE_VERSION && n.indexOf('overdrive-3d-') === 0)
+      .map((n) => caches.delete(n)));
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener('message', (event) => {
-  const data = event.data;
-  if (!data || typeof data !== 'object') return;
-  if (data.type === 'set-token' && typeof data.token === 'string') {
-    cachedToken = data.token;
-  } else if (data.type === 'clear-token') {
-    cachedToken = null;
-  }
+// Cache-first for precached 3D assets; network passthrough for everything
+// else. Restricting to same-origin GETs is defensive — we must never
+// short-circuit /api/* or push subscription endpoints, and Chrome's SW
+// fetch event also fires for cross-origin subresources (CDN tiles for
+// Leaflet etc.) which we explicitly want to leave alone.
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  let url;
+  try { url = new URL(req.url); } catch (e) { return; }
+  if (url.origin !== self.location.origin) return;
+  // Only intercept the static asset paths we actually precached. Other
+  // same-origin requests (HTML pages, /api/*) flow straight through.
+  const pathname = url.pathname;
+  const isPrecacheTarget = PRECACHE_URLS.indexOf(pathname) !== -1;
+  if (!isPrecacheTarget) return;
+
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    const cached = await cache.match(req, { ignoreSearch: true });
+    if (cached) return cached;
+    // Cache miss after install (asset added between SW versions, or
+    // install-time precache failed). Fetch + store opportunistically
+    // so subsequent loads still benefit.
+    try {
+      const resp = await fetch(req);
+      if (resp && resp.ok && resp.type === 'basic') {
+        // Clone before reading — Response bodies are single-use.
+        try { await cache.put(req, resp.clone()); } catch (e) {}
+      }
+      return resp;
+    } catch (e) {
+      // Offline + miss — surface a network failure to the caller.
+      // The page-level code already handles vendor-load failures
+      // (canvas stays empty, battery overlay still shows SOC).
+      return new Response('', { status: 504, statusText: 'offline' });
+    }
+  })());
 });
 
 // ==================== PUSH ====================
@@ -52,12 +145,12 @@ function showFromPayload(payload) {
     // Large icon shown next to the body. Use the full app icon edge-to-edge.
     // The OS may still apply a circular mask on Android — that's the system
     // notification rail and not controllable from the SW.
-    icon: '/shared/app-icon-light.webp',
+    icon: '/shared/app-icon-dark.webp',
     // Status-bar badge: small monochrome glyph rendered next to the time.
     // Without this, Android falls back to a generic dot which looks worse
     // than the real branding. Same source file — Android renders it
     // monochrome anyway.
-    badge: '/shared/app-icon-light.webp',
+    badge: '/shared/app-icon-dark.webp',
     tag: payload.tag || payload.category || 'overdrive',
     timestamp: payload.ts || Date.now(),
     data: payload,
@@ -71,56 +164,23 @@ function showFromPayload(payload) {
     options.vibrate = [200];
   }
 
-  // Best-effort enrichment for surveillance pushes — fetch a snapshot if the
-  // payload referenced one, but never let enrichment delay or fail the
-  // notification itself. Cellular-only iPhones with the tunnel down will
-  // simply get a text-only banner.
-  if (payload.data && payload.data.snapshot && cachedToken) {
-    return enrichWithSnapshot(payload.data.snapshot, options)
-      .catch(() => {})
-      .then(() => self.registration.showNotification(title, options));
+  // Snapshot rendering: hand the URL straight to options.image. The URL is
+  // pre-signed by the head unit (?t=<jws>) so no Authorization header is
+  // required — the browser fetches the JPEG itself for the OS banner. We
+  // skip the assignment for stage="start" because the hero JPEG isn't
+  // written until stopRecording finalises; the matching `final` push will
+  // carry the real snapshot URL and replace this banner via tag.
+  var snap = payload.data && payload.data.snapshot;
+  var stage = payload.data && payload.data.stage;
+  if (snap && stage !== 'start') {
+    options.image = snap;
+    // iOS Safari ignores options.image on Web Push, so we surface the same
+    // URL through notification.data → notificationclick appends ?hero=<url>
+    // and events.js renders an inline hero banner on the page.
+    options.data = Object.assign({}, payload, { heroUrl: snap });
   }
 
   return self.registration.showNotification(title, options);
-}
-
-/**
- * Snapshot enrichment with 202-aware retry.
- *
- * The /thumb/ endpoint returns:
- *   200 — JPEG ready (hero sibling JPEG written by ThumbnailBuffer at recording
- *         close, or cached MediaMetadataRetriever frame).
- *   202 — Frame extraction kicked off in the background; retry shortly.
- *
- * Notifications fired at recording START will hit 202 because the hero JPEG
- * doesn't exist until recording-end. Without retry, the OS banner is text-only.
- * events.js does up to 8 retries with backoff for this same reason; the SW
- * mirrors a smaller version (3 attempts, ~5s total) to keep the push handler's
- * lifetime within Web Push budget.
- */
-function enrichWithSnapshot(url, options) {
-  const ATTEMPTS = 3;
-  const BACKOFF_MS = [800, 1500, 2500];
-
-  function attempt(i) {
-    return fetch(url, {
-      headers: { 'Authorization': 'Bearer ' + cachedToken }
-    }).then((res) => {
-      if (res.status === 200) {
-        return res.blob().then((blob) => {
-          options.image = URL.createObjectURL(blob);
-        });
-      }
-      if (res.status === 202 && i + 1 < ATTEMPTS) {
-        return new Promise((resolve) => setTimeout(resolve, BACKOFF_MS[i]))
-          .then(() => attempt(i + 1));
-      }
-      // 4xx / 5xx / final 202 — give up and ship text-only banner
-      throw new Error('snapshot fetch failed: ' + res.status);
-    });
-  }
-
-  return attempt(0);
 }
 
 // ==================== CLICK ====================
@@ -129,7 +189,17 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const url = data.url || '/';
+  let url = data.url || '/';
+
+  // iOS Safari ignores options.image on Web Push, so the OS banner never
+  // shows the snapshot. Forward heroUrl into the click target so the
+  // events page can render an inline hero image at the top — gives iOS
+  // users the "the photo is part of the alert" UX even though the OS
+  // banner can't carry it.
+  if (data.heroUrl) {
+    const sep = url.indexOf('?') >= 0 ? '&' : '?';
+    url = url + sep + 'hero=' + encodeURIComponent(data.heroUrl);
+  }
 
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

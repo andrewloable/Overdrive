@@ -315,6 +315,31 @@ public class ModelsApiHandler {
             HttpResponse.sendJsonError(out, Messages.get("errors.models_persist_failed"));
             return;
         }
+
+        // When the user changes the vehicle model, the baseline pack
+        // capacity that the SOH estimator was using may no longer apply
+        // (different model = different default kWh). Reset and re-seed
+        // SOH so the displayed health value reflects the new pack rather
+        // than carrying stale calibration from the previous selection.
+        // Skipped when only color changed — that has no SOH bearing.
+        if (incoming.has("modelId")) {
+            try {
+                com.overdrive.app.monitor.SocHistoryDatabase socDb =
+                    com.overdrive.app.monitor.SocHistoryDatabase.getInstance();
+                com.overdrive.app.abrp.SohEstimator sohEst =
+                    socDb != null ? socDb.getSohEstimator() : null;
+                if (sohEst != null) {
+                    sohEst.reset();
+                    android.content.Context appCtx =
+                        com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                    sohEst.autoDetectCarModel(appCtx);
+                    sohEst.seedInitialEstimate();
+                }
+            } catch (Throwable t) {
+                logger.warn(TAG + ": SOH reset on model change failed: " + t.getMessage());
+            }
+        }
+
         HttpResponse.sendJson(out, "{\"ok\":true}");
     }
 
@@ -323,6 +348,27 @@ public class ModelsApiHandler {
         if (fileName == null || fileName.contains("/") || fileName.contains("..")) return null;
         File f = new File(MODELS_DIR, fileName);
         return f.exists() && f.isFile() ? f : null;
+    }
+
+    /**
+     * Look up the canonical pack capacity (kWh) for the user-selected
+     * vehicle model from the bundled/cached manifest. Returns 0 when the
+     * user hasn't picked a model, the model has no nominalKwh declared,
+     * or the manifest can't be read. Used by SohEstimator as a stronger-
+     * than-heuristic capacity hint.
+     */
+    public static double nominalKwhForSelectedModel() {
+        try {
+            String modelId = UnifiedConfigManager.getVehicle().optString("modelId", "");
+            if (modelId.isEmpty()) return 0;
+            JSONObject manifest = readManifest();
+            if (manifest == null) return 0;
+            JSONObject m = findModel(manifest, modelId);
+            if (m == null) return 0;
+            return m.optDouble("nominalKwh", 0);
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     private static void handleList(OutputStream out) throws Exception {

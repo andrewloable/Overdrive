@@ -81,6 +81,8 @@
         a.href = '#';
         a.className = 'nav-link nav-link-update';
         a.id = 'navUpdateLink';
+        // aria-label doubles as the tooltip text in collapsed-rail variants.
+        a.setAttribute('aria-label', 'Check for Updates');
         a.innerHTML =
             '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
             '<polyline points="23 4 23 10 17 10"/>' +
@@ -91,18 +93,37 @@
             // once the catalog finishes loading. Without this attribute, the
             // initial t() call returns the literal key ("update.check_for_updates")
             // when run before BYD.i18n.init() resolves, and there's nothing to
-            // re-evaluate later.
-            // BYD.i18n.t() returns null if the catalog hasn't finished
-            // loading (per core.js: `return state.loaded ? key : null;`).
-            // Guard against that to avoid rendering the literal string
-            // "null" in the sidebar — fall back to English copy and let the
-            // next hydrate() pass replace it.
+            // re-evaluate later. BYD.i18n.t() returns null while the catalog
+            // is still loading — guard with the English fallback so we never
+            // render the literal "null" while the user waits for the first
+            // hydrate() pass.
             '<span data-i18n="update.check_for_updates">' + ((window.BYD && BYD.i18n && BYD.i18n.t('update.check_for_updates')) || 'Check for Updates') + '</span>';
         a.addEventListener('click', function (e) {
             e.preventDefault();
             startCheckFlow();
         });
-        nav.appendChild(a);
+
+        // Place the link UNDER the About entry so the two share the About
+        // group — "Check for Updates" is conceptually meta information about
+        // the app, not a top-level destination. Falls back to appendChild
+        // for pages that don't render an About link.
+        var aboutLink = nav.querySelector('.nav-link[href="about.html"]');
+        if (aboutLink && aboutLink.parentNode) {
+            // insertBefore(a, aboutLink.nextSibling) lands the new link
+            // immediately after About, which is where the About group ends
+            // (no further dividers after the About header in NAV_ITEMS).
+            aboutLink.parentNode.insertBefore(a, aboutLink.nextSibling);
+        } else {
+            nav.appendChild(a);
+        }
+
+        // app-shell.js wired the About group BEFORE we injected this link,
+        // so the new sibling isn't tracked as a member yet. Ask the shell
+        // to rewire — the call is idempotent (headers stay wired once,
+        // the collapse state is reapplied to current siblings).
+        if (window.OverdriveAppShell && typeof window.OverdriveAppShell.rewireNavGroups === 'function') {
+            window.OverdriveAppShell.rewireNavGroups();
+        }
     }
 
     // ─────────────────────── Check + Modal ───────────────────────

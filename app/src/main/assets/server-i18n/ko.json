@@ -125,6 +125,20 @@
     "recording_caption_no_label": " 녹음 - {0}",
     "proximity_alert": " 근위 경보 시간: {0} 트리거: {1} ({2}) 녹화 시작..."
   },
+  "vehicle_control": {
+    "cloud_required": "이 컨트롤을 사용하기 위해 설정에서 BYD 계정을 연결",
+    "cloud_sent": "클라우드를 통해 전송",
+    "cloud_unavailable_used_local": "클라우드 사용 불가능  사용된 직접 연결",
+    "local_sent": "직접 연결을 통해 전송",
+    "cloud_offline_used_local": "클라우드 오프라인  사용된 직접 연결",
+    "local_unavailable_used_cloud": "직접 연결을 사용할 수 없음 — 클라우드를 통해 전송됨",
+    "cloud_failed": "차에 도달하지 못했어요  차가 깨어있을 때 다시 시도해보세요",
+    "rate_limited": "명령은 계속 진행 중입니다",
+    "not_supported": "이 컨트롤은 현재 사용할 수 없습니다.",
+    "find_car_label": "차를 찾아",
+    "battery_heat_label": "핫타이터리",
+    "close_all_windows_label": "모든 창을 닫기"
+  },
   "messages": {
     "logged_out": "로그아웃",
     "bydcloud_connected": "성공적으로 연결",

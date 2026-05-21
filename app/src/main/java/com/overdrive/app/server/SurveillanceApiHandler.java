@@ -168,13 +168,17 @@ public class SurveillanceApiHandler {
             config.put("postRecordSeconds", 10);
         }
         
-        // Load recording settings from unified config
+        // Load recording settings from unified config. The new tier
+        // (recordingQuality: ECONOMY/STANDARD/HIGH/PREMIUM/MAX) replaces
+        // the legacy recordingBitrate string. Surveillance UI consumes
+        // recordingQuality; recordingBitrate is no longer surfaced.
         try {
             JSONObject recording = com.overdrive.app.config.UnifiedConfigManager.getRecording();
-            config.put("recordingBitrate", recording.optString("bitrate", "MEDIUM"));
+            config.put("recordingQuality", recording.optString("recordingQuality",
+                recording.optString("quality", "STANDARD")));
             config.put("recordingCodec", recording.optString("codec", "H264"));
         } catch (Exception e) {
-            config.put("recordingBitrate", "MEDIUM");
+            config.put("recordingQuality", "STANDARD");
             config.put("recordingCodec", "H264");
         }
         
@@ -870,20 +874,36 @@ public class SurveillanceApiHandler {
                 }
             }
             
-            // Save recording settings (bitrate, codec) to unified config
+            // Save recording settings (quality tier, codec) to unified config.
+            // Accepts both the new `recordingQuality` (ECONOMY..MAX) and the
+            // legacy `recordingBitrate` (LOW/MEDIUM/HIGH) for forward compat.
             boolean recordingChanged = false;
-            if (configJson.has("recordingBitrate") || configJson.has("recordingCodec")) {
+            if (configJson.has("recordingQuality") || configJson.has("recordingBitrate") || configJson.has("recordingCodec")) {
                 try {
                     JSONObject recording = com.overdrive.app.config.UnifiedConfigManager.getRecording();
-                    if (configJson.has("recordingBitrate")) {
+                    String appliedTier = null;
+                    if (configJson.has("recordingQuality")) {
+                        appliedTier = configJson.optString("recordingQuality", "STANDARD");
+                    } else if (configJson.has("recordingBitrate")) {
+                        // Legacy path: translate LOW/MEDIUM/HIGH → tier name
+                        // and persist under the canonical key.
                         String bitrate = configJson.optString("recordingBitrate", "MEDIUM");
-                        recording.put("bitrate", bitrate);
+                        switch (bitrate.toUpperCase()) {
+                            case "LOW":    appliedTier = "ECONOMY"; break;
+                            case "MEDIUM": appliedTier = "STANDARD"; break;
+                            case "HIGH":   appliedTier = "HIGH"; break;
+                            default:       appliedTier = "STANDARD"; break;
+                        }
+                    }
+                    if (appliedTier != null) {
+                        recording.put("recordingQuality", appliedTier);
+                        recording.put("quality", appliedTier);  // mirror for legacy readers
+                        recording.remove("bitrate");  // drop stale LOW/MEDIUM/HIGH so cross-channel readers don't see drift
                         recordingChanged = true;
-                        // Apply to running pipeline
                         try {
-                            CameraDaemon.setRecordingBitrate(bitrate);
+                            CameraDaemon.setRecordingQuality(appliedTier);
                         } catch (Exception e) {
-                            CameraDaemon.log("Failed to apply bitrate to pipeline: " + e.getMessage());
+                            CameraDaemon.log("Failed to apply recordingQuality to pipeline: " + e.getMessage());
                         }
                     }
                     if (configJson.has("recordingCodec")) {
@@ -899,8 +919,9 @@ public class SurveillanceApiHandler {
                     }
                     if (recordingChanged) {
                         com.overdrive.app.config.UnifiedConfigManager.setRecording(recording);
-                        CameraDaemon.log("Recording settings saved: bitrate=" + recording.optString("bitrate") + 
-                                        ", codec=" + recording.optString("codec"));
+                        CameraDaemon.log("Recording settings saved: recordingQuality="
+                                + recording.optString("recordingQuality")
+                                + ", codec=" + recording.optString("codec"));
                     }
                 } catch (Exception e) {
                     CameraDaemon.log("Failed to save recording settings: " + e.getMessage());

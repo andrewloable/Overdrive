@@ -9,11 +9,20 @@ window.BYD = window.BYD || {};
 
 BYD.recording = {
     config: {
-        recordingQuality: 'NORMAL',
-        streamingQuality: 'LQ',
-        recordingBitrate: 'MEDIUM',
+        // Single recording quality tier — ECONOMY/STANDARD/HIGH/PREMIUM/MAX.
+        // Replaces the legacy parallel recordingBitrate + recordingQuality
+        // strings. Server resets to STANDARD on first load post-migration.
+        recordingQuality: 'STANDARD',
+        // streamingQuality is owned by the camera controller dropdown in
+        // index.html — recording settings page no longer renders it.
         recordingCodec: 'H264',
         cameraFps: 15,
+        // Server-supplied for UI dynamic rendering (filled by loadConfig):
+        cameraFpsActual: null,
+        cameraFpsClampNote: null,
+        recordingQualityOptions: {},
+        activeRecordingEstimate: null,
+        nativeResolution: null,
         recordingsLimitMb: 500,
         recordingsStorageType: 'INTERNAL',
         recordingMode: 'NONE',
@@ -63,12 +72,20 @@ BYD.recording = {
                 this.reloadConfig();
             }
             this.loadStorageStats();  // Always refresh storage stats
-            
+
             // Refresh CDR info if visible
             if (this.config.recordingsStorageType === 'SD_CARD') {
                 this.loadCdrConfig();
             }
         }, 10000);
+
+        // Re-evaluate Apply enabled-state when the bottom tab changes —
+        // markChanged() reads the active tab id each call so the button
+        // reflects only the visible tab's dirty state.
+        var self = this;
+        document.addEventListener('ot-tabs:active-changed', function () {
+            self.markChanged();
+        });
     },
     
     async reloadConfig() {
@@ -82,11 +99,14 @@ BYD.recording = {
                 // Check if config actually changed (via timestamp)
                 const newTimestamp = data.lastModified || 0;
                 if (newTimestamp > this.lastConfigTimestamp) {
-                    this.config.recordingQuality = data.recordingQuality || 'NORMAL';
-                    this.config.streamingQuality = data.streamingQuality || 'LQ';
-                    this.config.recordingBitrate = data.recordingBitrate || 'MEDIUM';
+                    this.config.recordingQuality = data.recordingQuality || 'STANDARD';
                     this.config.recordingCodec = data.recordingCodec || 'H264';
                     this.config.cameraFps = data.cameraFps || 15;
+                    this.config.cameraFpsActual = data.cameraFpsActual || null;
+                    this.config.cameraFpsClampNote = data.cameraFpsClampNote || null;
+                    this.config.recordingQualityOptions = data.recordingQualityOptions || {};
+                    this.config.activeRecordingEstimate = data.activeRecordingEstimate || null;
+                    this.config.nativeResolution = data.nativeResolution || null;
                     this.savedConfig = JSON.parse(JSON.stringify(this.config));
                     this.lastConfigTimestamp = newTimestamp;
                     this.updateUI();
@@ -144,11 +164,17 @@ BYD.recording = {
             const resp = await fetch('/api/settings/quality');
             const data = await resp.json();
             if (data.success) {
-                this.config.recordingQuality = data.recordingQuality || 'NORMAL';
-                this.config.streamingQuality = data.streamingQuality || 'LQ';
-                this.config.recordingBitrate = data.recordingBitrate || 'MEDIUM';
+                // New unified tier (ECONOMY/STANDARD/HIGH/PREMIUM/MAX).
+                // STANDARD is the post-migration default; legacy
+                // LOW/REDUCED/NORMAL silently map upstream.
+                this.config.recordingQuality = data.recordingQuality || 'STANDARD';
                 this.config.recordingCodec = data.recordingCodec || 'H264';
                 this.config.cameraFps = data.cameraFps || 15;
+                this.config.cameraFpsActual = data.cameraFpsActual || null;
+                this.config.cameraFpsClampNote = data.cameraFpsClampNote || null;
+                this.config.recordingQualityOptions = data.recordingQualityOptions || {};
+                this.config.activeRecordingEstimate = data.activeRecordingEstimate || null;
+                this.config.nativeResolution = data.nativeResolution || null;
                 this.lastConfigTimestamp = data.lastModified || Date.now();
             }
         } catch (e) {}
@@ -575,25 +601,71 @@ BYD.recording = {
         this.markChanged();
     },
 
+    /**
+     * Per-tab dirty diff. Recording page tabs:
+     *   capture  — recordingMode, proximityGuard
+     *   quality  — recordingQuality, recordingCodec, cameraFps
+     *   storage  — recordingsLimitMb, recordingsStorageType
+     *   status   — read-only
+     * (recordingBitrate field removed; tier-based recordingQuality replaces it.
+     *  streamingQuality moved to the camera controller dropdown in index.html.)
+     */
+    _recTabFieldMap: {
+        capture: ['recordingMode', 'proximityGuard'],
+        quality: ['recordingQuality', 'recordingCodec', 'cameraFps'],
+        storage: ['recordingsLimitMb', 'recordingsStorageType']
+    },
+
+    _tabDirty: function () {
+        if (!this.savedConfig) return {};
+        var dirty = {};
+        var map = this._recTabFieldMap;
+        for (var tabId in map) {
+            var fields = map[tabId];
+            var d = false;
+            for (var i = 0; i < fields.length; i++) {
+                var k = fields[i];
+                if (JSON.stringify(this.config[k]) !== JSON.stringify(this.savedConfig[k])) {
+                    d = true; break;
+                }
+            }
+            dirty[tabId] = d;
+        }
+        return dirty;
+    },
+
     markChanged() {
-        this.hasUnsavedChanges = JSON.stringify(this.config) !== JSON.stringify(this.savedConfig);
-        const btn = document.getElementById('btnApply');
+        var dirtyByTab = this._tabDirty();
+        this.hasUnsavedChanges = false;
+        for (var k in dirtyByTab) {
+            if (dirtyByTab[k]) { this.hasUnsavedChanges = true; break; }
+        }
+        this._dirtyByTab = dirtyByTab;
+
+        var btn = document.getElementById('btnApply');
         if (btn) {
-            btn.disabled = !this.hasUnsavedChanges;
+            var activeTab = this._activeTabId();
+            var activeIsDirty = !!dirtyByTab[activeTab];
+            btn.disabled = !activeIsDirty;
+            btn.classList.toggle('has-changes', activeIsDirty);
         }
     },
 
     updateUI() {
-        document.querySelectorAll('#recQualityBtns .btn-toggle').forEach(btn => 
+        // Single recording quality tier (replaces parallel recordingQuality + recordingBitrate).
+        document.querySelectorAll('#recQualityBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === this.config.recordingQuality));
-        document.querySelectorAll('#streamQualityBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === this.config.streamingQuality));
-        document.querySelectorAll('#bitrateBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === this.config.recordingBitrate));
-        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === this.config.recordingCodec));
-        document.querySelectorAll('#fpsBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#fpsBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === String(this.config.cameraFps)));
+
+        // Tier metadata (Mbps, GB/hr, qualityEquivalent) comes from the
+        // recordingQualityOptions block in /api/quality. UI re-renders the
+        // per-tier subtitle whenever updateUI runs so the labels reflect
+        // current codec + fps choices live.
+        this.renderActiveEstimate();
+        this.renderFpsActual();
         
         // Update recording mode radio buttons
         const modeRadio = document.querySelector(`input[name="recordingMode"][value="${this.config.recordingMode}"]`);
@@ -624,8 +696,12 @@ BYD.recording = {
         
         this.updateStorageLimitUI();
         this.updateStorageTypeUI();
-        this.updateFileSizeEstimate();
-        
+        // File size estimate is now rendered by renderActiveEstimate() (called
+        // earlier in updateUI). The legacy updateFileSizeEstimate() that
+        // computed sizes locally from a hardcoded bitrate map was removed —
+        // size + qualityEquivalent now come from the server via the
+        // recordingQualityOptions / activeRecordingEstimate API fields.
+
         // Show CDR cleanup card if SD card is selected
         this.updateCdrCleanupVisibility();
         
@@ -673,53 +749,106 @@ BYD.recording = {
         this.markChanged();
     },
 
-    setRecQuality(quality) {
-        this.config.recordingQuality = quality;
-        document.querySelectorAll('#recQualityBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === quality));
-        this.markChanged();
-    },
-
-    setStreamQuality(quality) {
-        this.config.streamingQuality = quality;
-        document.querySelectorAll('#streamQualityBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === quality));
-        this.markChanged();
-    },
-
-    setBitrate(bitrate) {
-        this.config.recordingBitrate = bitrate;
-        document.querySelectorAll('#bitrateBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === bitrate));
-        this.updateFileSizeEstimate();
+    setRecordingQuality(tier) {
+        this.config.recordingQuality = tier;
+        document.querySelectorAll('#recQualityBtns .btn-toggle').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.value === tier));
+        this.renderActiveEstimate();
         this.markChanged();
     },
 
     setCodec(codec) {
         this.config.recordingCodec = codec;
-        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === codec));
-        this.updateFileSizeEstimate();
+        // Codec changes the bitrate→quality math; refresh tier subtitles +
+        // active estimate so the UI labels track the new codec.
+        this.renderActiveEstimate();
         this.markChanged();
     },
 
     setFps(fps) {
-        this.config.cameraFps = fps;
-        document.querySelectorAll('#fpsBtns .btn-toggle').forEach(btn => 
+        this.config.cameraFps = parseInt(fps, 10);
+        document.querySelectorAll('#fpsBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === String(fps)));
+        // FPS shifts the qualityEquivalent labels (bits-per-pixel-frame).
+        // Re-render the per-tier subtitle locally so the user sees the
+        // shift before they hit Apply (server then re-derives on next GET).
+        this.renderActiveEstimate();
         this.markChanged();
     },
 
-    updateFileSizeEstimate() {
-        const bitrateMap = { 'LOW': 2, 'MEDIUM': 3, 'HIGH': 6 };
-        const sizeMB = (bitrateMap[this.config.recordingBitrate] || 3) * 120 / 8 *
-                       (this.config.recordingCodec === 'H265' ? 0.5 : 1.0);
-        const estEl = document.getElementById('estFileSize');
-        if (estEl) {
-            const minMb = Math.round(sizeMB * 0.85);
-            const maxMb = Math.round(sizeMB * 1.15);
-            const key = this.config.recordingCodec === 'H265' ? 'recording.est_file_size_h265' : 'recording.est_file_size_range';
-            estEl.textContent = BYD.i18n.t(key, {min: minMb, max: maxMb});
+    /** Pick the matching tier entry from the server-supplied options table.
+     *  All math (bitrate, MB/2min, qualityEquivalent for the active codec+fps)
+     *  is precomputed there; we just look it up. Returns null if the tier
+     *  isn't loaded yet. */
+    estimateForTier(tier) {
+        const opts = this.config.recordingQualityOptions || {};
+        return opts[tier] || null;
+    },
+
+    /** Pull a fresh /api/settings/quality and update the local tier table.
+     *  Called after a save that affects per-tier metadata (codec or fps). */
+    async refetchQualityOptions() {
+        try {
+            const r = await fetch('/api/settings/quality');
+            if (!r.ok) return;
+            const data = await r.json();
+            if (data && data.recordingQualityOptions) {
+                this.config.recordingQualityOptions = data.recordingQualityOptions;
+                this.renderActiveEstimate();
+            }
+        } catch (e) { /* best-effort */ }
+    },
+
+    /** Format a tier+codec into "2 Mbps · ~28.6 MB / 2 min · ~720p". */
+    formatEstimate(est) {
+        if (!est) return '—';
+        const parts = [BYD.i18n.t('recording.unit_mbps', {n: (est.bitrateMbps != null ? est.bitrateMbps : '—')})];
+        if (est.mbPer2Min != null) parts.push(BYD.i18n.t('recording.unit_mb_per_2min', {n: est.mbPer2Min}));
+        if (est.qualityEquivalent) parts.push(est.qualityEquivalent);
+        return parts.join(' · ');
+    },
+
+    renderActiveEstimate() {
+        const el = document.getElementById('activeEstimate');
+        if (!el) return;
+
+        // Compute the *currently-selected* estimate locally — server's
+        // activeRecordingEstimate is stale until next save. The tier options
+        // table is keyed by tier name and already accounts for codec+fps.
+        const currentTier = this.config.recordingQuality;
+        const savedTier = this.savedConfig ? this.savedConfig.recordingQuality : currentTier;
+        const currentEst = this.estimateForTier(currentTier);
+        const savedEst = this.estimateForTier(savedTier);
+
+        // If the tier hasn't changed since save, show one line.
+        // If it has, show "saved → pending" so the user sees what changes.
+        if (currentTier === savedTier || !savedEst) {
+            el.textContent = this.formatEstimate(currentEst);
+        } else {
+            el.textContent = this.formatEstimate(savedEst)
+                + BYD.i18n.t('recording.estimate_diff_arrow')
+                + this.formatEstimate(currentEst);
+        }
+
+        const native = document.getElementById('nativeResolution');
+        if (native && this.config.nativeResolution) {
+            native.textContent = this.config.nativeResolution;
+        }
+    },
+
+    renderFpsActual() {
+        const row = document.getElementById('fpsClampRow');
+        const el  = document.getElementById('fpsActual');
+        if (!row || !el) return;
+        const actual = this.config.cameraFpsActual;
+        if (actual == null) { row.style.display = 'none'; return; }
+        row.style.display = '';
+        if (this.config.cameraFpsClampNote) {
+            el.textContent = this.config.cameraFpsClampNote;
+        } else {
+            el.textContent = actual + ' fps';
         }
     },
 
@@ -728,88 +857,154 @@ BYD.recording = {
         console.log('Retention days setting deprecated');
     },
 
-    async saveSettings() {
+    /**
+     * Look up the active bottom-tab id (status / capture / quality / storage).
+     * Mirrors the helper on SurvSettings — kept inline here to avoid a hard
+     * cross-module dependency between recording.js and surveillance.js.
+     */
+    _activeTabId: function () {
         try {
-            // Save quality settings
-            const resp = await fetch('/api/settings/quality', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recordingQuality: this.config.recordingQuality,
-                    streamingQuality: this.config.streamingQuality,
-                    recordingBitrate: this.config.recordingBitrate,
-                    recordingCodec: this.config.recordingCodec,
-                    cameraFps: this.config.cameraFps
-                })
-            });
-            const data = await resp.json();
-            
-            // Save recording mode
-            await fetch('/api/recording/mode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: this.config.recordingMode })
-            });
-            
-            // Save recording section to unified config (includes mode)
-            await fetch('/api/settings/unified', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    section: 'recording',
-                    data: {
-                        bitrate: this.config.recordingBitrate,
-                        codec: this.config.recordingCodec,
-                        quality: this.config.recordingQuality,
-                        mode: this.config.recordingMode
-                    }
-                })
-            });
-            
-            // Save proximity guard settings
-            await fetch('/api/settings/unified', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    section: 'proximityGuard',
-                    data: this.config.proximityGuard
-                })
-            });
-            
-            // Save storage limit and type settings
-            const storageResp = await fetch('/api/settings/storage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recordingsLimitMb: this.config.recordingsLimitMb,
-                    recordingsStorageType: this.config.recordingsStorageType
-                })
-            });
-            const storageData = await storageResp.json();
-            
+            var path = window.location.pathname || '';
+            var idx = path.lastIndexOf('/');
+            var page = idx >= 0 ? path.substring(idx + 1) : (path || 'index');
+            var stored = window.localStorage.getItem('ot-active-tab-' + page);
+            if (stored) return stored;
+        } catch (e) {}
+        var visible = document.querySelector('.bottom-tab.is-active');
+        if (visible) return visible.getAttribute('data-tab-target') || 'capture';
+        return 'capture';
+    },
+
+    async saveSettings() {
+        const btn = document.getElementById('btnApply');
+        const origHtml = btn ? btn.innerHTML : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = BYD.i18n.t('common.saving') || 'Saving…';
+        }
+        try {
+            const activeTab = this._activeTabId();
+            // Per-tab dispatch — each branch only writes endpoints whose data
+            // could have been edited on the visible tab. Saves on Quality
+            // tab no longer overwrite Storage/Proximity-Guard prefs the user
+            // may have changed on another device while this tab was open.
+            let storageData = {};
+            const prevFps = this.savedConfig ? this.savedConfig.cameraFps : 15;
+
+            if (activeTab === 'quality') {
+                // Single recording quality tier replaces the legacy parallel
+                // recordingBitrate (LOW/MEDIUM/HIGH) + recordingQuality
+                // (LOW/REDUCED/NORMAL) keys. Server still accepts the old
+                // recordingBitrate key for backward compat, but we no longer
+                // send it.
+                // streamingQuality is owned by the camera controller (index.html)
+                // — do not include it here so we don't overwrite a setting
+                // the user changed on the live view.
+                const qResp = await fetch('/api/settings/quality', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordingQuality: this.config.recordingQuality,
+                        recordingCodec: this.config.recordingCodec,
+                        cameraFps: this.config.cameraFps
+                    })
+                });
+                if (!qResp.ok) throw new Error('quality ' + qResp.status);
+                // Mirror codec + tier into the unified store so other pages
+                // that read from there see the new values. Note: legacy
+                // `bitrate` key is no longer written; the single `quality`
+                // tier (ECONOMY..MAX) is the source of truth.
+                await fetch('/api/settings/unified', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        section: 'recording',
+                        data: {
+                            codec: this.config.recordingCodec,
+                            quality: this.config.recordingQuality,
+                            recordingQuality: this.config.recordingQuality
+                        }
+                    })
+                });
+            } else if (activeTab === 'capture') {
+                const mResp = await fetch('/api/recording/mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: this.config.recordingMode })
+                });
+                if (!mResp.ok) throw new Error('mode ' + mResp.status);
+                await fetch('/api/settings/unified', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        section: 'recording',
+                        data: { mode: this.config.recordingMode }
+                    })
+                });
+                await fetch('/api/settings/unified', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        section: 'proximityGuard',
+                        data: this.config.proximityGuard
+                    })
+                });
+            } else if (activeTab === 'storage') {
+                const storageResp = await fetch('/api/settings/storage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordingsLimitMb: this.config.recordingsLimitMb,
+                        recordingsStorageType: this.config.recordingsStorageType
+                    })
+                });
+                if (!storageResp.ok) throw new Error('storage ' + storageResp.status);
+                storageData = await storageResp.json();
+            } else {
+                // Status tab is read-only (declared readOnly: true in the
+                // OT_TABS manifest), so app-tabs.js hides the Apply button
+                // there. Defensive: nothing to save → no-op.
+            }
+
             this.savedConfig = JSON.parse(JSON.stringify(this.config));
             this.hasUnsavedChanges = false;
             // Update timestamp to prevent immediate reload overwriting our changes
             this.lastConfigTimestamp = Date.now();
             this.markChanged();
-            
-            // Refresh storage stats after save (cleanup may have run)
-            setTimeout(() => this.loadStorageStats(), 1000);
-            
-            let msg = BYD.i18n.t('recording.settings_applied');
-            if (this.config.recordingCodec === 'H265') msg += ' - ' + BYD.i18n.t('recording.h265_next_recording');
-            if (this.config.cameraFps !== (this.savedConfig ? this.savedConfig.cameraFps : 15)) {
-                msg += ' - ' + BYD.i18n.t('recording.fps_next_acc_on');
+            // savedConfig caught up to config — re-render so the "saved →
+            // pending" arrow disappears and the new value is the new baseline.
+            this.renderActiveEstimate();
+            // If quality tab changes touched codec or fps, the per-tier
+            // qualityEquivalent shifts. Refetch the options table so the
+            // subtitle text matches the new active codec/fps.
+            if (activeTab === 'quality') {
+                this.refetchQualityOptions();
             }
 
-            // Show cleanup info if files will be deleted
+            // Refresh storage stats after save (cleanup may have run)
+            setTimeout(() => this.loadStorageStats(), 1000);
+
+            let msg = BYD.i18n.t('recording.settings_applied');
+            if (activeTab === 'quality' && this.config.recordingCodec === 'H265') {
+                msg += ' - ' + BYD.i18n.t('recording.h265_next_recording');
+            }
+            if (activeTab === 'quality' && this.config.cameraFps !== prevFps) {
+                msg += ' - ' + BYD.i18n.t('recording.fps_next_acc_on');
+            }
             if (storageData.cleanup && storageData.cleanup.recordingsToDelete) {
                 msg = BYD.i18n.t('recording.settings_applied_deleting', {files: storageData.cleanup.recordingsFilesEstimate, size: storageData.cleanup.recordingsToDelete});
             }
 
             if (BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, 'success');
         } catch (e) {
+            console.error('recording.saveSettings error:', e);
             if (BYD.utils && BYD.utils.toast) BYD.utils.toast(BYD.i18n.t('recording.save_settings_failed'), 'error');
+        } finally {
+            if (btn) {
+                btn.innerHTML = origHtml;
+                // markChanged() reapplies disabled-state based on dirty flag.
+                this.markChanged();
+            }
         }
     },
 

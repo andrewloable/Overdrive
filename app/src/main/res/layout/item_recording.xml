@@ -25,6 +25,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="@dimen/card_gap_horizontal_half"
+    android:layout_gravity="top"
     android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="?attr/colorSurfaceContainer"
     app:cardCornerRadius="@dimen/card_radius_standard"
@@ -44,7 +45,6 @@
                 android:id="@+id/ivThumbnail"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:adjustViewBounds="true"
                 android:background="?attr/colorSurfaceContainerHigh"
                 android:contentDescription="@string/cd_video_thumbnail"
                 android:scaleType="centerCrop" />
@@ -119,7 +119,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="11sp"
                 android:visibility="gone"
-                tools:text="👤 1 · close" />
+                tools:text="1 person · close" />
 
             <!-- Selection checkbox: top-left when in select mode. -->
             <CheckBox

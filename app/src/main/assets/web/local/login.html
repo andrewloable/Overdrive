@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title data-i18n="app.login_title">Login - OverDrive</title>
-    <link rel="icon" type="image/webp" href="../shared/app-icon.webp">
+    <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
+    <script src="../shared/theme.js?v=3"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -77,13 +78,27 @@
             margin: 0 auto 24px;
             border-radius: 20px;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-elevated);
+            /* Dark default — louder black shadow + faint top highlight so
+               the rounded tile reads against the near-black page bg. */
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.50),
+                0 10px 24px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
-        
+        :root[data-theme="light"] .brand-logo {
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.18),
+                0 8px 18px rgba(0, 0, 0, 0.16);
+        }
+
         .brand-logo img {
-            width: 150%;
-            height: 150%;
+            width: 78%;
+            height: 78%;
             object-fit: contain;
-            margin: -25%;
         }
         
         .login-title {
@@ -264,7 +279,7 @@
     <div class="login-container">
         <div class="login-card">
             <div class="brand-logo">
-                <img src="../shared/app-icon.webp" alt="OverDrive">
+                <img src="../shared/app-icon-glyph-dark.webp" alt="OverDrive">
             </div>
             <h1 class="login-title" data-i18n="app.name">OverDrive</h1>
             <p class="login-subtitle" data-i18n="login.subtitle">Enter your device token to access</p>

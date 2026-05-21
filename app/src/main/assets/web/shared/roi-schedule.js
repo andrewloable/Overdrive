@@ -167,15 +167,23 @@ var RoiEditor = (function() {
         // Always send blocks (even when disabling) so they persist for re-enable
         payload['roiBlocks_' + qk[currentQuadrant]] = blocks[currentQuadrant].slice();
         payload['roiEnabled_' + qk[currentQuadrant]] = en;
+        // Disable Save button while in flight so a double-tap can't fire two
+        // POSTs (the second one would race against the loadConfig() refresh).
+        var saveBtn = document.querySelector('#roiDrawingContent .btn.btn-primary');
+        if (saveBtn) saveBtn.disabled = true;
         fetch('/api/surveillance/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-            .then(function(r) { return r.json(); }).then(function() {
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            }).then(function() {
                 savedBlocks[currentQuadrant] = blocks[currentQuadrant].slice();
                 savedEnabled[currentQuadrant] = roiEnabledFlags[currentQuadrant];
                 updateUnsaved();
                 msg(BYD.i18n.t(en ? 'roi.zone_saved' : 'roi.roi_disabled', {cam: qName(currentQuadrant)}), 'success');
                 // Re-read config to confirm persistence (catches backend issues early)
                 loadConfig();
-            }).catch(function() { msg(BYD.i18n.t('roi.save_failed'), 'error'); });
+            }).catch(function() { msg(BYD.i18n.t('roi.save_failed'), 'error'); })
+            .then(function() { if (saveBtn) saveBtn.disabled = false; });
     }
 
     function selectAll() {
@@ -329,12 +337,18 @@ var ScheduleEditor = (function() {
         if (en && hasErr()) { msg(BYD.i18n.t('roi.fix_errors_first'),'error'); return; }
         var payload = { scheduleEnabled: en, scheduleRules: [] };
         for (var i = 0; i < rules.length; i++) payload.scheduleRules.push({ days:rules[i].days, startHour:rules[i].startHour, startMin:rules[i].startMin, endHour:rules[i].endHour, endMin:rules[i].endMin });
+        var saveBtn = document.getElementById('scheduleSaveBtn');
+        if (saveBtn) saveBtn.disabled = true;
         fetch('/api/surveillance/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
-            .then(function(r){return r.json();}).then(function(){
+            .then(function(r){
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            }).then(function(){
                 msg(BYD.i18n.t('roi.schedule_saved'),'success');
                 var badge = document.getElementById('scheduleBadge');
                 if (badge) { badge.textContent = en ? BYD.i18n.t('roi.badge_on') : BYD.i18n.t('roi.badge_off'); badge.className = 'status-badge '+(en?'active':'inactive'); }
-            }).catch(function(){ msg(BYD.i18n.t('roi.save_failed'),'error'); });
+            }).catch(function(){ msg(BYD.i18n.t('roi.save_failed'),'error'); })
+            .then(function(){ if (saveBtn) saveBtn.disabled = false; updateSaveBtn(); });
     }
     function loadConfig() {
         fetch('/api/surveillance/config').then(function(r){return r.json();}).then(function(d) {

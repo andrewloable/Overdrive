@@ -19,8 +19,13 @@ BYD.surveillance = {
         detectBike: true,
         preRecordSeconds: 5,
         postRecordSeconds: 10,
-        recordingBitrate: 'MEDIUM',
+        // Single recording quality tier (replaces legacy recordingBitrate
+        // LOW/MEDIUM/HIGH). Server rebuilds the encoder live on change.
+        recordingQuality: 'STANDARD',
         recordingCodec: 'H264',
+        // Server-supplied for UI (filled by load):
+        recordingQualityOptions: {},
+        activeRecordingEstimate: null,
         surveillanceLimitMb: 500,
         surveillanceStorageType: 'INTERNAL',
         // V2 Motion Detection
@@ -148,6 +153,14 @@ BYD.surveillance = {
                 }
             }
         });
+
+        // Re-evaluate Apply enabled-state + unsaved markers whenever the
+        // user swaps bottom tabs — markChanged() reads the active tab id
+        // each call, so the visible button reflects only the visible tab.
+        var self = this;
+        document.addEventListener('ot-tabs:active-changed', function () {
+            self.markChanged();
+        });
     },
     
     async reloadConfig() {
@@ -250,6 +263,15 @@ BYD.surveillance = {
             const data = await resp.json();
             if (data.success) {
                 this.config.cameraFps = data.cameraFps || 15;
+                this.config.cameraFpsActual = data.cameraFpsActual || null;
+                this.config.cameraFpsClampNote = data.cameraFpsClampNote || null;
+                // Pull tier + render data so the picker can show live
+                // size estimates without waiting for the next reload.
+                if (data.recordingQuality) {
+                    this.config.recordingQuality = data.recordingQuality;
+                }
+                this.config.recordingQualityOptions = data.recordingQualityOptions || {};
+                this.config.activeRecordingEstimate = data.activeRecordingEstimate || null;
             }
         } catch (e) {
             console.warn('Failed to load camera FPS:', e);
@@ -259,9 +281,9 @@ BYD.surveillance = {
     
     async setFps(fps) {
         this.config.cameraFps = fps;
-        document.querySelectorAll('#survFpsBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#survFpsBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === String(fps)));
-        
+
         // Save immediately via quality API (shared with recording page)
         try {
             await fetch('/api/settings/quality', {
@@ -272,10 +294,28 @@ BYD.surveillance = {
             if (BYD.utils && BYD.utils.toast) {
                 BYD.utils.toast(BYD.i18n.t('surveillance.fps_set', {fps: fps}), 'success');
             }
+            // Refetch the per-tier options so qualityEquivalent (which shifts
+            // with FPS) and the active-tier subtitle reflect the new rate.
+            this.refetchQualityOptions();
         } catch (e) {
             console.error('Failed to save FPS:', e);
             if (BYD.utils && BYD.utils.toast) BYD.utils.toast(BYD.i18n.t('surveillance.fps_save_failed'), 'error');
         }
+    },
+
+    /** Pull a fresh /api/settings/quality and update the local tier table +
+     *  active-estimate display. Called after a save that affects per-tier
+     *  metadata (codec or fps). */
+    async refetchQualityOptions() {
+        try {
+            const r = await fetch('/api/settings/quality');
+            if (!r.ok) return;
+            const data = await r.json();
+            if (data && data.recordingQualityOptions) {
+                this.config.recordingQualityOptions = data.recordingQualityOptions;
+                this.renderActiveEstimate();
+            }
+        } catch (e) { /* best-effort */ }
     },
     
     updateStorageLimitUI() {
@@ -654,40 +694,65 @@ BYD.surveillance = {
         return 5;
     },
 
-    markChanged() {
-        // Only compare user-editable fields (ignore server-only fields like lastModified, densityThreshold, etc.)
-        const editableKeys = [
-            'enabled', 'distance', 'sensitivity', 'flashImmunity',
-            'detectPerson', 'detectCar', 'detectBike',
-            'preRecordSeconds', 'postRecordSeconds',
-            'recordingBitrate', 'recordingCodec',
-            'surveillanceLimitMb', 'surveillanceStorageType',
-            'environmentPreset', 'sensitivityLevel', 'detectionZone', 'loiteringTime',
-            'shadowFilter',
-            'cameraFront', 'cameraRight', 'cameraLeft', 'cameraRear',
-            'quadrantOverrides',
-            'motionHeatmap', 'filterDebugLog',
-            'telegramSendStartPing',
-            'telegramNotices', 'telegramAlerts', 'telegramCritical'
-        ];
-        const pick = (obj) => {
-            const r = {};
-            editableKeys.forEach(k => { if (k in obj) r[k] = obj[k]; });
-            return JSON.stringify(r);
-        };
-        this.hasUnsavedChanges = pick(this.config) !== pick(this.savedConfig);
-        const btn = document.getElementById('btnApply');
-        if (btn) {
-            btn.disabled = !this.hasUnsavedChanges;
-            if (this.hasUnsavedChanges) {
-                btn.classList.add('has-changes');
-            } else {
-                btn.classList.remove('has-changes');
+    /**
+     * Per-tab dirty diff. The Apply button is enabled only when the
+     * CURRENTLY VISIBLE tab has uncommitted edits, and the per-card
+     * "● unsaved" markers each reflect their own tab's dirty state.
+     * Switching tabs re-runs the diff so the bar reflects what the user
+     * is looking at, not the page-wide aggregate.
+     */
+    _tabDirty: function () {
+        if (!this.savedConfig) return {};
+        var dirty = {};
+        var map = this._tabFieldMap || {};
+        var tabIds = Object.keys(map);
+        for (var t = 0; t < tabIds.length; t++) {
+            var tabId = tabIds[t];
+            var fields = map[tabId];
+            var d = false;
+            for (var i = 0; i < fields.length; i++) {
+                var k = fields[i];
+                if (k === '_storage_endpoint') continue;
+                if (JSON.stringify(this.config[k]) !== JSON.stringify(this.savedConfig[k])) {
+                    d = true; break;
+                }
             }
+            dirty[tabId] = d;
         }
-        document.getElementById('detectionUnsaved').classList.toggle('show', this.hasUnsavedChanges);
-        document.getElementById('recordingUnsaved').classList.toggle('show', this.hasUnsavedChanges);
-        var _su = document.getElementById('storageUnsaved'); if (_su) _su.classList.toggle('show', this.hasUnsavedChanges);
+        return dirty;
+    },
+
+    markChanged() {
+        var dirtyByTab = this._tabDirty();
+        // Aggregate flag — used by reloadConfig() / visibility refresh to
+        // decide whether to skip a server pull. True if ANY tab is dirty.
+        this.hasUnsavedChanges = false;
+        for (var k in dirtyByTab) {
+            if (dirtyByTab[k]) { this.hasUnsavedChanges = true; break; }
+        }
+        this._dirtyByTab = dirtyByTab;
+
+        // Apply button reflects the active tab only.
+        var btn = document.getElementById('btnApply');
+        if (btn) {
+            var activeTab = this._activeTabId();
+            var activeIsDirty = !!dirtyByTab[activeTab];
+            btn.disabled = !activeIsDirty;
+            btn.classList.toggle('has-changes', activeIsDirty);
+        }
+
+        // Each "● unsaved" marker maps 1:1 to a tab — show only when its
+        // own tab is dirty so cards on a clean tab don't flash markers
+        // because of edits on another tab.
+        var markerTabMap = {
+            'detectionUnsaved': 'detection',
+            'recordingUnsaved': 'recording',
+            'storageUnsaved':   'storage'
+        };
+        for (var elId in markerTabMap) {
+            var el = document.getElementById(elId);
+            if (el) el.classList.toggle('show', !!dirtyByTab[markerTabMap[elId]]);
+        }
     },
 
     updateUI() {
@@ -707,17 +772,20 @@ BYD.surveillance = {
         document.getElementById('postLabel').textContent = BYD.i18n.t('surveillance.after_seconds', {n: this.config.postRecordSeconds});
         document.getElementById('timelinePost').style.flex = this.config.postRecordSeconds / 20;
         
-        document.querySelectorAll('#bitrateBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === this.config.recordingBitrate));
-        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn => 
+        // New tier picker (replaces #bitrateBtns).
+        document.querySelectorAll('#survQualityBtns .btn-toggle').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.value === this.config.recordingQuality));
+        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === this.config.recordingCodec));
-        
+
         // Camera FPS buttons
-        document.querySelectorAll('#survFpsBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#survFpsBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === String(this.config.cameraFps || 15)));
-        
+
+        // Active estimate (per-tier subtitles removed — info is summarised below).
+        this.renderActiveEstimate();
+
         this.updateStorageLimitUI();
-        this.updateFileSizeEstimate();
         
         // V2 Motion Detection UI
         this.updateV2UI();
@@ -798,30 +866,69 @@ BYD.surveillance = {
         this.markChanged();
     },
 
-    setBitrate(bitrate) {
-        this.config.recordingBitrate = bitrate;
-        document.querySelectorAll('#bitrateBtns .btn-toggle').forEach(btn => 
-            btn.classList.toggle('active', btn.dataset.value === bitrate));
-        this.updateFileSizeEstimate();
+    setRecordingQuality(tier) {
+        this.config.recordingQuality = tier;
+        document.querySelectorAll('#survQualityBtns .btn-toggle').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.value === tier));
+        this.renderActiveEstimate();
         this.markChanged();
     },
 
     setCodec(codec) {
         this.config.recordingCodec = codec;
-        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn => 
+        document.querySelectorAll('#codecBtns .btn-toggle').forEach(btn =>
             btn.classList.toggle('active', btn.dataset.value === codec));
-        this.updateFileSizeEstimate();
+        this.renderActiveEstimate();
         this.markChanged();
     },
 
-    updateFileSizeEstimate() {
-        const bitrateMap = { 'LOW': 2, 'MEDIUM': 3, 'HIGH': 6 };
-        const sizeMB = (bitrateMap[this.config.recordingBitrate] || 3) * 120 / 8 * 
-                       (this.config.recordingCodec === 'H265' ? 0.5 : 1.0);
-        const estEl = document.getElementById('estFileSize');
-        if (estEl) {
-            estEl.textContent = `~${Math.round(sizeMB * 0.85)}-${Math.round(sizeMB * 1.15)} MB` + 
-                               (this.config.recordingCodec === 'H265' ? ' (H.265)' : '');
+    /** Look up the per-tier estimate computed by the server (codec+fps already
+     *  factored in). Returns null if not loaded yet. */
+    estimateForTier(tier) {
+        const opts = this.config.recordingQualityOptions || {};
+        return opts[tier] || null;
+    },
+
+    formatEstimate(est) {
+        if (!est) return '—';
+        const parts = [BYD.i18n.t('recording.unit_mbps', {n: (est.bitrateMbps != null ? est.bitrateMbps : '—')})];
+        if (est.mbPer2Min != null) parts.push(BYD.i18n.t('recording.unit_mb_per_2min', {n: est.mbPer2Min}));
+        if (est.qualityEquivalent) parts.push(est.qualityEquivalent);
+        return parts.join(' · ');
+    },
+
+    renderActiveEstimate() {
+        const el = document.getElementById('survActiveEstimate');
+        if (el) {
+            // Compute locally from the user's *current* selection, not the
+            // server's stale activeRecordingEstimate. Show "saved → pending"
+            // diff when the user has changed the tier without applying yet.
+            const currentTier = this.config.recordingQuality;
+            const savedTier = this.savedConfig ? this.savedConfig.recordingQuality : currentTier;
+            const currentEst = this.estimateForTier(currentTier);
+            const savedEst = this.estimateForTier(savedTier);
+            if (currentTier === savedTier || !savedEst) {
+                el.textContent = this.formatEstimate(currentEst);
+            } else {
+                el.textContent = this.formatEstimate(savedEst)
+                    + BYD.i18n.t('recording.estimate_diff_arrow')
+                    + this.formatEstimate(currentEst);
+            }
+        }
+        // Measured-FPS row mirrors recording.html: shown when the HAL is
+        // emitting at a different rate than what the user requested.
+        const row = document.getElementById('survFpsClampRow');
+        const fpsEl = document.getElementById('survFpsActual');
+        if (row && fpsEl) {
+            const actual = this.config.cameraFpsActual;
+            if (actual == null) {
+                row.style.display = 'none';
+            } else {
+                row.style.display = '';
+                fpsEl.textContent = this.config.cameraFpsClampNote
+                    ? this.config.cameraFpsClampNote
+                    : (actual + ' fps');
+            }
         }
     },
 
@@ -1528,52 +1635,150 @@ BYD.surveillance = {
         this.updateCheckboxStyles();
     },
 
+    /**
+     * Per-tab field map — which `this.config` keys belong to which tab.
+     * Apply uses this to build a PARTIAL body that only writes fields the
+     * user could have edited on the active tab. Avoids clobbering settings
+     * the user hasn't seen on this page-load.
+     *
+     * The keys here MUST match exactly what SurveillanceApiHandler reads on
+     * POST (configJson.has(...) calls). Audited 2026-05-20 against the
+     * Java handler. The "_storage_endpoint" sentinel signals a separate POST
+     * to /api/settings/storage instead of the surveillance config endpoint.
+     *
+     * Side-cam boost (sideCamBoost*) is intentionally absent — those
+     * controls write into `quadrantOverrides` rather than dedicated keys,
+     * so the partial body only needs to ship `quadrantOverrides`.
+     *
+     * Safe Locations and ROI editor have their OWN endpoints
+     * (/api/surveillance/safe-locations, save() on roi-schedule.js posts
+     * directly with its own partial body) and are NOT routed through this
+     * Apply flow. Listing them here would be a no-op since `this.config`
+     * doesn't carry those keys.
+     */
+    _tabFieldMap: {
+        general: [
+            'enabled',
+            'scheduleEnabled', 'scheduleRules',
+            'deterrentAction', 'deterrentCooldownSeconds'
+        ],
+        detection: [
+            'environmentPreset',
+            'sensitivityLevel', 'detectionZone',
+            'loiteringTime', 'shadowFilter',
+            'cameraFront', 'cameraRight', 'cameraLeft', 'cameraRear',
+            'quadrantOverrides',
+            'detectPerson', 'detectCar', 'detectBike',
+            'aiConfidence', 'minObjectSize',
+            'flashImmunity'
+        ],
+        recording: [
+            // Backend reads these EXACT names — preRecordSeconds (no "ing"),
+            // recordingQuality / recordingCodec (with the "recording" prefix).
+            // recordingQuality is the consolidated tier (ECONOMY..MAX) that
+            // replaces the legacy recordingBitrate (LOW/MEDIUM/HIGH).
+            // cameraFps does NOT live here — it's owned by the Quality
+            // Settings handler (/api/settings/quality).
+            'preRecordSeconds', 'postRecordSeconds',
+            'recordingQuality', 'recordingCodec'
+        ],
+        storage: [
+            // Sentinel — branches the Apply flow to /api/settings/storage.
+            '_storage_endpoint'
+        ],
+        advanced: [
+            'motionHeatmap', 'filterDebugLog'
+        ]
+    },
+
+    /**
+     * Look up the tab the user is currently viewing. The bottom-tabs script
+     * (shared/app-tabs.js) persists the active tab to localStorage; we read
+     * that so a partial save targets the visible tab even after the user
+     * switches across tabs without reloading.
+     */
+    _activeTabId: function () {
+        try {
+            var path = window.location.pathname || '';
+            var idx = path.lastIndexOf('/');
+            var page = idx >= 0 ? path.substring(idx + 1) : (path || 'index');
+            var stored = window.localStorage.getItem('ot-active-tab-' + page);
+            if (stored) return stored;
+        } catch (e) {}
+        // Fall back to the visible bottom-tab pill.
+        var visible = document.querySelector('.bottom-tab.is-active');
+        if (visible) return visible.getAttribute('data-tab-target') || 'general';
+        return 'general';
+    },
+
     async applySettings() {
         const btn = document.getElementById('btnApply');
         const origText = btn.innerHTML;
         btn.innerHTML = BYD.i18n.t('surveillance.saving');
         btn.disabled = true;
-        
+
         try {
-            // Save surveillance config
-            const configResp = await fetch('/api/surveillance/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.config)
-            });
-            
-            if (!configResp.ok) {
-                throw new Error('Config save failed: ' + configResp.status);
+            const activeTab = this._activeTabId();
+            const fields = this._tabFieldMap[activeTab] || [];
+            const isStorageTab = fields.indexOf('_storage_endpoint') !== -1;
+
+            let storageData = {};
+
+            if (isStorageTab) {
+                // Storage tab — only write storage fields via /api/settings/storage,
+                // mirroring the legacy carve-out. Don't touch /api/surveillance/config
+                // so detection sensitivity / schedule etc. stay untouched.
+                const storageResp = await fetch('/api/settings/storage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        surveillanceLimitMb: this.config.surveillanceLimitMb,
+                        surveillanceStorageType: this.config.surveillanceStorageType
+                    })
+                });
+                if (!storageResp.ok) throw new Error('Storage save failed: ' + storageResp.status);
+                storageData = await storageResp.json();
+                // CDR cleanup card on this tab self-saves — toggleCdrCleanup()
+                // and the slider onchange handlers POST to
+                // /api/storage/external/config directly on each change. So
+                // pressing Apply on the Storage tab only needs to write the
+                // surveillance storage limit + storage-type pair above; the
+                // CDR retention sliders are already persisted live.
+            } else {
+                // Build a partial body containing only the active tab's fields.
+                // The daemon's surveillance config endpoint is a partial-merge
+                // writer, so omitted keys retain their prior values.
+                const partial = {};
+                for (let i = 0; i < fields.length; i++) {
+                    const key = fields[i];
+                    if (this.config[key] !== undefined) partial[key] = this.config[key];
+                }
+                const configResp = await fetch('/api/surveillance/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(partial)
+                });
+                if (!configResp.ok) throw new Error('Config save failed: ' + configResp.status);
             }
-            
-            // SOTA: Also save storage limit and type settings via storage API
-            const storageResp = await fetch('/api/settings/storage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    surveillanceLimitMb: this.config.surveillanceLimitMb,
-                    surveillanceStorageType: this.config.surveillanceStorageType
-                })
-            });
-            const storageData = await storageResp.json();
-            
+
             this.savedConfig = JSON.parse(JSON.stringify(this.config));
             this.hasUnsavedChanges = false;
             this.markChanged();
-            
+            // Re-render so the "saved → pending" arrow disappears now that
+            // savedConfig caught up to config.
+            this.renderActiveEstimate();
+
             // Refresh storage stats after save (cleanup may have run)
             setTimeout(() => this.loadStorageStats(), 1000);
-            
-            let msg = BYD.i18n.t('surveillance.settings_applied');
 
-            // Show cleanup info if files will be deleted
+            let msg = BYD.i18n.t('surveillance.settings_applied');
             if (storageData.cleanup && storageData.cleanup.surveillanceToDelete) {
                 msg = BYD.i18n.t('surveillance.settings_applied_deleting', {files: storageData.cleanup.surveillanceFilesEstimate, size: storageData.cleanup.surveillanceToDelete});
             }
 
             btn.innerHTML = BYD.i18n.t('surveillance.saved_check');
             setTimeout(() => { btn.innerHTML = origText; }, 1500);
-            
+
             if (BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, 'success');
         } catch (e) {
             console.error('applySettings error:', e);
@@ -1581,6 +1786,28 @@ BYD.surveillance = {
             btn.disabled = false;
             if (BYD.utils && BYD.utils.toast) BYD.utils.toast(BYD.i18n.t('surveillance.save_failed', {error: e.message || BYD.i18n.t('errors.generic')}), 'error');
         }
+    },
+
+    /**
+     * Lightweight init for pages that only mount the Telegram delivery
+     * controls (notifications.html). Loads the surveillance config, paints
+     * the Telegram checkboxes via updateUI(), and refreshes the bot-paired
+     * availability state. Every DOM read inside updateUI() is null-guarded
+     * so missing controls (sensitivity slider, env preset, ROI editor, …)
+     * are skipped without warnings.
+     */
+    async initTelegramOnly() {
+        await this.loadConfig();
+        this.updateUI();
+        this.refreshTelegramAvailability();
+        // Re-poll the pairing state when the user comes back to this tab —
+        // a fresh bot pair done in the Telegram daemon page should un-grey
+        // the toggles without a manual reload.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.refreshTelegramAvailability();
+            }
+        });
     },
 
     /**
@@ -1845,6 +2072,9 @@ window.BydCloud = {
         const pin = document.getElementById('bydPin').value.trim();
         const region = document.getElementById('bydRegion').value;
         const saveBtn = document.getElementById('bydSaveBtn');
+        // Preserve the icon + label so the finally block can restore it cleanly
+        // after the request resolves; assigning .textContent strips the SVG.
+        const saveBtnHtml = saveBtn ? saveBtn.innerHTML : null;
 
         if (!email) { this.showStatus(BYD.i18n.t('surveillance.byd_email_required'), 'error'); return; }
         if (!this.isConfigured && (!password || !pin)) {
@@ -1890,6 +2120,7 @@ window.BydCloud = {
             }
         } finally {
             saveBtn.disabled = false;
+            if (saveBtnHtml != null) saveBtn.innerHTML = saveBtnHtml;
             await this.loadStatus();
         }
     },

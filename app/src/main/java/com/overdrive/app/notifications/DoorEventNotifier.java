@@ -15,9 +15,15 @@ import org.json.JSONObject;
  */
 public final class DoorEventNotifier {
 
-    // BYD bodywork area constants — see BYDAutoBodyworkDevice.BODYWORK_CMD_DOOR_*
-    private static final int AREA_LF = 1;
-    private static final int AREA_RF = 2;
+    // BYD bodywork area constants. The SDK publishes
+    // BODYWORK_CMD_DOOR_LEFT_FRONT=1 / RIGHT_FRONT=2 / LEFT_REAR=3 / RIGHT_REAR=4
+    // but field-tested telemetry on Sealion/Atto/Seal swaps L↔R on the FRONT
+    // axis only — area 1 is the right front door in real life, area 2 is the
+    // left front. The REAR axis matches the SDK declaration as-is (LR=3,
+    // RR=4). We remap accordingly so notification copy matches the physical
+    // door the user sees.
+    private static final int AREA_RF = 1;
+    private static final int AREA_LF = 2;
     private static final int AREA_LR = 3;
     private static final int AREA_RR = 4;
     private static final int AREA_HOOD = 5;

@@ -41,6 +41,7 @@ class DaemonAdapter(
     
     inner class DaemonViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val statusIndicator: View = itemView.findViewById(R.id.statusIndicator)
+        private val ivDaemonIcon: ImageView = itemView.findViewById(R.id.ivDaemonIcon)
         private val tvDaemonName: TextView = itemView.findViewById(R.id.tvDaemonName)
         private val tvDaemonStatus: TextView = itemView.findViewById(R.id.tvDaemonStatus)
         private val switchDaemon: SwitchMaterial = itemView.findViewById(R.id.switchDaemon)
@@ -50,9 +51,10 @@ class DaemonAdapter(
         private val mainRow: View = itemView.findViewById(R.id.mainRow)
         private val subprocessContainer: View = itemView.findViewById(R.id.subprocessContainer)
         private val subprocessList: LinearLayout = itemView.findViewById(R.id.subprocessList)
-        
+
         fun bind(state: DaemonState) {
             tvDaemonName.text = getDaemonDisplayName(state.type)
+            ivDaemonIcon.setImageResource(getDaemonIcon(state.type))
             
             // Build status text with uptime
             val statusText = when {
@@ -204,15 +206,27 @@ class DaemonAdapter(
         
         private fun getDaemonDisplayName(type: DaemonType): String {
             return when (type) {
-                DaemonType.CAMERA_DAEMON -> "📷 Camera Daemon"
-                DaemonType.SENTRY_DAEMON -> "🛡️ Sentry Daemon"
-                DaemonType.ACC_SENTRY_DAEMON -> "🚗 ACC Sentry"
-                DaemonType.SINGBOX_PROXY -> "🔗 Sing-box Proxy"
-                DaemonType.CLOUDFLARED_TUNNEL -> "☁️ Cloudflared Tunnel"
-                DaemonType.ZROK_TUNNEL -> "🌐 Zrok Tunnel"
-                DaemonType.TAILSCALE_TUNNEL -> "📡 Tailscale Tunnel"
-                DaemonType.TELEGRAM_DAEMON -> "📱 Telegram Bot"
+                DaemonType.CAMERA_DAEMON -> "Camera Daemon"
+                DaemonType.SENTRY_DAEMON -> "Surveillance Daemon"
+                DaemonType.ACC_SENTRY_DAEMON -> "ACC Surveillance"
+                DaemonType.SINGBOX_PROXY -> "Sing-box Proxy"
+                DaemonType.CLOUDFLARED_TUNNEL -> "Cloudflared Tunnel"
+                DaemonType.ZROK_TUNNEL -> "Zrok Tunnel"
+                DaemonType.TAILSCALE_TUNNEL -> "Tailscale Tunnel"
+                DaemonType.TELEGRAM_DAEMON -> "Telegram Bot"
             }
+        }
+
+        @androidx.annotation.DrawableRes
+        private fun getDaemonIcon(type: DaemonType): Int = when (type) {
+            DaemonType.CAMERA_DAEMON -> R.drawable.ic_camera_select
+            DaemonType.SENTRY_DAEMON -> R.drawable.ic_sentry
+            DaemonType.ACC_SENTRY_DAEMON -> R.drawable.ic_directions_car
+            DaemonType.SINGBOX_PROXY -> R.drawable.ic_vpn_lock
+            DaemonType.CLOUDFLARED_TUNNEL -> R.drawable.ic_cloud
+            DaemonType.ZROK_TUNNEL -> R.drawable.ic_link
+            DaemonType.TAILSCALE_TUNNEL -> R.drawable.ic_mqtt
+            DaemonType.TELEGRAM_DAEMON -> R.drawable.ic_telegram
         }
         
         private fun hasLogFile(type: DaemonType): Boolean {

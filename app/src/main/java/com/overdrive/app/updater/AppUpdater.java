@@ -237,7 +237,7 @@ public class AppUpdater {
     public void checkForUpdate(UpdateCallback callback) {
         String channel = BuildConfig.UPDATE_CHANNEL;
         if (channel == null || channel.isEmpty()) {
-            runCallback(() -> callback.onNoUpdate(BuildConfig.VERSION_NAME));
+            runCallback(() -> callback.onNoUpdate(getDisplayVersion(context)));
             return;
         }
 
@@ -296,7 +296,11 @@ public class AppUpdater {
 
                     // Extract version from APK filename
                     remoteVersion = extractVersion(apkName);
-                    String currentVersion = BuildConfig.VERSION_NAME;
+                    // Report what AppUpdater previously persisted so the
+                    // user-facing "you're on version X" matches what
+                    // SettingsAboutFragment shows. BuildConfig.VERSION_NAME
+                    // is the gradle stub and unrelated to GitHub releases.
+                    String currentVersion = getDisplayVersion(context);
 
                     // Update detection: compare asset updated_at timestamp only.
                     // Version comparison is unreliable since versionName may not be bumped
@@ -1114,20 +1118,111 @@ public class AppUpdater {
     }
 
     /**
+     * Fetch the latest published version label for the current channel from
+     * GitHub Releases (best-effort, non-blocking). Returns the same label
+     * format as the on-device "display version" (e.g. "alpha-v6.1") so the
+     * UI can swap one for the other without further parsing.
+     *
+     * Used by the Settings → About surface so the user sees the truth-source
+     * version (what's published) rather than what was last installed locally.
+     * Falls back through {@link #onError} when offline / proxy down.
+     */
+    public interface RemoteVersionCallback {
+        void onResult(String version);
+        void onError(String error);
+    }
+
+    public void fetchLatestReleaseVersion(RemoteVersionCallback callback) {
+        String channel = BuildConfig.UPDATE_CHANNEL;
+        if (channel == null || channel.isEmpty()) {
+            runCallback(() -> callback.onError("No channel configured"));
+            return;
+        }
+        executor.execute(() -> {
+            try {
+                String apiUrl = "https://api.github.com/repos/" + GITHUB_REPO +
+                        "/releases/tags/" + channel;
+
+                OkHttpClient client = buildClient(10, 10);
+                Request request = new Request.Builder()
+                        .url(apiUrl)
+                        .header("Accept", "application/vnd.github.v3+json")
+                        .build();
+
+                try (Response response = client.newCall(request).execute()) {
+                    if (!response.isSuccessful()) {
+                        String err = "GitHub API HTTP " + response.code();
+                        runCallback(() -> callback.onError(err));
+                        return;
+                    }
+                    JSONObject release = new JSONObject(response.body().string());
+                    JSONArray assets = release.optJSONArray("assets");
+                    String label = null;
+                    if (assets != null) {
+                        for (int i = 0; i < assets.length(); i++) {
+                            JSONObject asset = assets.getJSONObject(i);
+                            String name = asset.optString("name", "");
+                            if (name.endsWith(".apk")) {
+                                label = extractVersion(name);
+                                break;
+                            }
+                        }
+                    }
+                    if (label == null || label.isEmpty() || "unknown".equals(label)) {
+                        // Fallback to the release tag_name when the asset name
+                        // doesn't expose a parseable version.
+                        label = release.optString("tag_name", "");
+                    }
+                    final String result = label;
+                    runCallback(() -> {
+                        if (result == null || result.isEmpty()) {
+                            callback.onError("No version in release");
+                        } else {
+                            callback.onResult(result);
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                String err = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                runCallback(() -> callback.onError(err));
+            }
+        });
+    }
+
+    /**
+     * Sentinel returned when neither the SharedPreferences entry nor the
+     * version file has been populated yet — i.e. a fresh sideloaded install
+     * that has never run an update check. We deliberately do NOT fall back
+     * to BuildConfig.VERSION_NAME here because that value is the gradle
+     * stub ("11.0") and is unrelated to the GitHub release the user is
+     * actually running. "Manually Installed" makes the install path
+     * explicit; once the user runs check-for-updates the real channel-
+     * versioned string takes over.
+     */
+    public static final String DISPLAY_VERSION_FALLBACK = "Manually Installed";
+
+    /**
      * Get the display version string (channel + version from APK name).
-     * Falls back to BuildConfig.VERSION_NAME if no remote version is known.
+     * Returns {@link #DISPLAY_VERSION_FALLBACK} when no AppUpdater-tracked
+     * version exists yet (fresh sideload before first update check).
      */
     public static String getDisplayVersion(Context context) {
         String stored = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(PREF_UPDATED_VERSION, null);
-        return stored != null ? stored : BuildConfig.VERSION_NAME;
+        if (stored != null && !stored.isEmpty()) {
+            return stored;
+        }
+        // Try the file too — daemon-side updates may have written it without
+        // the app-process SharedPreferences also being populated yet.
+        return getDisplayVersionFromFile();
     }
 
     /**
      * Get the display version without requiring a Context.
-     * Reads from the persisted version file (written by the app process via ADB shell).
-     * Falls back to BuildConfig.VERSION_NAME if the file doesn't exist.
-     * Used by the daemon process (HttpServer) where SharedPreferences may not be accessible.
+     * Reads from the persisted version file (written by the updater after
+     * a successful install). Returns {@link #DISPLAY_VERSION_FALLBACK} when
+     * the file is missing or empty — used by the daemon process where
+     * SharedPreferences may not be accessible.
      */
     public static String getDisplayVersionFromFile() {
         try {
@@ -1141,6 +1236,6 @@ public class AppUpdater {
                 }
             }
         } catch (Exception ignored) {}
-        return BuildConfig.VERSION_NAME;
+        return DISPLAY_VERSION_FALLBACK;
     }
 }

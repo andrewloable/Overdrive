@@ -324,12 +324,23 @@ public class AbrpTelemetryService {
                 payload.put("soh", sohEstimator.getCurrentSoh());
             }
 
-            // capacity + feed SohEstimator
-            // Use getBatteryRemainPowerKwh() which handles PHEV stuck values
+            // capacity payload uses the synthesized helper (UI-friendly), but
+            // SOH is fed from RAW vd.remainKwh only — getBatteryRemainPowerKwh
+            // synthesizes from currentSoh on PHEV / bad-BMS paths, so feeding
+            // it to updateFromEnergy would lock the formula at its initial seed.
             double remainingKwh = vehicleDataMonitor.getBatteryRemainPowerKwh();
             if (remainingKwh > 0 && soc > 0) {
                 payload.put("capacity", remainingKwh / (soc / 100.0));
-                sohEstimator.updateFromInstantaneous(remainingKwh, soc);
+            }
+            double rawRemainKwh = (vd != null && !Double.isNaN(vd.remainKwh)) ? vd.remainKwh : Double.NaN;
+            double highCellV = (vd != null && !Double.isNaN(vd.highCellVoltage))
+                ? vd.highCellVoltage : Double.NaN;
+            if (rawRemainKwh > 0 && soc > 0 && sohEstimator.getNominalCapacityKwh() > 0) {
+                double impliedCap = rawRemainKwh / (soc / 100.0);
+                double ratio = impliedCap / sohEstimator.getNominalCapacityKwh();
+                if (ratio >= 0.5 && ratio <= 1.5) {
+                    sohEstimator.updateFromEnergy(rawRemainKwh, soc, highCellV, false);
+                }
             }
 
             // batt_temp — from collector (real cell temps), fallback to thermal monitor

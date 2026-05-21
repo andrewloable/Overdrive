@@ -649,6 +649,77 @@ public final class BydDeviceHelper {
         return false;
     }
 
+    /**
+     * Register a typed charging listener. The bare 1-arg
+     * registerListener(IBYDAutoListener) registration succeeds on most
+     * firmware but the HAL never invokes the device-specific callbacks
+     * on AbsBYDAutoChargingListener subclasses through that path —
+     * onBatteryManagementDeviceStateChanged in particular has been
+     * observed to silently drop on PHEV builds, which is the root cause
+     * of charging-detection lag during AC charging start.
+     *
+     * Registers both the 2-arg (with empty int[] for subscribe-all) and
+     * 1-arg overloads where present. Both succeed additively where supported.
+     */
+    public static boolean registerChargingListener(Object device, ListenerCallback callback) {
+        if (device == null) return false;
+        try {
+            android.hardware.bydauto.charging.AbsBYDAutoChargingListener listener =
+                new android.hardware.bydauto.charging.AbsBYDAutoChargingListener() {
+                    @Override
+                    public void onBatteryManagementDeviceStateChanged(int state) {
+                        invokeCallback(callback, "onBatteryManagementDeviceStateChanged", new Object[]{state});
+                    }
+                    @Override
+                    public void onChargerStateChanged(int state) {
+                        invokeCallback(callback, "onChargerStateChanged", new Object[]{state});
+                    }
+                    @Override
+                    public void onChargingGunStateChanged(int state) {
+                        invokeCallback(callback, "onChargingGunStateChanged", new Object[]{state});
+                    }
+                    @Override
+                    public void onChargingPowerChanged(double power) {
+                        invokeCallback(callback, "onChargingPowerChanged", new Object[]{power});
+                    }
+                    @Override
+                    public void onChargingCapacityChanged(double capacity) {
+                        invokeCallback(callback, "onChargingCapacityChanged", new Object[]{capacity});
+                    }
+                };
+
+            // Strategy 1: 2-arg with empty int[] (subscribe-all). Some firmware
+            // only delivers events through the filtered overload.
+            Method registerWithIds = findRegisterMethodWithIds(device.getClass(),
+                android.hardware.bydauto.charging.AbsBYDAutoChargingListener.class);
+            boolean twoArgRegistered = false;
+            if (registerWithIds != null) {
+                try {
+                    registerWithIds.invoke(device, listener, new int[0]);
+                    twoArgRegistered = true;
+                } catch (Exception e) {
+                    logger.debug("Charging 2-arg registration failed: " + e.getMessage());
+                }
+            }
+
+            // Strategy 2: 1-arg typed.
+            Method register = findRegisterMethod(device.getClass(),
+                android.hardware.bydauto.charging.AbsBYDAutoChargingListener.class);
+            if (register != null) {
+                register.invoke(device, listener);
+                return true;
+            }
+            if (twoArgRegistered) return true;
+            logger.debug("registerChargingListener: no registerListener method on "
+                + device.getClass().getName());
+        } catch (NoClassDefFoundError e) {
+            logger.debug("registerChargingListener: class not available on this firmware");
+        } catch (Exception e) {
+            logger.debug("registerChargingListener failed: " + e.getMessage());
+        }
+        return false;
+    }
+
     private static void invokeCallback(ListenerCallback callback, String method, Object[] args) {
         try {
             callback.onCallback(method, args);

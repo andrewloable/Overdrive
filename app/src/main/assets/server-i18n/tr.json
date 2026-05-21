@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Kayıtlama - {0}",
     "proximity_alert": " Yakınlık Alarmı Zamanı: {0} Trigger: {1} ({2}) Kayıt başlandı..."
   },
+  "vehicle_control": {
+    "cloud_required": "Bu kontrolü kullanmak için Ayarlarda BYD hesabını bağlayın",
+    "cloud_sent": "Bulut yoluyla gönderilir",
+    "cloud_unavailable_used_local": "Bulut kullanılamıyor  kullanılmış doğrudan bağlantı",
+    "local_sent": "Doğrudan bağlantı üzerinden gönderildi",
+    "cloud_offline_used_local": "Bulut çevrimdışı  kullanılmış doğrudan bağlantı",
+    "local_unavailable_used_cloud": "Doğrudan bağlantı kullanılamıyor — bulut üzerinden gönderildi",
+    "cloud_failed": "Araca ulaşamadım. Araç uyanıkken tekrar dene.",
+    "rate_limited": "Bir komut hala devam ediyor  birkaç saniye bekleyin",
+    "not_supported": "Bu kontrol şu anda kullanılamıyor.",
+    "find_car_label": "Arabayı bul .",
+    "battery_heat_label": "Sıcaklık Battery",
+    "close_all_windows_label": "Tüm pencereler kapatıldı"
+  },
   "messages": {
     "logged_out": "Çıkış .",
     "bydcloud_connected": "Başarılı bağlantı",

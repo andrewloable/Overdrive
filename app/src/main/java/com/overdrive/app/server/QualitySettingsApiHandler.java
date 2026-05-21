@@ -25,8 +25,13 @@ import java.io.OutputStream;
 public class QualitySettingsApiHandler {
     
     // Stored quality settings
-    private static String recordingQuality = "NORMAL";
-    private static String recordingBitrate = "MEDIUM";  // LOW (2Mbps), MEDIUM (3Mbps), HIGH (6Mbps)
+    // Single user-facing recording quality tier (ECONOMY/STANDARD/HIGH/PREMIUM/MAX).
+    // Persisted in UnifiedConfigManager under recording.recordingQuality.
+    // Default STANDARD on first load — legacy values reset per migration policy.
+    private static String recordingQuality = "STANDARD";
+    /** @deprecated mirrors recordingQuality; kept until persistence migration completes. */
+    @Deprecated
+    private static String recordingBitrate = "STANDARD";
     private static String recordingCodec = "H264";      // H264 or H265
     
     private static final String UNIFIED_CONFIG_FILE = "/data/local/tmp/overdrive_config.json";
@@ -104,22 +109,9 @@ public class QualitySettingsApiHandler {
         boolean configured = false;
         boolean paired = false;
         try {
-            // Hard-coded path mirrors TelegramBotDaemon.PATH_TELEGRAM_CONFIG.
-            // Reading the properties file directly avoids a cross-process
-            // hop to the daemon (which may not be running yet on cold-boot).
-            java.io.File f = new java.io.File("/data/local/tmp/telegram_config.properties");
-            if (f.exists() && f.canRead()) {
-                java.util.Properties props = new java.util.Properties();
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
-                    props.load(fis);
-                }
-                String tok = props.getProperty("bot_token", "");
-                configured = tok != null && !tok.trim().isEmpty();
-                String owner = props.getProperty("owner_chat_id", "-1");
-                try {
-                    paired = configured && Long.parseLong(owner.trim()) > 0;
-                } catch (NumberFormatException ignored) {}
-            }
+            configured = com.overdrive.app.telegram.config.UnifiedTelegramConfig.hasBotToken();
+            paired = configured
+                    && com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId() > 0;
         } catch (Exception e) {
             // Treat any read failure as "not configured" — the UI will
             // grey out the toggles and the runtime gate (NotificationGate
@@ -408,9 +400,9 @@ public class QualitySettingsApiHandler {
                 config.put("version", 1);
                 
                 JSONObject recording = new JSONObject();
-                recording.put("bitrate", recordingBitrate);
+                recording.put("recordingQuality", recordingQuality);
+                recording.put("quality", recordingQuality);  // legacy mirror
                 recording.put("codec", recordingCodec);
-                recording.put("quality", recordingQuality);
                 config.put("recording", recording);
                 
                 JSONObject streaming = new JSONObject();
@@ -539,23 +531,41 @@ public class QualitySettingsApiHandler {
                 
                 JSONObject recording = unified.optJSONObject("recording");
                 if (recording != null) {
-                    String fileBitrate = recording.optString("bitrate", "");
-                    if (fileBitrate.equals("LOW") || fileBitrate.equals("MEDIUM") || fileBitrate.equals("HIGH")) {
-                        currentBitrate = fileBitrate;
-                        recordingBitrate = fileBitrate;
-                    }
-                    
                     String fileCodec = recording.optString("codec", "");
                     if (fileCodec.equals("H264") || fileCodec.equals("H265")) {
                         currentCodec = fileCodec;
                         recordingCodec = fileCodec;
                     }
-                    
-                    String fileQuality = recording.optString("quality", "");
-                    if (fileQuality.equals("LOW") || fileQuality.equals("REDUCED") || fileQuality.equals("NORMAL")) {
-                        currentRecQuality = fileQuality;
-                        recordingQuality = fileQuality;
+
+                    // Canonical tier first (recordingQuality → quality), then
+                    // migrate legacy `bitrate` LOW/MEDIUM/HIGH as a final fallback.
+                    // Old `quality` values (LOW/REDUCED/NORMAL) collapse to STANDARD.
+                    String fileTier = recording.optString("recordingQuality",
+                        recording.optString("quality", ""));
+                    if (isKnownTier(fileTier)) {
+                        currentRecQuality = fileTier;
+                        recordingQuality = fileTier;
+                        recordingBitrate = fileTier;
+                    } else if (recording.has("bitrate")) {
+                        String fileBitrate = recording.optString("bitrate", "").toUpperCase();
+                        String tier;
+                        switch (fileBitrate) {
+                            case "LOW":    tier = "ECONOMY"; break;
+                            case "MEDIUM": tier = "STANDARD"; break;
+                            case "HIGH":   tier = "HIGH"; break;
+                            default:       tier = ""; break;
+                        }
+                        if (!tier.isEmpty()) {
+                            currentRecQuality = tier;
+                            recordingQuality = tier;
+                            recordingBitrate = tier;
+                        }
+                    } else if (!fileTier.isEmpty()) {
+                        currentRecQuality = "STANDARD";
+                        recordingQuality = "STANDARD";
+                        recordingBitrate = "STANDARD";
                     }
+                    currentBitrate = recordingBitrate;
                 }
                 
                 JSONObject streaming = unified.optJSONObject("streaming");
@@ -571,9 +581,22 @@ public class QualitySettingsApiHandler {
             CameraDaemon.log("sendQualitySettings: Could not read unified config: " + e.getMessage());
         }
         
-        response.put("recordingQuality", currentRecQuality);
+        // Single user-facing recording quality tier. Bundles bitrate +
+        // perceptual expectation. FPS and codec stay independent.
+        // Migrate any legacy LOW/REDUCED/NORMAL value silently to STANDARD.
+        String tierFromConfig;
+        try {
+            org.json.JSONObject recCfg = com.overdrive.app.config.UnifiedConfigManager
+                .loadConfig().optJSONObject("recording");
+            tierFromConfig = recCfg != null ? recCfg.optString("recordingQuality", null) : null;
+        } catch (Exception e) {
+            tierFromConfig = null;
+        }
+        com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality activeTier =
+            com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(tierFromConfig);
+
+        response.put("recordingQuality", activeTier.name());
         response.put("streamingQuality", currentStreamQuality);
-        response.put("recordingBitrate", currentBitrate);
         response.put("recordingCodec", currentCodec);
         response.put("lastModified", lastModified);
         
@@ -587,13 +610,73 @@ public class QualitySettingsApiHandler {
             }
         } catch (Exception e) { /* use default */ }
         response.put("cameraFps", currentFps);
-        
-        // Add bitrate info for UI
-        JSONObject bitrateInfo = new JSONObject();
-        bitrateInfo.put("LOW", "2 Mbps (~15-20 MB/2min)");
-        bitrateInfo.put("MEDIUM", "3 Mbps (~22-30 MB/2min)");
-        bitrateInfo.put("HIGH", "6 Mbps (~90 MB/2min)");
-        response.put("bitrateOptions", bitrateInfo);
+
+        // Surface measured FPS so the UI can show actualFps when HAL clamps
+        // below requested (e.g., user picks 30, HAL emits ~26 panoramic on
+        // this device). 0 means "not measured yet" — the renderLoop only
+        // updates this every 2 minutes.
+        try {
+            com.overdrive.app.surveillance.GpuSurveillancePipeline pipeline =
+                CameraDaemon.getGpuPipeline();
+            float measured = (pipeline != null && pipeline.getCamera() != null)
+                ? pipeline.getCamera().getMeasuredFps() : 0f;
+            if (measured > 0f) {
+                response.put("cameraFpsActual", Math.round(measured * 10) / 10.0);
+                if (Math.abs(measured - currentFps) > 1.5f) {
+                    response.put("cameraFpsClampNote",
+                        "HAL emitting at ~" + Math.round(measured)
+                            + " fps (requested " + currentFps + ")");
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Recording quality tiers — single user-facing knob.
+        // Includes per-tier bitrate (resolved against current codec) and
+        // size estimate so the UI can show "X MB/min, ~Y GB/hour".
+        // Note: bitrate is bandwidth-per-second, FPS does not change file
+        // size at fixed bitrate (higher fps just spreads bits over more
+        // frames, reducing per-frame detail).
+        com.overdrive.app.surveillance.GpuPipelineConfig.VideoCodec codecForEstimate =
+            "H265".equalsIgnoreCase(currentCodec)
+                ? com.overdrive.app.surveillance.GpuPipelineConfig.VideoCodec.H265
+                : com.overdrive.app.surveillance.GpuPipelineConfig.VideoCodec.H264;
+
+        JSONObject qualityInfo = new JSONObject();
+        for (com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality q :
+                com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality.values()) {
+            JSONObject entry = new JSONObject();
+            int br = q.getBitrateForCodec(codecForEstimate);
+            entry.put("displayName", q.displayName);
+            entry.put("bitrateBps", br);
+            entry.put("bitrateMbps", Math.round(br / 100_000.0) / 10.0);
+            entry.put("mbPerMinute", Math.round(q.estimateMbPerMinute(codecForEstimate) * 10) / 10.0);
+            entry.put("gbPerHour", Math.round(q.estimateMbPerHour(codecForEstimate) / 102.4) / 10.0);
+            // Perceptual equivalent at the user's current fps. Drops one tier
+            // at 30 fps vs 15 fps because the encoder spreads bits over more
+            // frames. UI should label this as approximate — native resolution
+            // is fixed at 2560×1920 regardless of tier.
+            entry.put("qualityEquivalent", q.getQualityEquivalent(codecForEstimate, currentFps));
+            qualityInfo.put(q.name(), entry);
+        }
+        response.put("recordingQualityOptions", qualityInfo);
+        response.put("nativeResolution", "2560×1920 mosaic · 4 × 1280×960 cameras");
+
+        // Currently-active size estimate so the UI can render
+        // "uses ~X GB/hour at your current settings" without iterating the
+        // options dict. Recomputed from active tier + active codec each call.
+        JSONObject activeEstimate = new JSONObject();
+        double mbPerMin = activeTier.estimateMbPerMinute(codecForEstimate);
+        activeEstimate.put("bitrateMbps", Math.round(activeTier.getBitrateForCodec(codecForEstimate) / 100_000.0) / 10.0);
+        activeEstimate.put("mbPerMinute", Math.round(mbPerMin * 10) / 10.0);
+        activeEstimate.put("mbPer2Min", Math.round(mbPerMin * 2 * 10) / 10.0);
+        activeEstimate.put("gbPerHour", Math.round(mbPerMin * 60 / 102.4) / 10.0);
+        // Minutes of recording per 1 GB of storage — easier to reason about
+        // for a parked surveillance session than fractional GB/hr numbers.
+        if (mbPerMin > 0) {
+            activeEstimate.put("minutesPerGb", Math.round(1024.0 / mbPerMin));
+        }
+        activeEstimate.put("qualityEquivalent", activeTier.getQualityEquivalent(codecForEstimate, currentFps));
+        response.put("activeRecordingEstimate", activeEstimate);
         
         // Add codec info for UI
         JSONObject codecInfo = new JSONObject();
@@ -601,11 +684,15 @@ public class QualitySettingsApiHandler {
         codecInfo.put("H265", "H.265/HEVC (50% smaller)");
         response.put("codecOptions", codecInfo);
         
-        // Add FPS options for UI
+        // Add FPS options for UI. Range 10..30 — clamped server-side by
+        // GpuSurveillancePipeline.applyFpsChange. The HAL on this device
+        // tops out around 26 fps panoramic, so 30 will clamp gracefully.
         JSONObject fpsInfo = new JSONObject();
-        fpsInfo.put("8", "8 FPS (Low power)");
+        fpsInfo.put("10", "10 FPS (Low power)");
         fpsInfo.put("15", "15 FPS (Balanced)");
-        fpsInfo.put("25", "25 FPS (Smooth)");
+        fpsInfo.put("20", "20 FPS (Smooth)");
+        fpsInfo.put("25", "25 FPS (High motion)");
+        fpsInfo.put("30", "30 FPS (Max — HAL ceiling ~26)");
         response.put("fpsOptions", fpsInfo);
         
         HttpResponse.sendJson(out, response.toString());
@@ -616,32 +703,47 @@ public class QualitySettingsApiHandler {
             JSONObject settings = new JSONObject(body);
             
             if (settings.has("recordingQuality")) {
-                String recQuality = settings.getString("recordingQuality");
-                if (recQuality.equals("LOW") || recQuality.equals("REDUCED") || recQuality.equals("NORMAL")) {
-                    recordingQuality = recQuality;
-                    CameraDaemon.log("Recording quality set to: " + recQuality);
-                    CameraDaemon.setRecordingQuality(recQuality);
+                String tier = settings.getString("recordingQuality").toUpperCase();
+                if (tier.equals("ECONOMY") || tier.equals("STANDARD")
+                        || tier.equals("HIGH") || tier.equals("PREMIUM")
+                        || tier.equals("MAX")) {
+                    recordingQuality = tier;
+                    CameraDaemon.log("Recording quality set to: " + tier);
+                    CameraDaemon.setRecordingQuality(tier);
+                } else {
+                    CameraDaemon.log("Rejecting recordingQuality=" + tier
+                        + " — must be one of ECONOMY/STANDARD/HIGH/PREMIUM/MAX");
                 }
             }
-            
+
             if (settings.has("streamingQuality")) {
                 String streamQuality = settings.getString("streamingQuality").toUpperCase();
-                if (streamQuality.equals("ULTRA_LOW") || streamQuality.equals("LOW") || 
-                    streamQuality.equals("MEDIUM") || streamQuality.equals("HIGH") || 
-                    streamQuality.equals("ULTRA_HIGH") || streamQuality.equals("LQ") || streamQuality.equals("HQ")) {
+                if (streamQuality.equals("ULTRA_LOW") || streamQuality.equals("LOW")
+                        || streamQuality.equals("MEDIUM") || streamQuality.equals("HIGH")
+                        || streamQuality.equals("ULTRA_HIGH") || streamQuality.equals("SMOOTH")
+                        || streamQuality.equals("MAX")
+                        || streamQuality.equals("LQ") || streamQuality.equals("HQ")) {
                     StreamingApiHandler.setStreamingQuality(streamQuality);
                     CameraDaemon.log("Streaming quality set to: " + streamQuality);
                     CameraDaemon.setStreamingQuality(streamQuality);
                 }
             }
-            
-            if (settings.has("recordingBitrate")) {
-                String bitrate = settings.getString("recordingBitrate").toUpperCase();
-                if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-                    recordingBitrate = bitrate;
-                    CameraDaemon.log("Recording bitrate set to: " + bitrate);
-                    CameraDaemon.setRecordingBitrate(bitrate);
+
+            // Legacy `recordingBitrate` key (LOW/MEDIUM/HIGH) — translate
+            // to the new tier system. UI should send `recordingQuality`
+            // directly going forward; this branch only catches old clients.
+            if (settings.has("recordingBitrate") && !settings.has("recordingQuality")) {
+                String legacy = settings.getString("recordingBitrate").toUpperCase();
+                String tier;
+                switch (legacy) {
+                    case "LOW":    tier = "ECONOMY"; break;
+                    case "MEDIUM": tier = "STANDARD"; break;
+                    case "HIGH":   tier = "HIGH"; break;
+                    default:       tier = "STANDARD"; break;
                 }
+                CameraDaemon.log("Legacy recordingBitrate=" + legacy + " → recordingQuality=" + tier);
+                recordingQuality = tier;
+                CameraDaemon.setRecordingQuality(tier);
             }
             
             if (settings.has("recordingCodec")) {
@@ -655,23 +757,29 @@ public class QualitySettingsApiHandler {
             
             if (settings.has("cameraFps")) {
                 int fps = settings.getInt("cameraFps");
-                if (fps == 8 || fps == 15 || fps == 25) {
-                    // Save to unified config
-                    try {
-                        org.json.JSONObject camCfg = com.overdrive.app.config.UnifiedConfigManager
-                            .loadConfig().optJSONObject("camera");
-                        if (camCfg == null) camCfg = new org.json.JSONObject();
-                        camCfg.put("targetFps", fps);
-                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
-                    } catch (Exception e) {
-                        CameraDaemon.log("Failed to save camera FPS: " + e.getMessage());
-                    }
-                    // Apply to running camera (takes effect on next camera open/restart)
+                if (fps < 10 || fps > 30) {
+                    CameraDaemon.log("Rejecting cameraFps=" + fps + " — out of range [10..30]");
+                } else {
+                    // applyFpsChange persists to UnifiedConfig, propagates to
+                    // the camera, and reinitializes the encoder so KEY_FRAME_RATE
+                    // matches. No restart required — change is live.
                     com.overdrive.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
-                    if (pipeline != null && pipeline.getCamera() != null) {
-                        pipeline.getCamera().setTargetFps(fps);
+                    if (pipeline != null) {
+                        pipeline.applyFpsChange(fps);
+                        CameraDaemon.log("Camera FPS applied: " + fps);
+                    } else {
+                        // Pipeline not yet created — persist so init() picks it up.
+                        try {
+                            org.json.JSONObject camCfg = com.overdrive.app.config.UnifiedConfigManager
+                                .loadConfig().optJSONObject("camera");
+                            if (camCfg == null) camCfg = new org.json.JSONObject();
+                            camCfg.put("targetFps", fps);
+                            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                            CameraDaemon.log("Camera FPS saved (pipeline not ready): " + fps);
+                        } catch (Exception e) {
+                            CameraDaemon.log("Failed to save camera FPS: " + e.getMessage());
+                        }
                     }
-                    CameraDaemon.log("Camera FPS set to: " + fps + " (applies on next camera restart)");
                 }
             }
             
@@ -713,11 +821,27 @@ public class QualitySettingsApiHandler {
                 
                 JSONObject recording = unified.optJSONObject("recording");
                 if (recording != null) {
-                    if (recording.has("bitrate")) {
-                        String bitrate = recording.getString("bitrate");
-                        if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-                            recordingBitrate = bitrate;
-                            CameraDaemon.log("Restored recording bitrate from unified: " + bitrate);
+                    // Canonical tier: recordingQuality (ECONOMY..MAX). Fall back to
+                    // legacy `quality` and finally legacy `bitrate` (LOW/MEDIUM/HIGH).
+                    String tier = recording.optString("recordingQuality",
+                            recording.optString("quality", ""));
+                    if (isKnownTier(tier)) {
+                        recordingQuality = tier;
+                        recordingBitrate = tier;  // mirror — keep in sync
+                        CameraDaemon.log("Restored recording tier from unified: " + tier);
+                    } else if (recording.has("bitrate")) {
+                        String legacyBitrate = recording.getString("bitrate").toUpperCase();
+                        switch (legacyBitrate) {
+                            case "LOW":    tier = "ECONOMY"; break;
+                            case "MEDIUM": tier = "STANDARD"; break;
+                            case "HIGH":   tier = "HIGH"; break;
+                            default:       tier = ""; break;
+                        }
+                        if (!tier.isEmpty()) {
+                            recordingQuality = tier;
+                            recordingBitrate = tier;
+                            CameraDaemon.log("Migrated legacy bitrate=" + legacyBitrate
+                                    + " → recordingQuality=" + tier);
                         }
                     }
                     if (recording.has("codec")) {
@@ -725,13 +849,6 @@ public class QualitySettingsApiHandler {
                         if (codec.equals("H264") || codec.equals("H265")) {
                             recordingCodec = codec;
                             CameraDaemon.log("Restored recording codec from unified: " + codec);
-                        }
-                    }
-                    if (recording.has("quality")) {
-                        String quality = recording.getString("quality");
-                        if (quality.equals("LOW") || quality.equals("REDUCED") || quality.equals("NORMAL")) {
-                            recordingQuality = quality;
-                            CameraDaemon.log("Restored recording quality from unified: " + quality);
                         }
                     }
                 }
@@ -769,22 +886,31 @@ public class QualitySettingsApiHandler {
                 
                 JSONObject settings = new JSONObject(sb.toString());
                 
-                if (settings.has("recordingBitrate")) {
-                    String bitrate = settings.getString("recordingBitrate");
-                    if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-                        recordingBitrate = bitrate;
+                // Canonical recordingQuality first; fall back to legacy bitrate.
+                if (settings.has("recordingQuality")) {
+                    String tier = settings.getString("recordingQuality").toUpperCase();
+                    if (isKnownTier(tier)) {
+                        recordingQuality = tier;
+                        recordingBitrate = tier;
+                    }
+                } else if (settings.has("recordingBitrate")) {
+                    String bitrate = settings.getString("recordingBitrate").toUpperCase();
+                    String tier;
+                    switch (bitrate) {
+                        case "LOW":    tier = "ECONOMY"; break;
+                        case "MEDIUM": tier = "STANDARD"; break;
+                        case "HIGH":   tier = "HIGH"; break;
+                        default:       tier = ""; break;
+                    }
+                    if (!tier.isEmpty()) {
+                        recordingQuality = tier;
+                        recordingBitrate = tier;
                     }
                 }
                 if (settings.has("recordingCodec")) {
                     String codec = settings.getString("recordingCodec");
                     if (codec.equals("H264") || codec.equals("H265")) {
                         recordingCodec = codec;
-                    }
-                }
-                if (settings.has("recordingQuality")) {
-                    String quality = settings.getString("recordingQuality");
-                    if (quality.equals("LOW") || quality.equals("REDUCED") || quality.equals("NORMAL")) {
-                        recordingQuality = quality;
                     }
                 }
                 if (settings.has("streamingQuality")) {
@@ -812,9 +938,12 @@ public class QualitySettingsApiHandler {
     public static void persistSettings() {
         try {
             org.json.JSONObject recording = new org.json.JSONObject();
-            recording.put("bitrate", recordingBitrate);
-            recording.put("codec", recordingCodec);
+            // Canonical tier; `quality` is the legacy mirror. We deliberately
+            // do NOT write `bitrate` (LOW/MEDIUM/HIGH) — that's the field
+            // that historically drifted out of sync with the active tier.
+            recording.put("recordingQuality", recordingQuality);
             recording.put("quality", recordingQuality);
+            recording.put("codec", recordingCodec);
             com.overdrive.app.config.UnifiedConfigManager.updateSection("recording", recording);
 
             org.json.JSONObject streaming = new org.json.JSONObject();
@@ -832,18 +961,51 @@ public class QualitySettingsApiHandler {
     public static String getRecordingBitrate() { return recordingBitrate; }
     public static String getRecordingCodec() { return recordingCodec; }
     
-    // Static setters for app UI and IPC
-    public static void setRecordingQuality(String quality) { 
-        if (quality.equals("LOW") || quality.equals("REDUCED") || quality.equals("NORMAL")) {
-            recordingQuality = quality;
+    // Static setters for app UI and IPC. recordingQuality accepts the new
+    // tier names (ECONOMY..MAX); legacy names are migrated to STANDARD per
+    // the migration policy so old IPC clients don't get silently swallowed.
+    public static void setRecordingQuality(String quality) {
+        if (quality == null) return;
+        String tier;
+        if (isKnownTier(quality)) {
+            tier = quality.toUpperCase();
+        } else {
+            // Legacy LOW/REDUCED/NORMAL → STANDARD.
+            tier = "STANDARD";
         }
+        recordingQuality = tier;
+        CameraDaemon.setRecordingQuality(tier);
+        persistSettings();
     }
-    
+
+    /** @deprecated use setRecordingQuality with ECONOMY..MAX. */
+    @Deprecated
     public static void setRecordingBitrate(String bitrate) {
-        if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-            recordingBitrate = bitrate;
-            CameraDaemon.setRecordingBitrate(bitrate);
-            persistSettings();
+        if (bitrate == null) return;
+        String tier;
+        switch (bitrate.toUpperCase()) {
+            case "LOW":    tier = "ECONOMY"; break;
+            case "MEDIUM": tier = "STANDARD"; break;
+            case "HIGH":   tier = "HIGH"; break;
+            default:       tier = "STANDARD"; break;
+        }
+        setRecordingQuality(tier);
+    }
+
+    /** Validates a tier name without depending on the enum class (this
+     *  handler runs in the daemon process before the surveillance pipeline
+     *  is built — keep the check string-based and cheap). */
+    private static boolean isKnownTier(String s) {
+        if (s == null) return false;
+        switch (s.toUpperCase()) {
+            case "ECONOMY":
+            case "STANDARD":
+            case "HIGH":
+            case "PREMIUM":
+            case "MAX":
+                return true;
+            default:
+                return false;
         }
     }
     
@@ -855,11 +1017,24 @@ public class QualitySettingsApiHandler {
         }
     }
     
-    // Static setters for IPC server (updates variable only, no CameraDaemon call)
-    public static void setRecordingBitrateStatic(String bitrate) {
-        if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-            recordingBitrate = bitrate;
+    // Static setters for IPC server (updates variable only, no CameraDaemon call).
+    // Accepts both canonical tier names (ECONOMY..MAX) and legacy LOW/MEDIUM/HIGH.
+    public static void setRecordingBitrateStatic(String value) {
+        if (value == null) return;
+        String v = value.toUpperCase();
+        String tier;
+        switch (v) {
+            case "LOW":    tier = "ECONOMY"; break;
+            case "MEDIUM": tier = "STANDARD"; break;
+            case "HIGH":
+            case "ECONOMY":
+            case "STANDARD":
+            case "PREMIUM":
+            case "MAX":    tier = v; break;
+            default:       return;
         }
+        recordingBitrate = tier;
+        recordingQuality = tier;
     }
     
     public static void setRecordingCodecStatic(String codec) {

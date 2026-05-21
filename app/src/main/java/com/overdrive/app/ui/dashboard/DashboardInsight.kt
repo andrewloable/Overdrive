@@ -15,13 +15,12 @@ import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.WorkerThread
 import com.overdrive.app.R
+import com.overdrive.app.ui.model.RecordingFile
 import com.overdrive.app.ui.util.RecordingScanner
 import com.overdrive.app.util.DaemonHttpClient
 import org.json.JSONObject
-import java.io.File
 import java.net.HttpURLConnection
 import java.util.Calendar
-import kotlin.math.abs
 
 /**
  * One row in the rotating dashboard hero subtitle.
@@ -119,7 +118,13 @@ class DashboardInsightProvider(appContext: Context) {
         val json = fetchDaemonJson("/api/performance/parking-delta?maxAgeHours=72") ?: return null
         if (json.optBoolean("available", true).not()) return null
         val deltaSoc = json.optDouble("deltaSoc", Double.NaN)
-        if (deltaSoc.isNaN() || abs(deltaSoc) <= 0.5 || abs(deltaSoc) > 100) return null
+        // We only surface drain across an ACC-OFF→ACC-ON cycle — i.e. how
+        // much SOC/kWh was consumed while the car sat idle (vampire drain,
+        // surveillance recording, parasitic load). Positive deltas mean
+        // the car was charging while parked; we deliberately suppress those
+        // here so this insight reads consistently as "what you lost since
+        // last drive". The charging-finished surface lives elsewhere.
+        if (deltaSoc.isNaN() || deltaSoc >= -0.5 || deltaSoc < -100) return null
         // Use onTs (the return event) for staleness — that's when the user
         // came back to the car, which is when the displayed delta becomes
         // relevant.
@@ -128,43 +133,38 @@ class DashboardInsightProvider(appContext: Context) {
         val ageMs = System.currentTimeMillis() - onTs
         if (ageMs > 7L * 24 * 60 * 60 * 1000L) return null
 
-        val absDelta = abs(deltaSoc)
+        // Drain magnitude (positive number). deltaSoc is negative here.
+        val drainSoc = -deltaSoc
         val deltaKwhRaw = if (json.has("deltaKwh")) json.optDouble("deltaKwh", Double.NaN) else Double.NaN
-        val absKwh = if (deltaKwhRaw.isNaN()) Double.NaN else abs(deltaKwhRaw)
+        // kWh must also be a real loss (negative raw → positive drain).
+        // A drain in SOC with a positive kWh would be SOH calibration
+        // noise, not a real loss — drop the kWh phrasing in that case.
+        val drainKwh = if (!deltaKwhRaw.isNaN() && deltaKwhRaw < 0) -deltaKwhRaw else Double.NaN
 
-        val absSocStr = formatPercent(absDelta)
-        val isCharged = deltaSoc > 0.5
-        val template = when {
-            isCharged && !absKwh.isNaN() ->
-                ctx.getString(R.string.dashboard_insight_parked_charged_kwh, absSocStr, formatKwh(absKwh))
-            isCharged ->
-                ctx.getString(R.string.dashboard_insight_parked_charged, absSocStr)
-            !isCharged && !absKwh.isNaN() ->
-                ctx.getString(R.string.dashboard_insight_parked_drained_kwh, absSocStr, formatKwh(absKwh))
-            else ->
-                ctx.getString(R.string.dashboard_insight_parked_drained, absSocStr)
+        val socStr = formatPercent(drainSoc)
+        val template = if (!drainKwh.isNaN()) {
+            ctx.getString(R.string.dashboard_insight_parked_drained_kwh, socStr, formatKwh(drainKwh))
+        } else {
+            ctx.getString(R.string.dashboard_insight_parked_drained, socStr)
         }
         return DashboardInsight(
             text = emphasizeNumbers(template, emphasisColor),
-            priority = if (isCharged) 80 else 75
+            priority = 75
         )
     }
 
     /** "Last surveillance alert: 2 hours ago" — only when an event ≤ 7 days old exists. */
     private fun lastSurveillanceInsight(emphasisColor: Int): DashboardInsight? {
-        val dir = try {
-            RecordingScanner.getSentryEventsDir(ctx)
+        // Use the shared scanner so the dashboard agrees with the recordings
+        // page on what "surveillance" means (covers active + alternate +
+        // legacy paths, picks the parsed-from-filename timestamp not mtime).
+        val newest = try {
+            RecordingScanner.scanRecordings(ctx)
+                .asSequence()
+                .filter { it.type == RecordingFile.RecordingType.SENTRY }
+                .maxOfOrNull { it.timestamp } ?: 0L
         } catch (_: Throwable) {
             return null
-        }
-        if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return null
-        val files = dir.listFiles() ?: return null
-        var newest: Long = 0L
-        for (f in files) {
-            if (!f.isFile || !f.name.endsWith(".mp4")) continue
-            if (f.length() <= 0L) continue
-            val mt = f.lastModified()
-            if (mt > newest) newest = mt
         }
         if (newest <= 0L) return null
         val ageMs = System.currentTimeMillis() - newest
@@ -210,11 +210,11 @@ class DashboardInsightProvider(appContext: Context) {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
-        val rec = safeDir { RecordingScanner.getRecordingsDir(ctx) }
-        val sentry = safeDir { RecordingScanner.getSentryEventsDir(ctx) }
-        var n = 0
-        n += countMp4Since(rec, startOfDay)
-        n += countMp4Since(sentry, startOfDay)
+        val n = try {
+            RecordingScanner.scanRecordings(ctx).count { it.timestamp >= startOfDay }
+        } catch (_: Throwable) {
+            return null
+        }
         if (n <= 0) return null
         val template = ctx.resources.getQuantityString(
             R.plurals.dashboard_insight_today_clips, n, n
@@ -227,20 +227,13 @@ class DashboardInsightProvider(appContext: Context) {
 
     /** "320 clips · 42 GB recorded" — only when total clips > 50. */
     private fun storageMilestoneInsight(emphasisColor: Int): DashboardInsight? {
-        val rec = safeDir { RecordingScanner.getRecordingsDir(ctx) }
-        val sentry = safeDir { RecordingScanner.getSentryEventsDir(ctx) }
-        var totalClips = 0
-        var totalBytes = 0L
-        for (dir in listOf(rec, sentry)) {
-            if (dir == null) continue
-            val files = dir.listFiles() ?: continue
-            for (f in files) {
-                if (!f.isFile || !f.name.endsWith(".mp4")) continue
-                if (f.length() <= 0L) continue
-                totalClips++
-                totalBytes += f.length()
-            }
+        val all = try {
+            RecordingScanner.scanRecordings(ctx)
+        } catch (_: Throwable) {
+            return null
         }
+        val totalClips = all.size
+        val totalBytes = all.sumOf { it.sizeBytes }
         if (totalClips <= 50) return null
         if (totalBytes <= 0L) return null
         val sizeStr = Formatter.formatShortFileSize(ctx, totalBytes)
@@ -303,25 +296,6 @@ class DashboardInsightProvider(appContext: Context) {
         } finally {
             try { conn?.disconnect() } catch (_: Throwable) {}
         }
-    }
-
-    private fun safeDir(block: () -> File): File? = try {
-        val d = block()
-        if (d.exists() && d.isDirectory && d.canRead()) d else null
-    } catch (_: Throwable) {
-        null
-    }
-
-    private fun countMp4Since(dir: File?, sinceMs: Long): Int {
-        if (dir == null) return 0
-        val files = dir.listFiles() ?: return 0
-        var n = 0
-        for (f in files) {
-            if (f.isFile && f.name.endsWith(".mp4") && f.length() > 0L &&
-                f.lastModified() >= sinceMs
-            ) n++
-        }
-        return n
     }
 
     /**

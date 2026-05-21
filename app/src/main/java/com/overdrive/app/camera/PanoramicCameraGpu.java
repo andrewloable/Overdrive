@@ -1,6 +1,9 @@
 package com.overdrive.app.camera;
 
-import android.graphics.SurfaceTexture;
+import android.graphics.ImageFormat;
+import android.hardware.HardwareBuffer;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.Surface;
@@ -15,6 +18,7 @@ import com.overdrive.app.surveillance.SurveillanceEngineGpu;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * PanoramicCameraGpu - GPU Edition with Zero-Copy Pipeline.
@@ -77,8 +81,21 @@ public class PanoramicCameraGpu {
     private EGLCore eglCore;
     private android.opengl.EGLSurface dummySurface;  // Pbuffer for headless context
     private int cameraTextureId;
-    private SurfaceTexture cameraSurfaceTexture;
+    // Camera consumer: ImageReader → AHardwareBuffer → EGLImage →
+    // cameraTextureId. Bypasses SurfaceFlinger throttling that clamps the
+    // SurfaceTexture path to ~8.5 fps on DiLink50 5.0UI builds (verified by
+    // AvmImageReaderFpsProbe → 26 fps panoramic). cameraSurface is what we
+    // hand to AVMCamera.addPreviewSurface — sourced from ImageReader.getSurface().
+    // minSdk=28 enforces Image.getHardwareBuffer availability.
+    private ImageReader cameraImageReader;
     private Surface cameraSurface;
+    // Dedicated handler for ImageReader.OnImageAvailableListener. MUST be
+    // separate from glHandler — renderLoop blocks the GL thread on
+    // frameSync.wait(), which would starve the listener if it ran on the
+    // same looper. The callback hops to glHandler.post for the actual GL
+    // bind work via onHalImageAvailable.
+    private HandlerThread imageReaderThread;
+    private Handler imageReaderHandler;
     
     // Camera object (via reflection).
     // volatile because reopenCamera() runs on the daemon thread and writes
@@ -94,6 +111,14 @@ public class PanoramicCameraGpu {
     private Handler glHandler;
     private volatile boolean running = false;
     private final Object frameSync = new Object();
+    // State-backed signal between the HAL callback (onHalImageAvailable) and
+    // the GL render loop. Plain notify()/wait() races: if the HAL fires while
+    // the GL thread is mid-processing (not yet in wait()), the notification
+    // is dropped and the GL thread blocks for up to 100 ms before the NEXT
+    // HAL fire wakes it — capping effective FPS well below the HAL emission
+    // rate. The pending flag closes the race: HAL sets it, GL skips wait()
+    // when it's already set, and clears it before processing.
+    private volatile boolean imagePending = false;
     
     // Consumers
     private GpuMosaicRecorder recorder;
@@ -106,18 +131,16 @@ public class PanoramicCameraGpu {
     
     // Frame timing
     private int frameCounter = 0;
-    // Adaptive AI frame skip: dynamically computed to deliver ~10 FPS to the
-    // surveillance engine regardless of actual camera FPS. The V2 motion pipeline
-    // is designed for 10 FPS (ring buffer N vs N-3 = 300ms, temporal decay rates,
-    // loitering frame counts). Delivering too slow causes missed detections;
-    // delivering too fast wastes CPU on the GPU readback path.
-    //
-    // Computed as: max(1, round(actualFps / targetAiFps))
-    // At 30 FPS camera → skip=3 (10 FPS to sentry)
-    // At 15 FPS camera → skip=2 (7.5 FPS to sentry)  
-    // At 8 FPS camera  → skip=1 (8 FPS to sentry, sentry throttles to ~8)
-    private int aiFrameSkip = 1;  // Start at 1, recalculated from actual FPS
-    private static final float TARGET_AI_FPS = 10.0f;
+    // AI lane is fully decoupled from the GL thread (AiLaneWorker). GL thread
+    // produces downscaled frames at camera rate; worker consumes at its own
+    // pace and drops frames when busy. V2 motion's internal 100ms throttle
+    // (MOTION_PROCESS_INTERVAL_MS) keeps actual processing at ~10 fps so
+    // there's no need for a separate frame-skip counter on the GL side.
+    private com.overdrive.app.camera.AiLaneWorker aiLaneWorker;
+    // Last measured camera FPS, computed in the 2-min Stats log. Surfaced
+    // via getMeasuredFps() so the UI can show actualFps when it falls below
+    // requested (HAL clamp; e.g. user requests 30, HAL emits ~26).
+    private volatile float measuredFps = 0f;
     private long lastFrameTime = 0;
     private volatile long lastCameraStartTime = 0;
     private long startTime = 0;
@@ -145,8 +168,12 @@ public class PanoramicCameraGpu {
     private static final int CONTENTION_STALL_COUNT_TO_YIELD = 2;
     private volatile int consecutiveContentionStalls = 0;
     
-    // Flag to indicate camera restart is in progress — watchdog uses extended timeout
-    private volatile boolean restartInProgress = false;
+    // Flag to indicate camera restart is in progress — watchdog uses extended timeout.
+    // P1 #11: AtomicBoolean so concurrent restartCameraAfterError + reopenCamera
+    // calls can't both enter the restart path. Loser observes
+    // compareAndSet(false,true)==false and returns; only the winner runs the
+    // close/open sequence and is responsible for clearing the flag.
+    private final AtomicBoolean restartInProgress = new AtomicBoolean(false);
     
     // SOTA: Pre-yield listener — pipeline registers this to finalize recordings before yield
     public interface CameraYieldListener {
@@ -163,8 +190,35 @@ public class PanoramicCameraGpu {
     
     // Stats logging (time-based, not frame-based)
     private long lastStatsTime = 0;
+    private int lastStatsFrameCount = 0;
     private static final long STATS_INTERVAL_MS = 120000;  // Every 2 minutes
-    
+
+    // Per-stage timing diagnostic. Tracks the WORST frame in a 30 s window
+    // and logs a single line per window so the contribution of each stage
+    // (acquire / mosaicDraw / aiReadback / aiSubmit / swap) is visible
+    // without log spam. Used to verify that readback-skip + drainer keep
+    // each stage under budget.
+    private static final long STAGE_TIMING_LOG_INTERVAL_MS = 30000;
+    private long stageTimingWindowStartMs = 0;
+    private long stageWorstTotalNs = 0;
+    private long stageWorstAcquireNs = 0;
+    private long stageWorstMosaicNs = 0;
+    private long stageWorstAiReadbackNs = 0;
+    private long stageWorstAiSubmitNs = 0;
+    private int stageWindowFrames = 0;
+    private int stageWindowAiReadbackSkips = 0;
+
+    // AI readback throttle — frame-counter modulo, NOT wall-clock.
+    // Wall-clock throttling is fragile when readback duration approaches the
+    // interval: the GL thread spends ~117ms per frame (mosaic+swap+readback),
+    // which guarantees `now - lastReadback >= 95ms` on every loop, so 100% of
+    // frames trigger readback and the pipeline collapses to ~8 fps.
+    // Frame-modulo couples AI rate directly to HAL emission rate. With HAL
+    // emitting at ~26 fps (ImageReader path), every 3rd frame is ~8.6 AI fps,
+    // matching V2 motion's 10 fps internal cadence. If HAL rate changes, AI
+    // rate scales proportionally and the GL thread budget stays balanced.
+    private static final int AI_READBACK_FRAME_MODULO = 3;
+
     private int targetFps = 15;  // Desired frame rate for camera
     
     /**
@@ -185,11 +239,34 @@ public class PanoramicCameraGpu {
      * @param downscaler GPU downscaler for AI lane
      * @param sentry Surveillance engine for motion detection
      */
-    public void setConsumers(GpuMosaicRecorder recorder, GpuDownscaler downscaler, 
+    public void setConsumers(GpuMosaicRecorder recorder, GpuDownscaler downscaler,
                             SurveillanceEngineGpu sentry) {
         this.recorder = recorder;
         this.downscaler = downscaler;
         this.sentry = sentry;
+
+        // Build the AI lane worker once consumers are wired. Recycler points
+        // back to the downscaler's buffer pool so dropped frames are returned
+        // immediately (no leak under sustained submit-while-busy).
+        if (this.aiLaneWorker == null) {
+            this.aiLaneWorker = new com.overdrive.app.camera.AiLaneWorker(frame -> {
+                GpuDownscaler ds = this.downscaler;
+                if (ds != null && frame != null) {
+                    try {
+                        ds.recycleBuffer(frame);
+                    } catch (Throwable ignored) {}
+                }
+            });
+        }
+        this.aiLaneWorker.setSentry(sentry);
+        // Sentry needs the GL handler so its foveated crops (which touch GL
+        // state) can hop back to GL thread when called from AiLaneWorker.
+        if (sentry != null && glHandler != null) {
+            sentry.setGlHandler(glHandler);
+        }
+        if (sentry != null) {
+            sentry.setCameraTargetFps(targetFps);
+        }
     }
     
     /**
@@ -281,7 +358,14 @@ public class PanoramicCameraGpu {
         glThread = new HandlerThread("GL-RenderLoop");
         glThread.start();
         glHandler = new Handler(glThread.getLooper());
-        
+
+        // Now that the GL handler exists, give it to the sentry so its
+        // foveated crops can hop back to GL when called from AiLaneWorker.
+        if (sentry != null) {
+            sentry.setGlHandler(glHandler);
+            sentry.setCameraTargetFps(targetFps);
+        }
+
         // Initialize on GL thread
         glHandler.post(() -> {
             try {
@@ -326,14 +410,11 @@ public class PanoramicCameraGpu {
         
         // Create camera texture (OES type for external camera)
         cameraTextureId = GlUtil.createExternalTexture();
-        
-        // Create SurfaceTexture from camera texture
-        cameraSurfaceTexture = new SurfaceTexture(cameraTextureId);
-        cameraSurfaceTexture.setDefaultBufferSize(width, height);
-        cameraSurfaceTexture.setOnFrameAvailableListener(this::onFrameAvailable);
-        
-        // Create Surface for camera
-        cameraSurface = new Surface(cameraSurfaceTexture);
+
+        // Create the ImageReader-backed camera consumer. Bypasses
+        // SurfaceFlinger throttling that clamps the SurfaceTexture consumer
+        // to ~8.5 fps on this device (verified by AvmImageReaderFpsProbe).
+        createCameraImageReader();
         
         // Initialize GPU components now that EGL context exists
         if (recorder != null) {
@@ -439,25 +520,73 @@ public class PanoramicCameraGpu {
      * Recreating the SurfaceTexture forces a clean connection to the new camera.
      */
     private void recreateCameraSurface() {
-        logger.info("Recreating SurfaceTexture for camera switch...");
-        
-        // Release old surface and texture
+        logger.info("Recreating ImageReader consumer for camera switch...");
+        releaseCameraConsumer();
+        createCameraImageReader();
+        logger.info("Camera consumer recreated for camera switch");
+    }
+
+    /** Build an ImageReader-backed consumer (zero-copy path).
+     *  Frame handling:
+     *    HAL → ImageReader producer (gralloc)
+     *      → OnImageAvailableListener fires on imageReaderThread
+     *        → acquireLatestImage / getHardwareBuffer
+     *          → glHandler.post(bindHardwareBufferToTexture + notify frameSync)
+     *  The listener MUST run on a thread separate from glHandler because
+     *  renderLoop parks the GL thread on frameSync.wait(); a same-thread
+     *  listener would starve and the HAL queue would back up, dropping
+     *  frames the way we observed at boot (Stats: 0 frames). */
+    private void createCameraImageReader() {
+        if (imageReaderThread == null) {
+            imageReaderThread = new HandlerThread("CamImageReaderCb");
+            imageReaderThread.start();
+            imageReaderHandler = new Handler(imageReaderThread.getLooper());
+        }
+        // Pool size 6 (vs the typical 3) absorbs GL-thread stalls during
+        // surveillance heavy work (YOLO inference, foveated readback) without
+        // throttling the HAL producer rate. At 5120×960 NV12 = 7.4 MB/buf,
+        // pool=6 holds ~44 MB gralloc — well within Adreno 610 budget.
+        // Pool=3 was throttling HAL emission to ~5.7 fps in surveillance mode
+        // because GL frames occasionally hit 261ms (logged backpressure).
+        // 6 buffers × 67ms (15 fps cycle) = 400ms slack vs 200ms.
+        // PRIVATE = opaque gralloc, optimal for zero-copy GPU sampling.
+        // USAGE_GPU_SAMPLED_IMAGE tells the gralloc allocator we want a
+        // GPU-friendly memory layout.
+        final int poolSize = 6;
+        try {
+            long usage = HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE;
+            cameraImageReader = ImageReader.newInstance(
+                width, height,
+                ImageFormat.PRIVATE,
+                poolSize,
+                usage);
+        } catch (Throwable t) {
+            // Some BYD HAL builds may reject PRIVATE — fall back to YUV_420_888.
+            logger.warn("ImageReader PRIVATE init failed: " + t.getMessage()
+                + " — falling back to YUV_420_888");
+            cameraImageReader = ImageReader.newInstance(
+                width, height,
+                ImageFormat.YUV_420_888,
+                poolSize);
+        }
+        cameraImageReader.setOnImageAvailableListener(
+            this::onHalImageAvailable, imageReaderHandler);
+        cameraSurface = cameraImageReader.getSurface();
+    }
+
+    /** Idempotent teardown of whichever consumer is active. */
+    private void releaseCameraConsumer() {
+        // Release the held Image + HardwareBuffer FIRST so the gralloc slots
+        // go back to the ImageReader pool before we close the reader.
+        releasePreviousBoundImage();
         if (cameraSurface != null) {
-            cameraSurface.release();
+            try { cameraSurface.release(); } catch (Throwable ignored) {}
             cameraSurface = null;
         }
-        if (cameraSurfaceTexture != null) {
-            cameraSurfaceTexture.release();
-            cameraSurfaceTexture = null;
+        if (cameraImageReader != null) {
+            try { cameraImageReader.close(); } catch (Throwable ignored) {}
+            cameraImageReader = null;
         }
-        
-        // Recreate with same texture ID (OES texture is still valid)
-        cameraSurfaceTexture = new SurfaceTexture(cameraTextureId);
-        cameraSurfaceTexture.setDefaultBufferSize(width, height);
-        cameraSurfaceTexture.setOnFrameAvailableListener(this::onFrameAvailable);
-        cameraSurface = new Surface(cameraSurfaceTexture);
-        
-        logger.info("SurfaceTexture recreated for camera switch");
     }
     
     /**
@@ -488,12 +617,19 @@ public class PanoramicCameraGpu {
     }
 
     /**
-     * Opens camera via AVMCamera reflection with multi-strategy fallback.
-     * 
+     * Opens camera via AVMCamera reflection.
+     *
      * Strategy (mirrors DiPlus C4051a.m4446d() approach):
-     *   1. Constructor: new AVMCamera(int) + .open() — works on Seal, Atto 3
-     *   2. Static factory: AVMCamera.open(int) — works on DiLink5.0 and newer firmware
-     * 
+     *   1. Constructor: new AVMCamera(int) + .open() — required on this device.
+     *      The static factory AVMCamera.open(int) returns null because
+     *      BmmCameraInfo.isValidCamera() is empty (vehicle.config.cam_sort
+     *      is unset on DiLink 5.0). The constructor bypasses that gate and
+     *      is the only path that opens the camera at all.
+     *   2. Static factory AVMCamera.open(int) — only if constructor is
+     *      missing entirely (DiLink 6.0+ may remove it).
+     *
+     * See CAMERA_FPS_INVESTIGATION.md for the full rationale.
+     *
      * After either path succeeds, addPreviewSurface + startPreview are called.
      *
      * Notifies IBYDCameraService before opening so the service can arbitrate
@@ -506,14 +642,14 @@ public class PanoramicCameraGpu {
         }
 
         Class<?> avmClass = Class.forName("android.hardware.AVMCamera");
-        
+
         // === ATTEMPT 1: Constructor new AVMCamera(int) + .open() ===
-        // This is the known-working path for Seal and other deployed models.
+        // Required on this firmware. The static factory would return null.
         try {
             Constructor<?> constructor = avmClass.getDeclaredConstructor(int.class);
             constructor.setAccessible(true);
             cameraObj = constructor.newInstance(cameraId);
-            
+
             Method mOpen = avmClass.getDeclaredMethod("open");
             mOpen.setAccessible(true);
             if (!(boolean) mOpen.invoke(cameraObj)) {
@@ -521,37 +657,29 @@ public class PanoramicCameraGpu {
             }
             logger.info("Camera opened via constructor path (id=" + cameraId + ")");
         } catch (NoSuchMethodException e) {
-            // Constructor with int param doesn't exist on this firmware — try static factory
+            // Constructor with int param doesn't exist — fall back to static factory
             logger.info("AVMCamera(int) constructor not found — trying static factory");
             cameraObj = null;
-            
+
             // === ATTEMPT 2: Static factory AVMCamera.open(cameraId) ===
-            // Used by DiLink5.0 and newer firmware versions.
             try {
                 Method mStaticOpen = avmClass.getDeclaredMethod("open", int.class);
                 mStaticOpen.setAccessible(true);
-                
-                // Try the requested camera ID first
                 cameraObj = mStaticOpen.invoke(null, cameraId);
                 if (cameraObj != null) {
                     logger.info("Camera opened via static factory (id=" + cameraId + ")");
                 } else {
-                    // Requested ID returned null — iterate 0-5 to find a working one.
-                    // This handles fresh installs where BmmCameraInfo is empty and
-                    // the default ID doesn't match this vehicle's firmware.
                     logger.info("AVMCamera.open(" + cameraId + ") returned null — trying IDs 0-5");
                     for (int tryId = 0; tryId <= 5; tryId++) {
-                        if (tryId == cameraId) continue; // already tried
+                        if (tryId == cameraId) continue;
                         cameraObj = mStaticOpen.invoke(null, tryId);
                         if (cameraObj != null) {
                             logger.info("Camera opened via static factory probe (id=" + tryId + ")");
-                            // Update the override so the rest of the pipeline uses the correct ID
                             cameraIdOverride = tryId;
                             break;
                         }
                     }
                 }
-                
                 if (cameraObj == null) {
                     throw new RuntimeException("AVMCamera.open() returned null for all IDs 0-5");
                 }
@@ -584,13 +712,134 @@ public class PanoramicCameraGpu {
         logger.info("Camera started (id=" + cameraId + ", targetFps=" + targetFps + ")");
     }
     
+    // Diagnostic counters for the ImageReader frame flow. Kept in place as
+    // permanent instrumentation since the path crosses two threads + a
+    // gralloc lifetime boundary; surfacing health via 2-min Stats line is
+    // cheap and useful in field debugging.
+    private volatile long irFireCount = 0;       // onHalImageAvailable invocations
+    private volatile long irAcquireOkCount = 0;
+    private volatile long irAcquireNullCount = 0;
+    private volatile long irBindFailCount = 0;
+    private volatile long lastIrDiagLogMs = 0;
+
     /**
-     * Called when a new camera frame is available.
+     * Called when a new gralloc buffer is available from the HAL
+     * (ImageReader path, API 28+). Runs on imageReaderThread (NOT glThread)
+     * — we cannot do the EGLImage bind here because the EGL context lives
+     * on the GL thread.
+     *
+     * Strategy: notify frameSync so renderLoop wakes up. renderLoop will
+     * do acquireLatestImage + getHardwareBuffer + bind on the GL thread
+     * where the EGL context is current. This mirrors the SurfaceTexture
+     * path where the producer notifies and the consumer thread does
+     * updateTexImage.
      */
-    private void onFrameAvailable(SurfaceTexture st) {
+    private void onHalImageAvailable(ImageReader r) {
+        irFireCount++;
         synchronized (frameSync) {
+            imagePending = true;
             frameSync.notify();
         }
+    }
+
+    /**
+     * Acquires the latest gralloc buffer from cameraImageReader and binds it
+     * to cameraTextureId. MUST be called from the GL thread (current EGL
+     * context required for glEGLImageTargetTexture2DOES).
+     *
+     * Returns true if a frame was bound; false if no frame was ready or
+     * the bind failed. acquireLatestImage drops older buffered frames if
+     * the GL loop falls behind, matching SurfaceTexture's "always sample
+     * latest" semantics.
+     */
+    // The Image and HardwareBuffer currently bound to cameraTextureId.
+    // Held alive across GL render cycles — closing them returns the gralloc
+    // slot to the ImageReader pool, which invalidates the EGLImage we bound
+    // and causes the producer side to stall. Released only when the NEXT
+    // bind succeeds (releasePreviousImage call inside consumeLatestImageAndBind),
+    // so the texture always references a live gralloc buffer.
+    //
+    // THREAD-CONFINED to the GL thread (renderLoop). All reads and writes
+    // happen inside consumeLatestImageAndBind / releasePreviousBoundImage,
+    // which are only invoked from renderLoop. Do NOT access from the
+    // ImageReader callback thread, watchdog, or any daemon thread — touching
+    // these from another thread will leak the gralloc slot and stall the HAL.
+    private Image currentBoundImage;             // @GuardedBy(GL thread)
+    private HardwareBuffer currentBoundHwBuffer; // @GuardedBy(GL thread)
+
+    private boolean consumeLatestImageAndBind() {
+        ImageReader reader = cameraImageReader;
+        if (reader == null) return false;
+        Image image = null;
+        HardwareBuffer hwBuffer = null;
+        boolean transferredOwnership = false;
+        try {
+            image = reader.acquireLatestImage();
+            if (image == null) {
+                irAcquireNullCount++;
+                return false;
+            }
+            irAcquireOkCount++;
+            hwBuffer = image.getHardwareBuffer();
+            if (hwBuffer == null) {
+                logger.warn("Image.getHardwareBuffer() returned null — dropping frame");
+                irBindFailCount++;
+                return false;
+            }
+            boolean bound = HardwareBufferTextureBinder
+                .bindHardwareBufferToTextureNative(hwBuffer, cameraTextureId);
+            if (!bound) {
+                logger.warn("bindHardwareBufferToTexture failed — dropping frame");
+                irBindFailCount++;
+                return false;
+            }
+            // Bind succeeded. NOW it's safe to release the previous image —
+            // the texture is no longer pointing at it.
+            releasePreviousBoundImage();
+            // Transfer ownership of this image+hwBuffer into the held slots.
+            currentBoundImage = image;
+            currentBoundHwBuffer = hwBuffer;
+            transferredOwnership = true;
+            return true;
+        } catch (Throwable t) {
+            logger.warn("consumeLatestImageAndBind error: " + t.getMessage());
+            irBindFailCount++;
+            return false;
+        } finally {
+            // Only close locally if we did NOT transfer ownership to the
+            // held slots. On the success path the held slots own the refs;
+            // on failure paths we close immediately to release the slot.
+            if (!transferredOwnership) {
+                if (hwBuffer != null) {
+                    try { hwBuffer.close(); } catch (Throwable ignored) {}
+                }
+                if (image != null) {
+                    try { image.close(); } catch (Throwable ignored) {}
+                }
+            }
+        }
+    }
+
+    private void releasePreviousBoundImage() {
+        if (currentBoundHwBuffer != null) {
+            try { currentBoundHwBuffer.close(); } catch (Throwable ignored) {}
+            currentBoundHwBuffer = null;
+        }
+        if (currentBoundImage != null) {
+            try { currentBoundImage.close(); } catch (Throwable ignored) {}
+            currentBoundImage = null;
+        }
+    }
+
+    /** Periodic diagnostic for the ImageReader path. Throttled to align with
+     *  the 2-minute Stats log so it rides along instead of spamming. */
+    private void maybeLogImageReaderDiag() {
+        long now = System.currentTimeMillis();
+        if (now - lastIrDiagLogMs < STATS_INTERVAL_MS) return;
+        lastIrDiagLogMs = now;
+        logger.info(String.format(
+            "IR-diag: fire=%d acqOk=%d acqNull=%d bindFail=%d",
+            irFireCount, irAcquireOkCount, irAcquireNullCount, irBindFailCount));
     }
     
     /**
@@ -602,13 +851,19 @@ public class PanoramicCameraGpu {
         }
 
         try {
-            // Wait for new frame (hardware sync)
+            // Wait for new frame (hardware sync). Skip the wait if the HAL
+            // already signaled while we were processing the previous frame —
+            // otherwise the unconditional wait() would miss that notify and
+            // park us until the NEXT HAL fire, capping effective FPS.
             synchronized (frameSync) {
-                try {
-                    frameSync.wait(100);  // Timeout to check running flag
-                } catch (InterruptedException e) {
-                    // Continue
+                if (!imagePending) {
+                    try {
+                        frameSync.wait(100);  // Timeout to check running flag
+                    } catch (InterruptedException e) {
+                        // Continue
+                    }
                 }
+                imagePending = false;
             }
 
             if (!running) {
@@ -617,6 +872,7 @@ public class PanoramicCameraGpu {
 
             // Update watchdog heartbeat
             lastGlThreadHeartbeat = System.currentTimeMillis();
+            maybeLogImageReaderDiag();
 
             // SOTA: Skip frame processing if camera is yielded to native app,
             // not yet open, or being torn down/reopened by the daemon thread
@@ -625,22 +881,27 @@ public class PanoramicCameraGpu {
             // daemon thread's close and block in updateTexImage() against a
             // dead BufferQueue, freezing the GL thread until the watchdog
             // kills the process.
-            if (cameraYielded || cameraObj == null || restartInProgress) {
+            if (cameraYielded || cameraObj == null || restartInProgress.get()) {
                 // GL thread stays alive but doesn't touch camera — waiting for re-acquire
                 return;
             }
 
-            // Snapshot the current SurfaceTexture so a concurrent recreate from
-            // the daemon thread doesn't NPE us mid-frame.
-            SurfaceTexture st = cameraSurfaceTexture;
-            if (st == null) {
+            // ImageReader path: acquireLatestImage + getHardwareBuffer +
+            // glEGLImageTargetTexture2DOES binds the freshest gralloc buffer
+            // to cameraTextureId. Runs on the GL thread (current EGL
+            // context). If no new frame is ready (spurious wakeup or notify
+            // race), return — the finally re-posts the loop and we wait again.
+            if (cameraImageReader == null) {
                 return;
             }
-
-            // CRITICAL: Always consume camera texture FIRST to keep the camera HAL's
-            // BufferQueue flowing. If we don't call updateTexImage() promptly, the HAL
-            // buffer fills up and the BYD native camera app loses video signal.
-            st.updateTexImage();
+            // Per-stage timing — measure each phase of the GL frame so we can
+            // attribute backpressure (logged at most once per 2 s, worst-case
+            // frame only). nanoTime() is a monotonic call, ~50ns each.
+            long stageT0 = System.nanoTime();
+            if (!consumeLatestImageAndBind()) {
+                return;
+            }
+            long stageAfterAcquireNs = System.nanoTime();
             frameCounter++;
             lastFrameTime = System.currentTimeMillis();
             firstFrameReceived = true;
@@ -775,12 +1036,8 @@ public class PanoramicCameraGpu {
             // Without this, the encoder records BLACK frames, the stream shows garbage,
             // and the AI lane processes empty images during the probe sweep.
             if (!probeComplete) {
-                // Still probing — consume texture to keep HAL flowing but don't feed consumers.
-                // Update heartbeat so watchdog doesn't kill us during probe.
-                lastGlThreadHeartbeat = System.currentTimeMillis();
-                if (running) {
-                    glHandler.post(this::renderLoop);
-                }
+                // Still probing — don't feed consumers. Heartbeat already
+                // updated above. Re-post handled by the finally block.
                 return;
             }
 
@@ -788,6 +1045,7 @@ public class PanoramicCameraGpu {
             // SOTA: Always render to encoder (for pre-record circular buffer)
             GpuMosaicRecorder localRecorder = recorder;
             HardwareEventRecorderGpu localEncoder = encoder;
+            long stageBeforeMosaicNs = System.nanoTime();
             if (localRecorder != null) {
                 localRecorder.drawFrame(cameraTextureId);
 
@@ -796,17 +1054,35 @@ public class PanoramicCameraGpu {
                 if (localEncoder != null) {
                     localEncoder.drainEncoder();
                 }
-                
+
                 // RECOVERY: If encoder surface died (EGL_BAD_SURFACE after prolonged use),
-                // reinitialize the encoder and reconnect the recorder
+                // reinitialize the encoder and reconnect the recorder.
+                // P1 #9: keep using localRecorder/localEncoder captured above.
+                // pipeline.stop() runs on the daemon thread and can null
+                // this.recorder/this.encoder concurrently; re-reading the fields
+                // here would NPE.
                 if (localRecorder.needsReinit() && localEncoder != null) {
                     logger.warn("Encoder surface lost - reinitializing encoder...");
+                    // Extend the GL watchdog window: encoder.release() joins
+                    // the drainer (up to 2s) plus MediaCodec stop/release —
+                    // the bare 3s GL timeout is not enough headroom.
+                    // P1 #11: CAS so a concurrent reopenCamera (daemon thread)
+                    // can't race; if another restart is already in flight,
+                    // skip — it'll re-fire on the next frame.
+                    if (!restartInProgress.compareAndSet(false, true)) {
+                        return;
+                    }
                     try {
-                        recorder.releaseEncoderSurface();
-                        encoder.release();
-                        encoder.init();
-                        recorder.init(eglCore, encoder);
-                        recorder.clearReinitFlag();
+                        // Full teardown of recorder GL resources. Without this,
+                        // shader programs (programId, overlayProgramId) and the
+                        // overlay texture (overlayTextureId) leak on every
+                        // reinit, since recorder.init() only frees the encoder
+                        // surface, not the programs/textures it then re-creates.
+                        localRecorder.release();
+                        localEncoder.release();
+                        localEncoder.init();
+                        localRecorder.init(eglCore, localEncoder);
+                        localRecorder.clearReinitFlag();
                         logger.info("Encoder reinitialized successfully after surface loss");
                     } catch (Exception reinitEx) {
                         logger.error("Encoder reinit failed: " + reinitEx.getMessage());
@@ -814,6 +1090,8 @@ public class PanoramicCameraGpu {
                         logger.error("CRITICAL: Encoder reinit failed, forcing process restart");
                         try { Thread.sleep(100); } catch (InterruptedException ignored) {}
                         System.exit(0);
+                    } finally {
+                        restartInProgress.set(false);
                     }
                 }
             }
@@ -828,59 +1106,124 @@ public class PanoramicCameraGpu {
                 localStreamEncoder.drainEncoder();
             }
 
-            // PASS 2: AI Lane (Downscale & Readback at 2 FPS)
-            // Run AI lane on every AI_FRAME_SKIP-th frame. The sentry's internal
-            // throttle (100ms interval) and the frame skip already limit CPU usage.
-            // Previous elapsedMs < 50 guard was too aggressive — at 8 FPS the recording
-            // pass alone takes 50-80ms, causing the AI lane to NEVER run.
-            long elapsedMs = (System.nanoTime() - loopStartNs) / 1_000_000;
-            if (sentry != null && sentry.isActive() && downscaler != null) {
-                if (frameCounter % aiFrameSkip == 0) {
+            // PASS 2: AI Lane (decoupled, async).
+            //
+            // GL thread: read pixels (~5-15ms) and post the byte[] to the AI
+            // worker. Worker runs sentry.processFrame on its own thread —
+            // V2 motion native (~30-100ms) and YOLO (which already dispatches
+            // to its own aiExecutor inside SurveillanceEngineGpu) no longer
+            // block the GL render loop.
+            //
+            // Drop-not-queue: if the worker is still processing the previous
+            // frame, the new frame is recycled and dropped. V2 motion is
+            // throttled to 10 fps internally so backlog has zero benefit.
+            //
+            // FRAME-COUNTER THROTTLE: AI readback runs once per
+            // AI_READBACK_FRAME_MODULO frames the GL thread processes.
+            // Wall-clock throttling collapses when readback duration approaches
+            // the interval — the GL thread always finds the timer expired and
+            // every frame triggers readback, capping the loop at ~8 fps.
+            // Frame-modulo is immune: AI rate scales with HAL emission rate.
+            //
+            // Foveated cropper still runs on GL thread (inside processFrame's
+            // call chain via setFoveatedCropper), but only when sentry
+            // schedules it after motion detection — not every frame.
+            long stageBeforeAiReadbackNs = System.nanoTime();
+            long stageAfterAiReadbackNs = stageBeforeAiReadbackNs;
+            long stageAfterAiSubmitNs = stageBeforeAiReadbackNs;
+            if (sentry != null && sentry.isActive() && downscaler != null && aiLaneWorker != null) {
+                boolean aiFrameTurn = (frameCounter % AI_READBACK_FRAME_MODULO == 0);
+                if (!aiFrameTurn || aiLaneWorker.isBusy()) {
+                    // Not this frame's turn, or the worker is still processing
+                    // the previous frame. Skip readback — let GL thread fly
+                    // through mosaic+swap to drain the ImageReader pool.
+                    stageWindowAiReadbackSkips++;
+                } else {
                     try {
-                        // SOTA: Use direct FBO readback on GL thread.
-                        // The async readPixels path returns stale frames because the
-                        // shared EGL context can't reliably read the camera's external
-                        // OES texture. Direct readback on the GL thread that owns the
-                        // texture guarantees fresh frame data.
                         byte[] smallFrame = downscaler.readPixelsDirect(cameraTextureId);
+                        stageAfterAiReadbackNs = System.nanoTime();
                         if (smallFrame != null) {
-                            // Wire foveated cropper to sentry once (lazy init, GL thread safe)
+                            // Lazy-wire foveated cropper once. GL thread safe.
                             if (foveatedCropper != null && foveatedCropper.isInitialized()
                                     && sentry.getFoveatedCropper() == null) {
                                 sentry.setFoveatedCropper(foveatedCropper, cameraTextureId);
                             }
-                            // Buffer is recycled inside processFrame's finally block
-                            sentry.processFrame(smallFrame);
+                            // submitFrame is non-blocking: queues if worker idle,
+                            // recycles+drops if busy. Either way, GL thread
+                            // continues to next camera frame immediately.
+                            aiLaneWorker.submitFrame(smallFrame);
                         }
+                        stageAfterAiSubmitNs = System.nanoTime();
                     } catch (Exception e) {
-                        // Log but don't crash - AI lane is non-critical
                         logger.warn("AI lane error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
                     }
                 }
-            } else if (sentry != null && frameCounter % 300 == 0) {
-                // Periodic diagnostic: log why AI lane is not running
-                logger.info(String.format("AI lane gate: active=%b, downscaler=%b, elapsed=%dms",
-                        sentry.isActive(), downscaler != null, elapsedMs));
             }
 
-            // Log stats periodically (every 2 minutes, time-based)
+            // Per-stage timing roll-up. We track only the worst frame per
+            // 2 s window to keep the log line bounded and the reasoning
+            // simple — the worst frame is what crosses the encoder
+            // backpressure threshold and triggers HAL throttling.
+            long stageEndNs = System.nanoTime();
+            long stageTotalNs    = stageEndNs - stageT0;
+            long stageAcquireNs  = stageAfterAcquireNs - stageT0;
+            long stageMosaicNs   = stageBeforeAiReadbackNs - stageBeforeMosaicNs;
+            long stageReadbackNs = stageAfterAiReadbackNs  - stageBeforeAiReadbackNs;
+            long stageSubmitNs   = stageAfterAiSubmitNs    - stageAfterAiReadbackNs;
+            stageWindowFrames++;
+            if (stageTotalNs > stageWorstTotalNs) {
+                stageWorstTotalNs       = stageTotalNs;
+                stageWorstAcquireNs     = stageAcquireNs;
+                stageWorstMosaicNs      = stageMosaicNs;
+                stageWorstAiReadbackNs  = stageReadbackNs;
+                stageWorstAiSubmitNs    = stageSubmitNs;
+            }
+            long nowMs = System.currentTimeMillis();
+            if (stageTimingWindowStartMs == 0) {
+                stageTimingWindowStartMs = nowMs;
+            } else if (nowMs - stageTimingWindowStartMs >= STAGE_TIMING_LOG_INTERVAL_MS) {
+                logger.info(String.format(
+                        "Stage(worst/2s): total=%dms acq=%dms mosaic+swap=%dms aiReadback=%dms aiSubmit=%dms (frames=%d, aiSkips=%d)",
+                        stageWorstTotalNs / 1_000_000,
+                        stageWorstAcquireNs / 1_000_000,
+                        stageWorstMosaicNs / 1_000_000,
+                        stageWorstAiReadbackNs / 1_000_000,
+                        stageWorstAiSubmitNs / 1_000_000,
+                        stageWindowFrames,
+                        stageWindowAiReadbackSkips));
+                stageWorstTotalNs = 0;
+                stageWorstAcquireNs = 0;
+                stageWorstMosaicNs = 0;
+                stageWorstAiReadbackNs = 0;
+                stageWorstAiSubmitNs = 0;
+                stageWindowFrames = 0;
+                stageWindowAiReadbackSkips = 0;
+                stageTimingWindowStartMs = nowMs;
+            }
+
+            // Log stats periodically (every 2 minutes, time-based).
+            // Reports the *windowed* FPS (frames since the last stats log) instead
+            // of the lifetime average — otherwise a stall during one window drags
+            // the running mean down forever and masks recovery in later windows.
             long now = System.currentTimeMillis();
             if (now - lastStatsTime >= STATS_INTERVAL_MS) {
-                lastStatsTime = now;
-                long elapsed = now - startTime;
-                float fps = (frameCounter * 1000.0f) / elapsed;
-                
-                // SOTA: Adaptive AI frame skip — recalculate based on measured FPS.
-                // Target ~10 FPS delivery to the V2 motion pipeline.
-                int newSkip = Math.max(1, Math.round(fps / TARGET_AI_FPS));
-                if (newSkip != aiFrameSkip) {
-                    logger.info(String.format("Adaptive AI skip: %d → %d (camera=%.1f FPS, target=%.0f FPS, effective=%.1f FPS)",
-                            aiFrameSkip, newSkip, fps, TARGET_AI_FPS, fps / newSkip));
-                    aiFrameSkip = newSkip;
+                long windowMs = (lastStatsTime == 0) ? (now - startTime) : (now - lastStatsTime);
+                int windowFrames = frameCounter - lastStatsFrameCount;
+                float fps = windowMs > 0 ? (windowFrames * 1000.0f) / windowMs : 0f;
+                measuredFps = fps;
+
+                long aiProc = aiLaneWorker != null ? aiLaneWorker.getProcessedFrames() : 0;
+                long aiDrop = aiLaneWorker != null ? aiLaneWorker.getDroppedFrames() : 0;
+                long uptimeS = (now - startTime) / 1000;
+                logger.info(String.format(
+                        "Stats: %d frames (window), %.1f FPS (target=%d), uptime=%ds, aiProcessed=%d, aiDropped=%d",
+                        windowFrames, fps, targetFps, uptimeS, aiProc, aiDrop));
+                if (aiLaneWorker != null) {
+                    aiLaneWorker.resetCounters();
                 }
-                
-                logger.info(String.format("Stats: %d frames, %.1f FPS (target=%d), uptime=%ds, aiSkip=%d",
-                        frameCounter, fps, targetFps, elapsed / 1000, aiFrameSkip));
+
+                lastStatsTime = now;
+                lastStatsFrameCount = frameCounter;
             }
 
         } catch (Exception e) {
@@ -889,11 +1232,14 @@ public class PanoramicCameraGpu {
                 msg = e.getClass().getSimpleName();
             }
             logger.error("Render loop error: " + msg, e);
-        }
-
-        // Schedule next frame
-        if (running) {
-            glHandler.post(this::renderLoop);
+        } finally {
+            // Schedule next frame in finally so any `return` inside the try
+            // (e.g., consumeLatestImageAndBind() returning false on a frame
+            // where no new image is ready) still re-posts the loop. Without
+            // this, the GL thread stops iterating and the watchdog kills us.
+            if (running) {
+                glHandler.post(this::renderLoop);
+            }
         }
     }
     
@@ -1004,6 +1350,7 @@ public class PanoramicCameraGpu {
             cameraIdOverride = tryId;
             cameraSurfaceMode = 0;  // Surface mode 0 confirmed working
             frameCounter = 0;
+            lastStatsFrameCount = 0;
             lastGlThreadHeartbeat = System.currentTimeMillis();
             
             // Recreate SurfaceTexture — HAL won't deliver continuous frames
@@ -1041,6 +1388,7 @@ public class PanoramicCameraGpu {
                 cameraIdOverride = lastDataCameraId;
                 cameraSurfaceMode = 0;
                 frameCounter = 0;
+                lastStatsFrameCount = 0;
                 lastGlThreadHeartbeat = System.currentTimeMillis();
                 recreateCameraSurface();
                 lastGlThreadHeartbeat = System.currentTimeMillis();
@@ -1110,8 +1458,8 @@ public class PanoramicCameraGpu {
                     // Also use extended timeout during camera restart — the GL thread
                     // is busy with close/reopen operations and heartbeat updates are
                     // interleaved but may not be frequent enough for the normal timeout.
-                    long effectiveTimeout = (firstFrameReceived && !restartInProgress)
-                            ? GL_THREAD_TIMEOUT_MS 
+                    long effectiveTimeout = (firstFrameReceived && !restartInProgress.get())
+                            ? GL_THREAD_TIMEOUT_MS
                             : GL_THREAD_WARMUP_TIMEOUT_MS;
                     
                     if (timeSinceHeartbeat > effectiveTimeout) {
@@ -1266,9 +1614,15 @@ public class PanoramicCameraGpu {
      * a full process restart — just a camera reopen.
      */
     private void restartCameraAfterError() {
+        // P1 #11: CAS — only one restart can be in flight. If reopenCamera
+        // (daemon thread) is already restarting, return without touching the
+        // flag so its finally{set(false)} doesn't get clobbered.
+        if (!restartInProgress.compareAndSet(false, true)) {
+            logger.info("Restart already in progress — skipping restartCameraAfterError");
+            return;
+        }
         logger.info("Restarting camera after error/stall...");
-        restartInProgress = true;
-        
+
         try {
             // CRITICAL: Finalize active recording BEFORE closing camera.
             if (yieldListener != null) {
@@ -1303,7 +1657,7 @@ public class PanoramicCameraGpu {
                     cameraCoordinator.notifyPosCloseCamera();
                 }
             }
-            
+
             // Brief pause to let HAL settle
             Thread.sleep(500);
             
@@ -1391,10 +1745,10 @@ public class PanoramicCameraGpu {
             // If restart fails, the watchdog will eventually kill the process
             // but at least we won't crash-loop immediately
         } finally {
-            restartInProgress = false;
+            restartInProgress.set(false);
         }
     }
-    
+
     /**
      * Stops the GPU camera pipeline.
      */
@@ -1478,6 +1832,14 @@ public class PanoramicCameraGpu {
             return;
         }
 
+        // P1 #11: CAS — only one restart can be in flight. If
+        // restartCameraAfterError (GL thread) already owns the flag, return
+        // without clobbering its finally{set(false)}.
+        if (!restartInProgress.compareAndSet(false, true)) {
+            logger.warn("Restart already in progress — skipping reopenCamera");
+            return;
+        }
+
         logger.info("Reopening AVMCamera...");
 
         // CRITICAL: Mark restart-in-progress BEFORE touching the camera so the
@@ -1486,7 +1848,6 @@ public class PanoramicCameraGpu {
         // GL thread briefly blocking on updateTexImage() against a dying HAL
         // is enough to trip the watchdog and force a full process restart on
         // every ACC OFF→ON transition. See log: "GL thread blocked for 3492ms".
-        restartInProgress = true;
 
         try {
             // Proper cleanup order via BydCameraCoordinator.
@@ -1581,7 +1942,7 @@ public class PanoramicCameraGpu {
                 logger.error("Camera retry failed: " + e2.getMessage());
             }
         } finally {
-            restartInProgress = false;
+            restartInProgress.set(false);
         }
     }
 
@@ -1606,22 +1967,31 @@ public class PanoramicCameraGpu {
      * Releases OpenGL resources.
      */
     private void releaseGl() {
+        // Shut down the AI worker FIRST so any in-flight processFrame
+        // completes before we tear down the consumers it might still
+        // reference. The worker's drain timeout caps this at ~2s.
+        if (aiLaneWorker != null) {
+            try { aiLaneWorker.shutdown(); } catch (Throwable ignored) {}
+            aiLaneWorker = null;
+        }
+
         // Release foveated cropper before GL context is destroyed
         if (foveatedCropper != null) {
             foveatedCropper.release();
             foveatedCropper = null;
         }
-        
-        if (cameraSurfaceTexture != null) {
-            cameraSurfaceTexture.release();
-            cameraSurfaceTexture = null;
+
+        // Releases whichever consumer (SurfaceTexture or ImageReader) is active.
+        releaseCameraConsumer();
+
+        // Tear down the ImageReader callback thread (full shutdown only —
+        // recreateCameraSurface keeps it alive across camera re-attach).
+        if (imageReaderThread != null) {
+            try { imageReaderThread.quitSafely(); } catch (Throwable ignored) {}
+            imageReaderThread = null;
+            imageReaderHandler = null;
         }
-        
-        if (cameraSurface != null) {
-            cameraSurface.release();
-            cameraSurface = null;
-        }
-        
+
         if (cameraTextureId != 0) {
             GlUtil.deleteTexture(cameraTextureId);
             cameraTextureId = 0;
@@ -1716,13 +2086,33 @@ public class PanoramicCameraGpu {
     /**
      * Sets the target frame rate for the binder camera backend.
      * Only effective when binder backend is enabled.
-     * Must be called before start().
-     * 
-     * @param fps Desired frames per second (e.g., 15, 25)
+     * Updates the target frame rate. If the camera is already open, also
+     * pushes the new rate to the HAL via AvmCameraHelper.setCameraFps so
+     * emission rate matches the encoder's KEY_FRAME_RATE without a full
+     * camera reopen.
+     *
+     * @param fps Desired frames per second (range enforced by callers; this
+     *            method just stores and applies)
      */
     public void setTargetFps(int fps) {
         this.targetFps = fps;
         logger.info("Target FPS set to: " + fps);
+        // Keep the AI-lane GL-hop budget in sync with the new rate.
+        if (sentry != null) {
+            sentry.setCameraTargetFps(fps);
+        }
+        // If the camera is currently open, push the new rate to the HAL.
+        // Returns false on devices where setCameraFps is rejected (e.g., the
+        // BYD HAL when isValidCamera gate fails) — we log and continue; the
+        // encoder reconfig will still produce the right KEY_FRAME_RATE.
+        Object cam = cameraObj;
+        if (cam != null) {
+            try {
+                AvmCameraHelper.setCameraFps(cam, fps);
+            } catch (Throwable t) {
+                logger.warn("Live setCameraFps failed: " + t.getMessage());
+            }
+        }
     }
     
     /**
@@ -1730,6 +2120,16 @@ public class PanoramicCameraGpu {
      */
     public int getTargetFps() {
         return targetFps;
+    }
+
+    /**
+     * Gets the most recently measured camera FPS (over the last 2-minute
+     * stats window). Returns 0 if no stats window has elapsed yet. Use this
+     * to surface to the UI when HAL clamps below the requested target —
+     * e.g., user picks 30, HAL emits ~26 on this device.
+     */
+    public float getMeasuredFps() {
+        return measuredFps;
     }
     /**
      * Enables auto-probe mode: tries camera IDs 0-5 at startup to find

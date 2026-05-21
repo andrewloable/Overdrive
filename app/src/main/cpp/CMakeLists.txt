@@ -52,6 +52,9 @@ set(SURVEILLANCE_SOURCES
     surveillance/native_motion.cpp
     surveillance/motion_pipeline_v2.cpp
     surveillance/texture_tracker.cpp
+    # Camera/EGL: AHardwareBuffer → EGLImage → GL_TEXTURE_EXTERNAL_OES
+    # binding for the ImageReader-based zero-copy camera path.
+    camera/HardwareBufferTextureBinder.cpp
 )
 
 add_library(surveillance SHARED ${SURVEILLANCE_SOURCES})
@@ -59,10 +62,11 @@ add_library(surveillance SHARED ${SURVEILLANCE_SOURCES})
 target_include_directories(surveillance PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/surveillance
+    ${CMAKE_SOURCE_DIR}/camera
 )
 
-# Base libraries
-set(SURVEILLANCE_LIBS android log m)
+# Base libraries — `EGL` and `GLESv2` added for HardwareBufferTextureBinder.
+set(SURVEILLANCE_LIBS android log m EGL GLESv2)
 
 # Add OpenCV if available
 if(OPENCV_AVAILABLE)

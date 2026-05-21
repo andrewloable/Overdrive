@@ -115,20 +115,48 @@ public class HttpResponse {
         out.flush();
     }
     
+    /**
+     * Cache directive used for finalized event recordings. Filenames are
+     * unique-per-event and the file is immutable once renamed from
+     * .mp4.tmp, so a long max-age plus immutable lets the WebView's HTTP
+     * cache satisfy repeat playback locally. ETag invalidates if the
+     * underlying file is ever replaced.
+     */
+    private static final String VIDEO_CACHE_CONTROL = "private, max-age=86400, immutable";
+
+    /**
+     * Backwards-compat overload — callers that don't compute an ETag get the
+     * old "no-cache" behaviour so any future /video/* caller (e.g. live
+     * streams) opting out of caching just calls the no-ETag version.
+     */
     public static void sendVideo(OutputStream out, java.io.File file) throws Exception {
+        sendVideoInternal(out, file, null);
+    }
+
+    public static void sendVideo(OutputStream out, java.io.File file, String etag) throws Exception {
+        sendVideoInternal(out, file, etag);
+    }
+
+    private static void sendVideoInternal(OutputStream out, java.io.File file, String etag) throws Exception {
         if (!file.exists()) {
             sendError(out, 404, "File not found");
             return;
         }
-        
-        String headers = "HTTP/1.1 200 OK\r\n" +
-                        "Content-Type: video/mp4\r\n" +
-                        "Content-Length: " + file.length() + "\r\n" +
-                        "Accept-Ranges: bytes\r\n" +
-                        "Cache-Control: no-cache\r\n" +
-                        "Connection: close\r\n\r\n";
-        out.write(headers.getBytes());
-        
+
+        StringBuilder headers = new StringBuilder();
+        headers.append("HTTP/1.1 200 OK\r\n")
+               .append("Content-Type: video/mp4\r\n")
+               .append("Content-Length: ").append(file.length()).append("\r\n")
+               .append("Accept-Ranges: bytes\r\n");
+        if (etag != null) {
+            headers.append("Cache-Control: ").append(VIDEO_CACHE_CONTROL).append("\r\n")
+                   .append("ETag: ").append(etag).append("\r\n");
+        } else {
+            headers.append("Cache-Control: no-cache\r\n");
+        }
+        headers.append("Connection: close\r\n\r\n");
+        out.write(headers.toString().getBytes());
+
         // Stream file in chunks
         try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
             byte[] buffer = new byte[16384];
@@ -139,13 +167,21 @@ public class HttpResponse {
         }
         out.flush();
     }
-    
+
     public static void sendVideoRange(OutputStream out, java.io.File file, long start, long end) throws Exception {
+        sendVideoRangeInternal(out, file, start, end, null);
+    }
+
+    public static void sendVideoRange(OutputStream out, java.io.File file, long start, long end, String etag) throws Exception {
+        sendVideoRangeInternal(out, file, start, end, etag);
+    }
+
+    private static void sendVideoRangeInternal(OutputStream out, java.io.File file, long start, long end, String etag) throws Exception {
         if (!file.exists()) {
             sendError(out, 404, "File not found");
             return;
         }
-        
+
         long fileLength = file.length();
         if (start < 0 || start >= fileLength) {
             sendError(out, 416, "Range Not Satisfiable");
@@ -158,16 +194,22 @@ public class HttpResponse {
             end = start;
         }
         long contentLength = end - start + 1;
-        
-        String headers = "HTTP/1.1 206 Partial Content\r\n" +
-                        "Content-Type: video/mp4\r\n" +
-                        "Content-Length: " + contentLength + "\r\n" +
-                        "Content-Range: bytes " + start + "-" + end + "/" + fileLength + "\r\n" +
-                        "Accept-Ranges: bytes\r\n" +
-                        "Cache-Control: no-cache\r\n" +
-                        "Connection: close\r\n\r\n";
-        out.write(headers.getBytes());
-        
+
+        StringBuilder headers = new StringBuilder();
+        headers.append("HTTP/1.1 206 Partial Content\r\n")
+               .append("Content-Type: video/mp4\r\n")
+               .append("Content-Length: ").append(contentLength).append("\r\n")
+               .append("Content-Range: bytes ").append(start).append("-").append(end).append("/").append(fileLength).append("\r\n")
+               .append("Accept-Ranges: bytes\r\n");
+        if (etag != null) {
+            headers.append("Cache-Control: ").append(VIDEO_CACHE_CONTROL).append("\r\n")
+                   .append("ETag: ").append(etag).append("\r\n");
+        } else {
+            headers.append("Cache-Control: no-cache\r\n");
+        }
+        headers.append("Connection: close\r\n\r\n");
+        out.write(headers.toString().getBytes());
+
         try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
             raf.seek(start);
             byte[] buffer = new byte[16384];
@@ -180,6 +222,21 @@ public class HttpResponse {
                 remaining -= read;
             }
         }
+        out.flush();
+    }
+
+    /**
+     * 304 Not Modified — no body. Echoes the ETag so the client knows the
+     * cached entry is still authoritative. Cache-Control reaffirms the
+     * caching policy in case the client previously saw no-cache.
+     */
+    public static void sendNotModified(OutputStream out, String etag) throws Exception {
+        StringBuilder headers = new StringBuilder();
+        headers.append("HTTP/1.1 304 Not Modified\r\n")
+               .append("ETag: ").append(etag).append("\r\n")
+               .append("Cache-Control: ").append(VIDEO_CACHE_CONTROL).append("\r\n")
+               .append("Connection: close\r\n\r\n");
+        out.write(headers.toString().getBytes());
         out.flush();
     }
     

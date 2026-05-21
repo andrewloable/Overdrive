@@ -131,12 +131,14 @@ class RecordingAdapter(
                 }
             }
 
-            // Actor + proximity summary (v3 only)
+            // Actor + proximity summary (v3 only). Mid-dot prefix reads cleanly
+            // without leaning on emoji glyphs that don't render at SOTA quality
+            // on the head-unit font stack.
             val parts = mutableListOf<String>()
-            if (recording.personCount > 0)  parts += "👤 ${recording.personCount}"
-            if (recording.vehicleCount > 0) parts += "🚗 ${recording.vehicleCount}"
-            if (recording.bikeCount > 0)    parts += "🚲 ${recording.bikeCount}"
-            if (recording.animalCount > 0)  parts += "🐾 ${recording.animalCount}"
+            if (recording.personCount > 0)  parts += "${recording.personCount} person"
+            if (recording.vehicleCount > 0) parts += "${recording.vehicleCount} vehicle"
+            if (recording.bikeCount > 0)    parts += "${recording.bikeCount} bike"
+            if (recording.animalCount > 0)  parts += "${recording.animalCount} animal"
             val proxLabel = when (recording.peakProximity?.uppercase()) {
                 "VERY_CLOSE" -> "very close"
                 "CLOSE" -> "close"

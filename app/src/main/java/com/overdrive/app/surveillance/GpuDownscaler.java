@@ -417,6 +417,7 @@ public class GpuDownscaler {
     private int directUCameraTex = -1;
     private ByteBuffer directReadBuffer = null;
     private byte[] directRgbBuffer = null;
+    private byte[] directScratchRgba = null;  // bulk-copy RGBA scratch for Y-flip pack
     private boolean directInitialized = false;
     
     // Double-buffered async readback: eliminates glFinish() stall.
@@ -482,20 +483,33 @@ public class GpuDownscaler {
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, readFbo);
             directReadBuffer.clear();
             GLES20.glReadPixels(0, 0, WIDTH, HEIGHT, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, directReadBuffer);
-            
-            // RGBA → RGB with Y-flip (GL origin is bottom-left)
+
+            // RGBA → RGB with Y-flip. The previous version did a 921 K-iter Java
+            // loop with per-byte ByteBuffer.get(int) calls — each one a JNI hop.
+            // That loop alone was ~80 ms and the dominant cost in this stage.
+            //
+            // Bulk-copy the whole RGBA into a scratch byte[] in one JNI call,
+            // then walk it as a Java array. Y-flip happens during the row pack.
+            if (directScratchRgba == null || directScratchRgba.length != WIDTH * HEIGHT * 4) {
+                directScratchRgba = new byte[WIDTH * HEIGHT * 4];
+            }
             directReadBuffer.rewind();
-            int rgbIdx = 0;
+            directReadBuffer.get(directScratchRgba, 0, WIDTH * HEIGHT * 4);
+
+            byte[] src = directScratchRgba;
+            byte[] dst = directRgbBuffer;
+            final int rowRgbaBytes = WIDTH * 4;
+            int dstIdx = 0;
             for (int y = HEIGHT - 1; y >= 0; y--) {
-                int rowStart = y * WIDTH * 4;
+                int srcRow = y * rowRgbaBytes;
                 for (int x = 0; x < WIDTH; x++) {
-                    int srcIdx = rowStart + x * 4;
-                    directRgbBuffer[rgbIdx++] = directReadBuffer.get(srcIdx);
-                    directRgbBuffer[rgbIdx++] = directReadBuffer.get(srcIdx + 1);
-                    directRgbBuffer[rgbIdx++] = directReadBuffer.get(srcIdx + 2);
+                    int s = srcRow + (x << 2);
+                    dst[dstIdx++] = src[s];
+                    dst[dstIdx++] = src[s + 1];
+                    dst[dstIdx++] = src[s + 2];
                 }
             }
-            result = directRgbBuffer;
+            result = dst;
         } else {
             // First frame — nothing to read back yet. Render submitted, will be
             // available next call. Return null this one time.

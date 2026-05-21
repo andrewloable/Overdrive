@@ -84,13 +84,36 @@ data class RecordingFile(
     }
     
     companion object {
-        // Parse filename like: cam1_20251224_132630.mp4 or cam_20251224_132630.mp4
-        private val CAM_FILENAME_PATTERN = Regex("""cam(\d+)?_(\d{8})_(\d{6})\.mp4""")
-        // Parse filename like: event_20251224_132630.mp4
-        private val EVENT_FILENAME_PATTERN = Regex("""event_(\d{8})_(\d{6})\.mp4""")
-        // Parse filename like: proximity_20251224_132630.mp4
-        private val PROXIMITY_FILENAME_PATTERN = Regex("""proximity_(\d{8})_(\d{6})\.mp4""")
-        private val DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+        // Parse filename like: cam1_20251224_132630.mp4, cam_20251224_132630.mp4,
+        // or segmented continuations cam_20251224_132630_2.mp4. Mirrors the
+        // server-side RecordingsApiHandler.CAM_PATTERN so both surfaces see
+        // every clip on disk.
+        private val CAM_FILENAME_PATTERN = Regex("""cam(\d+)?_(\d{8})_(\d{6})(?:_\d+)?\.mp4""")
+        // event_20251224_132630.mp4 or event_20251224_132630_2.mp4
+        private val EVENT_FILENAME_PATTERN = Regex("""event_(\d{8})_(\d{6})(?:_\d+)?\.mp4""")
+        // proximity_20251224_132630.mp4 or proximity_20251224_132630_2.mp4
+        private val PROXIMITY_FILENAME_PATTERN = Regex("""proximity_(\d{8})_(\d{6})(?:_\d+)?\.mp4""")
+
+        /**
+         * Parses the writer's `yyyyMMdd_HHmmss` filename stamp.
+         *
+         * Pinned to [Locale.US] for two reasons:
+         *  1. The writer (GpuMosaicRecorder, SurveillanceEngineGpu, etc.) all
+         *     format with Locale.US. Reading with `getDefault()` parsed those
+         *     digits through whatever calendar the user's locale defaults to
+         *     — Thai locale e.g. interprets the year as Buddhist Era and
+         *     produced timestamps ~543 years off, dropping every clip out of
+         *     "today" and breaking single-day filters.
+         *  2. SimpleDateFormat is NOT thread-safe. The scanner runs from
+         *     multiple workers (RecordingsFragment + RecordingLibraryFragment +
+         *     DashboardInsight). A static-shared instance corrupts under
+         *     concurrent parse() calls, returning null (→ mtime fallback) or
+         *     wrong years intermittently — that was the "1 clip per day"
+         *     symptom. Allocating per parse is far cheaper than the surrounding
+         *     disk I/O.
+         */
+        private fun newDateFormat(): SimpleDateFormat =
+            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
         
         fun fromFile(file: File, type: RecordingType = RecordingType.NORMAL): RecordingFile? {
             // Try type-specific parsing first
@@ -127,7 +150,7 @@ data class RecordingFile(
             val cameraId = match.groupValues[1].toIntOrNull() ?: 0  // 0 for mosaic recordings
             val dateStr = "${match.groupValues[2]}_${match.groupValues[3]}"
             val timestamp = try {
-                DATE_FORMAT.parse(dateStr)?.time ?: file.lastModified()
+                newDateFormat().parse(dateStr)?.time ?: file.lastModified()
             } catch (e: Exception) {
                 file.lastModified()
             }
@@ -146,7 +169,7 @@ data class RecordingFile(
             val match = EVENT_FILENAME_PATTERN.matchEntire(file.name) ?: return null
             val dateStr = "${match.groupValues[1]}_${match.groupValues[2]}"
             val timestamp = try {
-                DATE_FORMAT.parse(dateStr)?.time ?: file.lastModified()
+                newDateFormat().parse(dateStr)?.time ?: file.lastModified()
             } catch (e: Exception) {
                 file.lastModified()
             }
@@ -165,7 +188,7 @@ data class RecordingFile(
             val match = PROXIMITY_FILENAME_PATTERN.matchEntire(file.name) ?: return null
             val dateStr = "${match.groupValues[1]}_${match.groupValues[2]}"
             val timestamp = try {
-                DATE_FORMAT.parse(dateStr)?.time ?: file.lastModified()
+                newDateFormat().parse(dateStr)?.time ?: file.lastModified()
             } catch (e: Exception) {
                 file.lastModified()
             }

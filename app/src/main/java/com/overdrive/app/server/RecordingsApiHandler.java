@@ -169,7 +169,7 @@ public class RecordingsApiHandler {
         // Stream video file
         if (path.startsWith("/video/")) {
             String filename = path.substring(7);
-            streamVideo(out, filename, null);
+            streamVideo(out, filename, null, null);
             return true;
         }
         
@@ -215,12 +215,15 @@ public class RecordingsApiHandler {
     }
     
     /**
-     * Handle with Range header support for video seeking.
+     * Handle with Range header support for video seeking and conditional GET
+     * (If-None-Match) for ETag-based 304 responses on cached recordings.
      */
-    public static boolean handleWithRange(String method, String path, String body, String rangeHeader, OutputStream out) throws Exception {
+    public static boolean handleWithRange(String method, String path, String body,
+                                          String rangeHeader, String ifNoneMatchHeader,
+                                          OutputStream out) throws Exception {
         if (path.startsWith("/video/")) {
             String filename = path.substring(7);
-            streamVideo(out, filename, rangeHeader);
+            streamVideo(out, filename, rangeHeader, ifNoneMatchHeader);
             return true;
         }
         return handle(method, path, body, out);
@@ -1155,23 +1158,40 @@ public class RecordingsApiHandler {
     }
     
     /**
-     * Stream video file with optional Range support.
+     * Stream video file with optional Range support and ETag-based caching.
+     *
+     * Finalized event recordings are immutable (the daemon writes to
+     * <name>.mp4.tmp and atomically renames once the file is closed), so we
+     * emit a strong ETag derived from length+mtime and a 24h max-age so the
+     * WebView's HTTP cache can serve repeat playback locally instead of
+     * re-streaming from the daemon. Cache headers are added in
+     * HttpResponse.sendVideo / sendVideoRange.
      */
-    private static void streamVideo(OutputStream out, String filename, String rangeHeader) throws Exception {
+    private static void streamVideo(OutputStream out, String filename, String rangeHeader,
+                                    String ifNoneMatchHeader) throws Exception {
         // Security: prevent path traversal
         if (filename.contains("..") || filename.contains("/")) {
             HttpResponse.sendError(out, 400, Messages.get("errors.recordings_invalid_filename"));
             return;
         }
-        
+
         // Use shared findVideoFile which checks ALL storage locations
         File file = findVideoFile(filename);
-        
+
         if (file == null) {
             HttpResponse.sendError(out, 404, Messages.get("errors.recordings_not_found_with_filename", filename));
             return;
         }
-        
+
+        // Conditional GET: if the client's cached copy matches our ETag,
+        // skip re-streaming. Tag is "<length>-<mtime>" so any append/replace
+        // invalidates without us needing a content hash.
+        String etag = buildVideoEtag(file);
+        if (ifNoneMatchHeader != null && etagMatches(ifNoneMatchHeader, etag)) {
+            HttpResponse.sendNotModified(out, etag);
+            return;
+        }
+
         // Handle Range request for video seeking
         try {
             if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
@@ -1179,17 +1199,17 @@ public class RecordingsApiHandler {
                 String[] parts = rangeSpec.split("-");
                 long start = parts[0].isEmpty() ? 0 : Long.parseLong(parts[0]);
                 long end = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : -1;
-                
+
                 // Validate range
                 long fileLength = file.length();
                 if (start < 0 || start >= fileLength) {
                     HttpResponse.sendError(out, 416, Messages.get("errors.recordings_range_not_satisfiable"));
                     return;
                 }
-                
-                HttpResponse.sendVideoRange(out, file, start, end);
+
+                HttpResponse.sendVideoRange(out, file, start, end, etag);
             } else {
-                HttpResponse.sendVideo(out, file);
+                HttpResponse.sendVideo(out, file, etag);
             }
         } catch (NumberFormatException e) {
             HttpResponse.sendError(out, 400, Messages.get("errors.recordings_invalid_range_header"));
@@ -1198,7 +1218,32 @@ public class RecordingsApiHandler {
             HttpResponse.sendError(out, 410, Messages.get("errors.recordings_file_no_longer_accessible"));
         }
     }
-    
+
+    /**
+     * Build a strong ETag for a video file from its size and mtime. Anything
+     * that mutates the file (replacement, append, ext-storage rotation)
+     * changes at least one of these, invalidating the client's cache.
+     */
+    private static String buildVideoEtag(File file) {
+        return "\"" + file.length() + "-" + file.lastModified() + "\"";
+    }
+
+    /**
+     * Check whether the client's If-None-Match header matches our ETag.
+     * Tolerates the wildcard form, weak prefix ("W/"), and comma-separated
+     * lists per RFC 7232 §3.2.
+     */
+    private static boolean etagMatches(String ifNoneMatch, String etag) {
+        if (ifNoneMatch == null || etag == null) return false;
+        if ("*".equals(ifNoneMatch.trim())) return true;
+        for (String token : ifNoneMatch.split(",")) {
+            String t = token.trim();
+            if (t.startsWith("W/")) t = t.substring(2);
+            if (t.equals(etag)) return true;
+        }
+        return false;
+    }
+
     /**
      * Delete a recording.
      */

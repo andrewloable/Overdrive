@@ -642,15 +642,25 @@ public class SurveillanceIpcServer implements Runnable {
                 logger.info("Post-record seconds set to: " + postRecordSeconds);
             }
             
-            // Handle bitrate setting
-            if (config.has("bitrate")) {
-                String bitrate = config.optString("bitrate", "MEDIUM").toUpperCase();
-                if (bitrate.equals("LOW") || bitrate.equals("MEDIUM") || bitrate.equals("HIGH")) {
-                    CameraDaemon.setRecordingBitrate(bitrate);
-                    // Also update HttpServer's static setting for web UI sync
-                    HttpServer.setRecordingBitrateStatic(bitrate);
-                    logger.info("Recording bitrate set to: " + bitrate);
+            // Handle recording quality / legacy bitrate setting.
+            // Prefer the canonical `recordingQuality` (ECONOMY..MAX); accept the
+            // legacy `bitrate` (LOW/MEDIUM/HIGH) only as a fallback.
+            String tierIn = null;
+            if (config.has("recordingQuality")) {
+                tierIn = config.optString("recordingQuality", "").toUpperCase();
+            } else if (config.has("bitrate")) {
+                String legacy = config.optString("bitrate", "").toUpperCase();
+                switch (legacy) {
+                    case "LOW":    tierIn = "ECONOMY"; break;
+                    case "MEDIUM": tierIn = "STANDARD"; break;
+                    case "HIGH":   tierIn = "HIGH"; break;
+                    default:       tierIn = null; break;
                 }
+            }
+            if (tierIn != null && !tierIn.isEmpty()) {
+                CameraDaemon.setRecordingQuality(tierIn);
+                HttpServer.setRecordingBitrateStatic(tierIn);  // legacy alias setter; takes any string
+                logger.info("Recording quality set to: " + tierIn);
             }
             
             // Handle codec setting
@@ -665,7 +675,7 @@ public class SurveillanceIpcServer implements Runnable {
             }
             
             // Persist recording settings to file so web UI can read them
-            if (config.has("bitrate") || config.has("codec")) {
+            if (config.has("recordingQuality") || config.has("bitrate") || config.has("codec")) {
                 HttpServer.persistSettingsStatic();
             }
             
@@ -1009,7 +1019,7 @@ public class SurveillanceIpcServer implements Runnable {
         config.put("lightThreshold", 0.4);
         config.put("aiEnabled", true);
         config.put("scheduleEnabled", false);
-        config.put("bitrate", CameraDaemon.getRecordingBitrate());
+        config.put("recordingQuality", CameraDaemon.getRecordingQuality());
         config.put("codec", CameraDaemon.getRecordingCodec());
         
         // Get actual values from sentry config if available
@@ -1482,7 +1492,7 @@ public class SurveillanceIpcServer implements Runnable {
                 try {
                     r.put("available", false);
                     r.put("error", error != null ? error : "unknown");
-                    r.put("currentVersion", com.overdrive.app.BuildConfig.VERSION_NAME);
+                    r.put("currentVersion", com.overdrive.app.updater.AppUpdater.getDisplayVersionFromFile());
                 } catch (Exception ignored) {}
                 resultRef[0] = r;
                 synchronized (lock) { done[0] = true; lock.notify(); }
@@ -1506,7 +1516,11 @@ public class SurveillanceIpcServer implements Runnable {
             String k = keys.next();
             response.put(k, resultRef[0].opt(k));
         }
-        response.put("success", true);
+        // success reflects whether the check actually got a verdict — a
+        // result that came back via onError carries an "error" field, so
+        // surface that as success=false instead of leaving callers to
+        // guess from a separate key.
+        response.put("success", !resultRef[0].has("error"));
     }
 
     /**

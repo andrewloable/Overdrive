@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title data-i18n="app.live_view_title">Live View - OverDrive</title>
-    <link rel="icon" type="image/webp" href="../shared/app-icon.webp">
+    <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="../shared/app-icon.webp">
+    <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#00E5FF">
+    <meta name="theme-color" content="#00876C">
     <script src="../shared/theme.js?v=3"></script>
+    <script src="../shared/app-shell.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -25,242 +26,8 @@
 <body class="live-view-page">
     <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <div class="brand-logo"><img src="../shared/app-icon.webp" alt="OverDrive"></div>
-                    <div class="brand-text">
-                        <span class="brand-name" data-i18n="app.name">OverDrive</span>
-                        <span class="brand-tagline" data-i18n="app.tagline">Surveillance System</span>
-                        <span class="brand-version" id="appVersion"></span>
-                    </div>
-                </div>
-                <button class="sidebar-close" onclick="toggleSidebar()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="index.html" class="nav-link active">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/>
-                        <path d="M2 12a9 9 0 0 0 8 8"/><circle cx="2" cy="12" r="2"/>
-                    </svg>
-                    <span data-i18n="nav.live_view">Live View</span>
-                </a>
-                <a href="events.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <span data-i18n="nav.events">Events</span>
-                </a>
-                <a href="surveillance.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    <span data-i18n="nav.surveillance">Surveillance</span>
-                </a>
-                <a href="recording.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/>
-                    </svg>
-                    <span data-i18n="nav.recordings">Recordings</span>
-                </a>
-                <a href="performance.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
-                    <span data-i18n="nav.performance">Performance</span>
-                </a>
-                <a href="abrp.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 18l6-6-6-6"/>
-                        <circle cx="18" cy="12" r="3"/>
-                        <circle cx="6" cy="6" r="3"/>
-                        <circle cx="6" cy="18" r="3"/>
-                    </svg>
-                    <span data-i18n="nav.abrp">ABRP</span>
-                </a>
-                <a href="mqtt.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <circle cx="12" cy="12" r="2"/>
-                        <path d="M8.46 15.54A5 5 0 0 1 7 12a5 5 0 0 1 1.46-3.54"/>
-                        <path d="M15.54 8.46A5 5 0 0 1 17 12a5 5 0 0 1-1.46 3.54"/>
-                        <path d="M5.64 18.36A9 9 0 0 1 3 12a9 9 0 0 1 2.64-6.36"/>
-                        <path d="M18.36 5.64A9 9 0 0 1 21 12a9 9 0 0 1-2.64 6.36"/>
-                    </svg>
-                    <span data-i18n="nav.mqtt">MQTT</span>
-                </a>
-                <a href="trips.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 17h2v-7l4 4 4-4 4 4 4-4v7h2"/>
-                        <path d="M4 5h16"/>
-                    </svg>
-                    <span data-i18n="nav.trips">Trips</span>
-                </a>
-                <a href="notifications.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <span data-i18n="nav.notifications">Notifications</span>
-                </a>
-                <a href="vehicle-control.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <span data-i18n="nav.vehicle_control">Vehicle Control</span>
-                </a>
-                <a href="about.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    <span data-i18n="nav.about">About</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="status-card">
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.device"><span class="status-dot" id="connDot"></span>Device</span>
-                        <span class="status-value" id="deviceId">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.acc">ACC</span>
-                        <span class="status-value" id="accValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.battery_12v">
-                            <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="7" width="12" height="10" rx="1"/><path d="M6 10H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2"/><path d="M18 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2"/>
-                            </svg>12V
-                        </span>
-                        <span class="status-value" id="batteryValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.sentry">Surveillance</span>
-                        <span class="status-value" id="survStatus" data-i18n="status.off">OFF</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.network">
-                            <span id="networkIcon"><svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></span>Net
-                        </span>
-                        <span class="status-value" id="networkValue">--</span>
-                    </div>
-                </div>
-                <div class="status-card ev-card" id="evCard">
-                    <div class="ev-header-row">
-                        <span class="ev-title" data-i18n="status.vehicle_status">Vehicle Status</span>
-                        <span class="ev-percent-text" id="evPercentValue">--%</span>
-                    </div>
-                    <div class="ev-svg-container">
-                        <svg viewBox="0 0 320 130" class="ev-car-svg">
-                            <defs>
-                                <linearGradient id="ceramicBody" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#ffffff"/>
-                                    <stop offset="60%" stop-color="#f8fafc"/>
-                                    <stop offset="100%" stop-color="#e2e8f0"/>
-                                </linearGradient>
-                                <linearGradient id="glassTint" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#020617"/>
-                                    <stop offset="100%" stop-color="#1e293b"/>
-                                </linearGradient>
-                                <linearGradient id="batteryFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#2dd4bf" class="grad-start"/>
-                                    <stop offset="50%" stop-color="#06b6d4" class="grad-mid"/>
-                                    <stop offset="100%" stop-color="#3b82f6" class="grad-end"/>
-                                </linearGradient>
-                                <pattern id="chargeFlowPattern" x="0" y="0" width="20" height="10" patternUnits="userSpaceOnUse">
-                                    <rect x="0" y="0" width="10" height="16" fill="rgba(255,255,255,0.4)"/>
-                                </pattern>
-                                <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#e2e8f0"/>
-                                    <stop offset="50%" stop-color="#ffffff"/>
-                                    <stop offset="100%" stop-color="#94a3b8"/>
-                                </linearGradient>
-                                <filter id="liquidDepth">
-                                    <feInnerShadow dx="0" dy="2" stdDeviation="1" flood-color="rgba(0,0,0,0.1)"/>
-                                </filter>
-                            </defs>
-                            <g transform="translate(0, -3)">
-                                <circle cx="70" cy="90" r="19" fill="#050505"/>
-                                <circle cx="250" cy="90" r="19" fill="#050505"/>
-                            </g>
-                            <path d="M10,65 Q15,50 30,45 L60,38 L100,20 C130,10 180,10 210,22 L260,40 Q280,44 295,52 L310,62 Q315,68 312,78 L275,78 Q250,50 225,78 L95,78 Q70,50 45,78 L15,78 Q5,78 5,68 Q5,62 10,65 Z" fill="url(#ceramicBody)" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.3))"/>
-                            <path d="M95,78 L225,78 L225,98 L95,98 Z" fill="url(#ceramicBody)"/>
-                            <g>
-                                <path d="M100,24 L210,26 L240,42 L200,42 L100,40 Z" fill="none" stroke="url(#chromeGrad)" stroke-width="1.5"/>
-                                <path d="M102,26 L208,28 L235,41 L200,41 L102,39 Z" fill="url(#glassTint)"/>
-                                <path d="M155,27 L160,28 L160,41 L155,40 Z" fill="#020617"/>
-                            </g>
-                            <rect id="evBatteryFill" x="100" y="80" width="0" height="16" rx="2" fill="url(#batteryFlow)" class="battery-bar" filter="url(#liquidDepth)"/>
-                            <rect id="evChargeFlow" x="100" y="80" width="0" height="16" rx="2" fill="url(#chargeFlowPattern)" class="charge-flow" opacity="0"/>
-                            <g transform="translate(70, 90)">
-                                <circle r="19" fill="#050505"/>
-                                <circle r="14" fill="#ffffff"/>
-                                <circle r="14" fill="url(#ceramicBody)" opacity="0.8"/>
-                                <circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/>
-                                <path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/>
-                                <circle r="4" fill="#1e293b"/>
-                            </g>
-                            <g transform="translate(250, 90)">
-                                <circle r="19" fill="#050505"/>
-                                <circle r="14" fill="#ffffff"/>
-                                <circle r="14" fill="url(#ceramicBody)" opacity="0.8"/>
-                                <circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/>
-                                <path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/>
-                                <circle r="4" fill="#1e293b"/>
-                            </g>
-                            <path d="M290,55 L302,53 L298,60 Z" fill="#fff" filter="drop-shadow(0 0 3px cyan)"/>
-                            <path d="M12,58 L18,55 L18,62 Z" fill="#ef4444" opacity="0.9"/>
-                            <g id="svgChargeIcon" transform="translate(160, 5) scale(0)" style="transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-                                <circle r="12" fill="#00D4AA" stroke="#fff" stroke-width="2"/>
-                                <path d="M-2,-6 L-4,1 L0,1 L-2,7 L5,-1 L1,-1 Z" fill="#fff"/>
-                            </g>
-                        </svg>
-                    </div>
-                    <div class="ev-info-row">
-                        <div class="ev-range">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2v20M2 12h20"/>
-                            </svg>
-                            <span id="evRange">-- km</span>
-                        </div>
-                        <div class="ev-power-status">
-                            <span class="ev-power-val" id="evPower">-- kW</span>
-                        </div>
-                    </div>
-                    <div class="ev-soh-row" id="evSohRow" style="display:none;">
-                        <span class="ev-soh-label" data-i18n="vehicle.soh_label">SOH</span>
-                        <span class="ev-soh-val" id="evSohValue">--%</span>
-                    </div>
-                    <div class="ev-personalized-range" id="evPersonalizedRow" style="display:none;">
-                        <span class="ev-personalized-label" data-i18n="vehicle.personalized_label">⚡ Personalized</span>
-                        <span class="ev-personalized-val" id="evPersonalizedRange">-- km</span>
-                    </div>
-                </div>
-
-                <!-- Fuel Card (PHEV only — hidden for BEVs) -->
-                <div class="status-card fuel-card" id="fuelCard" style="display:none;">
-                    <div class="fuel-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px;color:var(--warning);">
-                            <path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/>
-                            <path d="M3 22h10"/>
-                            <path d="M13 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/>
-                            <path d="M6 14v-3"/>
-                        </svg>
-                        <span class="fuel-title" data-i18n="vehicle.fuel">Fuel</span>
-                        <span class="fuel-percent" id="fuelPercentValue">--%</span>
-                    </div>
-                    <div class="fuel-bar-track">
-                        <div class="fuel-bar-fill" id="fuelBarFill" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
+        <!-- App shell sidebar (rendered by ../shared/app-shell.js) -->
+        <div id="app-shell-mount"></div>
         <!-- Main Content -->
         <main class="main-content">
             <div class="mobile-header" id="mobileHeader">
@@ -318,10 +85,13 @@
                                 </div>
                                 <div class="top-bar-right">
                                     <select id="qualitySelector" class="quality-select-sota" onchange="BYD.stream.setQuality(this.value)">
-                                        <option value="ULTRA_LOW" data-i18n="stream.quality_ultra_low">Ultra Low (400k)</option>
-                                        <option value="LOW" selected data-i18n="stream.quality_low">Low (600k)</option>
-                                        <option value="MEDIUM" data-i18n="stream.quality_medium">Medium (1M)</option>
-                                        <option value="HIGH" data-i18n="stream.quality_high">High (1.5M)</option>
+                                        <option value="ULTRA_LOW"  data-i18n="stream.quality_ultra_low">Ultra Low (400k)</option>
+                                        <option value="LOW"        data-i18n="stream.quality_low">Low (600k)</option>
+                                        <option value="MEDIUM"     selected data-i18n="stream.quality_medium">Medium (1M)</option>
+                                        <option value="HIGH"       data-i18n="stream.quality_high">High (1.5M)</option>
+                                        <option value="ULTRA_HIGH" data-i18n="stream.quality_ultra_high">Ultra High (2.5M)</option>
+                                        <option value="SMOOTH"     data-i18n="stream.quality_smooth">Smooth (3.5M, 25 fps)</option>
+                                        <option value="MAX"        data-i18n="stream.quality_max">Max (5M, 30 fps)</option>
                                     </select>
                                     <button class="top-bar-btn" onclick="BYD.stream.toggleFullscreen()">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -353,7 +123,7 @@
                             <!-- Bottom Car Image Selector — flips to a right-rail in landscape -->
                             <div class="car-selector-bottom">
                                 <div class="car-image-container">
-                                    <img src="../shared/car-icon.webp" alt="Car" class="car-image" id="carImage">
+                                    <canvas id="liveCarCanvas" class="car-image" aria-hidden="true"></canvas>
                                     
                                     <!-- Camera Hotspots with Pulse Animation -->
                                     <div class="cam-hotspot" data-cam="1" onclick="BYD.stream.selectCamera(1)">
@@ -914,6 +684,10 @@
                 if (tab === this.activeTab) return;
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 document.getElementById(tab === 'map' ? 'panelMap' : 'panelCameras').classList.add('active');
+                // Flip a body class so CSS can float the mobile header over
+                // the map and let the map paint edge-to-edge to the top.
+                if (tab === 'map') document.body.classList.add('live-map-active');
+                else document.body.classList.remove('live-map-active');
                 const label = document.getElementById('miniPreviewLabel');
                 const content = document.getElementById('miniPreviewContent');
                 if (tab === 'map') {
@@ -927,6 +701,9 @@
                 this.activeTab = tab;
             }
         };
+        // Initial state — the page lands on the map tab, so flip the class
+        // immediately to avoid a one-frame flash with the opaque header.
+        document.body.classList.add('live-map-active');
         
         // Override stream for seamless UI - NO default camera selected
         BYD.stream.currentViewMode = -1; // -1 = none selected
@@ -1188,6 +965,29 @@
                 if (_scv) _scv.classList.remove('fullscreen');
             }
         });
+
+        // Top-down 3D vehicle in the camera selector. Replaces the static
+        // car-icon.webp PNG with the user's actual GLB tinted in their
+        // chosen paint colour, kept in sync with the sidebar EV-card via
+        // OverdriveAppShell.mountVehicleCanvas. Hotspot CSS positions
+        // (FRONT/REAR/LEFT/RIGHT around a 72×150 silhouette) align with
+        // the auto-fit roof-down render.
+        function mountLiveCarCanvas() {
+            const canvas = document.getElementById('liveCarCanvas');
+            if (!canvas) return;
+            const shell = window.OverdriveAppShell;
+            if (!shell || typeof shell.mountVehicleCanvas !== 'function') return;
+            shell.mountVehicleCanvas(canvas, { view: 'top' });
+        }
+        // app-shell.js exposes mountVehicleCanvas after it renders the
+        // sidebar and dispatches `app-shell:ready`. Listen for that
+        // event AND check synchronously in case the shell already
+        // initialised (script-load order on cached pages can flip).
+        if (window.OverdriveAppShell && window.OverdriveAppShell.mountVehicleCanvas) {
+            mountLiveCarCanvas();
+        } else {
+            document.addEventListener('app-shell:ready', mountLiveCarCanvas);
+        }
     </script>
 </body>
 </html>

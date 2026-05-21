@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded: vpn_lock (24px, weight 400, fill 0)
+     Used for the Sing-box proxy daemon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateY="24">
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M620-40q-25 0-42.5-17.5T560-100v-160q0-25 17.5-42.5T620-320v-40q0-42 29-71t71-29q42 0 71 29t29 71v40q25 0 42.5 17.5T880-260v160q0 25-17.5 42.5T820-40H620Zm60-280h80v-40q0-17-11.5-28.5T720-400q-17 0-28.5 11.5T680-360v40Zm-200-65q-148-22-244-130T140-560q0-29 4.5-57.5T158-672q22 19 47.5 31.5T260-624q-3 16-4.5 31.5T254-560q0 109 70.5 191T504-272q-7 12-13 23.5T482-225q-1 9-1.5 18t-.5 22Zm-103-22q-30-7-56-19t-50-30l60-60q-44-13-79.5-39.5T194-356q-29-44-44.5-95.5T134-560q0-12 1-23.5t3-22.5q-14-5-26.5-12T88-635q-3 17-5.5 36T80-560q0 105 64 188.5T244-244l133 -83Z"/>
+    </group>
+</vector>

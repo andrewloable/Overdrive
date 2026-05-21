@@ -50,7 +50,9 @@ BYD.performance = {
         dataIndex: -1
     },
     
-    // Colors
+    // Colors — line/series accents stay constant; surface-dependent fields
+    // (grid, text, crosshair, tooltip) get refreshed from CSS tokens by
+    // _refreshPalette() so they flip with [data-theme="light"].
     colors: {
         system: '#00D4AA',
         app: '#0EA5E9',
@@ -59,14 +61,54 @@ BYD.performance = {
         charging: '#0EA5E9',
         grid: 'rgba(255, 255, 255, 0.06)',
         text: 'rgba(255, 255, 255, 0.4)',
+        textStrong: '#FFFFFF',
         crosshair: 'rgba(255, 255, 255, 0.3)',
         tooltipBg: 'rgba(20, 20, 30, 0.95)',
-        tooltipBorder: 'rgba(255, 255, 255, 0.1)'
+        tooltipBorder: 'rgba(255, 255, 255, 0.1)',
+        tooltipText: '#FFFFFF'
+    },
+
+    /**
+     * Pull the theme-dependent chart colors out of CSS custom properties so
+     * canvas labels react to light/dark mode (data-theme on <html>). Called
+     * at init and whenever the theme attribute mutates.
+     */
+    _refreshPalette() {
+        try {
+            const s = getComputedStyle(document.documentElement);
+            const pick = (name, fallback) => {
+                const v = (s.getPropertyValue(name) || '').trim();
+                return v || fallback;
+            };
+            this.colors.grid = pick('--chart-grid', this.colors.grid);
+            this.colors.text = pick('--chart-text', this.colors.text);
+            this.colors.textStrong = pick('--chart-text-strong', this.colors.textStrong);
+            this.colors.crosshair = pick('--chart-crosshair', this.colors.crosshair);
+            this.colors.tooltipBg = pick('--chart-tooltip-bg', this.colors.tooltipBg);
+            this.colors.tooltipBorder = pick('--chart-tooltip-border', this.colors.tooltipBorder);
+            this.colors.tooltipText = pick('--chart-tooltip-text', this.colors.tooltipText);
+        } catch (e) { /* keep dark defaults */ }
+    },
+
+    _setupThemeObserver() {
+        if (this._themeObserver) return;
+        const self = this;
+        this._themeObserver = new MutationObserver(() => {
+            self._refreshPalette();
+            try { self.renderAllCharts(); } catch (_) {}
+            try { self.renderSocChart(); } catch (_) {}
+            try { self.renderVoltageChart(); } catch (_) {}
+            try { self.renderThermalChart(); } catch (_) {}
+        });
+        this._themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
     },
     
     async init() {
         console.log('[Performance] Initializing...');
-        
+
         // Initialize history arrays
         for (let i = 0; i < this.HISTORY_SIZE; i++) {
             this.history.cpuSystem.push(0);
@@ -75,10 +117,15 @@ BYD.performance = {
             this.history.memApp.push(0);
             this.history.gpu.push(0);
         }
-        
+
+        // Resolve theme-dependent canvas colors before first paint, then
+        // watch for live theme flips from the Android shell.
+        this._refreshPalette();
+        this._setupThemeObserver();
+
         // Initialize charts
         this.initCharts();
-        
+
         // SOTA: Connect to backend (starts monitoring if first client)
         await this.connect();
         
@@ -276,15 +323,15 @@ BYD.performance = {
             this._visibilityObserver.observe(canvas);
         }
     },
-    
+
     createChart(canvasId, chartType) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return null;
-        
+
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        
+
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
         ctx.scale(dpr, dpr);
@@ -869,10 +916,10 @@ BYD.performance = {
         }
     },
 
-    
+
     renderChart(chart, series) {
         if (!chart || !chart.ctx) return;
-        
+
         const { ctx, width, height, type } = chart;
         const padding = { top: 10, right: 10, bottom: 25, left: 40 };
         const chartWidth = width - padding.left - padding.right;
@@ -954,10 +1001,10 @@ BYD.performance = {
                 // White ring
                 ctx.beginPath();
                 ctx.arc(x, y, 8, 0, Math.PI * 2);
-                ctx.strokeStyle = '#fff';
+                ctx.strokeStyle = this.colors.textStrong;
                 ctx.lineWidth = 2;
                 ctx.stroke();
-                
+
                 tooltipData.push({ label: s.label, value: value.toFixed(1), color: s.color });
             }
         });
@@ -1011,19 +1058,19 @@ BYD.performance = {
         ctx.font = '10px Inter, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(timeLabel, tooltipX + boxPadding, y + boxPadding + 10);
-        
+
         // Draw data values
         data.forEach((item, i) => {
             const itemY = y + boxPadding + lineHeight * (i + 1) + 10;
-            
+
             // Color dot
             ctx.beginPath();
             ctx.arc(tooltipX + boxPadding + 4, itemY - 4, 4, 0, Math.PI * 2);
             ctx.fillStyle = item.color;
             ctx.fill();
-            
+
             // Label and value
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = this.colors.tooltipText;
             ctx.font = '11px Inter, sans-serif';
             ctx.fillText(item.label + ':', tooltipX + boxPadding + 14, itemY);
             
@@ -1477,8 +1524,8 @@ BYD.performance = {
         const bgPadding = 4;
         ctx.fillStyle = this.colors.tooltipBg;
         ctx.fillRect(labelX - bgPadding, labelY - 12, textWidth + bgPadding * 2, 16);
-        
-        ctx.fillStyle = '#fff';
+
+        ctx.fillStyle = this.colors.tooltipText;
         ctx.textAlign = 'left';
         ctx.fillText(labelText, labelX, labelY);
         
@@ -1518,10 +1565,10 @@ BYD.performance = {
         // White ring
         ctx.beginPath();
         ctx.arc(x, y, 9, 0, Math.PI * 2);
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = this.colors.textStrong;
         ctx.lineWidth = 2;
         ctx.stroke();
-        
+
         // Format time
         const date = new Date(point.t);
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1605,7 +1652,7 @@ BYD.performance = {
 
         // Range if available
         if (point.range && point.range > 0) {
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = this.colors.tooltipText;
             ctx.fillText(BYD.i18n.t('performance.tooltip_range_km', {km: point.range.toFixed(0)}), tooltipX + boxPadding, tooltipY + boxPadding + yOffset);
         }
     },
@@ -1779,12 +1826,12 @@ BYD.performance = {
         const vRange = maxV - minV || 1;
 
         // Grid
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.strokeStyle = this.colors.grid;
         ctx.lineWidth = 1;
         for (let v = Math.ceil(minV); v <= maxV; v += 0.5) {
             const y = padding.top + cH - ((v - minV) / vRange) * cH;
             ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(W - padding.right, y); ctx.stroke();
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillStyle = this.colors.text;
             ctx.font = '11px Inter';
             ctx.textAlign = 'right';
             ctx.fillText(v.toFixed(1) + 'V', padding.left - 6, y + 4);
@@ -1813,7 +1860,7 @@ BYD.performance = {
 
         // Time labels
         const labels = this.getTimeLabels(timeStart, timeEnd, this.batteryTimeRange);
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = this.colors.text;
         ctx.font = '11px Inter';
         ctx.textAlign = 'center';
         labels.forEach(l => {
@@ -1875,12 +1922,12 @@ BYD.performance = {
         const tRange = maxT - minT || 1;
 
         // Grid
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.strokeStyle = this.colors.grid;
         ctx.lineWidth = 1;
         for (let t = Math.ceil(minT / 5) * 5; t <= maxT; t += 5) {
             const y = padding.top + cH - ((t - minT) / tRange) * cH;
             ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(W - padding.right, y); ctx.stroke();
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillStyle = this.colors.text;
             ctx.font = '11px Inter';
             ctx.textAlign = 'right';
             ctx.fillText(t + '°C', padding.left - 6, y + 4);
@@ -1912,7 +1959,7 @@ BYD.performance = {
 
         // Time labels
         const labels = this.getTimeLabels(timeStart, timeEnd, this.healthTimeRange);
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = this.colors.text;
         ctx.font = '11px Inter';
         ctx.textAlign = 'center';
         labels.forEach(l => {
@@ -1953,7 +2000,7 @@ BYD.performance = {
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x, y, 9, 0, Math.PI * 2);
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = this.colors.textStrong;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -2033,7 +2080,7 @@ BYD.performance = {
             ctx.fill();
             ctx.beginPath();
             ctx.arc(x, y, 7, 0, Math.PI * 2);
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = this.colors.textStrong;
             ctx.lineWidth = 2;
             ctx.stroke();
         });
@@ -2152,79 +2199,285 @@ BYD.performance = {
     },
 
     updateSohDetailCard(data) {
-        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        var setEl = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
 
-        // Active SOH value
-        if (data.hasEstimate && data.soh > 0) {
-            setEl('sohDetailPercent', data.soh.toFixed(1) + '%');
+        // When no nominal is set, hide the SOH percentage entirely and prompt
+        // the user to configure capacity. Without a nominal the formula has
+        // nothing to divide by.
+        var nominalSet = data.nominalCapacityKwh > 0;
+        var displaySource = data.displaySource || (data.hasEstimate ? 'live' : 'unavailable');
+        var displaySoh = (typeof data.displaySoh === 'number') ? data.displaySoh : -1;
+
+        var percentEl = document.getElementById('sohDetailPercent');
+        var fallbackEl = document.getElementById('sohFallbackCaption');
+
+        var calSoh = (data.calibration && data.calibration.soh) ? data.calibration.soh : -1;
+        var calTs = (data.calibration && data.calibration.timestampMs) ? data.calibration.timestampMs : 0;
+        var calDateStr = '';
+        if (calTs > 0) {
+            var cd = new Date(calTs);
+            calDateStr = cd.getFullYear() + '-' +
+                ('0' + (cd.getMonth() + 1)).slice(-2) + '-' +
+                ('0' + cd.getDate()).slice(-2);
+        }
+
+        if (!nominalSet) {
+            if (percentEl) {
+                percentEl.style.display = '';
+                percentEl.textContent = BYD.i18n.t('soh.set_battery_capacity_prompt') || '—';
+            }
+            if (fallbackEl) { fallbackEl.hidden = true; fallbackEl.textContent = ''; }
+        } else if (displaySource === 'live' && displaySoh > 0) {
+            if (percentEl) {
+                percentEl.style.display = '';
+                percentEl.textContent = displaySoh.toFixed(1) + '%';
+            }
+            if (fallbackEl) { fallbackEl.hidden = true; fallbackEl.textContent = ''; }
+        } else if (displaySource === 'calibration' && displaySoh > 0) {
+            if (percentEl) {
+                percentEl.style.display = '';
+                percentEl.textContent = displaySoh.toFixed(1) + '%';
+            }
+            if (fallbackEl) {
+                var capPct = (calSoh > 0 ? calSoh : displaySoh).toFixed(1);
+                fallbackEl.textContent = BYD.i18n.t('soh.fallback_caption', {pct: capPct, date: calDateStr});
+                fallbackEl.hidden = false;
+            }
         } else {
-            setEl('sohDetailPercent', BYD.i18n.t('performance.soh_na'));
+            if (percentEl) {
+                percentEl.style.display = 'none';
+                percentEl.textContent = '';
+            }
+            if (fallbackEl) {
+                fallbackEl.textContent = BYD.i18n.t('soh.unavailable_caption');
+                fallbackEl.hidden = false;
+            }
         }
 
-        // EMA value (always show for reference)
-        if (data.emaSoh > 0) {
-            setEl('sohEmaValue', BYD.i18n.t('performance.soh_ema_label', {pct: data.emaSoh.toFixed(1)}));
+        // Calibration anchor — separate "Last verified" subline. Hidden when
+        // we're already showing the calibration value as the primary readout
+        // (caption above already names the date), otherwise visible.
+        var calEl = document.getElementById('sohCalibrationAnchor');
+        if (calEl) {
+            if (calSoh > 0 && displaySource !== 'calibration') {
+                calEl.textContent = BYD.i18n.t('soh.last_verified', {pct: calSoh.toFixed(1), date: calDateStr});
+                calEl.style.display = 'block';
+            } else {
+                calEl.style.display = 'none';
+            }
         }
 
-        // Source selector — highlight active button
-        const selectorDiv = document.getElementById('sohSourceSelector');
-        if (selectorDiv && data.preferredSource) {
-            const buttons = selectorDiv.querySelectorAll('.time-btn');
-            buttons.forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.source === data.preferredSource);
-            });
+        // Battery-capacity row — summary + source caption
+        var summaryEl = document.getElementById('sohCapacitySummary');
+        var sourceEl = document.getElementById('sohCapacitySource');
+        if (summaryEl) {
+            if (nominalSet) {
+                var pieces = [data.nominalCapacityKwh.toFixed(1) + ' ' + BYD.i18n.t('soh.kwh_unit')];
+                if (data.modelId) pieces.push(this._formatModelId(data.modelId));
+                summaryEl.textContent = pieces.join(' · ');
+            } else {
+                summaryEl.textContent = BYD.i18n.t('soh.tap_to_set');
+            }
         }
-
-        // Raw values from all sources
-        if (data.rawValues) {
-            const rv = data.rawValues;
-            const fmt = (v) => (typeof v === 'number' && v > 0) ? v.toFixed(1) + '%' : '--';
-            setEl('sohRawOem', fmt(rv.oem));
-            setEl('sohRawCapAh', fmt(rv.capacity_ah));
-            setEl('sohRawCalib', fmt(rv.calibration));
-            setEl('sohRawEnergy', fmt(rv.energy));
+        if (sourceEl) {
+            sourceEl.textContent = data.nominalSource ? '(' + data.nominalSource + ')' : '';
         }
 
         // Metadata
-        setEl('sohDetailNominal', data.nominalCapacityKwh > 0 ? data.nominalCapacityKwh.toFixed(1) + ' kWh' : '--');
-        setEl('sohDetailSamples', data.sampleCount != null ? data.sampleCount.toString() : '--');
+        setEl('sohDetailNominal', nominalSet ? data.nominalCapacityKwh.toFixed(1) + ' kWh' : '--');
 
         if (data.lastUpdated && data.lastUpdated > 0) {
-            const d = new Date(data.lastUpdated);
+            var d = new Date(data.lastUpdated);
             setEl('sohDetailUpdated', d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
         } else {
             setEl('sohDetailUpdated', '--');
         }
 
-        // Hint text
-        const hint = document.getElementById('sohDetailHint');
+        // Hint
+        var hint = document.getElementById('sohDetailHint');
         if (hint) {
-            if (!data.hasEstimate) {
+            if (!nominalSet) {
+                hint.style.display = 'block';
+                hint.textContent = BYD.i18n.t('soh.set_battery_capacity_prompt');
+            } else if (!data.hasEstimate) {
                 hint.style.display = 'block';
                 hint.textContent = BYD.i18n.t('performance.soh_no_estimate');
-            } else if (data.preferredSource !== 'auto') {
-                hint.style.display = 'block';
-                hint.textContent = BYD.i18n.t('performance.soh_pinned_to', {source: data.preferredSource});
             } else {
                 hint.style.display = 'none';
             }
         }
     },
 
-    async setSohSource(source) {
-        try {
-            const resp = await fetch('/api/performance/soh/source', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source: source })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                this.fetchSohStatus();  // Refresh card with new active value
+    _formatModelId: function(id) {
+        // Best-effort: capitalize first letter. Manifest titles aren't cached
+        // here; the modal has the full list when the user opens it.
+        if (!id) return '';
+        return id.charAt(0).toUpperCase() + id.slice(1);
+    },
+
+    // ==================== SOH Capacity Modal ====================
+
+    openSohCapacityModal: function() {
+        var self = this;
+        var backdrop = document.getElementById('sohCapacityModalBackdrop');
+        if (!backdrop) return;
+
+        // Pre-populate the inputs from the current status
+        var input = document.getElementById('sohCapacityModalInput');
+        var modelSel = document.getElementById('sohCapacityModalModel');
+        if (input) input.value = '';
+        if (modelSel) modelSel.innerHTML = '';
+
+        // Fetch current state in parallel: nominal + model + manifest
+        var nominalReq = new XMLHttpRequest();
+        nominalReq.open('GET', '/api/performance/soh/nominal', true);
+        nominalReq.onload = function() {
+            try {
+                var data = JSON.parse(nominalReq.responseText);
+                if (input && typeof data.nominalKwh === 'number') {
+                    input.value = data.nominalKwh.toFixed(1);
+                }
+            } catch (e) {}
+        };
+        nominalReq.send();
+
+        var manifestReq = new XMLHttpRequest();
+        manifestReq.open('GET', '/api/models/manifest', true);
+        manifestReq.onload = function() {
+            try {
+                var manifest = JSON.parse(manifestReq.responseText);
+                self._populateModelDropdown(manifest);
+                // Sync current selected model. Setting `select.value`
+                // programmatically does NOT dispatch a `change` event, so we
+                // also need to populate the kWh input from the model's
+                // nominal whenever the saved-nominal fetch came back empty
+                // (fresh install, never customised). Without this fallback
+                // the input renders blank even though Seal (or whichever
+                // model) is selected, leaving the user with no default.
+                var selReq = new XMLHttpRequest();
+                selReq.open('GET', '/api/models/selected', true);
+                selReq.onload = function() {
+                    try {
+                        var sel = JSON.parse(selReq.responseText);
+                        var modelId = (sel && sel.modelId) ? sel.modelId : '';
+                        // If no selected model came back, fall back to the
+                        // first model in the manifest — every dropdown should
+                        // surface a sensible default capacity on open.
+                        if (!modelId && modelSel && modelSel.options.length) {
+                            modelId = modelSel.options[0].value;
+                        }
+                        if (modelSel && modelId) modelSel.value = modelId;
+                        if (input && (!input.value || input.value === '')) {
+                            var kwh = self._modelNominalById[modelId];
+                            if (typeof kwh === 'number' && kwh > 0) {
+                                input.value = kwh.toFixed(1);
+                            }
+                        }
+                    } catch (e) {}
+                };
+                selReq.send();
+            } catch (e) {}
+        };
+        manifestReq.send();
+
+        backdrop.style.display = 'flex';
+    },
+
+    _populateModelDropdown: function(manifest) {
+        var modelSel = document.getElementById('sohCapacityModalModel');
+        if (!modelSel) return;
+        modelSel.innerHTML = '';
+        var models = (manifest && manifest.models) ? manifest.models : [];
+        // Cache so the change handler can look up nominalKwh by id without
+        // re-parsing the manifest each time the user moves the dropdown.
+        this._modelNominalById = {};
+        for (var i = 0; i < models.length; i++) {
+            var m = models[i];
+            var opt = document.createElement('option');
+            opt.value = m.id || '';
+            // Manifest's canonical user-facing string is "name"; older
+            // copies used "title". Fall back to id when neither is set.
+            opt.textContent = m.name || m.title || m.id || '';
+            modelSel.appendChild(opt);
+            if (m.id && typeof m.nominalKwh === 'number' && m.nominalKwh > 0) {
+                this._modelNominalById[m.id] = m.nominalKwh;
             }
-        } catch (e) {
-            console.warn('[Performance] Failed to set SOH source:', e);
         }
+        // Auto-fill the kWh input when the user changes model so the
+        // displayed capacity reflects the new pack rather than the old
+        // one. Mirrors the Android dialog's behavior.
+        var self = this;
+        modelSel.onchange = function() {
+            var input = document.getElementById('sohCapacityModalInput');
+            if (!input) return;
+            var kwh = self._modelNominalById[modelSel.value];
+            if (typeof kwh === 'number' && kwh > 0) {
+                input.value = kwh.toFixed(1);
+            }
+        };
+    },
+
+    closeSohCapacityModal: function() {
+        var backdrop = document.getElementById('sohCapacityModalBackdrop');
+        if (backdrop) backdrop.style.display = 'none';
+    },
+
+    saveSohCapacity: function() {
+        var self = this;
+        var input = document.getElementById('sohCapacityModalInput');
+        var modelSel = document.getElementById('sohCapacityModalModel');
+        var kwh = input ? parseFloat(input.value) : NaN;
+        if (isNaN(kwh) || kwh < 15 || kwh > 120) {
+            alert(BYD.i18n.t('soh.modal_capacity_label') + ': 15 - 120');
+            return;
+        }
+        var modelId = modelSel ? modelSel.value : '';
+
+        // Persist nominal first, then model. Each request is independent;
+        // a failure on either leaves the other applied (intentional — the
+        // user can retry a single field).
+        var nomXhr = new XMLHttpRequest();
+        nomXhr.open('POST', '/api/performance/soh/nominal', true);
+        nomXhr.setRequestHeader('Content-Type', 'application/json');
+        nomXhr.onload = function() {
+            if (modelId) {
+                var modelXhr = new XMLHttpRequest();
+                modelXhr.open('POST', '/api/models/selected', true);
+                modelXhr.setRequestHeader('Content-Type', 'application/json');
+                modelXhr.onload = function() {
+                    self.closeSohCapacityModal();
+                    self.fetchSohStatus();
+                };
+                modelXhr.onerror = function() {
+                    self.closeSohCapacityModal();
+                    self.fetchSohStatus();
+                };
+                modelXhr.send(JSON.stringify({ modelId: modelId }));
+            } else {
+                self.closeSohCapacityModal();
+                self.fetchSohStatus();
+            }
+        };
+        nomXhr.onerror = function() {
+            self.closeSohCapacityModal();
+            self.fetchSohStatus();
+        };
+        nomXhr.send(JSON.stringify({ nominalKwh: kwh }));
+    },
+
+    resetSohCapacityToAuto: function() {
+        var self = this;
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/performance/soh/nominal', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            self.closeSohCapacityModal();
+            self.fetchSohStatus();
+        };
+        xhr.onerror = function() {
+            self.closeSohCapacityModal();
+        };
+        xhr.send(JSON.stringify({ nominalKwh: null }));
     },
 
     async resetSoh() {

@@ -10,7 +10,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -98,7 +98,13 @@ public class StorageManager {
     
     // Base directories for Overdrive files
     private static final String INTERNAL_BASE_DIR = "/storage/emulated/0/Overdrive";
-    
+
+    // Legacy paths from older app versions. Files here aren't written anymore
+    // but they still count toward the user's configured limit and must be
+    // reaped — otherwise a 500 MB limit can show 800 MB used in the UI.
+    private static final String LEGACY_APP_FILES_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files";
+    private static final String LEGACY_SURVEILLANCE_DIR = LEGACY_APP_FILES_DIR + "/sentry_events";
+
     // Known SD card mount paths (BYD and common Android paths)
     private static final String[] SD_CARD_PATHS = {
         "/storage/external_sd",
@@ -195,18 +201,37 @@ public class StorageManager {
         discoverSdCard();
         initDirectories();
         loadConfig();
-        
+
         // SOTA: If config says SD card but it's not available, try to mount it
         // This happens when daemon starts and SD card is unmounted
-        if (!sdCardAvailable && 
-            (surveillanceStorageType == StorageType.SD_CARD || 
+        if (!sdCardAvailable &&
+            (surveillanceStorageType == StorageType.SD_CARD ||
              recordingsStorageType == StorageType.SD_CARD ||
              tripsStorageType == StorageType.SD_CARD)) {
             logInfo("SD card configured but not available - attempting mount...");
             ensureSdCardMounted(true);
         }
-        
+
         updateActiveDirectories();
+
+        // One-shot startup reap. If the user lowered the limit, switched
+        // storage type, or upgraded from a legacy build, the inactive +
+        // legacy locations may be holding orphan files that count toward
+        // the limit. Reap them once at boot so the UI total agrees with
+        // the configured limit before any new event fires the per-save
+        // cleanup. Async — don't block daemon startup.
+        asyncCleanupExecutor.execute(() -> {
+            synchronized (cleanupLock) {
+                try {
+                    ensureRecordingsSpace(0);
+                    ensureSurveillanceSpace(0);
+                    ensureProximitySpace(0);
+                    ensureTripsSpace(0);
+                } catch (Exception e) {
+                    logWarn("Startup reap failed: " + e.getMessage());
+                }
+            }
+        });
     }
     
     public static synchronized StorageManager getInstance() {
@@ -1255,13 +1280,120 @@ public class StorageManager {
     public List<File> getAllSurveillanceDirs() {
         return getAllDirsForType(surveillanceDir, internalSurveillanceDir, sdCardSurveillanceDir);
     }
-    
+
     public List<File> getAllProximityDirs() {
         return getAllDirsForType(proximityDir, internalProximityDir, sdCardProximityDir);
     }
-    
+
     public List<File> getAllTripsDirs() {
         return getAllDirsForType(tripsDir, internalTripsDir, sdCardTripsDir);
+    }
+
+    /**
+     * Same as {@link #getAllSurveillanceDirs()} et al, but additionally
+     * includes legacy app-files locations from older app versions where
+     * stale media may still be living and counting toward the limit.
+     *
+     * Used by both the size accounting and the cleanup reaper so the two
+     * agree about what "the surveillance pool" actually is — otherwise
+     * the UI can show 800 MB used against a 500 MB limit while cleanup
+     * (which only saw the active dir) thinks everything is fine.
+     *
+     * Includes the flat legacy base ({@link #LEGACY_APP_FILES_DIR}) when a
+     * non-null filename prefix is supplied via {@link #namePrefixForCategory},
+     * because the flat base is shared across categories and only files
+     * matching the category's prefix should be touched.
+     */
+    private List<File> getReapableDirs(String category) {
+        List<File> dirs;
+        String legacyPath = null;
+        boolean includeFlatBase = false;
+        switch (category) {
+            case "recordings":
+                dirs = new ArrayList<>(getAllRecordingsDirs());
+                legacyPath = LEGACY_APP_FILES_DIR + "/recordings";
+                includeFlatBase = true;  // some old installs wrote cam_* into <base>
+                break;
+            case "surveillance":
+                dirs = new ArrayList<>(getAllSurveillanceDirs());
+                legacyPath = LEGACY_SURVEILLANCE_DIR;
+                break;
+            case "proximity":
+                dirs = new ArrayList<>(getAllProximityDirs());
+                legacyPath = LEGACY_APP_FILES_DIR + "/proximity_events";
+                break;
+            case "trips":
+                dirs = new ArrayList<>(getAllTripsDirs());
+                break;
+            default:
+                return new ArrayList<>();
+        }
+        if (legacyPath != null) {
+            addDirIfMissing(dirs, new File(legacyPath));
+        }
+        if (includeFlatBase) {
+            addDirIfMissing(dirs, new File(LEGACY_APP_FILES_DIR));
+        }
+        return dirs;
+    }
+
+    private static void addDirIfMissing(List<File> dirs, File candidate) {
+        if (candidate == null || !candidate.exists() || !candidate.isDirectory()) return;
+        String path = candidate.getAbsolutePath();
+        for (File d : dirs) {
+            if (d != null && d.getAbsolutePath().equals(path)) return;
+        }
+        dirs.add(candidate);
+    }
+
+    /**
+     * Filename prefix that identifies media belonging to {@code category}.
+     * When non-null, callers that scan multi-category directories (the
+     * flat legacy base) should restrict to filenames starting with this
+     * prefix so they don't reap a sibling category's files. Returns null
+     * for categories whose dirs are all category-dedicated.
+     */
+    private static String namePrefixForCategory(String category) {
+        switch (category) {
+            case "recordings":  return "cam";        // cam_*, cam2_*, …
+            case "surveillance": return "event_";
+            case "proximity":   return "proximity_";
+            default: return null;
+        }
+    }
+
+    /**
+     * Sum .mp4 files across the given dirs, deduplicating by filename
+     * (so a clip mirrored on internal + SD-card isn't counted twice).
+     *
+     * @param namePrefix If non-null, only files whose name starts with
+     *                   this prefix are summed. Used when the dir set
+     *                   includes the flat legacy base shared across
+     *                   categories.
+     */
+    private long getDirectoriesTotalSize(List<File> dirs, String namePrefix) {
+        long size = 0;
+        Set<String> seen = new HashSet<>();
+        for (File dir : dirs) {
+            if (dir == null || !dir.exists() || !dir.isDirectory()) continue;
+            File[] files = dir.listFiles();
+            if (files == null) {
+                files = listFilesViaShell(dir);
+            }
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.isFile()) continue;
+                String name = f.getName();
+                if (namePrefix != null && !name.startsWith(namePrefix)) continue;
+                // Only the per-category extension counts (.mp4 + sidecar .json)
+                // for limit accounting; filenames in the flat base that don't
+                // match the prefix would already have been skipped above.
+                if (!name.endsWith(".mp4") && !name.endsWith(".json")) continue;
+                if (!seen.add(name)) continue;
+                size += f.length();
+            }
+        }
+        return size;
     }
     
     /**
@@ -1377,45 +1509,75 @@ public class StorageManager {
     // ==================== Storage Stats ====================
     
     /**
-     * Get current size of recordings directory in bytes.
+     * Get current size of recordings across all locations (active dir, the
+     * inactive internal/SD-card mirror, and legacy app-files paths).
+     *
+     * Must match the dirs the cleanup actually reaps — otherwise the UI can
+     * report 800 MB used while the limit is 500 MB and cleanup never fires.
      */
     public long getRecordingsSize() {
-        return getDirectorySize(recordingsDir);
+        return getDirectoriesTotalSize(getReapableDirs("recordings"), namePrefixForCategory("recordings"));
     }
-    
+
     /**
-     * Get current size of surveillance directory in bytes.
+     * Get current size of surveillance across all locations (active dir, the
+     * inactive internal/SD-card mirror, and the legacy sentry_events path).
      */
     public long getSurveillanceSize() {
-        return getDirectorySize(surveillanceDir);
+        return getDirectoriesTotalSize(getReapableDirs("surveillance"), namePrefixForCategory("surveillance"));
     }
-    
+
     /**
-     * Get current size of proximity directory in bytes.
+     * Get current size of proximity across all locations (active dir, the
+     * inactive internal/SD-card mirror, and the legacy proximity_events path).
      */
     public long getProximitySize() {
-        return getDirectorySize(proximityDir);
+        return getDirectoriesTotalSize(getReapableDirs("proximity"), namePrefixForCategory("proximity"));
     }
     
     /**
-     * Get recordings count.
+     * Get recordings file count across all locations (active + inactive
+     * mirror + legacy). Matches the size accounting so per-file averages
+     * line up with reported totals.
      */
     public int getRecordingsCount() {
-        return getFileCount(recordingsDir);
+        return getFileCountAcross(getReapableDirs("recordings"), namePrefixForCategory("recordings"));
     }
-    
+
     /**
-     * Get surveillance events count.
+     * Get surveillance events file count across all locations.
      */
     public int getSurveillanceCount() {
-        return getFileCount(surveillanceDir);
+        return getFileCountAcross(getReapableDirs("surveillance"), namePrefixForCategory("surveillance"));
     }
-    
+
     /**
-     * Get proximity events count.
+     * Get proximity events file count across all locations.
      */
     public int getProximityCount() {
-        return getFileCount(proximityDir);
+        return getFileCountAcross(getReapableDirs("proximity"), namePrefixForCategory("proximity"));
+    }
+
+    private int getFileCountAcross(List<File> dirs, String namePrefix) {
+        int total = 0;
+        Set<String> seen = new HashSet<>();
+        for (File dir : dirs) {
+            if (dir == null || !dir.exists() || !dir.isDirectory()) continue;
+            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files == null) {
+                files = listFilesViaShell(dir);
+            }
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.isFile()) continue;
+                String name = f.getName();
+                if (namePrefix != null && !name.startsWith(namePrefix)) continue;
+                if (seen.add(name)) {
+                    total++;
+                }
+            }
+        }
+        return total;
     }
     
     /**
@@ -1499,124 +1661,184 @@ public class StorageManager {
     // ==================== Cleanup Logic ====================
     
     /**
-     * Ensure recordings directory is within size limit.
-     * Deletes oldest files until under limit.
-     * 
+     * Ensure recordings storage is within size limit.
+     * Deletes oldest files (across active + inactive + legacy locations)
+     * until the total falls under the limit.
+     *
      * @param reserveBytes Additional bytes to reserve for new file
      * @return true if cleanup was successful and space is available
      */
     public boolean ensureRecordingsSpace(long reserveBytes) {
-        return ensureSpace(recordingsDir, recordingsLimitMb * 1024 * 1024, reserveBytes);
+        return ensureSpace(getReapableDirs("recordings"), recordingsDir,
+            namePrefixForCategory("recordings"),
+            recordingsLimitMb * 1024 * 1024, reserveBytes);
     }
-    
+
     /**
-     * Ensure surveillance directory is within size limit.
-     * Deletes oldest files until under limit.
-     * 
+     * Ensure surveillance storage is within size limit.
+     * Deletes oldest files (across active + inactive + legacy locations)
+     * until the total falls under the limit.
+     *
      * @param reserveBytes Additional bytes to reserve for new file
      * @return true if cleanup was successful and space is available
      */
     public boolean ensureSurveillanceSpace(long reserveBytes) {
-        return ensureSpace(surveillanceDir, surveillanceLimitMb * 1024 * 1024, reserveBytes);
+        return ensureSpace(getReapableDirs("surveillance"), surveillanceDir,
+            namePrefixForCategory("surveillance"),
+            surveillanceLimitMb * 1024 * 1024, reserveBytes);
     }
-    
+
     /**
-     * Ensure proximity directory is within size limit.
-     * Deletes oldest files until under limit.
-     * 
+     * Ensure proximity storage is within size limit.
+     * Deletes oldest files (across active + inactive + legacy locations)
+     * until the total falls under the limit.
+     *
      * @param reserveBytes Additional bytes to reserve for new file
      * @return true if cleanup was successful and space is available
      */
     public boolean ensureProximitySpace(long reserveBytes) {
-        return ensureSpace(proximityDir, proximityLimitMb * 1024 * 1024, reserveBytes);
+        return ensureSpace(getReapableDirs("proximity"), proximityDir,
+            namePrefixForCategory("proximity"),
+            proximityLimitMb * 1024 * 1024, reserveBytes);
     }
-    
+
     /**
-     * Ensure trips directory is within size limit.
-     * Deletes oldest files until under limit.
-     * 
+     * Ensure trips storage is within size limit.
+     * Deletes oldest files until the total falls under the limit.
+     *
      * @param reserveBytes Additional bytes to reserve for new file
      * @return true if cleanup was successful and space is available
      */
     public boolean ensureTripsSpace(long reserveBytes) {
-        return ensureSpace(tripsDir, tripsLimitMb * 1024 * 1024, reserveBytes);
+        return ensureSpace(getReapableDirs("trips"), tripsDir,
+            namePrefixForCategory("trips"),
+            tripsLimitMb * 1024 * 1024, reserveBytes);
     }
     
     /**
-     * Generic cleanup method for any directory.
-     * SOTA: Uses shell fallback for listing/deleting when directory is owned by UI app.
+     * Generic cleanup method that operates across a set of directories.
+     *
+     * Pools all .mp4 files from every dir (active, inactive mirror, legacy),
+     * sorts globally by mtime, and deletes oldest-first until the combined
+     * total is under the limit. This guarantees the user-configured limit
+     * is honored across orphan locations after a storage-type switch or
+     * after a legacy install left behind clips.
+     *
+     * SOTA: Uses shell fallback for listing/deleting when directory is owned
+     * by a different UID than the daemon.
+     *
+     * @param dirs        Every directory whose files count toward this limit.
+     *                    May contain a mix of active, inactive, and legacy
+     *                    paths. Nulls/missing dirs are skipped.
+     * @param activeDir   The dir new files will land in. Created if missing
+     *                    so the next write doesn't fail.
+     * @param limitBytes  Total bytes allowed across all dirs.
+     * @param reserveBytes Additional bytes to keep free (subtracted from limit).
+     * @return true if cleanup was successful and space is available
      */
-    private boolean ensureSpace(File dir, long limitBytes, long reserveBytes) {
-        if (!dir.exists() || !dir.isDirectory()) {
-            dir.mkdirs();
-            return true;
+    private boolean ensureSpace(List<File> dirs, File activeDir, String namePrefix,
+                                long limitBytes, long reserveBytes) {
+        if (activeDir != null && (!activeDir.exists() || !activeDir.isDirectory())) {
+            activeDir.mkdirs();
         }
-        
+
         long targetSize = limitBytes - reserveBytes;
         if (targetSize < 0) targetSize = 0;
-        
-        long currentSize = getDirectorySize(dir);
-        
+
+        // Collect every reapable file, deduplicated by filename so a clip
+        // that exists on both internal and SD card isn't accounted twice.
+        // When namePrefix is non-null, restrict to files matching the
+        // category (some dirs in the list are shared with other categories
+        // — typically the flat legacy base).
+        List<File> allFiles = new ArrayList<>();
+        Set<String> seenNames = new HashSet<>();
+        long currentSize = 0;
+        for (File dir : dirs) {
+            if (dir == null || !dir.exists() || !dir.isDirectory()) continue;
+            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files == null) {
+                files = listFilesViaShell(dir);
+            }
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.isFile()) continue;
+                String name = f.getName();
+                if (namePrefix != null && !name.startsWith(namePrefix)) continue;
+                if (!seenNames.add(name)) continue;
+                allFiles.add(f);
+                currentSize += f.length();
+            }
+        }
+
         if (currentSize <= targetSize) {
             return true;  // Already within limit
         }
-        
-        // Get all video files sorted by modification time (oldest first)
-        // SOTA: Try direct listFiles first, fall back to shell if null
-        File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
-        
-        if (files == null) {
-            // Directory might be owned by UI app - use shell to list
-            files = listFilesViaShell(dir);
-        }
-        
-        if (files == null || files.length == 0) {
+
+        if (allFiles.isEmpty()) {
             return true;
         }
-        
-        Arrays.sort(files, Comparator.comparingLong(File::lastModified));
-        
+
+        // Oldest first (global ordering across all dirs).
+        Collections.sort(allFiles, Comparator.comparingLong(File::lastModified));
+
         int deletedCount = 0;
         long deletedSize = 0;
-        
-        for (File file : files) {
-            if (currentSize <= targetSize) {
-                break;  // We're under the limit now
-            }
-            
+        boolean reapedFromInactive = false;
+
+        for (File file : allFiles) {
+            if (currentSize <= targetSize) break;
+
             long fileSize = file.length();
-            
-            // SOTA: Try Java delete first, fall back to shell rm
             boolean deleted = file.delete();
             if (!deleted) {
                 deleted = deleteFileViaShell(file);
             }
-            
+
             if (deleted) {
                 currentSize -= fileSize;
                 deletedCount++;
                 deletedSize += fileSize;
-                logInfo("Deleted old file: " + file.getName() + " (" + formatSize(fileSize) + ")");
-                
-                // SOTA: Also delete JSON sidecar (event timeline) if it exists
+                if (activeDir == null
+                    || !file.getParentFile().getAbsolutePath().equals(activeDir.getAbsolutePath())) {
+                    reapedFromInactive = true;
+                }
+                logInfo("Deleted old file: " + file.getAbsolutePath() + " (" + formatSize(fileSize) + ")");
+
+                // Also delete the JSON sidecar (event timeline) sitting next
+                // to the mp4 — it's keyed off the mp4 filename, so when the
+                // mp4 goes the sidecar is dead weight.
                 String jsonName = file.getName().replace(".mp4", ".json");
-                File jsonSidecar = new File(dir, jsonName);
+                File jsonSidecar = new File(file.getParentFile(), jsonName);
                 if (jsonSidecar.exists()) {
                     if (!jsonSidecar.delete()) {
                         deleteFileViaShell(jsonSidecar);
                     }
                 }
+
+                // Drop any cached entry the recordings API might still hold.
+                try {
+                    com.overdrive.app.server.RecordingsApiHandler
+                        .invalidateRecordingCache(file.getAbsolutePath());
+                } catch (Throwable ignored) {
+                    // RecordingsApiHandler may not be loaded in every process.
+                }
             } else {
-                logWarn("Failed to delete: " + file.getName());
+                logWarn("Failed to delete: " + file.getAbsolutePath());
             }
         }
-        
+
         if (deletedCount > 0) {
-            logInfo("Cleanup complete: deleted " + deletedCount + " files (" + formatSize(deletedSize) + ")");
+            logInfo("Cleanup complete: deleted " + deletedCount + " files (" + formatSize(deletedSize) + ")"
+                + (reapedFromInactive ? " — including orphan/legacy locations" : ""));
         }
-        
-        // If still over limit and directory is on SD card, try freeing space via CDR cleanup
-        if (currentSize > targetSize && sdCardAvailable && dir.getAbsolutePath().startsWith(sdCardPath)) {
+
+        // If still over limit and the active dir lives on the SD card, fall
+        // back to CDR cleanup to free up underlying SD-card space.
+        if (currentSize > targetSize
+            && sdCardAvailable
+            && activeDir != null
+            && sdCardPath != null
+            && activeDir.getAbsolutePath().startsWith(sdCardPath)) {
             try {
                 ExternalStorageCleaner cleaner = ExternalStorageCleaner.getInstance();
                 if (cleaner.isEnabled()) {
@@ -1627,7 +1849,7 @@ public class StorageManager {
                 logWarn("CDR fallback cleanup failed: " + e.getMessage());
             }
         }
-        
+
         return currentSize <= targetSize;
     }
     

@@ -13,7 +13,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
-import com.overdrive.app.BuildConfig;
 import com.overdrive.app.R;
 
 /**
@@ -68,7 +67,8 @@ public class SetupGuideDialog {
         TextView tvVersionBanner = view.findViewById(R.id.tvVersionBanner);
         if (tvVersionBanner != null) {
             if (isUpdate) {
-                tvVersionBanner.setText(context.getString(R.string.setup_version_banner, BuildConfig.VERSION_NAME));
+                tvVersionBanner.setText(context.getString(R.string.setup_version_banner,
+                        com.overdrive.app.updater.AppUpdater.getDisplayVersion(context)));
                 tvVersionBanner.setVisibility(View.VISIBLE);
             } else {
                 tvVersionBanner.setVisibility(View.GONE);

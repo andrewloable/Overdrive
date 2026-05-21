@@ -68,6 +68,8 @@ public final class PermissionGranter {
         "android.permission.BYDAUTO_CHARGING_COMMON",
         "android.permission.BYDAUTO_CHARGING_GET",
         "android.permission.BYDAUTO_CHARGING_SET",
+        "android.permission.BYDAUTO_BMS_COMMON",
+        "android.permission.BYDAUTO_BMS_GET",
         "android.permission.BYDAUTO_STATISTIC_COMMON",
         "android.permission.BYDAUTO_STATISTIC_GET",
         "android.permission.BYDAUTO_STATISTIC_SET",

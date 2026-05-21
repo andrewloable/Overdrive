@@ -87,7 +87,14 @@ public class UpdateCommandHandler implements TelegramCommandHandler {
             String trimmed = releaseNotes.length() > 600
                     ? releaseNotes.substring(0, 600) + "…"
                     : releaseNotes;
-            sb.append("\n*Release notes:*\n").append(trimmed).append("\n");
+            // GitHub release bodies are user-authored Markdown (often with
+            // **bold**, ```fenced code```, mid-token underscores, [links]())
+            // which Telegram's legacy Markdown parser rejects with
+            // "can't parse entities" — the whole sendMessage 400s and the
+            // user is left staring at "🔍 Checking for updates…" forever.
+            // Strip the control chars so the body lands as plain text inside
+            // the Telegram-Markdown envelope.
+            sb.append("\n*Release notes:*\n").append(stripMarkdown(trimmed)).append("\n");
         }
         sb.append("\n_Install takes ~2 minutes. The bot will restart and post a new tunnel URL when done._");
 
@@ -140,5 +147,25 @@ public class UpdateCommandHandler implements TelegramCommandHandler {
         // killed and reborn, so the new instance starts with a fresh AtomicBoolean.
         ctx.log("Update install scheduled via Telegram (remote=" +
                 resp.optString("remoteVersion", "?") + ")");
+    }
+
+    /**
+     * Neutralize Markdown control characters in user-supplied content
+     * (GitHub release notes) so the Telegram legacy-Markdown parser
+     * doesn't reject the whole message. We strip rather than escape
+     * because backslash-escaping is itself spotty in legacy Markdown,
+     * and the user just wants to read the notes — formatting fidelity
+     * isn't worth the parse failures.
+     */
+    private static String stripMarkdown(String s) {
+        if (s == null || s.isEmpty()) return s;
+        StringBuilder out = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            // Control chars Telegram legacy treats as entity boundaries.
+            if (c == '*' || c == '_' || c == '`' || c == '[' || c == ']') continue;
+            out.append(c);
+        }
+        return out.toString();
     }
 }

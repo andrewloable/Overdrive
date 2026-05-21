@@ -1,7 +1,33 @@
 {
-  "version": 1,
+  "version": 5,
   "default": "seal",
   "baseUrl": "https://github.com/yash-srivastava/Overdrive-release/releases/download/models-v1/",
+  "paintPresets": [
+    {
+      "name": "Aurora White",
+      "hex": "#E8E8EC"
+    },
+    {
+      "name": "Cosmos Black",
+      "hex": "#1A1A1E"
+    },
+    {
+      "name": "Atlantic Blue",
+      "hex": "#1E3A5F"
+    },
+    {
+      "name": "Deepsea Green",
+      "hex": "#1B4D3E"
+    },
+    {
+      "name": "Cherry Red",
+      "hex": "#C8102E"
+    },
+    {
+      "name": "Storm Grey",
+      "hex": "#5C5C66"
+    }
+  ],
   "models": [
     {
       "id": "seal",
@@ -9,7 +35,8 @@
       "file": "seal.glb",
       "sizeBytes": 1653240,
       "sha256": "1030260cb7dc6b4483cc4f5fd2feb4746870234a87ee3ccf7f3d71e7bd0178fe",
-      "bundled": true
+      "bundled": true,
+      "nominalKwh": 82.5
     },
     {
       "id": "seal-u",
@@ -17,7 +44,8 @@
       "file": "seal-u.glb",
       "sizeBytes": 1808308,
       "sha256": "e41eebdbc2ceaa0d196e7f09348bb11f1bd8c9430fd04abc830cfb40321de9fd",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 71.8
     },
     {
       "id": "seal-u-dmi",
@@ -25,7 +53,8 @@
       "file": "seal-u-dmi.glb",
       "sizeBytes": 1711432,
       "sha256": "23a2b08e382a5c81fdda2c24df60173bd0a8a0d13713e434491d7eb2b182743b",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 18.3
     },
     {
       "id": "dolphin",
@@ -33,7 +62,8 @@
       "file": "dolphin.glb",
       "sizeBytes": 1327816,
       "sha256": "94eb27928e410848e22aa92e6cf45fcc1329e941b74602f81c8f4de799abcdb6",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 44.9
     },
     {
       "id": "atto3",
@@ -41,7 +71,8 @@
       "file": "atto3.glb",
       "sizeBytes": 1642648,
       "sha256": "6e08a0223fb2a4c229a8ed323b6d748930491b583cb595b38a0e372314c028a1",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 60.48
     },
     {
       "id": "han",
@@ -49,7 +80,8 @@
       "file": "han.glb",
       "sizeBytes": 1548304,
       "sha256": "844c1cead90c69a72b12cfed0d8824ba1c1e3540c67888a8e57d3329d7310185",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 85.44
     },
     {
       "id": "tang",
@@ -57,7 +89,8 @@
       "file": "tang.glb",
       "sizeBytes": 1629596,
       "sha256": "b1b387ba4c7fef171ef2a3b51b1bc51de3c85a8df532df565828f31836a3013c",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 108.8
     },
     {
       "id": "m6",
@@ -65,7 +98,8 @@
       "file": "m6.glb",
       "sizeBytes": 1856336,
       "sha256": "0d89df8d36ec33cd5b8b6041e662b0d0b1c7cdc47cab87cbb2277f16ab95ae13",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 71.8
     },
     {
       "id": "seagull",
@@ -73,7 +107,8 @@
       "file": "seagull.glb",
       "sizeBytes": 2558920,
       "sha256": "effb9cafb7a6246dd972575fd1f8ffea9a8e7b4942df02863d4343de70fe4a44",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 30.08
     },
     {
       "id": "destroyer",
@@ -81,7 +116,8 @@
       "file": "destroyer.glb",
       "sizeBytes": 1708884,
       "sha256": "f2728598afcaaafc09899a36bd3f06900644935b14ec373a825b03bc6b13799b",
-      "bundled": false
+      "bundled": false,
+      "nominalKwh": 18.3
     }
   ]
 }

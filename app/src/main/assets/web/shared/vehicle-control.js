@@ -184,6 +184,14 @@ var VC = {
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(patch));
         } catch(e) {}
+        // Sidebar EV card mirrors the same /api/models/selected. Tell it
+        // to re-fetch so the silhouette + paint colour update instantly,
+        // without waiting for a page navigation.
+        try {
+            if (window.OverdriveAppShell && typeof window.OverdriveAppShell.refreshVehicle === 'function') {
+                window.OverdriveAppShell.refreshVehicle();
+            }
+        } catch(e) {}
     },
 
     initThreeJS: function() {
@@ -1215,9 +1223,14 @@ var VC = {
         // Open the panel container — Windows needs extra vertical space for
         // the per-window preset rows.
         panel.classList.add('open');
-        if (panelId === 'panelWindows') panel.classList.add('vc-panel-tall');
+        // Tall panels: Windows (4×5 preset grid), Charging (schedule + cap stacked).
+        if (panelId === 'panelWindows' || panelId === 'panelCharging') panel.classList.add('vc-panel-tall');
         else panel.classList.remove('vc-panel-tall');
         this._activePanel = panelId;
+        if (panelId === 'panelCharging') {
+            this.fetchChargingSchedule();
+            this.fetchChargeCap();
+        }
     },
 
     /** Update tab dot indicators based on vehicle state */
@@ -1252,37 +1265,29 @@ var VC = {
     bindControls: function() {
         var self = this;
 
-        // Lock
+        // Lock — routed (cloud-first; SDK has no door-lock primitive so cloud-only effectively).
         this.bindBtn('btnLock', function() {
             if (!self.requireCloud()) return;
             self.setPending('btnLock', true);
             self.triggerLockVFX();
             self.apiPost('/api/vehicle/lock').then(function(result) {
                 self.setPending('btnLock', false);
-                if (result.success && result.commandSuccess) {
-                    self.toast(BYD.i18n.t('vehicle.car_locked'), 'success');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.lock_failed'), 'error');
-                }
+                self.toastFromResult(result, BYD.i18n.t('vehicle.car_locked'), BYD.i18n.t('vehicle.lock_failed'));
             });
         });
 
-        // Unlock
+        // Unlock — routed (cloud-first).
         this.bindBtn('btnUnlock', function() {
             if (!self.requireCloud()) return;
             self.setPending('btnUnlock', true);
             self.triggerUnlockVFX();
             self.apiPost('/api/vehicle/unlock').then(function(result) {
                 self.setPending('btnUnlock', false);
-                if (result.success && result.commandSuccess) {
-                    self.toast(BYD.i18n.t('vehicle.car_unlocked'), 'success');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.unlock_failed'), 'error');
-                }
+                self.toastFromResult(result, BYD.i18n.t('vehicle.car_unlocked'), BYD.i18n.t('vehicle.unlock_failed'));
             });
         });
 
-        // Trunk open — shows progress: Unlocking → Opening
+        // Trunk open — composite: cloud unlock → SDK tailgate motor.
         this.bindBtn('btnTrunkOpen', function() {
             if (!self.requireCloud()) return;
             self.setPending('btnTrunkOpen', true);
@@ -1290,40 +1295,60 @@ var VC = {
             self.triggerUnlockVFX();
             self.apiPost('/api/vehicle/trunk', { action: 'open' }).then(function(result) {
                 self.setPending('btnTrunkOpen', false);
-                if (result.success) {
-                    self.triggerTrunkVFX(true);
-                    self.toast(BYD.i18n.t('vehicle.trunk_opening'), 'success');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.trunk_failed'), 'error');
-                }
+                if (result.success) self.triggerTrunkVFX(true);
+                self.toastFromResult(result, BYD.i18n.t('vehicle.trunk_opening'), BYD.i18n.t('vehicle.trunk_failed'));
             });
         });
 
-        // Trunk close — closes trunk via local HAL + locks car
+        // Trunk close — SDK tailgate motor.
         this.bindBtn('btnTrunkClose', function() {
             self.setPending('btnTrunkClose', true);
             self.toast(BYD.i18n.t('vehicle.closing_trunk'), 'info');
             self.triggerLockVFX();
             self.apiPost('/api/vehicle/trunk', { action: 'close' }).then(function(result) {
                 self.setPending('btnTrunkClose', false);
-                if (result.success) {
-                    self.triggerTrunkVFX(false);
-                    self.toast(BYD.i18n.t('vehicle.trunk_closing'), 'success');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.trunk_close_failed'), 'error');
-                }
+                if (result.success) self.triggerTrunkVFX(false);
+                self.toastFromResult(result, BYD.i18n.t('vehicle.trunk_closing'), BYD.i18n.t('vehicle.trunk_close_failed'));
             });
         });
 
-        // Flash lights
+        // Flash lights — routed (cloud-only on this gen). Toast reads server-resolved message.
         this.bindBtn('btnFlash', function() {
             if (!self.requireCloud()) return;
             self.setPending('btnFlash', true);
             self.triggerFlashVFX();
             self.apiPost('/api/vehicle/flash').then(function(result) {
                 self.setPending('btnFlash', false);
-                if (result.success) self.toast(BYD.i18n.t('vehicle.lights_flashed'), 'info');
-                else self.toast(result.error || BYD.i18n.t('vehicle.flash_failed'), 'error');
+                self.toastFromResult(result, BYD.i18n.t('vehicle.lights_flashed'), BYD.i18n.t('vehicle.flash_failed'));
+            });
+        });
+
+        // Find car — routed cloud-first (cloud-only on this gen). Vehicle wakes,
+        // then horn + lights pulse.
+        this.bindBtn('btnFindCar', function() {
+            if (!self.requireCloud()) return;
+            self.setPending('btnFindCar', true);
+            self.triggerFlashVFX();
+            self.apiPost('/api/vehicle/find-car').then(function(result) {
+                self.setPending('btnFindCar', false);
+                self.toastFromResult(result, BYD.i18n.t('vehicle_control.find_car_label'), null);
+            });
+        });
+
+        // Battery preconditioning heat — cloud-only. We render the toggle
+        // optimistically; the server message resolves cloud-required prompt
+        // automatically when not connected (per memory: tap-to-discover).
+        this.bindBtn('btnBatteryHeat', function() {
+            var current = !!(self.vehicleState && self.vehicleState.batteryHeat);
+            var next = !current;
+            self.setPending('btnBatteryHeat', true);
+            self.apiPost('/api/vehicle/battery-heat', { enabled: next }).then(function(result) {
+                self.setPending('btnBatteryHeat', false);
+                if (result.success) {
+                    if (!self.vehicleState) self.vehicleState = {};
+                    self.vehicleState.batteryHeat = next;
+                }
+                self.toastFromResult(result, BYD.i18n.t('vehicle_control.battery_heat_label'), null);
             });
         });
 
@@ -1368,10 +1393,13 @@ var VC = {
             self.apiPost('/api/vehicle/window', { area: 0, command: 1 });
             self.toast(BYD.i18n.t('vehicle.windows_all_opening'), 'info');
         });
+        // Routed CLOUD_FIRST on the server (area=0+command=2 → CLOSEWINDOW),
+        // so this works while the car is asleep with SDK fallback.
         this.bindBtn('btnWinAllClose', function() {
             for (var j = 0; j < 4; j++) self.triggerWindowVFX(areas[j], false);
-            self.apiPost('/api/vehicle/window', { area: 0, command: 2 });
-            self.toast(BYD.i18n.t('vehicle.windows_all_closing'), 'info');
+            self.apiPost('/api/vehicle/window', { area: 0, command: 2 }).then(function(result) {
+                self.toastFromResult(result, BYD.i18n.t('vehicle.windows_all_closing'), BYD.i18n.t('vehicle.windows_all_closing'));
+            });
         });
 
         // === LIGHTS CONTROLS ===
@@ -1379,13 +1407,13 @@ var VC = {
             var enable = !(self.vehicleState.lights && self.vehicleState.lights.dayTimeLight);
             self.triggerSonarVFX(0, 0.6, 2, new THREE.Color(enable ? 0xFF6B35 : 0x1A1A1E));
             self.apiPost('/api/vehicle/lights', { target: 'dayTimeLight', enable: enable }).then(function(result) {
-                if (result.success && result.commandSuccess) {
-                    self.vehicleState.lights.dayTimeLight = result.enable;
+                if (result.success) {
+                    self.vehicleState.lights.dayTimeLight = enable;
                     self.updateLightsUI();
-                    self.toast(BYD.i18n.t(result.enable ? 'vehicle.drl_enabled' : 'vehicle.drl_disabled'), 'info');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.drl_failed'), 'error');
                 }
+                self.toastFromResult(result,
+                    BYD.i18n.t(enable ? 'vehicle.drl_enabled' : 'vehicle.drl_disabled'),
+                    BYD.i18n.t('vehicle.drl_failed'));
             });
         });
 
@@ -1393,32 +1421,199 @@ var VC = {
         this.bindBtn('btnSLW', function() {
             var enable = !(self.vehicleState.adas && self.vehicleState.adas.speedLimitWarning);
             self.apiPost('/api/vehicle/adas', { target: 'speedLimitWarning', enable: enable }).then(function(result) {
-                if (result.success && result.commandSuccess) {
-                    self.vehicleState.adas.speedLimitWarning = result.enable;
+                if (result.success) {
+                    self.vehicleState.adas.speedLimitWarning = enable;
                     self.updateAdasUI();
-                    self.toast(BYD.i18n.t(result.enable ? 'vehicle.slw_enabled' : 'vehicle.slw_disabled'), 'info');
-                } else {
-                    self.toast(result.error || BYD.i18n.t('vehicle.slw_failed'), 'error');
                 }
+                self.toastFromResult(result,
+                    BYD.i18n.t(enable ? 'vehicle.slw_enabled' : 'vehicle.slw_disabled'),
+                    BYD.i18n.t('vehicle.slw_failed'));
             });
         });
 
+        // === CHARGING SCHEDULE ===
+        // pyBYD-shaped: { startChargeTime, endChargeTime, chargeWay, enabled }.
+        // chargeWay is "s" one-shot, "e" every day, or "0,1,2,3,4" weekday list (Mon=0).
+        // endChargeTime accepts "HH:MM" or sentinel "full" (charge until full within window).
+        if (!this.vehicleState.chargingSchedule) {
+            this.vehicleState.chargingSchedule = {
+                enabled: null,
+                startChargeTime: '22:00',
+                endChargeTime: '06:00',
+                chargeWay: 'e',
+                untilFull: false,
+                days: []
+            };
+        }
+        // Master switch — wraps changeChargeStatue.
+        this.bindBtn('btnSmartChargeToggle', function() {
+            if (!self.requireCloud()) return;
+            var cur = !!(self.vehicleState.chargingSchedule && self.vehicleState.chargingSchedule.enabled);
+            var enable = !cur;
+            self.apiPost('/api/vehicle/charging-schedule', { enabled: enable }).then(function(result) {
+                if (result.success) {
+                    self.vehicleState.chargingSchedule.enabled = enable;
+                    self.updateChargingUI();
+                }
+                self.toastFromResult(result, null, null);
+            });
+        });
+        // Repeat segmented control — three exclusive modes.
+        //   once   → chargeWay "s" (one-shot)
+        //   daily  → chargeWay "e" (every day)
+        //   custom → chargeWay = comma-separated weekday list
+        var segs = document.querySelectorAll('#repeatSegmented .vc-seg');
+        for (var i = 0; i < segs.length; i++) {
+            (function(seg) {
+                seg.addEventListener('click', function() {
+                    var mode = seg.getAttribute('data-mode');
+                    var s = self.vehicleState.chargingSchedule;
+                    if (mode === 'once') { s.chargeWay = 's'; s.days = []; }
+                    else if (mode === 'daily') { s.chargeWay = 'e'; s.days = [0,1,2,3,4,5,6]; }
+                    else if (mode === 'custom') {
+                        // Default custom selection to weekdays if nothing was set yet.
+                        if (!s.days || s.days.length === 0 || s.days.length === 7) {
+                            s.days = [0, 1, 2, 3, 4];
+                        }
+                        s.chargeWay = self._computeCustomChargeWay(s.days);
+                    }
+                    self.updateChargingUI();
+                });
+            })(segs[i]);
+        }
+        // Day chips — only meaningful when custom mode is active.
+        var dayChips = document.getElementById('chargeDayChips');
+        if (dayChips) {
+            var chips = dayChips.querySelectorAll('.vc-day');
+            for (var j = 0; j < chips.length; j++) {
+                (function(chip) {
+                    chip.addEventListener('click', function() {
+                        var day = parseInt(chip.getAttribute('data-day'), 10);
+                        var s = self.vehicleState.chargingSchedule;
+                        if (!s.days) s.days = [];
+                        var idx = s.days.indexOf(day);
+                        if (idx >= 0) s.days.splice(idx, 1);
+                        else s.days.push(day);
+                        s.days.sort(function(a, b) { return a - b; });
+                        s.chargeWay = self._computeCustomChargeWay(s.days);
+                        self.updateChargingUI();
+                    });
+                })(chips[j]);
+            }
+        }
+        // "Until full" preset → endChargeTime sentinel.
+        this.bindBtn('btnChargeUntilFull', function() {
+            var s = self.vehicleState.chargingSchedule;
+            s.untilFull = !s.untilFull;
+            self.updateChargingUI();
+        });
+        // Time inputs — write directly to local state; no API call until Save.
+        var startInput = document.getElementById('chargeStartTime');
+        if (startInput) {
+            startInput.addEventListener('change', function() {
+                self.vehicleState.chargingSchedule.startChargeTime = startInput.value || '22:00';
+            });
+        }
+        var endInput = document.getElementById('chargeEndTime');
+        if (endInput) {
+            endInput.addEventListener('change', function() {
+                self.vehicleState.chargingSchedule.endChargeTime = endInput.value || '06:00';
+                // Editing the time clears the "until full" sentinel.
+                if (self.vehicleState.chargingSchedule.untilFull) {
+                    self.vehicleState.chargingSchedule.untilFull = false;
+                    self.updateChargingUI();
+                }
+            });
+        }
+        // Save — writes saveOrUpdate. Schedule save carries its own status,
+        // so the master toggle isn't a precondition.
+        this.bindBtn('btnChargeScheduleSave', function() {
+            if (!self.requireCloud()) return;
+            var s = self.vehicleState.chargingSchedule;
+            var way = s.chargeWay || 'e';
+            // Custom mode with no days picked is a no-op — refuse to send.
+            if (self._scheduleMode(way) === 'custom') {
+                if (!s.days || s.days.length === 0) {
+                    self.toastFromResult({ success: false, error: BYD.i18n.t('vehicle_control.pick_a_day') }, null, null);
+                    return;
+                }
+                way = self._computeCustomChargeWay(s.days);
+            }
+            var payload = {
+                startChargeTime: s.startChargeTime || '22:00',
+                endChargeTime: s.untilFull ? 'full' : (s.endChargeTime || '06:00'),
+                chargeWay: way,
+                enabled: s.enabled !== false
+            };
+            self.apiPost('/api/vehicle/charging-schedule', payload).then(function(result) {
+                if (result.success) {
+                    s.enabled = payload.enabled;
+                    self.updateChargingUI();
+                }
+                self.toastFromResult(result,
+                    BYD.i18n.t('vehicle_control.schedule_saved'),
+                    BYD.i18n.t('vehicle_control.schedule_save_failed'));
+            });
+        });
+        this.fetchChargingSchedule();
+
+        // === BEV CHARGE CAP (SDK_ONLY) ===
+        // setChargeStopCapacityState (50..100%) + setChargeStopSwitchState.
+        // The collector probes write/read-back on first call; if the framework
+        // doesn't honor the value (the documented Seal HAL behavior) the GET
+        // returns supported=false and we hide the section.
+        if (!this.vehicleState.chargeCap) {
+            this.vehicleState.chargeCap = { percent: 80, enabled: null, supported: null };
+        }
+        this.bindBtn('btnChargeCapToggle', function() {
+            var s = self.vehicleState.chargeCap;
+            var enable = !s.enabled;
+            self.apiPost('/api/vehicle/charge-cap', { enabled: enable }).then(function(result) {
+                if (result.success) {
+                    s.enabled = enable;
+                    if (typeof result.supported === 'boolean') s.supported = result.supported;
+                    self.updateChargeCapUI();
+                }
+                self.toastFromResult(result, null, null);
+            });
+        });
+        var capSlider = document.getElementById('chargeCapSlider');
+        if (capSlider) {
+            var capDebounce = null;
+            capSlider.addEventListener('input', function() {
+                var v = parseInt(capSlider.value, 10);
+                self.vehicleState.chargeCap.percent = v;
+                var readout = document.getElementById('chargeCapReadout');
+                if (readout) readout.textContent = v + '%';
+                if (capDebounce) clearTimeout(capDebounce);
+                capDebounce = setTimeout(function() {
+                    self.apiPost('/api/vehicle/charge-cap', { percent: v }).then(function(result) {
+                        if (result.success && typeof result.supported === 'boolean') {
+                            self.vehicleState.chargeCap.supported = result.supported;
+                            self.updateChargeCapUI();
+                        }
+                        self.toastFromResult(result, null, null);
+                    });
+                }, 350);
+            });
+        }
+        this.fetchChargeCap();
+
         // === CLIMATE CONTROLS ===
         this.bindBtn('btnAcOn', function() {
-            // Blue burst from cabin center
             self.triggerSonarVFX(0, 0.6, 0.2, new THREE.Color(0x38BDF8));
             self.triggerSonarVFX(0, 0.6, -0.2, new THREE.Color(0x38BDF8));
             self.flashBodyColor(new THREE.Color(0x38BDF8), 0.1, 2, null);
-            self.apiPost('/api/vehicle/climate', { action: 'power_on' }).then(function(r) {
-                if (r.success && r.commandSuccess !== false) { self.vehicleState.acOn = true; self.updateClimateUI(); self.toast(BYD.i18n.t('vehicle.ac_on'), 'success'); }
-                else { self.toast(r.error || BYD.i18n.t('vehicle.ac_command_failed'), 'error'); }
+            self.apiPost('/api/vehicle/climate', { action: 'power_on', temp: self.vehicleState.acTemp }).then(function(r) {
+                if (r.success) { self.vehicleState.acOn = true; self.updateClimateUI(); }
+                self.toastFromResult(r, BYD.i18n.t('vehicle.ac_on'), BYD.i18n.t('vehicle.ac_command_failed'));
             });
         });
         this.bindBtn('btnAcOff', function() {
             self.flashBodyColor(new THREE.Color(0x71717A), 0.15, 1, null);
             self.apiPost('/api/vehicle/climate', { action: 'power_off' }).then(function(r) {
-                if (r.success && r.commandSuccess !== false) { self.vehicleState.acOn = false; self.updateClimateUI(); self.toast(BYD.i18n.t('vehicle.ac_off'), 'info'); }
-                else { self.toast(r.error || BYD.i18n.t('vehicle.ac_command_failed'), 'error'); }
+                if (r.success) { self.vehicleState.acOn = false; self.updateClimateUI(); }
+                self.toastFromResult(r, BYD.i18n.t('vehicle.ac_off'), BYD.i18n.t('vehicle.ac_command_failed'));
             });
         });
         this.bindBtn('btnTempUp', function() {
@@ -1483,7 +1678,13 @@ var VC = {
                     } else {
                         self.toast(BYD.i18n.t('vehicle.seat_heat_off'), 'info');
                     }
-                    self.apiPost('/api/vehicle/seat', { action: 'heating', position: pos, level: next });
+                    self.apiPost('/api/vehicle/seat', {
+                        action: 'heating', position: pos, level: next,
+                        driverHeat: self.vehicleState.seatHeat[0] || 0,
+                        driverVent: self.vehicleState.seatCool[0] || 0,
+                        passengerHeat: self.vehicleState.seatHeat[1] || 0,
+                        passengerVent: self.vehicleState.seatCool[1] || 0
+                    });
                 });
                 self.bindBtn('btnSeatCool' + pos, function() {
                     var cur = self.vehicleState.seatCool[pos - 1] || 0;
@@ -1504,7 +1705,13 @@ var VC = {
                     } else {
                         self.toast(BYD.i18n.t('vehicle.seat_cool_off'), 'info');
                     }
-                    self.apiPost('/api/vehicle/seat', { action: 'ventilation', position: pos, level: next });
+                    self.apiPost('/api/vehicle/seat', {
+                        action: 'ventilation', position: pos, level: next,
+                        driverHeat: self.vehicleState.seatHeat[0] || 0,
+                        driverVent: self.vehicleState.seatCool[0] || 0,
+                        passengerHeat: self.vehicleState.seatHeat[1] || 0,
+                        passengerVent: self.vehicleState.seatCool[1] || 0
+                    });
                 });
             })(si);
         }
@@ -1634,6 +1841,17 @@ var VC = {
 
             if (data.seats && data.seats.heat) self.vehicleState.seatHeat = data.seats.heat;
             if (data.seats && data.seats.cool) self.vehicleState.seatCool = data.seats.cool;
+            if (data.seats && data.seats.ventilatedSupported === false) {
+                // Trim lacks ventilated seats — disable the cool buttons.
+                // Cars without the hardware return hasFeature=0 from SDK and
+                // 1001 from the BYD cloud, so neither path can succeed.
+                var coolBtns = document.querySelectorAll('[id^="btnSeatCool"]');
+                for (var ci = 0; ci < coolBtns.length; ci++) {
+                    coolBtns[ci].setAttribute('disabled', 'true');
+                    coolBtns[ci].classList.add('disabled');
+                    coolBtns[ci].title = 'Ventilated seats not available on this trim';
+                }
+            }
 
             // Update UI
             self.updateHUD();
@@ -2032,6 +2250,148 @@ var VC = {
         var btnSLW = document.getElementById('btnSLW');
         var on = !!(this.vehicleState.adas && this.vehicleState.adas.speedLimitWarning);
         if (btnSLW) { if (on) btnSLW.classList.add('on'); else btnSLW.classList.remove('on'); }
+    },
+
+    /** Custom-mode chargeWay: always emit CSV so server doesn't fall back to "e". */
+    _computeCustomChargeWay: function(days) {
+        if (!days || days.length === 0) return '';
+        return days.slice().sort(function(a, b) { return a - b; }).join(',');
+    },
+
+    /** Parse wire chargeWay back into local day-array. "e" → all 7; "s" → []; CSV → ints. */
+    _parseChargeWay: function(way) {
+        if (!way || way === 'e') return [0, 1, 2, 3, 4, 5, 6];
+        if (way === 's') return [];
+        var parts = String(way).split(',');
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+            var n = parseInt(parts[i], 10);
+            if (!isNaN(n) && n >= 0 && n <= 6) out.push(n);
+        }
+        return out;
+    },
+
+    /** Derive segmented mode from current chargeWay. */
+    _scheduleMode: function(chargeWay) {
+        if (chargeWay === 's') return 'once';
+        if (!chargeWay || chargeWay === 'e') return 'daily';
+        return 'custom';
+    },
+
+    updateChargingUI: function() {
+        var s = this.vehicleState.chargingSchedule || {};
+        var btn = document.getElementById('btnSmartChargeToggle');
+        if (btn) { if (s.enabled === true) btn.classList.add('on'); else btn.classList.remove('on'); }
+
+        var startInput = document.getElementById('chargeStartTime');
+        if (startInput && s.startChargeTime) startInput.value = s.startChargeTime;
+
+        var endInput = document.getElementById('chargeEndTime');
+        if (endInput && s.endChargeTime && s.endChargeTime !== 'full') endInput.value = s.endChargeTime;
+        if (endInput) endInput.disabled = !!s.untilFull;
+
+        var fullBtn = document.getElementById('btnChargeUntilFull');
+        if (fullBtn) { if (s.untilFull) fullBtn.classList.add('on'); else fullBtn.classList.remove('on'); }
+
+        var mode = this._scheduleMode(s.chargeWay);
+        var segs = document.querySelectorAll('#repeatSegmented .vc-seg');
+        for (var k = 0; k < segs.length; k++) {
+            if (segs[k].getAttribute('data-mode') === mode) segs[k].classList.add('on');
+            else segs[k].classList.remove('on');
+        }
+
+        var dayChips = document.getElementById('chargeDayChips');
+        if (dayChips) {
+            dayChips.style.display = (mode === 'custom') ? '' : 'none';
+            var chips = dayChips.querySelectorAll('.vc-day');
+            var selected;
+            if (mode === 'custom') {
+                selected = s.days && s.days.length > 0 ? s.days : this._parseChargeWay(s.chargeWay);
+            } else if (mode === 'daily') {
+                selected = [0, 1, 2, 3, 4, 5, 6];
+            } else {
+                selected = [];
+            }
+            for (var i = 0; i < chips.length; i++) {
+                var d = parseInt(chips[i].getAttribute('data-day'), 10);
+                if (selected.indexOf(d) >= 0) chips[i].classList.add('on');
+                else chips[i].classList.remove('on');
+            }
+        }
+    },
+
+    updateChargeCapUI: function() {
+        var s = this.vehicleState.chargeCap || {};
+        var section = document.getElementById('chargeCapSection');
+        // Hide on trims where the probe confirmed no-op. null = not yet
+        // probed → show optimistically so the user can trigger the probe.
+        if (section) section.style.display = (s.supported === false) ? 'none' : '';
+
+        var btn = document.getElementById('btnChargeCapToggle');
+        if (btn) { if (s.enabled === true) btn.classList.add('on'); else btn.classList.remove('on'); }
+
+        var slider = document.getElementById('chargeCapSlider');
+        var readout = document.getElementById('chargeCapReadout');
+        if (slider && typeof s.percent === 'number') slider.value = s.percent;
+        if (readout) {
+            readout.textContent = (typeof s.percent === 'number') ? (s.percent + '%') : '--';
+        }
+    },
+
+    fetchChargeCap: function() {
+        var self = this;
+        fetch('/api/vehicle/charge-cap').then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            if (!data || !data.success) {
+                console.debug('[VC] charge-cap GET failed', data);
+                return;
+            }
+            if (!self.vehicleState.chargeCap) self.vehicleState.chargeCap = {};
+            var s = self.vehicleState.chargeCap;
+            if (typeof data.percent === 'number') s.percent = data.percent;
+            if (typeof data.enabled === 'boolean') s.enabled = data.enabled;
+            if (typeof data.supported === 'boolean') s.supported = data.supported;
+            else s.supported = null;
+            self.updateChargeCapUI();
+        }).catch(function(e) { console.debug('[VC] charge-cap GET threw', e); });
+    },
+
+    fetchChargingSchedule: function() {
+        var self = this;
+        fetch('/api/vehicle/charging-schedule').then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            if (!data || !data.success) {
+                console.debug('[VC] charging-schedule GET failed', data);
+                return;
+            }
+            // Tab stays visible even when cloud isn't configured — tapping
+            // surfaces the cloud-setup modal via requireCloud().
+            if (data.supported === false) {
+                console.debug('[VC] charging-schedule cloud not ready — reason:', data.reason || 'unsupported');
+                return;
+            }
+            if (!self.vehicleState.chargingSchedule) self.vehicleState.chargingSchedule = {};
+            var s = self.vehicleState.chargingSchedule;
+            if (data.enabled === true || data.enabled === false) s.enabled = data.enabled;
+            if (typeof data.startChargeTime === 'string' && data.startChargeTime) {
+                s.startChargeTime = data.startChargeTime;
+            }
+            if (typeof data.endChargeTime === 'string' && data.endChargeTime) {
+                if (data.endChargeTime === 'full') {
+                    s.untilFull = true;
+                } else {
+                    s.untilFull = false;
+                    s.endChargeTime = data.endChargeTime;
+                }
+            }
+            if (typeof data.chargeWay === 'string' && data.chargeWay) {
+                s.chargeWay = data.chargeWay;
+                s.days = self._parseChargeWay(data.chargeWay);
+            }
+            self.updateChargingUI();
+        }).catch(function(e) { console.debug('[VC] charging-schedule GET threw', e); });
     },
 
     updateSeatGlows: function() {
@@ -3293,6 +3653,46 @@ var VC = {
         this._toastTimer = setTimeout(function() {
             toastEl.classList.remove('show');
         }, 2500);
+    },
+
+    /**
+     * Render a toast from a routed-API response { success, path, latencyMs, message, outcome }.
+     * Prefers the server-resolved `message` so cloud-required / rate-limited /
+     * cloud-failed prompts surface in the right locale automatically. Falls
+     * back to caller-supplied success / error labels if the server didn't
+     * return a message (e.g., legacy endpoint).
+     *
+     * Appends a localized path badge ("· via cloud", "· cloud → direct connection")
+     * on success so the user always knows which transport actually fired.
+     */
+    toastFromResult: function(result, fallbackOk, fallbackErr) {
+        if (!result) return;
+        var msg = result.message || (result.success ? fallbackOk : (result.error || fallbackErr));
+        if (!msg) msg = result.success ? (fallbackOk || '') : (fallbackErr || '');
+        if (result.success) {
+            var badge = this.pathLabel(result.path);
+            if (badge) msg = msg + ' · ' + badge;
+        }
+        var type;
+        if (result.success) type = 'success';
+        else if (result.outcome === 'auth_required') type = 'info';
+        else if (result.outcome === 'rate_limited') type = 'info';
+        else type = 'error';
+        this.toast(msg, type);
+    },
+
+    /**
+     * Map the server's `path` field to a localized human badge. Unknown /
+     * "none" paths return empty so callers can skip the separator.
+     */
+    pathLabel: function(path) {
+        switch (path) {
+            case 'cloud': return BYD.i18n.t('vehicle_control.path_cloud');
+            case 'local': return BYD.i18n.t('vehicle_control.path_local');
+            case 'cloud-then-local': return BYD.i18n.t('vehicle_control.path_cloud_then_local');
+            case 'local-then-cloud': return BYD.i18n.t('vehicle_control.path_local_then_cloud');
+            default: return '';
+        }
     }
 };
 

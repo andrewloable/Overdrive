@@ -25,15 +25,15 @@ public class AccMonitor {
     // Default to false (ACC off) - safer assumption until AccSentryDaemon confirms state
     // This prevents false "acc: true" in status when daemon restarts
     private static volatile boolean accOn = false;
-    
+
     public static boolean isAccOn() {
         return accOn;
     }
-    
+
     public static boolean isInSentryMode() {
         return inSentryMode;
     }
-    
+
     /**
      * Called by SurveillanceEngine IPC when AccSentryDaemon sends ACC state.
      */

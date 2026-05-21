@@ -1,0 +1,267 @@
+/*
+ * Overdrive — Bottom-tab navigation for long settings pages.
+ *
+ * Pages opt in by including app-tabs.js + setting either window.OT_TABS or
+ * a <meta name="ot-tabs"> manifest. The script renders a sticky bottom tab
+ * bar; this stylesheet gives it a M3-Expressive look that matches the rest
+ * of the app shell.
+ *
+ *   - Glass app bar treatment (translucent + backdrop-filter blur), so
+ *     it floats over the bottom of the content area.
+ *   - 4px hairline accent above the bar (primary → tertiary gradient,
+ *     same identity stripe as the toolbar / sidebar).
+ *   - Active tab uses M3 secondary-container as the active-pill background
+ *     with primary as the icon/label tint — same affordance the native
+ *     rail uses.
+ *   - Press / hover ripples reuse the surface-container-high tier so
+ *     the press state is visible against the glass background.
+ *
+ * No raw hex values — all tokens come from design-tokens.css.
+ */
+
+/*
+ * Bottom-tab bar positioning.
+ *
+ * Sit to the RIGHT of the sidebar — the sidebar uses position:fixed with
+ * left:0 + width:var(--sidebar-width), so the tab bar's `left` matches
+ * that width. The bar therefore never overlaps the sidebar, regardless
+ * of viewport width.
+ *
+ * On viewports under 768px the sidebar slides off-screen (transform:
+ * translateX(-100%)) and the tab bar fills the full width, since the
+ * sidebar is no longer occupying its space.
+ */
+.bottom-tabs {
+    position: fixed;
+    left: var(--sidebar-width, 260px);
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    /* Extend the bar height by the bottom safe-area inset rather than letting
+       padding-bottom eat into the 68px content row (global border-box).
+       In standalone PWA on iPhone safe-bottom is ~34px, which previously
+       collapsed the icon+label cluster to ~18px and clipped both. */
+    height: calc(68px + var(--safe-bottom, 0px));
+    padding: 8px 12px calc(8px + var(--safe-bottom, 0px));
+    background: var(--bg-glass);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--outline-variant);
+    /* Scroll horizontally on narrow viewports so a 5-tab bar with an Apply
+       slot never crushes hit-targets below the M3 48dp floor. The native
+       Recordings rail uses the same pattern. */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.bottom-tabs::-webkit-scrollbar { display: none; }
+
+/* Mobile / portrait — sidebar slides off-screen below 768px (see styles.css
+   .sidebar @media rule), so the tab bar takes the full width. */
+@media (max-width: 768px) {
+    .bottom-tabs {
+        left: 0;
+        height: calc(72px + var(--safe-bottom, 0px));
+        padding: 8px 8px calc(8px + var(--safe-bottom, 0px));
+    }
+}
+
+.bottom-tabs::before {
+    /* Identity accent stripe above the bar — mirrors the toolbar accent
+       on the native side and the sidebar / app-bar accents in app-shell.css.
+       Only 2px here (3px would compete with the bar's own border-top). */
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -2px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--tertiary) 100%);
+    pointer-events: none;
+}
+
+.bottom-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    flex-shrink: 0;
+    min-width: 64px;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-md, 14px);
+    color: var(--on-surface-variant);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background-color 160ms ease-out, color 160ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.bottom-tab:hover {
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+}
+
+.bottom-tab.is-active {
+    color: var(--on-secondary-container);
+    background: var(--secondary-container);
+}
+
+.bottom-tab.is-active .bottom-tab-icon {
+    color: var(--primary);
+}
+
+.bottom-tab-icon {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 2px;
+    color: var(--on-surface-variant);
+    transition: color 160ms ease-out;
+}
+
+.bottom-tab-label {
+    line-height: 1.1;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* Bump main-content's bottom padding so the last card never hides under
+   the tab bar. .page-body (the inner scroll container some pages use)
+   gets the same lift. Also override the .footer-bar default offset on
+   pages that use OT tabs — the relocated Apply lives in the bar itself. */
+body.ot-tabs-on .main-content,
+body.ot-tabs-on .main-content .page-body {
+    padding-bottom: calc(96px + var(--safe-bottom, 0px));
+}
+
+/* Lift any floating action / picture-in-picture overlay above the bottom
+   tab bar so it never blocks the Apply pill. The tab bar is 68dp on
+   tablet+ and 72dp on phone, plus safe-bottom; we add a 16dp gap. */
+body.ot-tabs-on .pip-toggle-btn { bottom: calc(96px + var(--safe-bottom, 0px)); }
+body.ot-tabs-on .pip-container  { bottom: calc(96px + var(--safe-bottom, 0px)); }
+body.ot-tabs-on .toast-container { bottom: calc(96px + var(--safe-bottom, 0px)); }
+
+/* Ensure the tab bar always wins over leaflet, modals, and other overlays. */
+.bottom-tabs { z-index: 400; }
+
+/* In-bar Apply slot. The page's existing Apply button is moved here by
+   app-tabs.js so each tab gets a contextually-adjacent action surface
+   (no separate sticky strip eating screen space, no overlap with the
+   tab labels). Tabs flagged readOnly: true in the manifest hide it.
+   The slot uses `align-self: center` so its inner button vertically
+   centers against the tab cluster (icon-over-label) regardless of bar
+   height, instead of riding stretched against the bar's full inner area
+   which made the divider line and button feel off-center next to tabs. */
+.bottom-tab-action {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    height: 44px;            /* matches the inner button on tablet+ */
+    margin-left: 8px;
+    padding-left: 12px;
+    border-left: 1px solid var(--outline-variant);
+    flex-shrink: 0;
+}
+
+.bottom-tab-action.is-hidden {
+    visibility: hidden;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Re-style the relocated #btnApply (it was a full-width primary button
+   in .footer-bar; here it's a compact pill that fits the bar height).
+   The same pill applies to per-tab custom action buttons so MQTT's "Add"
+   reads identical to surveillance's "Apply". */
+.bottom-tab-action .btn,
+.bottom-tab-action #btnApply,
+.bottom-tab-action .bottom-tab-action-btn {
+    height: 44px;
+    padding: 0 18px;
+    border-radius: var(--radius-md, 14px);
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+/* Margin-based gap shim — Chrome 58 doesn't support flex `gap:`. */
+.bottom-tab-action .btn > * + *,
+.bottom-tab-action #btnApply > * + *,
+.bottom-tab-action .bottom-tab-action-btn > * + * { margin-left: 8px; }
+
+.bottom-tab-action.is-disabled #btnApply,
+.bottom-tab-action.is-disabled .btn {
+    opacity: 0.55;
+}
+
+/* Mobile — collapse the action label so the bar still fits 4 tabs.
+   The slot height drops to 40px to match the smaller button so the divider
+   line + button are flush at the same vertical centerline as the tab
+   icon/label cluster. */
+@media (max-width: 480px) {
+    .bottom-tab-action {
+        margin-left: 4px;
+        padding-left: 6px;
+        height: 40px;
+    }
+    .bottom-tab-action #btnApply,
+    .bottom-tab-action .btn {
+        height: 40px;
+        /* Equal padding + zero gap so the icon sits dead-center inside the
+           pill. The previous `gap: 8px` (inherited from .btn) added 8px of
+           leading whitespace AFTER the icon for the now-hidden label, which
+           pushed the check-mark to the left of center. */
+        padding: 0;
+        width: 40px;
+        min-width: 40px;
+        gap: 0;
+        font-size: 0; /* hide text */
+        justify-content: center;
+    }
+    .bottom-tab-action #btnApply svg,
+    .bottom-tab-action .btn svg {
+        width: 20px;
+        height: 20px;
+        margin: 0; /* defeat any inherited margin-right that would re-offset */
+    }
+    /* Hide the now-empty label span so it can't claim flex space.
+       (`font-size: 0` collapses glyph width but a `<span>` with bg/padding
+       could still take a slot — be explicit.) */
+    .bottom-tab-action #btnApply > span,
+    .bottom-tab-action .btn > span {
+        display: none;
+    }
+    .bottom-tab { min-width: 56px; padding: 6px 6px; }
+    .bottom-tab-label { font-size: 10px; }
+    .bottom-tab-icon { width: 20px; height: 20px; }
+}
+
+/* When a tab pane is hidden by the tabs script, animate the swap so the
+   transition reads as a real motion, not a flicker. The selector matches
+   any tagged element regardless of class (.card, .chart-card, .metric-card,
+   bare <section>, etc.) so the animation works across pages. */
+[data-tab][hidden] { display: none !important; }
+[data-tab]:not([hidden]) {
+    animation: ot-tab-fade-in var(--duration-med, 240ms) var(--easing-decel, cubic-bezier(0.0, 0.0, 0.2, 1.0));
+}
+
+@keyframes ot-tab-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

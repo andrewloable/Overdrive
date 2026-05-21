@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded: smart_toy (24px, weight 400, fill 0) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateY="24">
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M200-200v-262q-37-29-58.5-72T120-624v-56q0-50 35-85t85-35h120q50 0 85 35t35 85v56q0 47-21.5 90T400-462v262q0 17-11.5 28.5T360-160H240q-17 0-28.5-11.5T200-200Zm280 40q-17 0-28.5-11.5T440-200v-360q0-50 35-85t85-35h160q50 0 85 35t35 85v360q0 17-11.5 28.5T800-160H480Zm-160-280q33 0 56.5-23.5T400-520v-160q0-33-23.5-56.5T320-760H240q-33 0-56.5 23.5T160-680v160q0 33 23.5 56.5T240-440h80Zm120-200q0-25-17.5-42.5T380-700q-25 0-42.5 17.5T320-640q0 25 17.5 42.5T380-580q25 0 42.5-17.5T440-640ZM280-280h40v-160h-40v160Zm240 40h240v-320H520v320Zm60-100h40v-40h-40v40Zm120 0h40v-40h-40v40ZM280-440h40-40Zm280-180Z"/>
+    </group>
+</vector>

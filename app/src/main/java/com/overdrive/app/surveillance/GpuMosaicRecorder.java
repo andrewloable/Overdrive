@@ -207,9 +207,23 @@ public class GpuMosaicRecorder {
             this.encoderSurface = null;
             logger.info("Released old encoder surface for reinitialization");
         }
-        
+
         this.eglCore = eglCore;
         this.encoder = encoder;
+
+        // Seed TBC EMA from the encoder's configured fps so the first ~10
+        // frames have correct PTS pacing. Without this, averageDeltaNs starts
+        // at the static default (~5.5 fps) and the EMA needs ~22 frames to
+        // converge — at 30 fps that's 700ms of fast-forward at the start of
+        // each recording, plus a "snap to wall clock" jump from the 1s drift
+        // failsafe. Reset smoothedPtsNs too so on reinit (FPS change) the
+        // first frame uses real wall-clock time as the new origin.
+        int encoderFps = encoder != null ? encoder.getFps() : 15;
+        averageDeltaNs = 1_000_000_000L / Math.max(1, encoderFps);
+        smoothedPtsNs = -1;
+        lastRealTimeNs = -1;
+        logger.info("TBC seeded: averageDeltaNs=" + (averageDeltaNs / 1_000_000)
+            + "ms (from encoder fps=" + encoderFps + ")");
         
         // Register callback to sync recording flag when encoder closes file
         encoder.setFileClosedCallback(() -> {

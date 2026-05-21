@@ -28,43 +28,156 @@ public class GpuPipelineConfig {
         }
     }
     
-    // Bitrate presets (optimized for surveillance)
-    // H.265 achieves same quality at ~65% of H.264 bitrate
-    public enum BitratePreset {
-        LOW(2_000_000, 1_300_000, "Low"),        // H.264: 2 Mbps, H.265: 1.3 Mbps
-        MEDIUM(3_000_000, 2_000_000, "Medium"),  // H.264: 3 Mbps, H.265: 2 Mbps
-        HIGH(6_000_000, 4_000_000, "High");      // H.264: 6 Mbps, H.265: 4 Mbps
-        
-        public final int bitrateH264;
+    // Recording quality — single user-facing knob that bundles bitrate +
+    // user-readable expectations. FPS is configured separately via
+    // camera.targetFps so the user can pick e.g. PREMIUM @ 15 fps for
+    // "archival without smoothness" or HIGH @ 30 fps for "smooth daily".
+    //
+    // Bitrate sizing rationale at 2560×1920 (4.9 megapixels per frame):
+    //   - H.265 needs ~0.04 bpp for "good" quality, ~0.10 bpp for "evidence"
+    //   - At 15 fps: 0.04 bpp × 5 MP × 15 = 3 Mbps minimum for "good"
+    //   - At 30 fps: encoder spreads bits over 2× frames so per-frame detail
+    //     drops at fixed bitrate — bump tier when going to higher fps
+    //
+    // H.265 / H.264 split: H.265 gets ~50% better compression at same
+    // perceived quality, so H.264 columns are ~1.5× the H.265 column.
+    public enum RecordingQuality {
+        // ~7.5 MB/min @ H.265, archival multi-day SD lifespan
+        ECONOMY (1_000_000,  1_500_000, "Economy"),
+        // ~15 MB/min @ H.265, daily driver default
+        STANDARD(2_000_000,  3_000_000, "Standard"),
+        // ~30 MB/min @ H.265, fine textures readable
+        HIGH    (4_000_000,  6_000_000, "High"),
+        // ~45 MB/min @ H.265, evidence-grade
+        PREMIUM (6_000_000,  9_000_000, "Premium"),
+        // ~75 MB/min @ H.265, hardware ceiling
+        MAX     (10_000_000, 15_000_000, "Max");
+
         public final int bitrateH265;
+        public final int bitrateH264;
         public final String displayName;
-        
-        // Legacy field for backward compatibility
-        public final int bitrate;
-        
-        BitratePreset(int bitrateH264, int bitrateH265, String displayName) {
-            this.bitrateH264 = bitrateH264;
+
+        RecordingQuality(int bitrateH265, int bitrateH264, String displayName) {
             this.bitrateH265 = bitrateH265;
+            this.bitrateH264 = bitrateH264;
             this.displayName = displayName;
-            this.bitrate = bitrateH264;  // Default to H.264 for legacy code
         }
-        
-        /**
-         * Gets the appropriate bitrate for the given codec.
-         * H.265 uses ~65% of H.264 bitrate for equivalent quality.
-         */
+
+        /** Resolved bitrate (bps) for the given codec. */
         public int getBitrateForCodec(VideoCodec codec) {
             return codec == VideoCodec.H265 ? bitrateH265 : bitrateH264;
         }
-        
-        /**
-         * Gets display string showing both bitrates.
-         */
+
+        /** Effective-bitrate calibration. Measured on-device with MAX H.265
+         *  configured @ 10 Mbps ceiling:
+         *    sample 1: 38.4 MB / 30 s = 10.24 Mbps
+         *    sample 2: 21.9 MB / 17 s = 10.31 Mbps
+         *  Average ≈ 10.27 Mbps = 103% of ceiling — the encoder treats
+         *  KEY_BIT_RATE as a target, not a cap, and briefly overshoots on
+         *  keyframes. Use 1.0 so the storage forecast matches what users
+         *  actually see on disk; rounding the displayed values down (Math.round
+         *  in QualitySettingsApiHandler) keeps the headline conservative.
+         *  H.264 tracks its cap similarly closely. */
+        private static final double H265_EFFECTIVE_FACTOR = 1.0;
+        private static final double H264_EFFECTIVE_FACTOR = 1.0;
+
+        /** Effective bitrate (bps) — what the encoder typically produces,
+         *  not the KEY_BIT_RATE ceiling. Used for storage estimates. */
+        public double effectiveBitrateForCodec(VideoCodec codec) {
+            int ceiling = getBitrateForCodec(codec);
+            double factor = (codec == VideoCodec.H265) ? H265_EFFECTIVE_FACTOR : H264_EFFECTIVE_FACTOR;
+            return ceiling * factor;
+        }
+
+        /** Estimated size per minute in MB for the given codec. Independent
+         *  of FPS — bitrate is bandwidth-per-second. Uses effective rate so
+         *  the user's storage forecast matches what they'll actually see. */
+        public double estimateMbPerMinute(VideoCodec codec) {
+            return (effectiveBitrateForCodec(codec) * 60.0) / 8.0 / 1024.0 / 1024.0;
+        }
+
+        /** Estimated size per hour in MB for the given codec. */
+        public double estimateMbPerHour(VideoCodec codec) {
+            return estimateMbPerMinute(codec) * 60.0;
+        }
+
+        /** Display string showing tier name + bitrate for the given codec. */
         public String getDisplayString(VideoCodec codec) {
             int br = getBitrateForCodec(codec);
-            return displayName + " (" + (br / 1_000_000.0) + " Mbps)";
+            return displayName + " (" + formatMbps(br) + " Mbps)";
         }
-        
+
+        private static String formatMbps(int bps) {
+            double m = bps / 1_000_000.0;
+            return m == Math.floor(m) ? String.valueOf((int) m) : String.format("%.1f", m);
+        }
+
+        public static RecordingQuality fromString(String name) {
+            if (name == null) return STANDARD;
+            switch (name.toUpperCase()) {
+                case "ECONOMY": return ECONOMY;
+                case "STANDARD": return STANDARD;
+                case "HIGH": return HIGH;
+                case "PREMIUM": return PREMIUM;
+                case "MAX": return MAX;
+                default: return STANDARD;
+            }
+        }
+
+        /**
+         * Approximate perceptual equivalence to a familiar resolution at the
+         * given codec + fps. Returns a human-readable label like "~1080p".
+         *
+         * Computed via bits-per-pixel-frame (bpp = bitrate / (frameW × frameH × fps))
+         * and benchmarked against industry-standard "good quality" bitrates:
+         *   480p ≈ 0.014 bpp at H.265
+         *   720p ≈ 0.027 bpp
+         *   1080p ≈ 0.054 bpp
+         *   1440p ≈ 0.081 bpp
+         *
+         * Native frame is fixed at 2560×1920 (4.92 MP, 4:3). The label is
+         * capped at "~1440p" — the mosaic is physically incapable of 4K
+         * (3840×2160) detail because it's stitched from four 1280×960
+         * camera feeds, so any "4K-equivalent" label would be misleading
+         * marketing. Higher fps reduces bpp at fixed bitrate, so the
+         * equivalent shifts down one tier when going from 15 → 30 fps.
+         */
+        public String getQualityEquivalent(VideoCodec codec, int fps) {
+            int br = getBitrateForCodec(codec);
+            // Frame size: mosaic is 2560×1920 = 4.92 MP per frame.
+            double bpp = (double) br / (2560.0 * 1920.0 * Math.max(1, fps));
+            if (bpp < 0.012)  return "~SD";
+            if (bpp < 0.022)  return "~480p";
+            if (bpp < 0.040)  return "~720p";
+            if (bpp < 0.067)  return "~1080p";
+            return "~1440p";
+        }
+    }
+
+    /** @deprecated use RecordingQuality. Kept as a thin alias so older call
+     *  sites compile until they're migrated. */
+    @Deprecated
+    public enum BitratePreset {
+        LOW(RecordingQuality.ECONOMY),
+        MEDIUM(RecordingQuality.STANDARD),
+        HIGH(RecordingQuality.HIGH);
+
+        public final RecordingQuality quality;
+        public final int bitrate;
+
+        BitratePreset(RecordingQuality q) {
+            this.quality = q;
+            this.bitrate = q.bitrateH264;
+        }
+
+        public int getBitrateForCodec(VideoCodec codec) {
+            return quality.getBitrateForCodec(codec);
+        }
+
+        public String getDisplayString(VideoCodec codec) {
+            return quality.getDisplayString(codec);
+        }
+
         public static BitratePreset fromBitrate(int bitrate) {
             if (bitrate <= 2_500_000) return LOW;
             if (bitrate <= 4_500_000) return MEDIUM;
@@ -72,15 +185,19 @@ public class GpuPipelineConfig {
         }
     }
     
-    // Recording modes (legacy - now uses BitratePreset)
+    // Recording modes (legacy - now uses BitratePreset).
+    // FPS values are *defaults per mode*; user-configurable override is
+    // honored via UnifiedConfig camera.targetFps and applyFpsChange().
     public enum RecordingMode {
-        NORMAL(15, 6_000_000),      // 15 FPS, 6 Mbps
-        SENTRY(10, 2_000_000),      // 10 FPS, 2 Mbps (idle)
-        SENTRY_EVENT(10, 5_000_000); // 10 FPS, 5 Mbps (event)
-        
+        NORMAL(15, 6_000_000),       // 15 FPS, 6 Mbps
+        SENTRY(10, 2_000_000),       // 10 FPS, 2 Mbps (idle)
+        SENTRY_EVENT(10, 5_000_000), // 10 FPS, 5 Mbps (event)
+        HIGH_FPS(25, 6_000_000),     // 25 FPS for high-motion capture
+        MAX_FPS(30, 8_000_000);      // 30 FPS, HAL ceiling on this device
+
         public final int fps;
         public final int bitrate;
-        
+
         RecordingMode(int fps, int bitrate) {
             this.fps = fps;
             this.bitrate = bitrate;
@@ -102,8 +219,14 @@ public class GpuPipelineConfig {
         // High: 1.5 Mbps - good quality
         HIGH(960, 720, 12, 1_500_000, "High (1.5M)"),
         
-        // Ultra High: 2.5 Mbps - best quality (LAN/WiFi only)
-        ULTRA_HIGH(1280, 960, 15, 2_500_000, "Ultra (2.5M)");
+        // Ultra High: 2.5 Mbps - best quality
+        ULTRA_HIGH(1280, 960, 15, 2_500_000, "Ultra (2.5M)"),
+
+        // Smooth: 1280×960 @ 25 fps, 3.5 Mbps - high motion clarity
+        SMOOTH(1280, 960, 25, 3_500_000, "Smooth (3.5M)"),
+
+        // Max: 1280×960 @ 30 fps, 5 Mbps - HAL ceiling on this device, LAN only
+        MAX(1280, 960, 30, 5_000_000, "Max (5M)");
         
         // Legacy aliases
         public static final StreamingQuality LQ = LOW;
@@ -133,6 +256,8 @@ public class GpuPipelineConfig {
                 case "HIGH":
                 case "HQ": return HIGH;
                 case "ULTRA_HIGH": return ULTRA_HIGH;
+                case "SMOOTH": return SMOOTH;
+                case "MAX": return MAX;
                 default: return MEDIUM;
             }
         }
@@ -144,8 +269,15 @@ public class GpuPipelineConfig {
     
     // New configurable settings
     private VideoCodec videoCodec = VideoCodec.H264;  // Default H.264 for compatibility
-    private BitratePreset bitratePreset = BitratePreset.MEDIUM;  // Default 3 Mbps for balance
-    private int customBitrate = 3_000_000;  // Custom bitrate in bps
+    // Single user-facing quality knob (replaces legacy bitratePreset string).
+    // Resolved bitrate = recordingQuality.getBitrateForCodec(videoCodec).
+    // Default STANDARD per the migration policy: existing settings reset to
+    // STANDARD on first load after upgrade.
+    private RecordingQuality recordingQuality = RecordingQuality.STANDARD;
+    /** @deprecated mirrors recordingQuality, kept until call sites migrate. */
+    @Deprecated
+    private BitratePreset bitratePreset = BitratePreset.MEDIUM;
+    private int customBitrate = 0;  // 0 = derive from recordingQuality + codec
     
     // AI configuration
     private boolean aiEnabled = true;
@@ -238,8 +370,28 @@ public class GpuPipelineConfig {
      */
     public void setVideoCodec(VideoCodec codec) {
         this.videoCodec = codec;
-        // Recalculate bitrate for new codec
-        this.customBitrate = bitratePreset.getBitrateForCodec(codec);
+        // Codec change re-derives bitrate from the active quality tier.
+        this.customBitrate = 0;  // re-derive via getEffectiveBitrate
+    }
+
+    /** Gets the user-selected recording quality tier. */
+    public RecordingQuality getRecordingQuality() {
+        return recordingQuality;
+    }
+
+    /** Sets the recording quality tier and clears any custom-bitrate override
+     *  so the new tier's bitrate (resolved against the current codec) takes
+     *  effect on the next encoder reinit. */
+    public void setRecordingQuality(RecordingQuality quality) {
+        this.recordingQuality = quality;
+        this.customBitrate = 0;
+        // Keep legacy bitratePreset alias roughly in sync for any code that
+        // still reads it. Map ECONOMY/STANDARD → LOW/MEDIUM, the rest → HIGH.
+        switch (quality) {
+            case ECONOMY:  this.bitratePreset = BitratePreset.LOW; break;
+            case STANDARD: this.bitratePreset = BitratePreset.MEDIUM; break;
+            default:       this.bitratePreset = BitratePreset.HIGH; break;
+        }
     }
     
     /**
@@ -261,15 +413,16 @@ public class GpuPipelineConfig {
     }
     
     /**
-     * Gets the effective bitrate in bps.
-     * Returns the custom bitrate if set, otherwise the preset bitrate for current codec.
+     * Gets the effective bitrate in bps. Order of precedence:
+     *   1. customBitrate if explicitly set (>0) — used by AdaptiveBitrate
+     *      controller when scaling for thermals or network conditions.
+     *   2. The current RecordingQuality tier resolved against the active codec.
      */
     public int getEffectiveBitrate() {
-        // If custom bitrate was explicitly set, use it
         if (customBitrate > 0) {
             return customBitrate;
         }
-        return bitratePreset.getBitrateForCodec(videoCodec);
+        return recordingQuality.getBitrateForCodec(videoCodec);
     }
     
     /**

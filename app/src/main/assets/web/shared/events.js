@@ -44,6 +44,13 @@ BYD.events = {
         }
         const fileParam = urlParams.get('file');
 
+        // iOS Web Push can't render options.image, so the SW forwards the
+        // signed snapshot URL as ?hero=<encoded URL>. Render it inline at
+        // the top of the page so the user sees the same picture they would
+        // have seen on Android's banner.
+        const heroParam = urlParams.get('hero');
+        if (heroParam) this.renderHeroBanner(heroParam);
+
         this.renderCalendar();
         this.updateRecordingsTitle();
         this.updateCalendarButton();
@@ -104,6 +111,39 @@ BYD.events = {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') stopOnExit();
         });
+    },
+
+    /**
+     * Inserts a full-bleed hero banner at the top of the page using the
+     * pre-signed snapshot URL forwarded from the notification. Used as the
+     * iOS Web Push fallback path because Safari ignores options.image.
+     * The URL already carries a single-purpose signed token, so no auth
+     * header is required and the browser fetches it directly.
+     */
+    renderHeroBanner(heroUrl) {
+        try {
+            // Idempotent: replace any existing banner so re-entries don't stack.
+            var existing = document.getElementById('eventsHeroBanner');
+            if (existing && existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+            var img = document.createElement('img');
+            img.id = 'eventsHeroBanner';
+            img.src = heroUrl;
+            img.alt = '';
+            img.style.cssText =
+                'display:block;width:100%;max-height:42vh;object-fit:cover;' +
+                'border-radius:20px;margin:12px auto 16px;' +
+                'box-shadow:0 8px 24px rgba(0,0,0,0.35);';
+            // Fail silently if the token expired — text-only fallback is fine.
+            img.onerror = function () {
+                if (img.parentNode) img.parentNode.removeChild(img);
+            };
+            // Insert above the filter tabs so it dominates the first viewport.
+            var anchor = document.querySelector('.filter-tab');
+            var host = anchor && anchor.parentNode ? anchor.parentNode : document.body;
+            host.parentNode.insertBefore(img, host);
+        } catch (e) { /* best-effort */ }
     },
 
     /** Idempotent stop — safe to call multiple times. */

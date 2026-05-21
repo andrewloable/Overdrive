@@ -15,55 +15,67 @@ import java.util.concurrent.TimeUnit;
 /**
  * Publishes vehicle.charging.* notifications:
  * <ul>
- *   <li>{@code vehicle.charging.started} — fires {@link #START_STABILIZE_MS}
- *       after the BMS enters CHARGING, so the kW reading has time to ramp
- *       up from 0. Cancelled if the state leaves CHARGING within the window
- *       (transient plug-in flicker → no notification).</li>
- *   <li>{@code vehicle.charging.stopped} — once when the BMS leaves CHARGING
- *       (debounced 10s to ride out brief gaps during DC handshakes).</li>
- *   <li>{@code vehicle.charging.full}    — once per session when SOC crosses
- *       {@link #FULL_SOC_THRESHOLD} while a session is active. Suppressed when
- *       the session began at or above the threshold (plugged-in-already-full).</li>
- *   <li>{@code vehicle.charging.fault}   — every distinct breakdown transition.</li>
+ *   <li>{@code vehicle.charging.started} / {@code .stopped} — driven directly
+ *       by {@link com.overdrive.app.monitor.ChargingDetector} fused-state
+ *       edges. The detector already fuses BMS + Power.isCharging() + L3
+ *       inference + plug edges with hysteresis (30s plug bias, 10s L1↔L2
+ *       disagreement, 15s unplug override, 3-sample L3), so re-debouncing
+ *       here is redundant and was the cause of silently-dropped sessions.</li>
+ *   <li>{@code vehicle.charging.full} — once per session when SOC crosses
+ *       {@link #FULL_SOC_THRESHOLD} (or plateaus near the top) while a
+ *       session is active. Suppressed when the session began at or above
+ *       the threshold (plugged-in-already-full).</li>
+ *   <li>{@code vehicle.charging.fault} — every distinct breakdown transition
+ *       on the BMS edge stream. Independent of session bookkeeping so a
+ *       breakdown is always announced even if no session was active.</li>
  * </ul>
  *
- * <p>State changes hook the {@link BydDataCollector.ChargingStateListener}
- * edge stream — fires only on actual snapshot transitions, not on every poll.
- * SOC is sampled on a {@link #SOC_POLL_INTERVAL_MS} timer that runs only while
- * a session is active.
- *
- * <p>This notifier is purely a downstream consumer of the snapshot — it never
- * mutates {@code chargingState} or {@code chargingPowerKw}. ABRP, MQTT, and
- * the SOC-history graph all read the snapshot directly via {@code getData()}
- * / {@code getChargingState()} and are unaffected by this code path.
+ * <p>This notifier is purely a downstream consumer — it never mutates
+ * {@code chargingState} or {@code chargingPowerKw}. ABRP, MQTT, and the
+ * SOC-history graph all read the snapshot directly via {@code getData()}
+ * and are unaffected by this code path.
  */
 public final class ChargingEventNotifier {
 
-    private static final long STOP_DEBOUNCE_MS = 10_000L;
+    /**
+     * Threshold for "full" notification. BYD's BMS reports SOC as a whole
+     * integer, so any fractional threshold like 99.5 is unreachable below
+     * 100. 99 is the earliest reachable signal that the pack is effectively
+     * full and the user can unplug.
+     */
+    private static final double FULL_SOC_THRESHOLD = 99.0;
 
     /**
-     * How long to wait after CHARGING begins before publishing "started".
-     * BYD AC charging ramps from 0 to ~7 kW over 5–15s; DC fast charging
-     * ramps to peak over 30–90s. 25s is a compromise that gets a stable
-     * AC reading and a representative early-DC reading without making the
-     * user wait too long. If the state leaves CHARGING during the window,
-     * the publish is cancelled — transient flicker emits no notification.
+     * Plateau-based completion: if SOC hits this floor, rises substantially
+     * from start, and then stays flat for {@link #PLATEAU_HOLD_MS}, treat
+     * that as full. Catches the BYD pattern of plateauing at 99 during
+     * balancing without ever quite hitting 100 before the user unplugs.
      */
-    private static final long START_STABILIZE_MS = 25_000L;
+    private static final double PLATEAU_SOC_FLOOR = 98.0;
+    private static final long PLATEAU_HOLD_MS = 90_000L;
 
-    /**
-     * Threshold for "full" notification. Set below 100 because BYD often
-     * plateaus at 99% during the final balancing/trickle phase; users want
-     * the "ready to unplug" cue at this point, not the BMS-reported 100.
-     */
-    private static final double FULL_SOC_THRESHOLD = 99.5;
+    /** Minimum SOC rise to call a plateau "complete" (filters short top-ups). */
+    private static final double MIN_SOC_RISE_FOR_PLATEAU = 5.0;
 
-    private static final long SOC_POLL_INTERVAL_MS = 30_000L;
+    /** SOC polling cadence while a session is active. */
+    private static final long SOC_POLL_INTERVAL_MS = 10_000L;
 
     private static volatile ChargingEventNotifier instance;
 
-    private final BydDataCollector.ChargingStateListener listener =
-            (prev, now) -> onChargingStateChanged(prev, now);
+    private final com.overdrive.app.monitor.ChargingDetector.FusedStateListener fusedListener =
+            (isCharging, source) -> onFusedEdge(isCharging, source);
+
+    /**
+     * Faults come from the raw BMS edge stream, independent of session
+     * bookkeeping. A breakdown reported while we never opened a session
+     * still warrants a notification.
+     */
+    private final BydDataCollector.ChargingStateListener faultListener =
+            (prev, now) -> {
+                if (statusOf(now) == ChargingStateData.ChargingStatus.ERROR) {
+                    publishFault(now);
+                }
+            };
 
     private final ScheduledExecutorService scheduler =
             Executors.newSingleThreadScheduledExecutor(r -> {
@@ -72,105 +84,60 @@ public final class ChargingEventNotifier {
                 return t;
             });
 
-    // True once "started" has actually been published. Cleared after the
-    // debounced "stopped" fires. Distinct from {@link #pendingStart} so the
-    // SOC-full guard and stop debounce can tell pre-publish from post-publish.
     private volatile boolean sessionActive = false;
-
-    // Pending start publish — cancelled if state leaves CHARGING within the
-    // stabilization window, so a transient CHARGING flicker emits nothing.
-    private volatile ScheduledFuture<?> pendingStart;
-
-    // Pending stop debounce — cancelled if charging resumes before it fires.
-    private volatile ScheduledFuture<?> pendingStop;
-
-    // SOC polling task — runs only while sessionActive, cancelled on stop.
     private volatile ScheduledFuture<?> socPoller;
-
-    // Already-fired guard for the "full" event in the current session.
     private volatile boolean fullFiredThisSession = false;
-
-    // SOC at the moment the session became active. Used to suppress the
-    // "full" notification when the user plugs in an already-full car.
     private volatile double sessionStartSoc = Double.NaN;
+    private volatile double sessionMaxSoc = Double.NaN;
+    private volatile long plateauStartedAtMs = 0L;
 
     private ChargingEventNotifier() {}
 
     public static synchronized void start() {
         if (instance != null) return;
         ChargingEventNotifier n = new ChargingEventNotifier();
-        BydDataCollector.getInstance().addChargingStateListener(n.listener);
+        // Single source of truth for session edges. Detector is already
+        // fused and debounced; trust its verdict directly.
+        com.overdrive.app.monitor.ChargingDetector detector =
+                com.overdrive.app.monitor.ChargingDetector.getInstance();
+        detector.addFusedStateListener(n.fusedListener);
+        // Faults are independent — wire to raw BMS edges.
+        BydDataCollector.getInstance().addChargingStateListener(n.faultListener);
         instance = n;
+
+        // Boot-race replay. The detector does not re-emit current state on
+        // subscribe; if BydDataCollector.init() has already driven fused
+        // state to true (cable plugged at cold boot), the listener above
+        // would otherwise miss the start edge entirely and the user would
+        // only get a "stopped" later. Synthesise a single self-call so the
+        // session opens and the SOC poller starts.
+        if (detector.isCharging()) {
+            n.onFusedEdge(true, "boot-replay");
+        }
     }
 
-    private void onChargingStateChanged(int previousState, int newState) {
-        ChargingStateData.ChargingStatus status = statusOf(newState);
+    private void onFusedEdge(boolean isCharging, String source) {
+        if (isCharging == sessionActive) return;
+        sessionActive = isCharging;
 
-        if (status == ChargingStateData.ChargingStatus.CHARGING) {
-            // Resumed — cancel any pending stop. If we already published this
-            // session, nothing else to do. Otherwise schedule a deferred start
-            // so the kW reading has time to ramp.
-            cancelPendingStop();
-            if (sessionActive || pendingStart != null) return;
+        BydVehicleData snap = BydDataCollector.getInstance().getData();
 
-            BydVehicleData snap = BydDataCollector.getInstance().getData();
+        if (isCharging) {
             sessionStartSoc = (snap != null) ? snap.socPercent : Double.NaN;
-
-            final int stateAtScheduleTime = newState;
-            pendingStart = scheduler.schedule(() -> {
-                pendingStart = null;
-                // Final guard: only fire if we're still in CHARGING. The
-                // listener path also clears pendingStart on transition out,
-                // but this catches the race where the cancel arrives just as
-                // this task starts running.
-                BydVehicleData s = BydDataCollector.getInstance().getData();
-                if (s == null) return;
-                ChargingStateData cs = new ChargingStateData(s.chargingState);
-                if (cs.status != ChargingStateData.ChargingStatus.CHARGING) return;
-
-                sessionActive = true;
-                fullFiredThisSession = false;
-                startSocPoller();
-                publishStarted(stateAtScheduleTime);
-            }, START_STABILIZE_MS, TimeUnit.MILLISECONDS);
-            return;
-        }
-
-        if (status == ChargingStateData.ChargingStatus.ERROR) {
-            // Faults are independent of session bookkeeping — always notify.
-            cancelPendingStart();
-            cancelPendingStop();
+            sessionMaxSoc = sessionStartSoc;
+            plateauStartedAtMs = 0L;
+            fullFiredThisSession = false;
+            startSocPoller();
+            int stateCode = (snap != null)
+                    ? snap.chargingState
+                    : ChargingStateData.CHARGING_BATTERY_STATE_CHARGING;
+            publishStarted(stateCode);
+        } else {
             stopSocPoller();
-            publishFault(newState);
-            sessionActive = false;
-            return;
-        }
-
-        // FINISHED / TERMINATED / IDLE / READY / DISCHARGING.
-        // If we never published "started" (transient flicker during
-        // stabilization), drop the pending start silently.
-        if (pendingStart != null) {
-            cancelPendingStart();
-            return;
-        }
-        // Debounced stop — only relevant once we've published "started".
-        if (sessionActive && pendingStop == null) {
-            final int finalState = newState;
-            pendingStop = scheduler.schedule(() -> {
-                pendingStop = null;
-                if (!sessionActive) return;
-                sessionActive = false;
-                stopSocPoller();
-                publishStopped(finalState);
-            }, STOP_DEBOUNCE_MS, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private void cancelPendingStart() {
-        ScheduledFuture<?> f = pendingStart;
-        if (f != null) {
-            f.cancel(false);
-            pendingStart = null;
+            int stateCode = (snap != null)
+                    ? snap.chargingState
+                    : ChargingStateData.CHARGING_BATTERY_STATE_IDLE;
+            publishStopped(stateCode);
         }
     }
 
@@ -178,7 +145,7 @@ public final class ChargingEventNotifier {
         stopSocPoller();
         socPoller = scheduler.scheduleWithFixedDelay(
                 this::checkSocFull,
-                SOC_POLL_INTERVAL_MS, SOC_POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
+                0L, SOC_POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
     private void stopSocPoller() {
@@ -195,24 +162,34 @@ public final class ChargingEventNotifier {
         if (snap == null) return;
         double soc = snap.socPercent;
         if (!isFinite(soc)) return;
-        if (soc < FULL_SOC_THRESHOLD) return;
 
-        // Plugged-in-already-full guard: only fire if the session crossed the
-        // threshold while charging, not if it started at or above.
-        if (isFinite(sessionStartSoc) && sessionStartSoc >= FULL_SOC_THRESHOLD) {
-            fullFiredThisSession = true; // suppress further checks this session
+        if (!isFinite(sessionMaxSoc) || soc > sessionMaxSoc) {
+            sessionMaxSoc = soc;
+        }
+
+        long now = System.currentTimeMillis();
+        if (soc >= PLATEAU_SOC_FLOOR) {
+            if (plateauStartedAtMs == 0L) plateauStartedAtMs = now;
+        } else {
+            plateauStartedAtMs = 0L;
+        }
+
+        boolean startedFull = isFinite(sessionStartSoc)
+                && sessionStartSoc >= FULL_SOC_THRESHOLD;
+
+        if (soc >= FULL_SOC_THRESHOLD) {
+            fullFiredThisSession = true;
+            if (!startedFull) publishFull(soc);
             return;
         }
 
-        fullFiredThisSession = true;
-        publishFull(soc);
-    }
-
-    private void cancelPendingStop() {
-        ScheduledFuture<?> f = pendingStop;
-        if (f != null) {
-            f.cancel(false);
-            pendingStop = null;
+        if (plateauStartedAtMs != 0L
+                && (now - plateauStartedAtMs) >= PLATEAU_HOLD_MS
+                && !startedFull
+                && isFinite(sessionStartSoc)
+                && (soc - sessionStartSoc) >= MIN_SOC_RISE_FOR_PLATEAU) {
+            fullFiredThisSession = true;
+            publishFull(soc);
         }
     }
 
@@ -283,7 +260,7 @@ public final class ChargingEventNotifier {
 
         publish(new NotificationEvent(
                 "vehicle.charging.full",
-                NotificationEvent.Severity.INFO,
+                NotificationEvent.Severity.WARN,
                 Messages.get("notifications.charging_complete"),
                 Messages.get("notifications.battery_ready_to_unplug",
                         (int) Math.round(socPercent)),

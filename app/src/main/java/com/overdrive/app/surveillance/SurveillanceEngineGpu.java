@@ -200,29 +200,60 @@ public class SurveillanceEngineGpu {
     // the recording stutter. add() is idempotent for already-queued quadrants.
     private final java.util.ArrayDeque<Integer> aiQuadrantQueue = new java.util.ArrayDeque<>(4);
     private int aiQuadrantQueueMask = 0;  // bit q = quadrant q is in queue
+    // P1 #12: lock guards the deque + mask as one unit. Callers come from
+    // AiLaneWorker (processFrameV2) and the aiExecutor lambda (heartbeat /
+    // post-suppression refresh paths); without this the deque could throw
+    // ConcurrentModificationException and mask/deque could decohere.
+    private final Object aiQuadrantQueueLock = new Object();
 
     private void aiQuadrantQueueAdd(int q) {
         if (q < 0 || q >= MotionPipelineV2.NUM_QUADRANTS) return;
         int bit = 1 << q;
-        if ((aiQuadrantQueueMask & bit) != 0) return;  // already queued
-        aiQuadrantQueueMask |= bit;
-        aiQuadrantQueue.addLast(q);
+        synchronized (aiQuadrantQueueLock) {
+            if ((aiQuadrantQueueMask & bit) != 0) return;  // already queued
+            aiQuadrantQueueMask |= bit;
+            aiQuadrantQueue.addLast(q);
+        }
     }
 
     private Integer aiQuadrantQueuePoll() {
-        Integer q = aiQuadrantQueue.pollFirst();
-        if (q != null) aiQuadrantQueueMask &= ~(1 << q);
-        return q;
+        synchronized (aiQuadrantQueueLock) {
+            Integer q = aiQuadrantQueue.pollFirst();
+            if (q != null) aiQuadrantQueueMask &= ~(1 << q);
+            return q;
+        }
     }
 
     private void aiQuadrantQueueClear() {
-        aiQuadrantQueue.clear();
-        aiQuadrantQueueMask = 0;
+        synchronized (aiQuadrantQueueLock) {
+            aiQuadrantQueue.clear();
+            aiQuadrantQueueMask = 0;
+        }
+    }
+
+    private boolean aiQuadrantQueueIsEmpty() {
+        synchronized (aiQuadrantQueueLock) {
+            return aiQuadrantQueue.isEmpty();
+        }
     }
     
     // Foveated AI cropping: high-res 640×640 crop from raw camera strip
     private FoveatedCropper foveatedCropper = null;
     private int cameraTextureId = -1;  // OES texture for foveated crop
+    // GL thread handler — used to dispatch foveated crops back to GL thread
+    // because crop() touches GL state (FBO bind, glReadPixels). With the
+    // AI lane decoupled to AiLaneWorker, processFrame now runs off the GL
+    // thread and cannot directly call cropper.crop() — we must hop to GL.
+    private android.os.Handler glHandler = null;
+    // Camera FPS used to size the GL-hop wait budget (one frame + slack).
+    // Wired by PanoramicCameraGpu.setCameraTargetFps() at startup and on FPS
+    // changes; the cropOnGlThread budget tracks it. 0 until wired — the
+    // crop path falls back to a safe minimum so we never time out on cold start.
+    private volatile int cameraTargetFps = 0;
+    // Throttle for foveated GL-hop timeout warnings — log at most once per 5s
+    // and aggregate the count so a busy GL thread doesn't spam.
+    private long lastFoveatedTimeoutLogMs = 0;
+    private long foveatedTimeoutCount = 0;
     
     // Cross-quadrant object tracker
     private final CrossQuadrantTracker crossQuadrantTracker = new CrossQuadrantTracker();
@@ -279,9 +310,13 @@ public class SurveillanceEngineGpu {
     private final DetectionBaseline detectionBaseline = new DetectionBaseline();
     // Track whether baseline has been seeded (one-time on sentry enable)
     private volatile boolean baselineSeeded = false;
-    // Track last YOLO detections per quadrant for event-end baseline update
-    @SuppressWarnings("unchecked")
-    private final java.util.List<com.overdrive.app.ai.Detection>[] lastYoloDetections = new java.util.List[MotionPipelineV2.NUM_QUADRANTS];
+    // Track last YOLO detections per quadrant for event-end baseline update.
+    // P1 #13: AtomicReferenceArray — written from aiExecutor lambda, read by
+    // stopRecording() (recorder drainer thread) and reset by enable() / disable().
+    // Plain array slot publication wasn't safe-published across threads. Readers
+    // must tolerate null (they already do — null check before deref).
+    private final java.util.concurrent.atomic.AtomicReferenceArray<java.util.List<com.overdrive.app.ai.Detection>> lastYoloDetections =
+            new java.util.concurrent.atomic.AtomicReferenceArray<>(MotionPipelineV2.NUM_QUADRANTS);
     // Track which quadrant had the last event (for event-end baseline update)
     private int lastEventQuadrant = -1;
     
@@ -471,6 +506,85 @@ public class SurveillanceEngineGpu {
         if (cropper != null && cropper.isInitialized()) {
             logger.info("Foveated AI cropping enabled (640×640 from raw strip)");
         }
+    }
+
+    /** GL handler for posting foveated crops back to the GL thread.
+     *  Required when processFrame runs on AiLaneWorker. */
+    public void setGlHandler(android.os.Handler glHandler) {
+        this.glHandler = glHandler;
+    }
+
+    /** Camera target FPS — sizes the foveated GL-hop wait budget so the
+     *  AI lane never times out on a normal-load render frame. */
+    public void setCameraTargetFps(int fps) {
+        if (fps > 0) this.cameraTargetFps = fps;
+    }
+
+    /**
+     * Run foveatedCropper.crop on the GL thread and wait for result. Caller
+     * may be on AiLaneWorker — this method bridges back to GL where
+     * FBO/glReadPixels calls are valid.
+     *
+     * Returns null if the crop fails, the GL handler isn't set, or the call
+     * times out. Timeout is sized to one full camera frame (1000/targetFps + 50ms
+     * slack) so we tolerate the GL thread being mid-render without flooding logs.
+     * Caller falls back to the mosaic crop on null.
+     */
+    private byte[] cropOnGlThread(int quadrant, float centroidX, float centroidY) {
+        FoveatedCropper cropper = this.foveatedCropper;
+        int texId = this.cameraTextureId;
+        android.os.Handler h = this.glHandler;
+        if (cropper == null || texId < 0) return null;
+        // Fast path: if we're already on GL thread (handler == null OR handler's
+        // looper == current looper), just call directly.
+        if (h == null || h.getLooper().getThread() == Thread.currentThread()) {
+            try {
+                return cropper.crop(texId, quadrant, centroidX, centroidY);
+            } catch (Throwable t) {
+                logger.warn("Foveated crop (inline) failed: " + t.getMessage());
+                return null;
+            }
+        }
+        // Slow path: post to GL handler and wait. Budget = one camera frame at
+        // the configured target FPS, plus a small slack for the readback itself.
+        // At 15 fps that's ~115ms; at 30 fps ~85ms. The previous 50ms cap was
+        // smaller than a single frame's render budget which guaranteed timeouts.
+        // Floor at 80ms so we don't go shorter than a normal readback even if
+        // FPS hasn't been wired yet (cold start before setCameraTargetFps).
+        int fps = this.cameraTargetFps;
+        long timeoutMs = fps > 0 ? Math.max(80, (1000L / fps) + 50) : 150;
+        final byte[][] result = new byte[1][];
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        boolean posted = h.post(() -> {
+            try {
+                result[0] = cropper.crop(texId, quadrant, centroidX, centroidY);
+            } catch (Throwable t) {
+                logger.warn("Foveated crop (GL hop) failed: " + t.getMessage());
+            } finally {
+                latch.countDown();
+            }
+        });
+        if (!posted) {
+            // GL thread shutting down or handler invalid — fall back to mosaic.
+            return null;
+        }
+        try {
+            if (!latch.await(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                // Throttle the warn so a busy GL thread doesn't spam logs.
+                long now = System.currentTimeMillis();
+                if (now - lastFoveatedTimeoutLogMs > 5_000) {
+                    lastFoveatedTimeoutLogMs = now;
+                    foveatedTimeoutCount++;
+                    logger.info("Foveated crop GL hop timed out (mosaic fallback active; "
+                            + foveatedTimeoutCount + " timeouts since start)");
+                }
+                return null;
+            }
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+        return result[0];
     }
     
     /**
@@ -912,7 +1026,7 @@ public class SurveillanceEngineGpu {
             // BEFORE the MP4 write is triggered. Without this, if someone leaves the
             // frame right at the trigger threshold, YOLO runs on an empty frame and the
             // JSON sidecar records a generic "motion" event instead of classifying it.
-            if (useObjectDetection && !isAiRunning.get() && aiQuadrantQueue.isEmpty()) {
+            if (useObjectDetection && !isAiRunning.get() && aiQuadrantQueueIsEmpty()) {
                 int bestQ = pipelineV2.getHighestThreatQuadrant();
                 if (bestQ >= 0) aiQuadrantQueueAdd(bestQ);
                 for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
@@ -921,7 +1035,7 @@ public class SurveillanceEngineGpu {
                     }
                 }
                 // Kick off AI immediately if cooldown allows
-                if (!aiQuadrantQueue.isEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
+                if (!aiQuadrantQueueIsEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
                     runAiOnQuadrant(smallRgbFrame, aiQuadrantQueuePoll());
                 }
             }
@@ -1130,7 +1244,7 @@ public class SurveillanceEngineGpu {
                             }
                         }
                         // FIX: Check cooldown before consuming queue item
-                        if (!aiQuadrantQueue.isEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
+                        if (!aiQuadrantQueueIsEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
                             runAiOnQuadrant(smallRgbFrame, aiQuadrantQueuePoll());
                         }
                     }
@@ -1148,7 +1262,7 @@ public class SurveillanceEngineGpu {
                         }
                     }
                     // FIX: Check cooldown before consuming queue item
-                    if (!aiQuadrantQueue.isEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
+                    if (!aiQuadrantQueueIsEmpty() && (System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
                         runAiOnQuadrant(smallRgbFrame, aiQuadrantQueuePoll());
                     }
                 }
@@ -1180,7 +1294,7 @@ public class SurveillanceEngineGpu {
                 // though YOLO is about to classify the person and start a track.
                 boolean trackerActive = false;
                 boolean anyLowActivity = false;
-                boolean aiPending = isAiRunning.get() || !aiQuadrantQueue.isEmpty();
+                boolean aiPending = isAiRunning.get() || !aiQuadrantQueueIsEmpty();
                 // SOTA: If YOLO confirmed a person during this motion sequence, extend
                 // gap tolerance. The person may have briefly moved between block boundaries
                 // or between quadrants, causing motion to drop below MEDIUM. But YOLO
@@ -1358,7 +1472,7 @@ public class SurveillanceEngineGpu {
         // FIX: Check cooldown BEFORE polling the queue. Previously, poll() consumed
         // the quadrant, then runAiOnQuadrant's internal cooldown check rejected it —
         // permanently vaporizing that quadrant's AI pass.
-        if (useObjectDetection && !isAiRunning.get() && !aiQuadrantQueue.isEmpty()) {
+        if (useObjectDetection && !isAiRunning.get() && !aiQuadrantQueueIsEmpty()) {
             if ((System.currentTimeMillis() - lastAiTimeMs) >= AI_COOLDOWN_MS) {
                 runAiOnQuadrant(smallRgbFrame, aiQuadrantQueuePoll());
             }
@@ -1577,13 +1691,16 @@ public class SurveillanceEngineGpu {
         
         if (foveatedCropper != null && foveatedCropper.isInitialized() && cameraTextureId >= 0
                 && ((motionResult != null && motionResult.componentSize > 0) || heartbeatHasTrackerPos)) {
-            // Foveated path: 640×640 from raw strip (called on GL thread — safe)
-            // Use motion centroid if available, otherwise fall back to tracker position
+            // Foveated path: 640×640 from raw strip. crop() touches GL state
+            // (FBO bind, glReadPixels) and must run on the GL thread. Since
+            // processFrame runs on AiLaneWorker, we hop to GL and wait
+            // synchronously. Round-trip is ~1-5ms so this doesn't meaningfully
+            // affect the AI lane budget.
             float centroidX = (motionResult != null && motionResult.componentSize > 0)
                     ? motionResult.centroidX : trackerCentroidX;
             float centroidY = (motionResult != null && motionResult.componentSize > 0)
                     ? motionResult.centroidY : trackerCentroidY;
-            byte[] foveatedRgb = foveatedCropper.crop(cameraTextureId, quadrant, centroidX, centroidY);
+            byte[] foveatedRgb = cropOnGlThread(quadrant, centroidX, centroidY);
             if (foveatedRgb != null) {
                 qW = FoveatedCropper.CROP_SIZE;
                 qH = FoveatedCropper.CROP_SIZE;
@@ -1828,7 +1945,7 @@ public class SurveillanceEngineGpu {
                         // Store last detections for event-end baseline update (use unfiltered
                         // motionFiltered list — baseline update needs to see ALL objects including
                         // those that were suppressed, so it can maintain/update their entries)
-                        lastYoloDetections[qIdx] = new java.util.ArrayList<>(motionFiltered);
+                        lastYoloDetections.set(qIdx, new java.util.ArrayList<>(motionFiltered));
                         lastEventQuadrant = qIdx;
                         
                         // THREAT-LEVEL DECISION MATRIX (AI background subtraction gate):
@@ -2913,7 +3030,14 @@ public class SurveillanceEngineGpu {
             if (videoFilename != null && !videoFilename.isEmpty()) {
                 String enc = java.net.URLEncoder.encode(videoFilename, "UTF-8");
                 data.put("filename", videoFilename);
-                data.put("snapshot", "/thumb/" + enc);
+                // Deliberately NOT setting data.snapshot here. At start time the
+                // hero JPEG hasn't been written yet and /thumb/<mp4> will return
+                // 202 or, worse, a mid-event MMR frame off the in-flight .tmp.
+                // iOS Safari Web Push caches the resolved image bytes against
+                // the tag on first paint and refuses to swap them when the
+                // matching `final` push arrives — so leaving snapshot out keeps
+                // the start banner intentionally text-only and lets the final
+                // push install the real hero image cleanly.
                 data.put("stage", "start");
                 url = "/events.html?filter=sentry&file=" + enc;
             } else {
@@ -3059,7 +3183,15 @@ public class SurveillanceEngineGpu {
                 String snapshotName = (heroJpegName != null && !heroJpegName.isEmpty())
                         ? heroJpegName : videoFilename;
                 String encSnap = java.net.URLEncoder.encode(snapshotName, "UTF-8");
-                data.put("snapshot", "/thumb/" + encSnap);
+                // Carry a single-purpose signed token so Web Push service
+                // workers / OS notification banners can fetch the thumbnail
+                // without an Authorization header. 10 min TTL is plenty for
+                // a banner that the user dismisses or taps within seconds.
+                String thumbTok = com.overdrive.app.auth.AuthManager
+                        .signThumbToken(snapshotName, 600L);
+                String snapUrl = "/thumb/" + encSnap;
+                if (thumbTok != null) snapUrl += "?t=" + thumbTok;
+                data.put("snapshot", snapUrl);
                 data.put("stage", "final");
                 url = "/events.html?filter=sentry&file=" + enc;
             } else {
@@ -3246,12 +3378,16 @@ public class SurveillanceEngineGpu {
         // SOTA: Update detection baseline from the last YOLO detections of this event.
         // This is the event-driven baseline update — zero extra inferences.
         // Only updates the quadrant where the event happened.
-        if (lastEventQuadrant >= 0 && lastYoloDetections[lastEventQuadrant] != null) {
-            int qW = THUMBNAIL_WIDTH / 2;
-            int qH = THUMBNAIL_HEIGHT / 2;
-            detectionBaseline.updateFromEventEnd(lastEventQuadrant,
-                    lastYoloDetections[lastEventQuadrant], qW, qH);
-            lastYoloDetections[lastEventQuadrant] = null;
+        // P1 #13: snapshot the slot once via getAndSet() so a late aiExecutor
+        // lambda writing the same slot can't corrupt the value mid-read.
+        if (lastEventQuadrant >= 0) {
+            java.util.List<com.overdrive.app.ai.Detection> snap =
+                    lastYoloDetections.getAndSet(lastEventQuadrant, null);
+            if (snap != null) {
+                int qW = THUMBNAIL_WIDTH / 2;
+                int qH = THUMBNAIL_HEIGHT / 2;
+                detectionBaseline.updateFromEventEnd(lastEventQuadrant, snap, qW, qH);
+            }
             lastEventQuadrant = -1;
         }
         
@@ -3496,7 +3632,7 @@ public class SurveillanceEngineGpu {
         detectionBaseline.reset();
         baselineSeeded = false;
         for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
-            lastYoloDetections[q] = null;
+            lastYoloDetections.set(q, null);
         }
         lastEventQuadrant = -1;
         
@@ -3549,18 +3685,38 @@ public class SurveillanceEngineGpu {
         }
         active = false;
         inActiveMode = false;
-        
+
+        // P1 #15: cancel pending YOLO work and clear shared state BEFORE
+        // resetting the baseline. Without this, an aiExecutor lambda already
+        // mid-flight can still write lastActors / lastYoloDetections after
+        // disable returns, polluting the next session's first frames.
+        aiQuadrantQueueClear();
+        for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
+            lastYoloDetections.set(q, null);
+        }
+        // Brief drain so any inference already running observes active=false
+        // and skips its writes. Bounded to 50ms — disable() is on the daemon
+        // thread; we don't want to block the caller for a full inference.
+        try {
+            long drainDeadline = System.currentTimeMillis() + 50;
+            while (isAiRunning.get() && System.currentTimeMillis() < drainDeadline) {
+                Thread.sleep(5);
+            }
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+
         // SOTA: Notify StorageManager that surveillance is inactive
         try {
             com.overdrive.app.storage.StorageManager.getInstance().setSurveillanceActive(false);
         } catch (Exception e) {
             logger.warn("Could not set surveillance inactive state: " + e.getMessage());
         }
-        
+
         // Reset detection baseline for clean session
         detectionBaseline.reset();
         baselineSeeded = false;
-        
+
         logger.info("Surveillance disabled");
     }
     

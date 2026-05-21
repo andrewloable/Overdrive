@@ -125,6 +125,62 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Check for updates — tonal CTA. Delegates to MainActivity's
+             manual update flow (toast → dialog → download/install). The
+             entry was previously orphaned: the layout/Kotlin/strings all
+             agreed it should live here, but no one wired it up. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCheckUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/card_gap_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="@dimen/card_radius_standard"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                style="@style/SettingsRow.Inner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_update"
+                    app:tint="?attr/colorPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_action_check_update"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/settings_about_check_update_value"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <ImageView
+                    style="@style/SettingsRow.Chevron"
+                    android:src="@drawable/ic_chevron_right" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- License — Overdrive is MIT-licensed. Tap opens the LICENSE
              text on GitHub. -->
         <com.google.android.material.card.MaterialCardView
@@ -292,17 +348,22 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textAllCaps="true" />
 
-                <!-- ScrollView caps the contributor list at ~6 rows so a
-                     growing list scrolls inside the card instead of pushing
-                     the whole About page down. android:nestedScrollingEnabled
-                     keeps gestures playing nicely with the outer NestedScrollView. -->
+                <!-- ScrollView hugs the contributor list when short and caps
+                     it at 280dp when long. wrap_content + maxHeight gives us
+                     "min = content, max = 280dp" — the previous fixed 280dp
+                     left a big empty trough on a 2-3 person list. The
+                     scrollbar still stays parked (fadeScrollbars=false) so
+                     users notice it once the list overflows. -->
                 <ScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:maxHeight="280dp"
                     android:fillViewport="false"
-                    android:nestedScrollingEnabled="true">
+                    android:fadeScrollbars="false"
+                    android:nestedScrollingEnabled="true"
+                    android:scrollbarThumbVertical="?attr/colorOutlineVariant"
+                    android:scrollbars="vertical">
 
                     <LinearLayout
                         android:id="@+id/containerContributors"
@@ -326,7 +387,10 @@
                     android:layout_marginTop="8dp"
                     android:maxHeight="280dp"
                     android:fillViewport="false"
-                    android:nestedScrollingEnabled="true">
+                    android:fadeScrollbars="false"
+                    android:nestedScrollingEnabled="true"
+                    android:scrollbarThumbVertical="?attr/colorOutlineVariant"
+                    android:scrollbars="vertical">
 
                     <LinearLayout
                         android:id="@+id/containerSupporters"

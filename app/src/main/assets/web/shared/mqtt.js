@@ -11,6 +11,10 @@ const MQTT = {
     editingId: null,
 
     init() {
+        // Render once up front so the Connections tab shows the empty state +
+        // CTA on first paint, even before the API call lands. Otherwise the
+        // user sees a blank panel until /api/mqtt/connections resolves.
+        this.render();
         this.loadConnections();
         this.loadTelemetry();
         this.startAutoRefresh();
@@ -22,21 +26,26 @@ const MQTT = {
         try {
             const resp = await fetch('/api/mqtt/connections');
             const data = await resp.json();
-            if (data.success) {
+            if (data && data.success) {
                 this.connections = data.connections || [];
                 this.maxConnections = data.maxConnections || 5;
-                this.render();
+            } else {
+                this.connections = [];
             }
         } catch (e) {
             console.warn('[MQTT] Failed to load connections:', e);
+            this.connections = [];
         }
+        // Always render — even on failure — so the empty state appears
+        // instead of a blank panel that looks broken.
+        this.render();
     },
 
     async loadStatus() {
         try {
             const resp = await fetch('/api/mqtt/status');
             const data = await resp.json();
-            if (data.success && data.connections) {
+            if (data && data.success && data.connections) {
                 this.connections = data.connections;
                 this.render();
             }
@@ -69,7 +78,7 @@ const MQTT = {
     render() {
         const list = document.getElementById('connectionList');
         const empty = document.getElementById('emptyState');
-        const addBtn = document.getElementById('btnAdd');
+        if (!list || !empty) return;
 
         if (this.connections.length === 0) {
             list.innerHTML = '';
@@ -78,16 +87,12 @@ const MQTT = {
         }
 
         empty.style.display = 'none';
-
-        // Disable add button if at max
-        if (addBtn) {
-            addBtn.disabled = this.connections.length >= this.maxConnections;
-            if (this.connections.length >= this.maxConnections) {
-                addBtn.title = BYD.i18n.t('mqtt.max_reached', {n: this.maxConnections});
-            }
-        }
-
         list.innerHTML = this.connections.map(conn => this.renderConnection(conn)).join('');
+
+        // Disable the empty-state CTA's "Add" button if the user already has
+        // the max number of connections — they can still hit it from this
+        // page only via the Add tab, where showAddForm() will toast instead.
+        // (No persistent Add button anywhere else now.)
     },
 
     renderConnection(conn) {
@@ -115,21 +120,26 @@ const MQTT = {
             ? new Date(s.lastPublishTime).toLocaleTimeString(BYD.i18n.getLang()) : BYD.i18n.t('mqtt.never');
         const lastErr = s.lastError || '';
 
+        const editIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+        const deleteIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        const enabledHtml = conn.enabled
+            ? '<span class="status-dot connected"></span><span>' + BYD.i18n.t('common.enabled') + '</span>'
+            : '<span class="status-dot off"></span><span>' + BYD.i18n.t('common.disabled') + '</span>';
         return `
         <div class="card conn-card" style="${!conn.enabled ? 'opacity:0.6;' : ''}">
             <div class="conn-header" onclick="MQTT.toggleExpand('${conn.id}')">
                 <span class="conn-dot ${dotClass}"></span>
-                <div style="flex:1;min-width:0;">
+                <div class="conn-info">
                     <div class="conn-name">${this.esc(conn.name || BYD.i18n.t('mqtt.unnamed'))}</div>
                     <div class="conn-broker">${this.esc(conn.brokerUrl || '')}:${conn.port} → ${this.esc(conn.topic || '')}</div>
                 </div>
                 <div class="conn-actions" onclick="event.stopPropagation()">
-                    <button class="icon-btn" onclick="MQTT.editConnection('${conn.id}')" title="${BYD.i18n.t('common.edit')}">✏️</button>
-                    <button class="icon-btn danger" onclick="MQTT.deleteConnection('${conn.id}')" title="${BYD.i18n.t('common.delete')}">🗑️</button>
+                    <button class="icon-btn" onclick="MQTT.editConnection('${conn.id}')" title="${BYD.i18n.t('common.edit')}" aria-label="${BYD.i18n.t('common.edit')}">${editIcon}</button>
+                    <button class="icon-btn danger" onclick="MQTT.deleteConnection('${conn.id}')" title="${BYD.i18n.t('common.delete')}" aria-label="${BYD.i18n.t('common.delete')}">${deleteIcon}</button>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;" onclick="event.stopPropagation()">
-                <div style="font-size:13px;color:var(--text-secondary);">${conn.enabled ? '🟢 ' + BYD.i18n.t('common.enabled') : '🔴 ' + BYD.i18n.t('common.disabled')}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;gap:8px;" onclick="event.stopPropagation()">
+                <div style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">${enabledHtml}</div>
                 <label class="toggle-switch">
                     <input type="checkbox" ${conn.enabled ? 'checked' : ''} onchange="MQTT.toggleEnabled('${conn.id}', this.checked)">
                     <span class="toggle-slider"></span>
@@ -142,12 +152,12 @@ const MQTT = {
                     <div class="conn-stat"><div class="label">${BYD.i18n.t('mqtt.label_published')}</div><div class="value">${totalPub}</div></div>
                     <div class="conn-stat"><div class="label">${BYD.i18n.t('mqtt.label_failed')}</div><div class="value" style="${failedPub > 0 ? 'color:var(--danger)' : ''}">${failedPub}</div></div>
                 </div>
-                ${lastErr ? `<div style="font-size:12px;color:var(--danger);padding:8px 0;">⚠️ ${this.esc(lastErr)}</div>` : ''}
+                ${lastErr ? `<div style="font-size:12px;color:var(--danger);padding:8px 0;">${this.esc(lastErr)}</div>` : ''}
                 <div style="font-size:12px;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap;">
                     <span>${BYD.i18n.t('mqtt.label_qos')}: ${conn.qos}</span>
                     <span>${BYD.i18n.t('mqtt.label_interval')}: ${conn.publishIntervalSeconds}s${conn.adaptiveInterval ? ' (' + BYD.i18n.t('mqtt.adaptive') + ')' : ''}</span>
                     <span>${BYD.i18n.t('mqtt.label_retain')}: ${conn.retainMessages ? BYD.i18n.t('common.yes') : BYD.i18n.t('common.no')}</span>
-                    <span>${BYD.i18n.t('mqtt.label_proxy')}: ${s.proxyActive ? '✅' : '❌'}</span>
+                    <span>${BYD.i18n.t('mqtt.label_proxy')}: ${s.proxyActive ? BYD.i18n.t('common.yes') : BYD.i18n.t('common.no')}</span>
                 </div>
             </div>
         </div>`;
@@ -160,13 +170,20 @@ const MQTT = {
 
     // ==================== FORM ====================
 
+    // The form is rendered on its own tab now (data-tab="add"), so showing /
+    // hiding maps onto a tab switch instead of an inline display toggle.
+    _switchTab(id) {
+        if (typeof window.OT_setActiveTab === 'function') window.OT_setActiveTab(id);
+    },
+
     showAddForm() {
         if (this.connections.length >= this.maxConnections) {
             this.toast(BYD.i18n.t('mqtt.max_reached', {n: this.maxConnections}), 'error');
             return;
         }
         this.editingId = null;
-        document.getElementById('formTitle').textContent = BYD.i18n.t('mqtt.add_connection');
+        var titleEl = document.getElementById('formTitle');
+        if (titleEl) titleEl.textContent = BYD.i18n.t('mqtt.add_connection');
         document.getElementById('formId').value = '';
         document.getElementById('formName').value = '';
         document.getElementById('formBrokerUrl').value = '';
@@ -180,8 +197,9 @@ const MQTT = {
         document.getElementById('formAdaptive').checked = true;
         document.getElementById('formRetain').checked = false;
         document.getElementById('formEnabled').checked = true;
-        document.getElementById('formCard').style.display = 'block';
-        document.getElementById('formName').focus();
+        this._switchTab('add');
+        var nameEl = document.getElementById('formName');
+        if (nameEl) nameEl.focus();
     },
 
     editConnection(id) {
@@ -189,7 +207,8 @@ const MQTT = {
         if (!conn) return;
 
         this.editingId = id;
-        document.getElementById('formTitle').textContent = BYD.i18n.t('mqtt.edit_connection');
+        var titleEl = document.getElementById('formTitle');
+        if (titleEl) titleEl.textContent = BYD.i18n.t('mqtt.edit_connection');
         document.getElementById('formId').value = conn.id;
         document.getElementById('formName').value = conn.name || '';
         document.getElementById('formBrokerUrl').value = conn.brokerUrl || '';
@@ -203,13 +222,16 @@ const MQTT = {
         document.getElementById('formAdaptive').checked = conn.adaptiveInterval !== false;
         document.getElementById('formRetain').checked = conn.retainMessages || false;
         document.getElementById('formEnabled').checked = conn.enabled || false;
-        document.getElementById('formCard').style.display = 'block';
-        document.getElementById('formName').focus();
+        this._switchTab('add');
+        var nameEl = document.getElementById('formName');
+        if (nameEl) nameEl.focus();
     },
 
     hideForm() {
-        document.getElementById('formCard').style.display = 'none';
+        // Cancel returns to the Connections list. editingId is reset so a
+        // subsequent tap on the empty-state CTA opens a fresh form.
         this.editingId = null;
+        this._switchTab('connections');
     },
 
     async saveForm() {
@@ -251,8 +273,11 @@ const MQTT = {
             const result = await resp.json();
             if (result.success) {
                 this.toast(this.editingId ? BYD.i18n.t('mqtt.toast_updated') : BYD.i18n.t('mqtt.toast_added'), 'success');
-                this.hideForm();
+                this.editingId = null;
                 this.loadConnections();
+                // Return to the Connections tab so the user sees the new entry
+                // immediately. The list re-renders via loadConnections().
+                this._switchTab('connections');
             } else {
                 this.toast(result.error || BYD.i18n.t('errors.save_failed'), 'error');
             }

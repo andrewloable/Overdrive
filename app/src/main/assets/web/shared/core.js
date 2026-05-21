@@ -771,8 +771,6 @@ BYD.core = {
 
         // Update elements
         const evPercentValue = document.getElementById('evPercentValue');
-        const evBatteryFill = document.getElementById('evBatteryFill');
-        const evChargeFlow = document.getElementById('evChargeFlow');
         const evRange = document.getElementById('evRange');
 
         // First-load placeholder: server says vehicle data isn't ready yet
@@ -799,39 +797,18 @@ BYD.core = {
 
         if (soc !== null) {
             const socRounded = Math.round(soc);
-            
+
             // Update percentage text
             if (evPercentValue) {
                 evPercentValue.textContent = `${socRounded}%`;
             }
 
-            // Max Width = 120
-            const maxBarWidth = 120;
-            const currentWidth = maxBarWidth * (soc / 100);
-            
-            // Update BOTH the main bar and the flow overlay
-            if (evBatteryFill) evBatteryFill.setAttribute('width', currentWidth);
-            if (evChargeFlow) evChargeFlow.setAttribute('width', currentWidth);
-
-            // Color Logic (Teal -> Cyan -> Blue)
-            const gradStart = document.querySelector('.grad-start');
-            const gradMid = document.querySelector('.grad-mid');
-            const gradEnd = document.querySelector('.grad-end');
-            if (gradStart && gradEnd) {
-                if (soc <= 20) {
-                    gradStart.setAttribute('stop-color', '#ef4444');
-                    if (gradMid) gradMid.setAttribute('stop-color', '#dc2626');
-                    gradEnd.setAttribute('stop-color', '#991b1b');
-                } else if (soc <= 40) {
-                    gradStart.setAttribute('stop-color', '#fbbf24');
-                    if (gradMid) gradMid.setAttribute('stop-color', '#f59e0b');
-                    gradEnd.setAttribute('stop-color', '#d97706');
-                } else {
-                    // SOTA Liquid Energy
-                    gradStart.setAttribute('stop-color', '#2dd4bf');
-                    if (gradMid) gradMid.setAttribute('stop-color', '#06b6d4');
-                    gradEnd.setAttribute('stop-color', '#3b82f6');
-                }
+            // Body-mesh emissive glow. The teal/amber/red ramp + intensity
+            // scaling lives in OverdriveEvCard3D — see ev-card-3d.js
+            // socRampColor + _applyEmissive. No-op on pages where the 3D
+            // shell isn't loaded yet (login.html, dev-only pages).
+            if (window.OverdriveAppShell && window.OverdriveAppShell.setSoc) {
+                window.OverdriveAppShell.setSoc(soc);
             }
         }
 
@@ -862,7 +839,6 @@ BYD.core = {
 
         // Charging state
         const evPower = document.getElementById('evPower');
-        const pattern = document.getElementById('chargeFlowPattern');
 
         let isCharging = false;
         let powerKW = 0;
@@ -891,27 +867,15 @@ BYD.core = {
             }
         }
 
-        // Charging Animation Logic
-        if (isCharging) {
-            evCard.classList.add('charging');
-            // SOTA: Animate the pattern x position using requestAnimationFrame
-            // This creates the "Moving Belt" effect left-to-right
-            if (!evCard.dataset.animating) {
-                evCard.dataset.animating = "true";
-                let offset = 0;
-                const animateFlow = () => {
-                    if (!evCard.classList.contains('charging')) {
-                        evCard.dataset.animating = "";
-                        return;
-                    }
-                    offset -= 1; // Move left (creates rightward visual flow for stripes)
-                    if (pattern) pattern.setAttribute('x', offset);
-                    requestAnimationFrame(animateFlow);
-                };
-                requestAnimationFrame(animateFlow);
-            }
-        } else {
-            evCard.classList.remove('charging');
+        // Charging state. The body-overlay sweep + bolt-icon scale-in
+        // are driven by toggling the .charging class on the card root.
+        // We forward the live charging power (kW) so the sweep
+        // animation duration scales with charging speed — DC fast
+        // visibly snaps; AC trickle crawls.
+        if (isCharging) evCard.classList.add('charging');
+        else            evCard.classList.remove('charging');
+        if (window.OverdriveAppShell && window.OverdriveAppShell.setCharging) {
+            window.OverdriveAppShell.setCharging(isCharging, powerKW);
         }
 
         // SOH display

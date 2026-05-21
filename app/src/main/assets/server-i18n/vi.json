@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Đăng ký - {0}s",
     "proximity_alert": " Thời gian cảnh báo gần gũi: {0} Trigger: {1} ({2}) Việc ghi lại bắt đầu..."
   },
+  "vehicle_control": {
+    "cloud_required": "Kết nối tài khoản BYD trong Cài đặt để sử dụng điều khiển này",
+    "cloud_sent": "Được gửi qua đám mây",
+    "cloud_unavailable_used_local": "Không có điện toán đám mây  kết nối trực tiếp được sử dụng",
+    "local_sent": "Được gửi qua kết nối trực tiếp",
+    "cloud_offline_used_local": "Cloud offline  kết nối trực tiếp được sử dụng",
+    "local_unavailable_used_cloud": "Kết nối trực tiếp không khả dụng — đã gửi qua đám mây",
+    "cloud_failed": "Không thể tiếp cận xe  thử lại khi xe tỉnh táo",
+    "rate_limited": "Một lệnh vẫn đang tiến hành  chờ vài giây",
+    "not_supported": "Máy điều khiển này không có sẵn ngay bây giờ.",
+    "find_car_label": "Tìm xe",
+    "battery_heat_label": "Thức nóng",
+    "close_all_windows_label": "tất cả các cửa sổ đóng cửa"
+  },
   "messages": {
     "logged_out": "Tham gia.",
     "bydcloud_connected": "Kết nối thành công",

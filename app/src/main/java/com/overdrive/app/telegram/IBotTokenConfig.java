@@ -44,4 +44,13 @@ public interface IBotTokenConfig {
      * Save bot info after successful validation.
      */
     void saveBotInfo(BotInfo botInfo);
+
+    /**
+     * Persist token and bot identity in a single underlying write. Prefer
+     * this over the saveToken/saveBotInfo pair when both are known together
+     * (the validate-and-save flow): one call avoids both the
+     * "configured-but-unknown-bot" race window between two writes and the
+     * extra disk I/O of two full-config rewrites.
+     */
+    void saveTokenAndBotInfo(String token, BotInfo botInfo);
 }

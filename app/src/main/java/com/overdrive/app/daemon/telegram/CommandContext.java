@@ -40,9 +40,44 @@ public interface CommandContext {
     
     /**
      * Execute a shell command and return output.
+     *
+     * Use ONLY for short-lived commands that terminate on their own (ps,
+     * pgrep, ls, cat, pm path, echo, rm, mv, kill). Implementations drain
+     * stdout to EOF and waitFor() the process — for a command that
+     * backgrounds a long-lived grandchild (nohup ... &amp;), the grandchild
+     * inherits the outer shell's stdio and the readLine() blocks forever.
+     * For long-lived spawns, use {@link #spawnDetached} instead.
      */
     String execShell(String command);
-    
+
+    /**
+     * Spawn a long-lived process and return immediately, without waiting
+     * for it to finish or draining its stdio. Mirrors the canonical pattern
+     * from {@code AppUpdater.runDetachedInstall} (AppUpdater.java:741-745):
+     * wraps the command in a {@code (… &amp;)} subshell that reparents to init,
+     * closes all stdio descriptors so no pipe is held open by the parent,
+     * and skips {@code waitFor}/{@code readLine} entirely.
+     *
+     * Use for: app_process daemon launches, native binary daemons
+     * (cloudflared, zrok, tailscaled, sing-box), watchdog scripts.
+     *
+     * The default impl exists so callers don't need a context-flavor check;
+     * implementations override with the real detached pattern.
+     *
+     * @param command the command line to run; the implementation wraps it
+     *                in {@code (… &lt;/dev/null &amp;)} so the caller should NOT
+     *                add {@code nohup} / trailing {@code &amp;}
+     * @return true on success, false if the spawn itself failed
+     */
+    default boolean spawnDetached(String command) {
+        // Fallback for any context that hasn't been updated. Better to
+        // execShell-with-trailing-& than to silently no-op, even though
+        // the brief execShell window before the parent shell exits is
+        // technically still racy.
+        execShell("(" + command + " </dev/null >/dev/null 2>&1 &)");
+        return true;
+    }
+
     /**
      * Log a message.
      */

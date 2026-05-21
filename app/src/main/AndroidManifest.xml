@@ -51,6 +51,13 @@
     <uses-permission android:name="android.permission.BYDAUTO_CHARGING_COMMON" />
     <uses-permission android:name="android.permission.BYDAUTO_CHARGING_GET" />
     <uses-permission android:name="android.permission.BYDAUTO_CHARGING_SET" />
+
+    <!-- BMS device access. Some firmware gates AbsBYDAutoChargingListener's
+         onBatteryManagementDeviceStateChanged behind this — without it, the
+         L1 layer of charging detection can fail to receive BMS edges on
+         stricter builds even though CHARGING_GET is granted. -->
+    <uses-permission android:name="android.permission.BYDAUTO_BMS_COMMON" />
+    <uses-permission android:name="android.permission.BYDAUTO_BMS_GET" />
     <!-- Statistic (SOC, mileage, range, fuel, SOH, cell temps/voltages) -->
     <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_COMMON" />
     <uses-permission android:name="android.permission.BYDAUTO_STATISTIC_GET" />
@@ -271,6 +278,7 @@
                 <action android:name="android.intent.action.USER_UNLOCKED" />
                 <!-- Power connection events -->
                 <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
                 <!-- BYD-specific ACC mode events -->
                 <action android:name="com.byd.action.ACC_ON" />
                 <action android:name="com.byd.action.ACC_OFF" />

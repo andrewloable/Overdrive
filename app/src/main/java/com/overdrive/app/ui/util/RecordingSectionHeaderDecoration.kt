@@ -79,33 +79,19 @@ class RecordingSectionHeaderDecoration(
         val data = items()
         if (pos >= data.size) return
 
-        // Only the first item in each section reserves space for the label —
-        // and in a 2-column grid, only the leftmost column of that row.
-        val isFirstInSection = pos == 0 || labelFor(data[pos]) != labelFor(data[pos - 1])
-        if (!isFirstInSection) return
-
-        // For grids: only inset rows that actually start a section. For all
-        // columns in that row we still want the row to align, so we apply
-        // the inset on every column of the row's first item — but since
-        // section transitions are by item (not by row), we additionally
-        // inset every item up to the next column == 0.
+        // To keep grid rows aligned, every cell that lives in a row whose
+        // leftmost cell (column 0) starts a new section needs the same top
+        // inset — otherwise the right column floats up and the left column
+        // sits below the header gap.
         val lm = parent.layoutManager
         val spanCount = if (lm is GridLayoutManager) lm.spanCount else 1
-        val columnInRow = pos % spanCount
-        // Inset only the first column so the row's top aligns; the other
-        // cells in the row are taller via wrap_content matching, but since
-        // we draw per-item and our items are the same size, this is enough
-        // for the header-area. To keep all cells in the row aligned we'd
-        // ideally inset every cell of the row that contains pos; for our
-        // simple case (section-start lands at column 0 in single-day mode
-        // since adjacent items share buckets) this is sufficient.
-        if (columnInRow == 0) {
-            outRect.top = headerHeightPx + headerInsetTopPx
-        } else {
-            // If section start lands mid-row (rare across-day boundaries),
-            // still inset to keep alignment.
-            outRect.top = headerHeightPx + headerInsetTopPx
-        }
+        val rowStart = pos - (pos % spanCount)
+        if (rowStart >= data.size) return
+        val rowStartIsSection = rowStart == 0 ||
+            labelFor(data[rowStart]) != labelFor(data[rowStart - 1])
+        if (!rowStartIsSection) return
+
+        outRect.top = headerHeightPx + headerInsetTopPx
     }
 
     override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {

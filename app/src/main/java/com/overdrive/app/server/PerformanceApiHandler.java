@@ -121,9 +121,14 @@ public class PerformanceApiHandler {
             return handleSohReset(out);
         }
         
-        // POST /api/performance/soh/source - Set preferred SOH source
-        if (path.equals("/api/performance/soh/source") && method.equals("POST")) {
-            return handleSohSetSource(body, out);
+        // GET /api/performance/soh/nominal - Get current nominal capacity + source
+        if (path.equals("/api/performance/soh/nominal") && method.equals("GET")) {
+            return handleSohGetNominal(out);
+        }
+
+        // POST /api/performance/soh/nominal - Set or clear user nominal capacity
+        if (path.equals("/api/performance/soh/nominal") && method.equals("POST")) {
+            return handleSohSetNominal(body, out);
         }
 
         // POST /api/performance/reset - Bulk reset of selected categories
@@ -758,10 +763,38 @@ public class PerformanceApiHandler {
     }
 
     /**
-     * POST /api/performance/soh/source - Set preferred SOH source.
-     * Body: {"source": "auto"|"oem"|"capacity_ah"|"calibration"|"energy"}
+     * GET /api/performance/soh/nominal - Returns current nominal kWh, source.
      */
-    private static boolean handleSohSetSource(String body, OutputStream out) throws Exception {
+    private static boolean handleSohGetNominal(OutputStream out) throws Exception {
+        try {
+            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
+            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+
+            JSONObject response = new JSONObject();
+            if (sohEst != null) {
+                double kwh = sohEst.getNominalCapacityKwh();
+                response.put("nominalKwh", kwh > 0 ? kwh : JSONObject.NULL);
+                response.put("nominalSource", sohEst.getNominalSource());
+            } else {
+                response.put("nominalKwh", JSONObject.NULL);
+                response.put("nominalSource", "unset");
+            }
+            HttpResponse.sendJson(out, response.toString());
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to get SOH nominal", e);
+            HttpResponse.sendJson(out, "{\"error\":\"" + e.getMessage() + "\"}");
+            return true;
+        }
+    }
+
+    /**
+     * POST /api/performance/soh/nominal — set or clear the user-set nominal kWh.
+     * Body: {"nominalKwh": 82.5}  → sets user override
+     *       {"nominalKwh": null}  → clears override, re-runs auto-detect
+     * Validates 15-120 kWh range.
+     */
+    private static boolean handleSohSetNominal(String body, OutputStream out) throws Exception {
         try {
             SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
             com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
@@ -774,22 +807,48 @@ public class PerformanceApiHandler {
                 return true;
             }
 
-            String source = "auto";
-            if (body != null && !body.isEmpty()) {
-                JSONObject json = new JSONObject(body);
-                source = json.optString("source", "auto");
+            JSONObject req = (body == null || body.isEmpty())
+                ? new JSONObject() : new JSONObject(body);
+
+            // null clears the override; otherwise validate & set.
+            boolean changed;
+            if (req.isNull("nominalKwh") || !req.has("nominalKwh")) {
+                changed = true;
+                sohEst.clearUserNominal();
+            } else {
+                double kwh = req.getDouble("nominalKwh");
+                if (kwh < 15.0 || kwh > 120.0) {
+                    JSONObject err = new JSONObject();
+                    err.put("success", false);
+                    err.put("error", "nominalKwh must be between 15 and 120");
+                    HttpResponse.sendJson(out, err.toString());
+                    return true;
+                }
+                changed = true;
+                sohEst.setNominalCapacityKwhFromUser(kwh);
             }
 
-            sohEst.setPreferredSource(source);
+            // Whenever the capacity baseline changes, the previously
+            // recorded SOH/calibration are no longer meaningful (they were
+            // computed against the old nominal). Reset live data and
+            // re-seed against the new baseline so the user immediately
+            // sees an SOH that reflects their current pack assumption.
+            // setNominalCapacityKwhFromUser() inside reset() will be
+            // re-applied automatically because it persists to UnifiedConfig.
+            if (changed) {
+                sohEst.reset();
+                android.content.Context appCtx =
+                    com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                sohEst.autoDetectCarModel(appCtx);
+                sohEst.seedInitialEstimate();
+            }
 
-            JSONObject response = new JSONObject();
+            JSONObject response = sohEst.getStatus();
             response.put("success", true);
-            response.put("preferredSource", sohEst.getPreferredSource());
-            response.put("activeSoh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
             HttpResponse.sendJson(out, response.toString());
             return true;
         } catch (Exception e) {
-            logger.error("Failed to set SOH source", e);
+            logger.error("Failed to set SOH nominal", e);
             HttpResponse.sendJson(out, "{\"success\":false,\"error\":\"" + e.getMessage() + "\"}");
             return true;
         }

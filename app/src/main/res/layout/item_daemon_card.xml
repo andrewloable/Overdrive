@@ -43,11 +43,21 @@
                 android:layout_height="12dp"
                 android:background="@drawable/status_indicator" />
 
+            <!-- Daemon type icon (set per-type by DaemonAdapter) -->
+            <ImageView
+                android:id="@+id/ivDaemonIcon"
+                android:layout_width="@dimen/card_icon_standard"
+                android:layout_height="@dimen/card_icon_standard"
+                android:layout_marginStart="12dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_services"
+                app:tint="?attr/colorPrimary" />
+
             <!-- Daemon Info -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="14dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 

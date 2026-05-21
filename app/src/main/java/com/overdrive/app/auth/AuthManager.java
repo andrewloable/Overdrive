@@ -367,6 +367,66 @@ public class AuthManager {
     }
 
     /**
+     * Mint a single-purpose thumb token for a given filename. Compact HS256
+     * over the existing device secret with claims {@code sub=filename} and
+     * {@code exp=now+ttlSec}. The token can be carried as a {@code ?t=}
+     * query param so browsers fetching the thumbnail (Web Push notification
+     * service worker, FCM image fetch, iOS WebKit notification body) don't
+     * need to send Authorization headers — useful when the URL ends up in
+     * the OS-level notification banner where headers are not configurable.
+     */
+    public static String signThumbToken(String filename, long ttlSec) {
+        AuthState state = getState();
+        if (state == null || filename == null) return null;
+        try {
+            long now = System.currentTimeMillis() / 1000;
+            JSONObject header = new JSONObject();
+            header.put("alg", JWT_ALGORITHM);
+            header.put("typ", "THM");
+            JSONObject payload = new JSONObject();
+            payload.put("sub", filename);
+            payload.put("iat", now);
+            payload.put("exp", now + ttlSec);
+            String headerB64 = base64UrlEncode(header.toString().getBytes(StandardCharsets.UTF_8));
+            String payloadB64 = base64UrlEncode(payload.toString().getBytes(StandardCharsets.UTF_8));
+            String content = headerB64 + "." + payloadB64;
+            String signature = hmacSha256(content, state.deviceSecret);
+            return content + "." + signature;
+        } catch (Exception e) {
+            log("Thumb token sign error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Validate a thumb token against an expected filename. Returns true iff
+     * signature matches the device secret, {@code typ=="THM"},
+     * {@code sub==filename}, and {@code exp} is in the future.
+     */
+    public static boolean validateThumbToken(String filename, String token) {
+        if (filename == null || token == null || token.isEmpty()) return false;
+        AuthState state = getState();
+        if (state == null) return false;
+        String[] parts = token.split("\\.");
+        if (parts.length != 3) return false;
+        try {
+            String content = parts[0] + "." + parts[1];
+            String expectedSig = hmacSha256(content, state.deviceSecret);
+            if (!expectedSig.equals(parts[2])) return false;
+            String headerJson = new String(base64UrlDecode(parts[0]), StandardCharsets.UTF_8);
+            JSONObject header = new JSONObject(headerJson);
+            if (!"THM".equals(header.optString("typ"))) return false;
+            String payloadJson = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
+            JSONObject payload = new JSONObject(payloadJson);
+            if (!filename.equals(payload.optString("sub"))) return false;
+            long exp = payload.optLong("exp", 0);
+            return System.currentTimeMillis() / 1000 <= exp;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Invalidate cached auth state.
      * Called via IPC when app regenerates token.
      * Next JWT validation will reload from the unified config.

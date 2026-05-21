@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Recordings page — portrait.
-
-  Header layout (top → down):
-    1. Title row: "Recordings" headline + tonal "Settings" icon-button on the right.
-    2. Counts subtitle: "X today · Y total · Z GB" populated by RecordingsFragment.
-    3. M3 segmented Dashcam | Surveillance toggle group whose labels gain a
-       count suffix at runtime (e.g. "Dashcam · 118" / "Surveillance · 202").
-    4. Library container fills the rest, hosting RecordingLibraryFragment.
+  Recordings page — portrait. Events.html-style inline filter strip lives
+  ABOVE the embedded RecordingLibraryFragment, so the user gets:
+    1. Title row + tonal Settings.
+    2. Counts subtitle.
+    3. Top filter strip:
+         • Date jump card (◀  Today / clip count  ▶).
+         • Dashcam | Surveillance segmented control (counts in label).
+         • "What" actor-class chip row.
+         • "Severity" chip row.
+    4. Library container hosts the recordings list (no chrome of its own).
 
   IDs preserved (consumed by RecordingsFragment.kt):
     segmentedSource, segmentDashcam, segmentSurveillance,
-    btnRecordingsSettings, libraryContainer.
+    btnRecordingsSettings, libraryContainer,
+    btnPrevDay, btnNextDay, cardDateJump, tvSelectedDate, tvDayClipCount,
+    chipActorAny, chipActorPerson, chipActorVehicle, chipActorBike, chipActorAnimal,
+    chipSevAny, chipSevAlert, chipSevCritical, btnFilterReset.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -21,16 +26,15 @@
     android:background="?android:attr/colorBackground"
     android:orientation="vertical">
 
-    <!-- Hero header: title + summary + segmented control. -->
+    <!-- ============ Hero header: title + summary ============ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="@dimen/page_padding_horizontal"
         android:paddingTop="@dimen/page_padding_top"
-        android:paddingBottom="@dimen/card_gap_vertical">
+        android:paddingBottom="6dp">
 
-        <!-- Title row: headline left, tonal Settings button right. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -62,7 +66,6 @@
                 app:iconGravity="textStart" />
         </LinearLayout>
 
-        <!-- Counts subtitle: populated at runtime by RecordingsFragment. -->
         <TextView
             android:id="@+id/tvRecordingsSummary"
             android:layout_width="wrap_content"
@@ -74,35 +77,351 @@
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant"
             tools:text="12 today · 320 total · 42 GB" />
+    </LinearLayout>
 
-        <!-- Segmented Dashcam | Surveillance. Labels gain "· N" suffix at runtime. -->
+    <!-- ============ Top filter strip ============ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/page_padding_horizontal"
+        android:paddingBottom="6dp">
+
+        <!-- Row 1: Dashcam | Surveillance segmented control -->
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/segmentedSource"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            app:checkedButton="@id/segmentDashcam"
             app:singleSelection="true"
             app:selectionRequired="true">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/segmentDashcam"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="42dp"
                 android:text="@string/recordings_segment_dashcam"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/segmentSurveillance"
                 style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="42dp"
                 android:text="@string/recordings_segment_surveillance"
                 android:textAllCaps="false" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Row 2: date jump (◀ card ▶) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="10dp"
+            android:baselineAligned="false">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPrevDay"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="@string/cd_previous_day"
+                app:icon="@drawable/ic_chevron_left"
+                app:iconSize="22dp"
+                app:iconTint="?attr/colorOnSurfaceVariant"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDateJump"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:cardElevation="0dp"
+                app:cardCornerRadius="@dimen/card_radius_accent"
+                app:rippleColor="?attr/colorPrimary"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="10dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_events"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/tvSelectedDate"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        tools:text="Today" />
+
+                    <TextView
+                        android:id="@+id/tvDayClipCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:paddingHorizontal="9dp"
+                        android:paddingVertical="2dp"
+                        android:background="@drawable/recording_lib_count_pill"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:visibility="gone"
+                        tools:text="12 clips"
+                        tools:visibility="visible" />
+
+                    <ImageButton
+                        android:id="@+id/btnClearDate"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_marginStart="6dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/cd_clear_date_filter"
+                        android:padding="4dp"
+                        android:src="@drawable/ic_clear"
+                        android:visibility="gone"
+                        app:tint="?attr/colorOnSurfaceVariant"
+                        tools:visibility="visible" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNextDay"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="@string/cd_next_day"
+                app:icon="@drawable/ic_chevron_right"
+                app:iconSize="22dp"
+                app:iconTint="?attr/colorOnSurfaceVariant"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+        </LinearLayout>
+
+        <!-- Row 3a: TYPE chips (Dashcam segment only) -->
+        <HorizontalScrollView
+            android:id="@+id/rowTypeFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/recording_lib_filter_section_type"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.06"
+                    android:textAllCaps="true" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="6dp"
+                    app:singleLine="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTypeNormal"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_type_normal" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTypeProximity"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_type_proximity" />
+                </com.google.android.material.chip.ChipGroup>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Row 3: WHAT chips -->
+        <HorizontalScrollView
+            android:id="@+id/rowWhatFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/recording_lib_filter_section_what"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.06"
+                    android:textAllCaps="true" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupWhat"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="6dp"
+                    app:singleLine="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipActorAny"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_any"
+                        android:checked="true" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipActorPerson"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_person" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipActorVehicle"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_vehicle" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipActorBike"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_bike" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipActorAnimal"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_lib_chip_animal" />
+                </com.google.android.material.chip.ChipGroup>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Row 4: SEVERITY chips + Reset -->
+        <LinearLayout
+            android:id="@+id/rowSeverityFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp"
+            android:baselineAligned="false">
+
+            <HorizontalScrollView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scrollbars="none"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/recording_lib_filter_section_severity"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.06"
+                        android:textAllCaps="true" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupSeverity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="6dp"
+                        app:singleLine="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipSevAny"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/recording_lib_chip_any"
+                            android:checked="true" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipSevAlert"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/recording_lib_chip_alert" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipSevCritical"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/recording_lib_chip_critical" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFilterReset"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:text="@string/recording_lib_filter_reset"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:visibility="gone"
+                android:minHeight="36dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                tools:visibility="visible" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Container hosting the native RecordingLibraryFragment (set by code) -->
+    <!-- ============ Library list (fills remaining height) ============ -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/libraryContainer"
         android:layout_width="match_parent"

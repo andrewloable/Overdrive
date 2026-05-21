@@ -33,6 +33,11 @@
     <!-- Borders -->
     <color name="border_default">#26FFFFFF</color>
 
+    <!-- Floating status overlay — dark variant (charcoal glass + faint
+         brand-tinted ring). See values/colors.xml for the light pair. -->
+    <color name="overlay_pill_background">#CC16161A</color>
+    <color name="overlay_pill_stroke">#335DDBB6</color>
+
     <!-- Status -->
     <color name="status_success">#5BD382</color>
     <color name="status_warning">#FFB870</color>

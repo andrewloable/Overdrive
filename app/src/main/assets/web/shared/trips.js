@@ -22,17 +22,88 @@ const TRIPS = {
     electricityRate: 0,
     currency: '$',
 
+    // Canvas paint palette. text / grid / textStrong / dotStroke /
+    // arcTrack flip with [data-theme="light"] via _refreshPalette() —
+    // they're seeded with the dark defaults and replaced by reading
+    // the --chart-* CSS variables (same pattern as performance.js).
+    // Brand and tier colours stay theme-independent.
     colors: {
         brand: '#00D4AA',
         brandRgba: 'rgba(0, 212, 170, 0.25)',
         accent: '#0EA5E9',
         danger: '#EF4444',
         warning: '#F59E0B',
-        text: 'rgba(255, 255, 255, 0.5)',
+        text: 'rgba(255, 255, 255, 0.7)',
+        textMuted: 'rgba(255, 255, 255, 0.5)',
+        textStrong: '#FFFFFF',
         grid: 'rgba(255, 255, 255, 0.08)',
+        // Inner stroke around radar dots / timeline pucks. In dark
+        // theme this matches the page background so the dot reads
+        // crisp; in light theme it flips to the light surface.
+        dotStroke: '#0F0F12',
+        // Faint background ring under score / range circle gauges.
+        arcTrack: 'rgba(255, 255, 255, 0.06)',
         speedGreen: '#22C55E',
         speedYellow: '#F59E0B',
         speedRed: '#EF4444',
+    },
+
+    // Re-read the palette from CSS custom properties whenever the
+    // <html data-theme> flips. Called once at init and on every
+    // attribute mutation, then renderers re-read this.colors.
+    _refreshPalette: function () {
+        try {
+            var s = getComputedStyle(document.documentElement);
+            var pick = function (name, fallback) {
+                var v = (s.getPropertyValue(name) || '').trim();
+                return v || fallback;
+            };
+            this.colors.text       = pick('--chart-text',        this.colors.text);
+            this.colors.textStrong = pick('--chart-text-strong', this.colors.textStrong);
+            this.colors.grid       = pick('--chart-grid',        this.colors.grid);
+            // dotStroke / arcTrack track the page surface, not the
+            // chart palette — read --bg-base which the design-tokens
+            // layer already flips per theme.
+            this.colors.dotStroke = pick('--bg-base',     this.colors.dotStroke);
+            this.colors.arcTrack  = pick('--border-subtle', this.colors.arcTrack);
+            this.colors.textMuted = this.colors.text;
+        } catch (e) { /* keep dark defaults */ }
+    },
+
+    _setupThemeObserver: function () {
+        if (this._themeObserver) return;
+        var self = this;
+        try {
+            this._themeObserver = new MutationObserver(function () {
+                self._refreshPalette();
+                // Re-paint everything that draws to a canvas. Each
+                // call is wrapped because the canvas may not be in
+                // the DOM (detail view collapsed, settings tab
+                // active, etc.) and a missing element shouldn't
+                // abort the rest.
+                try {
+                    var radar = document.getElementById('radarChart');
+                    if (radar && self.radarScoresCache) self.renderRadar(radar, self.radarScoresCache);
+                } catch (e) {}
+                try {
+                    if (self.radarScoresCache && self.radarScoresCache.overall !== undefined) {
+                        self.renderScoreCircle(self.radarScoresCache.overall);
+                    }
+                } catch (e) {}
+                try {
+                    if (self.telemetryCache) {
+                        var tl = document.getElementById('timelineChart');
+                        if (tl) self.renderTimeline(tl, self.telemetryCache);
+                        var hist = document.getElementById('speedHistogram');
+                        if (hist) self.renderSpeedHistogram(hist, self.telemetryCache);
+                    }
+                } catch (e) {}
+            });
+            this._themeObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme']
+            });
+        } catch (e) { /* MutationObserver unavailable — leave palette static */ }
     },
 
     // Criteria metadata for tooltips and descriptions.
@@ -66,6 +137,22 @@ const TRIPS = {
 
     async init() {
         console.log('[Trips] Initializing v2...');
+        // Resolve canvas palette from CSS variables before first paint
+        // and listen for theme flips so the radar / score circle /
+        // charts repaint in the new theme without a page reload.
+        this._refreshPalette();
+        this._setupThemeObserver();
+        // app-tabs.js drives the bottom tab bar (Trips / Stats / Storage)
+        // by toggling [data-tab] visibility. The trip-detail drill-in
+        // (#tripDetail) has no data-tab — when the user opens a trip
+        // and then taps another bottom tab, app-tabs hides the list
+        // view's [data-tab] cards but leaves the active drill-in on
+        // top, so the detail layout sticks across tabs. Close the
+        // detail back to the list whenever the active tab changes.
+        var self = this;
+        document.addEventListener('ot-tabs:active-changed', function () {
+            if (self.currentTripId != null) self.hideDetail();
+        });
         await this.loadConfig();
         await this.loadStorageSettings();
         await this.loadCdrInfo();
@@ -1108,7 +1195,7 @@ const TRIPS = {
         // Background ring
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.strokeStyle = this.colors.arcTrack;
         ctx.lineWidth = lineWidth;
         ctx.stroke();
 
@@ -1188,11 +1275,28 @@ const TRIPS = {
 
                     tt += '<div class="range-tooltip-row"><span class="range-tooltip-label">' + BYD.i18n.t('trip.range_confidence') + '</span><span class="range-tooltip-value">' + lower + ' – ' + upper + ' ' + distLbl + '</span></div>';
 
-                    // Conditions pills
+                    // Conditions pills.
+                    // Backend bucketKey formats (see RangeEstimator.java):
+                    //   "suburban_mild_low"          — exact bucket: 3 pills
+                    //   "suburban_mild_low(blend)"   — neighbor blend: 3 pills + mode note
+                    //   "city(profile)"              — speed-profile fallback: 1 pill + mode note
+                    //   "overall"                    — global average: no pills, mode note only
                     const bucketKey = r.bucketKey || r.bucket_key || '';
                     const samples = r.sampleCount || r.sample_count || 0;
                     if (bucketKey) {
-                        const parts = bucketKey.split('_');
+                        const modeMatch = bucketKey.match(/\(([^)]+)\)$/);
+                        const mode = modeMatch ? modeMatch[1] : (bucketKey === 'overall' ? 'overall' : 'exact');
+                        const cleanKey = bucketKey.replace(/\([^)]+\)$/, '');
+                        const parts = cleanKey === 'overall' ? [] : cleanKey.split('_');
+
+                        // Canonical category sets — must match RangeEstimator.computeBucketKey().
+                        // The bucket key is always English in the DB (e.g. "city_mild_low");
+                        // we look up display strings here at render time so the same row
+                        // localises per user.
+                        const SPEEDS = { city: 1, suburban: 1, highway: 1 };
+                        const TEMPS  = { cold: 1, mild: 1, hot: 1 };
+                        const STYLES = { low: 1, mid: 1, high: 1 };
+
                         const speedLabels = {
                             city: BYD.i18n.t('trip.speed_label.city'),
                             suburban: BYD.i18n.t('trip.speed_label.suburban'),
@@ -1203,14 +1307,56 @@ const TRIPS = {
                         const speedColors = { city: 'rgba(99,102,241,0.15);color:#6366F1', suburban: 'rgba(0,212,170,0.15);color:var(--brand-primary)', highway: 'rgba(245,158,11,0.15);color:var(--warning)' };
                         const tempColors = { cold: 'rgba(14,165,233,0.15);color:#0EA5E9', mild: 'rgba(34,197,94,0.15);color:#22C55E', hot: 'rgba(239,68,68,0.15);color:var(--danger)' };
                         const styleColors = { low: 'rgba(34,197,94,0.15);color:#22C55E', mid: 'rgba(245,158,11,0.15);color:var(--warning)', high: 'rgba(239,68,68,0.15);color:var(--danger)' };
+                        const neutralPill = 'rgba(148,163,184,0.18);color:var(--text-muted)';
+
+                        // Pull the speed/temp/style tokens out of the cleaned key. The
+                        // canonical layout is "<speed>_<temp>_<style>" but legacy or
+                        // partial data could have fewer/non-canonical tokens; we slot
+                        // each token into the dimension whose vocabulary it matches.
+                        // Anything that doesn't match a known category is dropped so
+                        // we never render the literal string "undefined".
+                        let sp = '', tp = '', st = '';
+                        for (let i = 0; i < parts.length; i++) {
+                            const p = parts[i];
+                            if (!p) continue;
+                            if (!sp && SPEEDS[p]) sp = p;
+                            else if (!tp && TEMPS[p]) tp = p;
+                            else if (!st && STYLES[p]) st = p;
+                        }
 
                         tt += '<div class="range-tooltip-conditions">';
                         tt += '<div class="range-tooltip-conditions-label">' + BYD.i18n.t('trip.range_current_conditions') + '</div>';
                         tt += '<div class="range-tooltip-pills">';
-                        tt += '<span class="range-tooltip-pill" style="background:' + (speedColors[parts[0]] || speedColors.suburban) + ';">' + (speedLabels[parts[0]] || parts[0]) + '</span>';
-                        tt += '<span class="range-tooltip-pill" style="background:' + (tempColors[parts[1]] || tempColors.mild) + ';">' + (tempLabels[parts[1]] || parts[1]) + '</span>';
-                        tt += '<span class="range-tooltip-pill" style="background:' + (styleColors[parts[2]] || styleColors.mid) + ';">' + (styleLabels[parts[2]] || parts[2]) + '</span>';
+
+                        if (sp) {
+                            tt += '<span class="range-tooltip-pill" style="background:' + speedColors[sp] + ';">' + speedLabels[sp] + '</span>';
+                        }
+                        if (tp) {
+                            tt += '<span class="range-tooltip-pill" style="background:' + tempColors[tp] + ';">' + tempLabels[tp] + '</span>';
+                        }
+                        if (st) {
+                            tt += '<span class="range-tooltip-pill" style="background:' + styleColors[st] + ';">' + styleLabels[st] + '</span>';
+                        }
+                        // Surface non-canonical bucket keys so we can spot stale
+                        // rows without having to scrape the DB. Quiet for the
+                        // overall/profile/blend forms which legitimately have
+                        // fewer than 3 dimensions.
+                        if (cleanKey !== 'overall' && parts.length >= 1
+                                && (!sp || (parts.length >= 3 && (!tp || !st)))) {
+                            console.warn('[Trips] Range bucket key has unexpected tokens:', bucketKey);
+                        }
+
                         tt += '</div>';
+
+                        // Explain how the estimate was produced when we fell back
+                        let modeNote = '';
+                        if (mode === 'blend') modeNote = BYD.i18n.t('trip.range_mode_blend');
+                        else if (mode === 'profile') modeNote = BYD.i18n.t('trip.range_mode_profile');
+                        else if (mode === 'overall') modeNote = BYD.i18n.t('trip.range_mode_overall');
+                        if (modeNote) {
+                            tt += '<div class="range-tooltip-samples" style="color:var(--text-muted);font-style:italic;">' + modeNote + '</div>';
+                        }
+
                         tt += '<div class="range-tooltip-samples">' + BYD.i18n.t('trip.range_based_on', {count: samples}) + '</div>';
                         tt += '</div>';
                     }
@@ -1397,6 +1543,50 @@ const TRIPS = {
         this.updateSliderDisplay(idx);
     },
 
+    /**
+     * Compute a smoothed bearing for the sample at `idx` by averaging
+     * the great-circle bearings of pairs taken from a small window
+     * ahead and behind. Single-pair bearings on noisy GPS produce a
+     * jittery rotation; the windowed average plus circular-mean math
+     * (sum sines and cosines, then atan2) gives a stable heading even
+     * when individual bearings straddle the ±180° wrap.
+     *
+     * Returns degrees in [-180, 180], or null if there's no usable
+     * pair (e.g. trip ended at idx 0, GPS hadn't moved yet).
+     */
+    _smoothedHeading: function (samples, idx) {
+        if (!samples || samples.length < 2 || idx == null) return null;
+        var sumSin = 0;
+        var sumCos = 0;
+        var pairs = 0;
+        // Window: average up to 5 forward + 5 backward bearings around
+        // idx. Pairs separated by < ~3.3m (lat/lon delta < 3e-5°) are
+        // skipped because the GPS rounding noise dominates over real
+        // motion at that scale.
+        var minDelta = 3e-5;
+        var window = 5;
+        var lo = Math.max(0, idx - window);
+        var hi = Math.min(samples.length - 1, idx + window);
+        for (var i = lo; i < hi; i++) {
+            var a = samples[i];
+            var b = samples[i + 1];
+            if (!a || !b || !a.la || !a.lo || !b.la || !b.lo) continue;
+            if (Math.abs(b.la - a.la) < minDelta && Math.abs(b.lo - a.lo) < minDelta) continue;
+            var dLon = (b.lo - a.lo) * Math.PI / 180;
+            var lat1 = a.la * Math.PI / 180;
+            var lat2 = b.la * Math.PI / 180;
+            var y = Math.sin(dLon) * Math.cos(lat2);
+            var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            var bearingRad = Math.atan2(y, x);
+            sumSin += Math.sin(bearingRad);
+            sumCos += Math.cos(bearingRad);
+            pairs++;
+        }
+        if (pairs === 0) return null;
+        // Circular mean — handles wraparound naturally.
+        return Math.atan2(sumSin / pairs, sumCos / pairs) * 180 / Math.PI;
+    },
+
     updateSliderDisplay(idx) {
         const samples = this.telemetryCache;
         if (!samples || idx >= samples.length) return;
@@ -1425,27 +1615,45 @@ const TRIPS = {
         // 2. Sync Map Marker with heading rotation
         if (this.leafletMap && this.sliderMarker && s.la && s.lo) {
             this.sliderMarker.setLatLng([s.la, s.lo]);
-            // Compute heading using a lookback window for stability
+            // Compute a smoothed heading.
+            //
+            // Two sources of jitter the user reported:
+            //   (a) GPS noise on consecutive samples flips the bearing
+            //       30-120° in a single tick at slow / standstill speed.
+            //   (b) Crossing the ±180° wraparound rotates the long way
+            //       around (the wrapper transform interpolates through
+            //       359° instead of -1°).
+            //
+            // Fix: average a window of forward + backward samples
+            // (smoother than a single pair) and, when assigning the
+            // new wrapper transform, normalise to the shortest arc
+            // from the previous angle so the CSS transition tweens
+            // through 0° and not the long way.
             var telSamples = this.telemetryCache || [];
-            var heading = null;
-            // Look back up to 10 samples to find a point with enough separation
-            for (var hi = 1; hi <= Math.min(10, idx); hi++) {
-                var prev = telSamples[idx - hi];
-                if (prev && prev.la && prev.lo && (Math.abs(prev.la - s.la) > 0.00003 || Math.abs(prev.lo - s.lo) > 0.00003)) {
-                    var dLon = (s.lo - prev.lo) * Math.PI / 180;
-                    var lat1 = prev.la * Math.PI / 180;
-                    var lat2 = s.la * Math.PI / 180;
-                    var y = Math.sin(dLon) * Math.cos(lat2);
-                    var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-                    heading = Math.atan2(y, x) * 180 / Math.PI;
-                    break;
-                }
-            }
+            var heading = this._smoothedHeading(telSamples, idx);
             if (heading !== null) {
                 var wrapper = this.sliderMarker.getElement();
                 if (wrapper) {
                     var img = wrapper.querySelector('.car-icon-wrapper');
-                    if (img) img.style.transform = 'rotate(' + heading + 'deg)';
+                    if (img) {
+                        // Continuity: pick the equivalent angle that
+                        // is within ±180° of the previously applied
+                        // rotation so the transition is always the
+                        // short way around the circle. Without this,
+                        // 170° → -170° animates as +340° instead of
+                        // +20° and reads as a violent spin.
+                        var prev = (img._lastHeading == null) ? heading : img._lastHeading;
+                        var delta = heading - prev;
+                        while (delta >  180) delta -= 360;
+                        while (delta < -180) delta += 360;
+                        var next = prev + delta;
+                        img._lastHeading = next;
+                        // CSS transition (set in stylesheet on
+                        // .car-icon-wrapper) tweens this delta over
+                        // the scrub-tick interval so the icon glides
+                        // between samples instead of snapping.
+                        img.style.transform = 'rotate(' + next + 'deg)';
+                    }
                 }
             }
         }
@@ -1661,7 +1869,14 @@ const TRIPS = {
             mapDiv.innerHTML = '';
             const map = L.map(mapDiv, { zoomControl: false, attributionControl: false });
             this.routeCompareMapInstance = map;
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+            // Match the live-view map (shared/map.js): CartoCDN Voyager
+            // tiles. OSM's main tile servers reject the BYD head-unit's
+            // Android 7.1 WebView UA, so the previous URL silently 404'd
+            // / hung in-app while working in browsers.
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd'
+            }).addTo(map);
 
             const bounds = L.latLngBounds();
 
@@ -1806,7 +2021,7 @@ const TRIPS = {
         // Background ring
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.strokeStyle = this.colors.arcTrack;
         ctx.lineWidth = lineWidth;
         ctx.stroke();
 
@@ -1936,7 +2151,15 @@ const TRIPS = {
         ctx.scale(dpr, dpr);
 
         const cx = w / 2, cy = h / 2;
-        const radius = Math.min(cx, cy) * 0.55;
+        // Reserve ~70px on each side for the longest labels
+        // ("Speed Discipline" / "Consistency"). Without this margin
+        // the radar polygon eats up almost the whole canvas and the
+        // outer labels at `radius + labelOffset` get clipped on the
+        // canvas edge ("Smoothness" → "hness", "Consistency" → "Cn",
+        // etc.). 0.42 of the half-axis leaves enough horizontal
+        // budget at common card widths (300-460px).
+        const radius = Math.min(cx, cy) * 0.42;
+        const labelOffset = 22;
 
         const axes = [
             { label: this.criterion('anticipation', 'label'),    key: 'anticipation' },
@@ -2003,22 +2226,39 @@ const TRIPS = {
             ctx.arc(x, y, 5, 0, Math.PI * 2);
             ctx.fillStyle = this.colors.brand;
             ctx.fill();
-            ctx.strokeStyle = '#0F0F12';
+            ctx.strokeStyle = this.colors.dotStroke;
             ctx.lineWidth = 2;
             ctx.stroke();
         });
 
-        // Labels
+        // Labels — clamp to canvas so long words don't get clipped
+        // at the edges. After the polygon shrunk we still need to
+        // make sure the rendered text rectangle fits, so measure
+        // each label and pull it inside if it would overflow.
         ctx.font = '13px Inter, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillStyle = this.colors.text;
+        ctx.textBaseline = 'middle';
+        const edgePad = 4; // gap from canvas edge
         axes.forEach((a, i) => {
             const angle = startAngle + i * angleStep;
-            const labelR = radius + 30;
-            const x = cx + Math.cos(angle) * labelR;
+            const labelR = radius + labelOffset;
+            let x = cx + Math.cos(angle) * labelR;
             const y = cy + Math.sin(angle) * labelR;
 
-            ctx.textAlign = Math.abs(Math.cos(angle)) > 0.3 ? (Math.cos(angle) > 0 ? 'left' : 'right') : 'center';
-            ctx.textBaseline = 'middle';
+            const cosA = Math.cos(angle);
+            const align = Math.abs(cosA) > 0.3 ? (cosA > 0 ? 'left' : 'right') : 'center';
+            ctx.textAlign = align;
+
+            const tw = ctx.measureText(a.label).width;
+            // Compute the text bbox under the chosen alignment and
+            // shift x inward if it'd cross the canvas edge.
+            let leftEdge, rightEdge;
+            if (align === 'left')        { leftEdge = x;            rightEdge = x + tw; }
+            else if (align === 'right')  { leftEdge = x - tw;       rightEdge = x; }
+            else                         { leftEdge = x - tw / 2;   rightEdge = x + tw / 2; }
+            if (rightEdge > w - edgePad) x -= (rightEdge - (w - edgePad));
+            if (leftEdge  < edgePad)     x += (edgePad - leftEdge);
+
             ctx.fillText(a.label, x, y);
         });
 
@@ -2433,7 +2673,7 @@ const TRIPS = {
             ctx.fillText(displayLabel + ' ' + BYD.units.speedLabel(), pad.left - 6, y + barH / 2 + 3);
 
             // Percentage
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillStyle = this.colors.text;
             ctx.textAlign = 'left';
             ctx.fillText(pct + '%', pad.left + barW + 6, y + barH / 2 + 3);
         });
@@ -2464,6 +2704,16 @@ const TRIPS = {
     renderRouteMap(container, telemetry) {
         console.log('[Trips] renderRouteMap called, telemetry=' + (telemetry ? telemetry.length : 'null'));
         if (this.leafletMap) { this.leafletMap.remove(); this.leafletMap = null; }
+        // Dispose the previous slider-marker 3D scene before the
+        // Leaflet remove() detaches its canvas from the DOM. dispose()
+        // releases the WebGL context cleanly; without this the trip-
+        // switcher would leak one context per opened trip and Chrome
+        // 58 caps at 8-16 before old contexts get force-killed (which
+        // breaks the sidebar EV-card and the live-view canvas too).
+        if (this._sliderMarker3d) {
+            try { this._sliderMarker3d.dispose(); } catch (e) {}
+            this._sliderMarker3d = null;
+        }
         if (!telemetry || telemetry.length < 2) {
             console.warn('[Trips] renderRouteMap: not enough telemetry');
             return;
@@ -2534,8 +2784,13 @@ const TRIPS = {
             this.leafletMap.setView([points[0].la, points[0].lo], 14);
         }
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
+        // Match the live-view map (shared/map.js): CartoCDN Voyager
+        // tiles. OSM's main tile servers reject the BYD head-unit's
+        // Android 7.1 WebView UA, so the previous URL silently 404'd
+        // / hung in-app while working in browsers.
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd'
         }).addTo(this.leafletMap);
 
         console.log('[Trips] Map created successfully, tiles added, bounds set');
@@ -2567,14 +2822,37 @@ const TRIPS = {
         });
         L.marker([points[points.length - 1].la, points[points.length - 1].lo], { icon: endIcon }).addTo(this.leafletMap).bindPopup('<b>' + BYD.i18n.t('trip.marker_end') + '</b>');
 
-        // Slider marker — car icon (same as live view map)
+        // Slider marker — same top-down 3D vehicle as the live-view
+        // map marker, rendered into a per-marker canvas. Wrapper id is
+        // unique to this map (live-view's marker also uses
+        // `.car-icon-wrapper` and a global selector would race).
         const carIcon = L.divIcon({
             className: 'car-map-marker',
-            html: '<div class="car-icon-wrapper"><img src="../shared/car-icon-map.webp" class="car-icon-img" alt="Car"></div>',
+            html: '<div class="car-icon-wrapper" id="tripSliderCarWrapper">'
+                + '<canvas class="car-icon-img" id="tripSliderCarCanvas" aria-hidden="true"></canvas>'
+                + '</div>',
             iconSize: [24, 50],
             iconAnchor: [12, 25]
         });
         this.sliderMarker = L.marker([points[0].la, points[0].lo], { icon: carIcon }).addTo(this.leafletMap);
+
+        // Mount the 3D vehicle render onto the new canvas now that
+        // Leaflet has injected the divIcon into the map pane. Capture
+        // the instance so we can dispose() it when the user opens a
+        // different trip and we tear down this map.
+        var self3d = this;
+        var mountTripsCar3d = function () {
+            var canvas = document.getElementById('tripSliderCarCanvas');
+            if (!canvas) return;
+            var shell = window.OverdriveAppShell;
+            if (!shell || typeof shell.mountVehicleCanvas !== 'function') return;
+            self3d._sliderMarker3d = shell.mountVehicleCanvas(canvas, { view: 'top' });
+        };
+        if (window.OverdriveAppShell && window.OverdriveAppShell.mountVehicleCanvas) {
+            mountTripsCar3d();
+        } else {
+            document.addEventListener('app-shell:ready', mountTripsCar3d, { once: true });
+        }
 
         // Set initial heading from first GPS points with meaningful distance
         if (points.length >= 2) {
@@ -2605,7 +2883,11 @@ const TRIPS = {
             }
             if (initHeading !== null) {
                 setTimeout(function() {
-                    var el = document.querySelector('.car-icon-wrapper');
+                    // Target the trip-map wrapper specifically. A
+                    // global '.car-icon-wrapper' selector would also
+                    // match the live-view map's marker on pages where
+                    // both are mounted, leaving its heading wrong.
+                    var el = document.getElementById('tripSliderCarWrapper');
                     if (el) el.style.transform = 'rotate(' + initHeading + 'deg)';
                 }, 100);
             }

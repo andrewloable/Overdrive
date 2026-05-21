@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Rules:
  * - Only shows items that are CONFIGURED (recording mode != NONE, trip analytics enabled)
- * - Each item shows: running (✓ icon) or not running (✗ icon)
+ * - Each item shows a tinted active/inactive icon next to its label
  * - Tapping a not-running item restarts it (it's configured, so it should be running)
  * - Hides entirely if nothing is configured
  * - Gracefully handles missing SYSTEM_ALERT_WINDOW — just stops itself
@@ -99,6 +99,7 @@ public class StatusOverlayService extends Service {
     private static final int DRAG_THRESHOLD = 10;
     private WindowManager.LayoutParams layoutParams;
 
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -118,11 +119,30 @@ public class StatusOverlayService extends Service {
         // Don't create overlay window yet — wait for first poll to confirm
         // there's something to show. This avoids adding an empty overlay window
         // that can interfere with GPU rendering on BYD head units.
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        if (windowManager == null) {
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        }
+
+        // Theme refresh — caller flipped the app's day/night setting.
+        // Rebuild the overlay against the new uiMode. rebuildOverlay() also
+        // re-fires pollStatus() so the pill repaints; return early so the
+        // standard start path doesn't double-poll.
+        if (intent != null && ACTION_REFRESH_THEME.equals(intent.getAction())) {
+            Log.i(TAG, "ACTION_REFRESH_THEME — rebuilding overlay");
+            rebuildOverlay();
+            return START_STICKY;
+        }
         if (!running.get()) {
             startPolling();
+        } else {
+            // Re-entry while we're already running: MainActivity is asking
+            // us to refresh. Cancel any in-flight delayed poll and fire one
+            // immediately so a stale "ACC=off, slow poll" loop doesn't keep
+            // us hidden for up to POLL_INTERVAL_ACC_OFF_MS.
+            handler.removeCallbacksAndMessages(null);
+            pollStatus();
         }
-        
+
         return START_STICKY;
     }
 
@@ -180,6 +200,70 @@ public class StatusOverlayService extends Service {
      * starting foreground services directly from inside onTaskRemoved on
      * newer platform versions.
      */
+    /**
+     * Re-inflate the overlay when the device configuration changes (light ↔
+     * dark, locale, font scale). Without this, the user toggling the app
+     * theme leaves the overlay stuck on whatever palette it was created with
+     * because the View tree was inflated once and is never re-resolved.
+     *
+     * We blow the view away and let the next pollStatus()/updateOverlay()
+     * tick rebuild it; that path also re-binds icon tints so the active /
+     * inactive states pick up the new status color tokens.
+     */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (overlayView == null) return;
+        Log.i(TAG, "Configuration changed — rebuilding overlay so theme tokens reapply");
+        rebuildOverlay();
+    }
+
+    /**
+     * Tear down + recreate the overlay so a theme change reaches the
+     * resolved drawables and color tokens. Persists current position so
+     * the new pill lands where the user last dragged it.
+     */
+    private void rebuildOverlay() {
+        try {
+            if (layoutParams != null) {
+                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putInt(PREF_POS_X, layoutParams.x)
+                        .putInt(PREF_POS_Y, layoutParams.y)
+                        .apply();
+            }
+        } catch (Exception ignored) {}
+        removeOverlay();
+        handler.removeCallbacksAndMessages(null);
+        pollStatus();
+    }
+
+    /**
+     * Build a context whose resources honor the app's day/night override.
+     *
+     * Plain Service contexts read uiMode straight from the system config,
+     * so AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_NO) doesn't reach
+     * the overlay — the pill stays dark on a light-themed system. Mapping
+     * the AppCompat mode onto Configuration.UI_MODE_NIGHT_* and creating a
+     * configuration-context with that override fixes it.
+     */
+    private Context themedContext() {
+        int mode = androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode();
+        int uiNight;
+        if (mode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES) {
+            uiNight = android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        } else if (mode == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO) {
+            uiNight = android.content.res.Configuration.UI_MODE_NIGHT_NO;
+        } else {
+            // Follow-system / unspecified — leave the system's value alone.
+            return this;
+        }
+        android.content.res.Configuration cfg = new android.content.res.Configuration(
+                getResources().getConfiguration());
+        cfg.uiMode = (cfg.uiMode & ~android.content.res.Configuration.UI_MODE_NIGHT_MASK) | uiNight;
+        return createConfigurationContext(cfg);
+    }
+
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         Log.i(TAG, "onTaskRemoved — scheduling overlay service restart");
@@ -207,8 +291,17 @@ public class StatusOverlayService extends Service {
 
     private void createOverlay() {
         if (overlayView != null) return; // Already created
-        
-        overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_status, null);
+
+        // Inflate against a context whose configuration honors the app's
+        // chosen day/night setting. A bare Service runs against the system
+        // configuration, so AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_NO)
+        // wouldn't reach the overlay — the pill would stay dark on a
+        // light-themed system because the Service never saw the override.
+        // Wrapping with createConfigurationContext gives us a context whose
+        // resources resolve light/dark drawables according to the user's
+        // explicit choice.
+        overlayView = LayoutInflater.from(themedContext()).inflate(
+                R.layout.overlay_status, null);
 
         layoutParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -348,6 +441,12 @@ public class StatusOverlayService extends Service {
             }
 
             if (running.get()) {
+                // Always reschedule. Detect ACC by VALUE on each poll, not by
+                // edge — single-shot SCREEN_ON suspension was racy because
+                // the ACC-on signal propagation (AccSentryDaemon → IPC →
+                // RecordingModeManager) lags SCREEN_ON, so the first poll
+                // after wake saw accOn=false and stranded us. Slow-poll
+                // loopback to the in-process daemon HTTP is negligible.
                 long interval = accOn ? POLL_INTERVAL_MS : POLL_INTERVAL_ACC_OFF_MS;
                 handler.postDelayed(this::pollStatus, interval);
             }
@@ -453,8 +552,29 @@ public class StatusOverlayService extends Service {
     // ==================== UI ====================
 
     private void updateUI() {
+        // User-facing visibility toggles. Stored in the unified config file
+        // (/data/local/tmp/overdrive_config.json) rather than SharedPreferences
+        // because both the app UID and the shell/daemon UID need to see the
+        // same values. Read fresh on every poll so a flip in Settings reflects
+        // without a service restart. Defaults to true so existing installs
+        // (where the section doesn't exist yet) keep current behavior.
+        boolean cameraOverlayEnabled = true;
+        boolean tripOverlayEnabled = true;
+        try {
+            JSONObject statusOverlayCfg =
+                com.overdrive.app.config.UnifiedConfigManager.loadConfig()
+                    .optJSONObject("statusOverlay");
+            if (statusOverlayCfg != null) {
+                cameraOverlayEnabled = statusOverlayCfg.optBoolean("cameraVisible", true);
+                tripOverlayEnabled = statusOverlayCfg.optBoolean("tripVisible", true);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read statusOverlay prefs: " + e.getMessage());
+        }
+
         boolean recConfigured = !"NONE".equals(configuredMode) && !"UNKNOWN".equals(configuredMode);
-        boolean anythingToShow = recConfigured || tripEnabled;
+        boolean anythingToShow = (recConfigured && cameraOverlayEnabled)
+                || (tripEnabled && tripOverlayEnabled);
 
         Log.d(TAG, "updateUI: mode=" + configuredMode + " isRec=" + isRecording 
                 + " gear=" + currentGear + " acc=" + accOn 
@@ -478,12 +598,16 @@ public class StatusOverlayService extends Service {
         }
 
         if (!anythingToShow) {
-            Log.d(TAG, "updateUI: nothing configured — hiding overlay");
-            if (overlayView != null) overlayView.setVisibility(View.GONE);
+            // If the user disabled both segments via Settings, fully tear
+            // down the overlay window so we don't keep a hidden View
+            // attached to WindowManager. A hidden TYPE_APPLICATION_OVERLAY
+            // still consumes a surface on BYD head units.
+            Log.d(TAG, "updateUI: nothing to show — removing overlay");
+            removeOverlay();
             hadContentBefore = false;
             return;
         }
-        
+
         // Hide overlay when ACC is off — car is parked, no need to show status.
         // We keep polling (at a slower rate) so we can show it again when ACC turns on.
         if (!accOn) {
@@ -495,13 +619,22 @@ public class StatusOverlayService extends Service {
         // Proximity guard should stay visible even when idle/armed (waiting for
         // a radar trigger) — hiding it would make users think the feature is off.
         boolean isProximityMode = "PROXIMITY_GUARD".equals(configuredMode);
-        boolean shouldShowRec = recConfigured
+        boolean shouldShowRec = recConfigured && cameraOverlayEnabled
                 && (isRecording || shouldRecordingBeActive() || isProximityMode);
-        boolean shouldShowTrip = tripEnabled;
+        boolean shouldShowTrip = tripEnabled && tripOverlayEnabled;
         
         if (!shouldShowRec && !shouldShowTrip) {
             // Configured but conditions don't require display (e.g., drive mode in P)
             if (overlayView != null) overlayView.setVisibility(View.GONE);
+            return;
+        }
+
+        // After config-merge gating, double-check: if BOTH user segments are
+        // toggled off, fully remove the window rather than leaving an empty
+        // shell attached. (anythingToShow guarded the entry, but reaching
+        // here with both flags off means a partial config state — be safe.)
+        if (!cameraOverlayEnabled && !tripOverlayEnabled) {
+            removeOverlay();
             return;
         }
         
@@ -513,8 +646,9 @@ public class StatusOverlayService extends Service {
         
         overlayView.setVisibility(View.VISIBLE);
 
-        // Recording: show only if configured
-        if (recConfigured) {
+        // Recording: show only if configured AND user hasn't toggled the
+        // camera segment off in Settings → Status overlay.
+        if (recConfigured && cameraOverlayEnabled) {
             recContainer.setVisibility(View.VISIBLE);
 
             // Determine if recording SHOULD be happening right now given mode + gear + ACC
@@ -528,22 +662,22 @@ public class StatusOverlayService extends Service {
                 // not continuous/drive recording.
                 if (isProximity) {
                     ivRecIcon.setImageResource(R.drawable.ic_overlay_rec_active);
-                    tvRecLabel.setText("PROX ✓");
+                    tvRecLabel.setText("PROX");
                     tvRecLabel.setTextColor(getColor(R.color.status_warning));
                 } else {
                     ivRecIcon.setImageResource(R.drawable.ic_overlay_rec_active);
-                    tvRecLabel.setText("REC ✓");
+                    tvRecLabel.setText("REC");
                     tvRecLabel.setTextColor(getColor(R.color.status_success));
                 }
             } else if (shouldBeRecording) {
                 // Problem — should be recording but isn't
                 if (isProximity) {
                     ivRecIcon.setImageResource(R.drawable.ic_overlay_rec_inactive);
-                    tvRecLabel.setText("PROX ✗");
+                    tvRecLabel.setText("PROX");
                     tvRecLabel.setTextColor(getColor(R.color.status_danger));
                 } else {
                     ivRecIcon.setImageResource(R.drawable.ic_overlay_rec_inactive);
-                    tvRecLabel.setText("REC ✗");
+                    tvRecLabel.setText("REC");
                     tvRecLabel.setTextColor(getColor(R.color.status_danger));
                 }
             } else if (isProximity) {
@@ -551,7 +685,7 @@ public class StatusOverlayService extends Service {
                 // Show an armed/idle indicator instead of hiding — users want to know
                 // the car is being watched even when nothing has triggered yet.
                 ivRecIcon.setImageResource(R.drawable.ic_overlay_rec_inactive);
-                tvRecLabel.setText("PROX ●");
+                tvRecLabel.setText("PROX");
                 tvRecLabel.setTextColor(getColor(R.color.status_warning));
             } else {
                 // Not recording, but that's expected (e.g., drive mode in P gear)
@@ -562,16 +696,17 @@ public class StatusOverlayService extends Service {
             recContainer.setVisibility(View.GONE);
         }
 
-        // Trip: show only if enabled in config
-        if (tripEnabled) {
+        // Trip: show only if enabled in config AND user hasn't toggled the
+        // trip segment off in Settings → Status overlay.
+        if (tripEnabled && tripOverlayEnabled) {
             tripContainer.setVisibility(View.VISIBLE);
             if (tripActive) {
                 ivTripIcon.setImageResource(R.drawable.ic_overlay_trip_active);
-                tvTripLabel.setText("TRIP ✓");
+                tvTripLabel.setText("TRIP");
                 tvTripLabel.setTextColor(getColor(R.color.status_success));
             } else {
                 ivTripIcon.setImageResource(R.drawable.ic_overlay_trip_inactive);
-                tvTripLabel.setText("TRIP ✗");
+                tvTripLabel.setText("TRIP");
                 tvTripLabel.setTextColor(getColor(R.color.status_danger));
             }
         } else {
@@ -736,4 +871,29 @@ public class StatusOverlayService extends Service {
     public static void stop(Context context) {
         context.stopService(new Intent(context, StatusOverlayService.class));
     }
+
+    /**
+     * Trigger a re-inflation of the overlay so a freshly-changed theme
+     * takes effect immediately. AppCompatDelegate.setDefaultNightMode()
+     * fires onConfigurationChanged for foreground Activities but NOT for
+     * plain Services, so the overlay would otherwise stay on its old
+     * palette until the system config changed for unrelated reasons.
+     *
+     * No-op when overlay permission is missing or the service isn't
+     * running — startForegroundService would just respawn an unwanted
+     * pill in that case.
+     */
+    public static void refreshTheme(Context context) {
+        if (!hasOverlayPermission(context)) return;
+        Intent intent = new Intent(context, StatusOverlayService.class);
+        intent.setAction(ACTION_REFRESH_THEME);
+        try {
+            context.startService(intent);
+        } catch (Exception e) {
+            Log.w(TAG, "refreshTheme failed: " + e.getMessage());
+        }
+    }
+
+    public static final String ACTION_REFRESH_THEME =
+            "com.overdrive.app.overlay.REFRESH_THEME";
 }

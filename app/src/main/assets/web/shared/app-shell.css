@@ -1,0 +1,610 @@
+/*
+ * Overdrive — App-shell visual identity layer.
+ *
+ * The base sidebar / nav-link / status-card rules live in styles.css and are
+ * already applied to the dynamically-rendered <aside class="sidebar"> emitted
+ * by app-shell.js. This file adds:
+ *
+ *   1. The Overdrive accent stripe — a 3px linear gradient that runs across
+ *      the top of every page's sidebar, mirroring the toolbar accent stripe
+ *      on the native side. Same gradient on both layers = same identity.
+ *   2. A glass-style top app bar styling for pages that mount one
+ *      (currently optional; pages opt in by adding <header class="app-bar">).
+ *   3. M3 Expressive active-link affordance: a 3px leading inset stripe in
+ *      colorPrimary on the active sidebar link. Replaces the previous
+ *      "background: rgba(0, 212, 170, 0.1)" tint that read off-brand under
+ *      light theme.
+ *   4. A no-flash bootstrap rule (html.shell-ready -> visibility:visible)
+ *      paired with app-shell.js's mount() event. Pages that opt in by adding
+ *      `<style>html{visibility:hidden}</style>` to <head> will hide content
+ *      until the shell mounts; we toggle .shell-ready on <html> after mount.
+ *
+ *  Tokens come from design-tokens.css (imported by styles.css), so this file
+ *  is theme-agnostic and contains no raw hex values.
+ */
+
+/* === ACCENT STRIPE ============================================== */
+/* A 3px gradient that anchors the brand at the top of every page.
+   Sits inside the sidebar, above the header, and tints from primary
+   (teal-green) into tertiary (sky-blue) — the same ramp the native
+   toolbar stripe uses. */
+.sidebar::before {
+    content: "";
+    display: block;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--tertiary) 100%);
+    /* Pin to the top of the sticky sidebar. Position relative+top:0 wins
+       over the sidebar-header's sticky positioning. */
+    flex-shrink: 0;
+    /* Account for safe-area inset on devices with notches so the stripe
+       isn't clipped. The sticky sidebar-header below already pads down. */
+    margin-top: 0;
+}
+
+/* === BRAND CLUSTER — clickable home affordance ====================
+ * The header brand reads as "go home" (Live View). Hover lifts it onto a
+ * tonal-primary surface; press scales it down — same interaction language
+ * as the active sidebar nav link.
+ */
+.sidebar .brand-link {
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--radius-md, 14px);
+    margin: -8px -8px -4px;
+    padding: 8px;
+    /* Re-establish the brand cluster's flex layout (was on .brand). */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+    transition: background-color 200ms ease-out, transform 120ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+}
+.sidebar .brand-link:hover {
+    background: var(--bg-hover, var(--surface-container-high));
+}
+.sidebar .brand-link:active {
+    transform: scale(0.98);
+}
+.sidebar .brand-link:focus-visible {
+    outline: 2px solid var(--brand-primary, var(--primary));
+    outline-offset: 2px;
+}
+
+/* Pin the logo cluster so the online pulse can dock to a corner of the
+   round avatar. */
+.sidebar .brand-logo {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* Online pulse — small steady-green dot anchored to the avatar's bottom-
+   right corner. Implies "system is alive" without binding to live status
+   state (the status-card below the nav already does that). */
+.sidebar .brand-online-pulse {
+    position: absolute;
+    right: 0;
+    bottom: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--status-success, var(--brand-primary));
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 0 0 0 rgba(91, 211, 130, 0.50);
+    animation: brand-online-pulse 2.4s ease-out infinite;
+}
+@keyframes brand-online-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(91, 211, 130, 0.50); }
+    70%  { box-shadow: 0 0 0 8px rgba(91, 211, 130, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(91, 211, 130, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sidebar .brand-online-pulse { animation: none; }
+}
+
+/* When the user is already on Live View, dim the brand-link's hover bg
+   so the active page doesn't re-trigger the affordance every time. */
+body.live-view-page .sidebar .brand-link:hover {
+    background: transparent;
+}
+
+/* === ACTIVE LINK INSET STRIPE =================================== */
+.sidebar-nav .nav-link {
+    position: relative;
+}
+
+.sidebar-nav .nav-link.active::before,
+.sidebar-nav .nav-link[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--primary);
+}
+
+/* Override the legacy active background — that hardcoded teal rgba reads
+   off-brand under the unified palette. Use the surface-container-high tier
+   for a subtle tonal lift instead. */
+.sidebar-nav .nav-link.active,
+.sidebar-nav .nav-link[aria-current="page"] {
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+}
+
+.sidebar-nav .nav-link.active .nav-icon,
+.sidebar-nav .nav-link[aria-current="page"] .nav-icon {
+    color: var(--primary);
+}
+
+/* === SIDEBAR NAV: GROUP HEADERS + HAIRLINES =================== */
+/*
+ * Mirrors the native rail's hairline-before-About pattern. Groups in the
+ * web sidebar (Integrations, Diagnostics, About) get a small overline
+ * label flanked by a hairline so the destinations cluster the same way
+ * users learn them in the native shell.
+ */
+.sidebar .nav-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px 6px;
+    color: var(--outline);
+}
+
+.sidebar .nav-group-line {
+    flex: 1;
+    height: 1px;
+    background: var(--outline-variant);
+}
+
+.sidebar .nav-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+}
+
+.sidebar .nav-divider {
+    margin: 8px 16px;
+    height: 1px;
+    background: var(--outline-variant);
+}
+
+/* === GLASS TOP APP BAR (opt-in) ================================ */
+/* Pages that want a Material 3 expressive top app bar add
+   <header class="app-bar">…</header> as the first child of .main-content.
+   The header sticks to the top of the scroll area with a translucent blur
+   so content scrolls "behind" it. */
+.app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--app-bar-height, 64px);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    background: var(--bg-glass);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    backdrop-filter: saturate(180%) blur(16px);
+    border-bottom: 1px solid var(--outline-variant);
+}
+
+.app-bar::after {
+    /* The same 3px accent stripe under the app bar, so a page that mounts
+       its own app bar still carries the brand identity. */
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--tertiary) 100%);
+    pointer-events: none;
+}
+
+.app-bar-title {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: var(--tracking-headline, -0.015em);
+    color: var(--on-surface);
+    margin: 0;
+}
+
+.app-bar-spacer {
+    flex: 1;
+}
+
+.app-bar-actions {
+    display: flex;
+    align-items: center;
+}
+
+.app-bar-actions > * + * {
+    /* gap: replaced with margin so it works on Chrome 58 where flex `gap`
+       was not supported. */
+    margin-left: 8px;
+}
+
+/* === NO-FLASH BOOTSTRAP ======================================== */
+html.shell-ready { visibility: visible; }
+
+/* === RESPONSIVE: COMPACT ICON-RAIL UNDER 1280px ================ */
+@media (max-width: 1279px) {
+    /* Pages on a narrower viewport (e.g. portrait 1080x1920 = 540dp logical
+       wide) collapse the sidebar from a 260px label rail to an 80px icon
+       rail. Clicking the brand area pops the labels back. */
+    .sidebar.compact .brand-text,
+    .sidebar.compact .nav-link span,
+    .sidebar.compact .sidebar-footer { display: none; }
+
+    /* Group headers ("Overview", "Vehicle", "Integrations", …) and the
+       trailing chevrons read as broken at 80px wide — the labels overflow
+       and the chevron floats in empty rail space. The rail's icons cluster
+       cleanly without group titles, mirroring the native NavigationRail
+       behaviour. The bare hairline (.nav-divider) is kept as the only
+       inter-group affordance. */
+    .sidebar.compact .nav-group-header { display: none; }
+
+    /* Tighten the rail's own horizontal padding so 24x24 icons sit
+       optically centred in the 80px column. The default 12px each side
+       leaves the icon offset by ~6px when paired with .nav-link's 16px
+       internal padding; collapsing to 8px keeps the icon on the rail's
+       centreline.
+       Bottom padding is larger than the top so the last icon doesn't
+       crash into the system bar / safe-area / page edge. The rail used
+       to end with the same 16px below the final destination as it
+       started with at the top, which read as "the grid lost its bottom
+       margin" — adding 32px (plus the safe-area inset on devices with a
+       gesture bar) gives the last icon room to breathe. */
+    .sidebar.compact .sidebar-nav {
+        padding: 16px 8px calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .sidebar.compact { width: 80px; }
+    .sidebar.compact .nav-link {
+        justify-content: center;
+        /* Equal vertical and horizontal padding so the hover background
+           reads as a square/round chip rather than a stretched pill. */
+        padding: 12px;
+    }
+}
+
+/* === COLLAPSIBLE NAV GROUPS ====================================
+ * Each .nav-group-header (Integrations / Diagnostics / Settings) is a
+ * tappable summary; clicking it hides every .nav-link between it and the
+ * next group / divider. State persists per-group in localStorage so the
+ * user's open/closed picks survive across pages.
+ *
+ * The chevron at the trailing edge is injected by app-shell.js at runtime
+ * and rotates with the data-collapsed attribute.
+ */
+.nav-group-header-collapsible {
+    cursor: pointer;
+    -webkit-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color 160ms ease-out, background-color 160ms ease-out;
+    border-radius: var(--radius-md, 14px);
+    /* Match the nav-link hover box: same horizontal padding (16px) and
+       vertically symmetric padding so the grey hover rectangle has the
+       same proportions as the destinations beneath it. The base
+       .nav-group-header rule above defaults to `padding: 14px 16px 6px`
+       (asymmetric — extra space above for the group separation) but the
+       collapsible variant gets a square box so the hover affordance reads
+       cleanly. The 14px above + 6px below baseline rhythm is preserved
+       via top/bottom margin on the header itself. */
+    padding: 10px 16px !important;
+    margin: 6px 0 0;
+}
+/* The first group header doesn't need the separator margin — it sits at
+   the very top of the nav so the 16px sidebar-nav padding already gives
+   the right offset. */
+.sidebar-nav > .nav-group-header-collapsible:first-child { margin-top: 0; }
+.nav-group-header-collapsible:hover {
+    color: var(--text-primary, var(--on-surface));
+    background: var(--bg-hover, var(--surface-container-high));
+}
+.nav-group-header-collapsible:focus-visible {
+    outline: 2px solid var(--brand-primary, var(--primary));
+    outline-offset: -2px;
+}
+
+.nav-group-chevron {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted, var(--on-surface-variant));
+    /* Sync with the member-collapse curve so the chevron and the slide land
+       on the same beat. Slightly different curve for the chevron to give it
+       the "expressive" rebound that M3 uses on toggles. */
+    transition: transform var(--duration-med, 240ms) cubic-bezier(0.2, 0.8, 0.4, 1.05),
+                color 160ms ease-out;
+}
+.nav-group-chevron svg { width: 14px; height: 14px; }
+
+/* Default = expanded. Chevron points UP (matches the M3 "tap to close" affordance). */
+.nav-group-header-collapsible:not([data-collapsed="true"]) .nav-group-chevron {
+    transform: rotate(180deg);
+}
+
+/* Honour user reduced-motion preference — replace the slide animation
+   with a snap so the collapse isn't a slow visual disorientation. */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-nav .nav-link,
+    .sidebar .nav-group-header,
+    .nav-group-chevron {
+        transition: none !important;
+    }
+}
+
+/* Hide the trailing hairline ".nav-group-line" — it was a decorative
+   line-after-the-label divider; with the chevron + tap-target it now
+   competes for space and reads as visual noise. */
+.nav-group-header-collapsible .nav-group-line { display: none; }
+
+/* === ANIMATED COLLAPSE for nav-link members ====================
+ * Members of a collapsible group don't snap with `display:none` when the
+ * group closes — they slide + fade to zero height. The `[hidden]` attribute
+ * is still set (for screen readers and tab-order semantics) but its UA
+ * `display:none` is overridden by `!important` flex below so the transition
+ * has something to animate.
+ *
+ * `max-height: 64px` is the resting cap — generous enough that long
+ * wrapped labels (Vehicle Control / Recording Settings) don't truncate at
+ * either theme's font size. Padding + margin shrink with the height so
+ * the layout collapses cleanly to a hairline.
+ */
+.sidebar-nav .nav-link {
+    /* Resting state — let the link size to content but cap so the
+       transition out has a concrete numeric start. */
+    max-height: 64px;
+    overflow: hidden;
+    transition: max-height var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0)),
+                padding-top var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0)),
+                padding-bottom var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0)),
+                margin-top var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0)),
+                margin-bottom var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0)),
+                opacity var(--duration-short, 180ms) ease-out,
+                background-color 0.2s ease,
+                color 0.2s ease;
+}
+
+.sidebar-nav [hidden] {
+    /* Override the UA `display:none` so the transition has a flex layout
+       to drive. Then drop every dimensional axis to 0 — the cascade lands
+       on a fully-flat link that reads as collapsed. */
+    display: flex !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+    /* Take the link out of the keyboard tab order while collapsed so a
+       focus trap can't land on a visually-hidden destination. */
+    visibility: hidden;
+}
+
+/* Animate group-header bottom padding so the gap between header and the
+   first member also collapses, not just the member itself. Without this
+   the collapsed state leaves a stray ~6dp gap below the header. */
+.sidebar .nav-group-header {
+    transition: padding-bottom var(--duration-med, 240ms) var(--easing-emphasized, cubic-bezier(0.2, 0.0, 0.0, 1.0));
+}
+.nav-group-header-collapsible[data-collapsed="true"] {
+    padding-bottom: 0;
+}
+
+/* === EV CARD: GLB-rendered three.js scene ======================= */
+/*
+ * #evCardCanvas hosts a tiny three.js scene (see shared/ev-card-3d.js)
+ * showing the user's selected GLB tinted live in their chosen paint
+ * colour. Side profile, front to the LEFT, no rotation. Loaded LAZILY
+ * after page-content paint.
+ *
+ * Layer order inside .ev-svg-container (bottom → top):
+ *   z=0  #evCardCanvas              — GLB body
+ *   z=1  .ev-battery-body-overlay   — translucent battery strip painted
+ *                                      onto the body's lower portion
+ *   z=1  #evCarSvg                  — bolt-icon badge (pops in on .charging)
+ *
+ * If vendor JS fails (offline, blocked) the canvas stays empty; the
+ * battery overlay still tracks SOC over the empty area.
+ */
+.ev-svg-container { position: relative; }
+
+#evCardCanvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background: transparent;
+    display: block;
+}
+
+/* Battery strip — sits at the BASE of the 3D body along the rocker
+   line, horizontally clipped between the wheels.
+     .ev-battery-body-fill   — single solid colour (no rainbow) chosen
+                                from SOC: red ≤20%, amber ≤50%, green
+                                otherwise. WIDTH is the SOC line; the
+                                glossy highlight reads as a chromed bar
+                                rather than a flat indicator.
+     .ev-battery-body-charge — charging-only highlight band that sweeps
+                                across the full strip width.
+   3D / shiny effect comes from three layered gradients on the fill:
+     - main vertical gradient: top edge brighter, bottom edge darker
+       → reads as a cylindrical / capsule body
+     - thin top inner highlight via inset box-shadow
+     - bottom inner shadow gives depth
+   Plus an outer drop-shadow for separation from the GLB. */
+/* Battery overlay PAINTED ONTO the lower portion of the GLB body.
+   Translucent + screen blend so the user's paint colour shows through.
+   Single fill bar, narrower than the wheelbase so it reads as a
+   centred indicator badge rather than a full rocker rail.
+     .ev-battery-body-fill   — single solid colour by SOC state, WIDTH
+                                tracks SOC%, vertical highlight gives
+                                a glossy 3D capsule look.
+     .ev-battery-body-charge — charging-only sweep on top. */
+.ev-battery-body-overlay {
+    position: absolute;
+    /* Width stays as the original 30% — only the height + contrast
+       were the issue, not the span. Keep left/right inset where the
+       user expects the band to land between the wheels. */
+    left: 35%;
+    right: 35%;
+    bottom: 38%;
+    height: 9px;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 999px;
+    /* Darker, more contrasting trough — was 5% white on a busy 3D
+       canvas which made the bar disappear. The dark base lets the
+       tinted fill colours pop. */
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+        inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="light"] .ev-battery-body-overlay {
+    background: rgba(24, 28, 26, 0.18);
+    box-shadow:
+        inset 0 0 0 1px rgba(24, 28, 26, 0.20),
+        inset 0 1px 1px rgba(24, 28, 26, 0.10);
+}
+
+.ev-battery-body-fill,
+.ev-battery-body-charge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    border-radius: inherit;
+    /* Drop screen-blend — it was pre-multiplying the fill against the
+       3D body underneath, which on the metallic paint colours pulled
+       the fill back into the body and made the bar look camouflaged.
+       Plain alpha-composite + opaque-ish fill keeps the band crisp. */
+    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1),
+                background 240ms ease-out,
+                box-shadow 240ms ease-out;
+}
+
+/* SOC fill. Vertical light→dark gradient + inset top highlight =
+   glossy 3D capsule. Healthy / warning / critical bands swapped via
+   data-soc-state. */
+.ev-battery-body-fill {
+    background: linear-gradient(180deg,
+                rgba(187, 247, 208, 0.95) 0%,
+                rgba(34,  197, 94,  0.95) 50%,
+                rgba(21,  128, 61,  0.90) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+        0 0 10px rgba(34, 197, 94, 0.70);
+}
+.ev-battery-body-overlay[data-soc-state="warning"] .ev-battery-body-fill {
+    background: linear-gradient(180deg,
+                rgba(253, 230, 138, 0.95) 0%,
+                rgba(245, 158, 11,  0.95) 50%,
+                rgba(180, 83,  9,   0.90) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+        0 0 10px rgba(245, 158, 11, 0.70);
+}
+.ev-battery-body-overlay[data-soc-state="critical"] .ev-battery-body-fill {
+    background: linear-gradient(180deg,
+                rgba(254, 202, 202, 0.95) 0%,
+                rgba(239, 68,  68,  0.95) 50%,
+                rgba(153, 27,  27,  0.90) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+        0 0 10px rgba(239, 68, 68, 0.75);
+}
+
+/* Charging highlight — translucent white band sweeps left→right over
+   the static fill. Screen blend keeps SOC colour visible. */
+.ev-battery-body-charge {
+    background: linear-gradient(90deg,
+                rgba(255, 255, 255, 0.0) 0%,
+                rgba(255, 255, 255, 0.45) 70%,
+                rgba(255, 255, 255, 0.85) 100%);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
+    opacity: 0;
+}
+.ev-card.charging .ev-battery-body-charge {
+    /* Duration is set per-card by app-shell.js setCharging() based on
+       charging power (kW). Faster kW = shorter cycle, so DC fast charge
+       visibly snaps and AC trickle crawls. Falls back to 2.4s when
+       core.js calls setCharging() without a power value. */
+    animation: ev-battery-body-fillup
+               var(--ev-charge-fillup-duration, 2.4s)
+               cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes ev-battery-body-fillup {
+    0%   { width: 0%;   opacity: 0; }
+    15%  { opacity: 0.85; }
+    85%  { opacity: 0.85; }
+    100% { width: 100%; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ev-card.charging .ev-battery-body-charge {
+        animation: none;
+        opacity: 0.5;
+        width: 100%;
+    }
+}
+
+/* The SVG sits above the canvas so battery + charge + bolt overlays
+   still animate on top of the 3D body. */
+#evCarSvg {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* === MOTION VOCABULARY: PAGE FADE ============================== */
+/* Web counterpart of native's MaterialFadeThrough. Pages opt in by adding
+   class="page-enter" to .main-content; the next animation frame promotes
+   it to .page-enter-active for the fade-in. */
+.page-enter {
+    opacity: 0;
+}
+
+.page-enter-active {
+    opacity: 1;
+    transition: opacity var(--duration-med, 240ms) var(--easing-decel, cubic-bezier(0.0, 0.0, 0.2, 1.0));
+}
+
+/* === ICON-TEXT SPACING: SHELL OVERRIDES ========================
+ * Tighten the leading-icon → label spacing on shell-rendered pages so
+ * the SVG never crowds the text. Scoped to [data-app-shell="1"] (set
+ * by app-shell.js mount()) so dev-only / login pages that opt out
+ * keep their stock spacing. !important because per-page CSS sometimes
+ * overrides .card-title gap and we want one consistent rhythm.
+ */
+[data-app-shell="1"] .card-title { gap: 12px !important; }
+[data-app-shell="1"] .card-title > svg { margin-right: 6px !important; }
+[data-app-shell="1"] .info-box-note > .info-icon,
+[data-app-shell="1"] .info-box-warning > .info-icon { margin-right: 12px !important; }
+[data-app-shell="1"] .tier-card { gap: 16px !important; }
+[data-app-shell="1"] .tier-card > .tier-icon { margin-right: 8px !important; }
+[data-app-shell="1"] .credit-row { gap: 16px !important; }
+[data-app-shell="1"] .credit-row > .credit-avatar { margin-right: 4px !important; }

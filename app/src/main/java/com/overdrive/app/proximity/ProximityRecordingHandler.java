@@ -29,6 +29,11 @@ public class ProximityRecordingHandler {
     private File outputDir;
     private String currentTriggerLevel;
     private boolean isRecording = false;
+    // Filename captured when the start-stage push was published. Reused on
+    // stop so the matching final-stage push uses the same tag (Web Push
+    // tag-replace semantics: a later push with the same tag swaps the
+    // banner) and points at the now-finalised .mp4 + sibling hero JPEG.
+    private String activeRecordingFile;
     
     public ProximityRecordingHandler(GpuSurveillancePipeline pipeline) {
         this.pipeline = pipeline;
@@ -94,11 +99,19 @@ public class ProximityRecordingHandler {
             // prefix. Pull the active output path so the push deep-links to
             // the exact clip being recorded and renders its thumbnail.
             String filename = activeRecordingFilename();
+            activeRecordingFile = filename;
             String url;
             if (filename != null) {
                 String enc = java.net.URLEncoder.encode(filename, "UTF-8");
                 data.put("filename", filename);
-                data.put("snapshot", "/thumb/" + enc);
+                // Mark as the start-stage event. The hero JPEG is only
+                // written when the segment finalises in stopRecording, so
+                // pointing the SW at a still-live .mp4 right now would only
+                // hit MMR's 202-while-generating window. Carrying stage so
+                // the SW skips the snapshot fetch on this event. The
+                // matching final-stage push fires from stopRecording with
+                // the same tag and a real signed snapshot URL.
+                data.put("stage", "start");
                 url = "/events.html?filter=proximity&file=" + enc;
             } else {
                 url = "/events.html?filter=proximity";
@@ -141,20 +154,80 @@ public class ProximityRecordingHandler {
         if (!isRecording) {
             return;
         }
-        
+
+        String triggerLevelAtStop = currentTriggerLevel;
+        String videoFile = activeRecordingFile;
+
         try {
             // Stop recording
             pipeline.stopRecording();
             isRecording = false;
-            
+
             logger.info("Proximity recording stopped");
-            
+
             // Trigger cleanup
             storageManager.onProximityFileSaved();
-            
+
+            // Final-stage push with the now-finalised hero JPEG. The start
+            // push deliberately skipped the snapshot URL because the hero
+            // JPEG is only written when stopRecording finalises the segment.
+            // Reusing the same notification tag ("proximity-<level>") so
+            // Web Push tag-replace semantics swap the banner image in
+            // place rather than stacking a second card.
+            publishProximityFinal(triggerLevelAtStop, videoFile);
+
         } catch (Exception e) {
             logger.error("Failed to stop proximity recording: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            activeRecordingFile = null;
+        }
+    }
+
+    /**
+     * Publish the final-stage push for a proximity recording. Carries a
+     * signed snapshot URL pointing at the sibling hero JPEG ({@code base.jpg}
+     * written by HardwareEventRecorderGpu on segment finalisation). When
+     * the JPEG is missing (rare — encoder error), falls back to the .mp4
+     * which the server resolves via MMR.
+     */
+    private void publishProximityFinal(String triggerLevel, String videoFile) {
+        if (videoFile == null || videoFile.isEmpty()) return;
+        try {
+            boolean red = "RED".equals(triggerLevel);
+            org.json.JSONObject data = new org.json.JSONObject();
+            data.put("triggerLevel", triggerLevel);
+            data.put("filename", videoFile);
+            data.put("stage", "final");
+
+            String heroName = videoFile.endsWith(".mp4")
+                    ? videoFile.substring(0, videoFile.length() - 4) + ".jpg"
+                    : videoFile + ".jpg";
+            File heroFile = new File(outputDir, heroName);
+            String snapshotName = heroFile.exists() ? heroName : videoFile;
+            String encSnap = java.net.URLEncoder.encode(snapshotName, "UTF-8");
+            String thumbTok = com.overdrive.app.auth.AuthManager
+                    .signThumbToken(snapshotName, 600L);
+            String snapUrl = "/thumb/" + encSnap;
+            if (thumbTok != null) snapUrl += "?t=" + thumbTok;
+            data.put("snapshot", snapUrl);
+
+            String enc = java.net.URLEncoder.encode(videoFile, "UTF-8");
+            String url = "/events.html?filter=proximity&file=" + enc;
+
+            com.overdrive.app.notifications.NotificationBus.get().publish(
+                    new com.overdrive.app.notifications.NotificationEvent(
+                            "surveillance.proximity",
+                            red
+                                    ? com.overdrive.app.notifications.NotificationEvent.Severity.CRITICAL
+                                    : com.overdrive.app.notifications.NotificationEvent.Severity.WARN,
+                            red ? "Object very close" : "Object nearby",
+                            red ? "Within 0.5 m" : "Within 0.8 m",
+                            "proximity-" + triggerLevel,
+                            url,
+                            data));
+        } catch (Throwable t) {
+            logger.debug("publishProximityFinal failed: " + t.getMessage());
         }
     }
     

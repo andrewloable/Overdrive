@@ -113,27 +113,13 @@
         return 'Browser';
     }
 
-    function postTokenToSw(reg) {
-        // Pass the auth token to the SW so it can fetch protected resources
-        // (e.g. snapshots) when enriching push notifications. Held in SW
-        // memory only — never persisted, never written to IndexedDB.
-        try {
-            if (reg.active && typeof BYDAuth !== 'undefined' && BYDAuth.getToken) {
-                var t = BYDAuth.getToken();
-                if (t) reg.active.postMessage({ type: 'set-token', token: t });
-            }
-        } catch (e) { /* ignore */ }
-    }
-
     async function init() {
         try {
             var reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             log('SW registered, scope:', reg.scope);
-            postTokenToSw(reg);
 
-            // Wait for SW to be active before pushing the token / subscribing.
+            // Wait for SW to be active before subscribing.
             await navigator.serviceWorker.ready;
-            postTokenToSw(reg);
 
             // Permission flow: only auto-prompt if not blocked. If denied, we
             // stop silently; if default, we wait for an explicit user action
@@ -166,7 +152,6 @@
             if (perm !== 'granted') return { ok: false, reason: 'permission-' + perm };
             var reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             await navigator.serviceWorker.ready;
-            postTokenToSw(reg);
             var meta = await getCategoriesAndKey();
             if (!meta || !meta.vapidPublicKey) return { ok: false, reason: 'no-vapid-key' };
             var sub = await ensureSubscription(reg, meta.vapidPublicKey);

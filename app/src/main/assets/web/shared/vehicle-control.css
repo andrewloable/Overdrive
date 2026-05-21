@@ -64,14 +64,14 @@
 .vc-container {
     position: relative;
     width: 100%;
+    /* Fill the parent EXACTLY — no margin-top. A margin-top here was
+       pushing the container's bottom edge below the viewport by the same
+       amount, which clipped the bottom .vc-bar control panel. The notch /
+       cutout offset is now applied per-element to the floating overlay
+       chrome (hamburger, status bars) inside .vc-viewport. */
     height: 100%;
     background: var(--vc-canvas-bg);
     overflow: hidden;
-    /* Margin past the iOS notch / Android cutout so the hamburger isn't
-       visually clipped or cut off by the system status bar. The
-       viewport-fit=cover meta tag on each page makes safe-area-inset-top
-       non-zero on devices with a notch. */
-    margin-top: calc(12px + env(safe-area-inset-top, 0px));
 }
 
 /* 3D fills the entire area — car renders behind the translucent bar */
@@ -81,7 +81,8 @@
 /* Floating mobile nav button */
 .vc-nav-btn {
     position: absolute;
-    top: 10px;
+    /* Safe-area offset baked in here (was on .vc-container before). */
+    top: calc(10px + env(safe-area-inset-top, 0px));
     left: 10px;
     z-index: 25;
     display: none;
@@ -107,7 +108,7 @@
    Splitting the rows guarantees the model dropdown never overlaps the cloud pill on
    narrow screens, no matter how long the model name or how cramped the device. */
 .vc-status-bar {
-    position: absolute; top: 10px; left: 10px; right: 10px;
+    position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px;
     display: -webkit-flex; display: flex;
     -webkit-justify-content: space-between; justify-content: space-between;
     -webkit-align-items: center; align-items: center;
@@ -116,7 +117,7 @@
 .vc-status-bar > * { pointer-events: auto; margin: 0 3px; }
 
 .vc-status-bar-secondary {
-    position: absolute; top: 56px; left: 10px; right: 10px;
+    position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px;
     display: -webkit-flex; display: flex;
     -webkit-align-items: center; align-items: center;
     -webkit-flex-wrap: wrap; flex-wrap: wrap;
@@ -472,7 +473,7 @@
     padding: 14px 12px;
 }
 .vc-panel.open.vc-panel-tall {
-    max-height: 300px;
+    max-height: 320px;
 }
 .vc-panel-row {
     display: -webkit-flex; display: flex;
@@ -541,18 +542,32 @@
 .vc-preset.active { border-color: #00D4AA; background: rgba(0,212,170,.12); color: #00D4AA; }
 .vc-preset.pending { opacity: .4; pointer-events: none; }
 
-/* Tab bar — always visible */
+/* Tab bar — always visible.
+   Horizontally scrollable on narrow viewports so 8 tabs never need to crush
+   their hit-target below the 44px Material minimum. On wider screens the
+   flex children stretch to fill the bar. */
 .vc-tabs {
     display: -webkit-flex; display: flex;
     -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: center; justify-content: center;
+    /* `flex-start` instead of `center` — when content overflows the bar
+       (8 tabs on a phone-width portrait), `center` shoves the leftmost
+       tab's edge OFF-SCREEN where the parent overflow clips it. The
+       Security tab was being cut at the left edge for that reason. With
+       flex-start, the leftmost tab stays at scroll position 0 and the
+       overflow runs cleanly to the right. On wider screens each tab's
+       `flex: 1` stretches to fill, so the visual outcome is unchanged. */
+    -webkit-justify-content: flex-start; justify-content: flex-start;
     background: var(--vc-bar-bg);
     -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
     border: 1px solid var(--vc-border-subtle);
     border-radius: 16px;
     padding: 6px 10px;
     width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
+.vc-tabs::-webkit-scrollbar { display: none; }
 .vc-tabs > * { margin: 0 2px; }
 .vc-tab {
     display: -webkit-inline-flex; display: inline-flex;
@@ -560,6 +575,8 @@
     -webkit-align-items: center; align-items: center;
     -webkit-justify-content: center; justify-content: center;
     -webkit-flex: 1; flex: 1;
+    -webkit-flex-shrink: 0; flex-shrink: 0;
+    min-width: 56px;
     height: 52px;
     border-radius: 12px;
     border: 1px solid transparent;
@@ -663,10 +680,172 @@
     -webkit-flex-shrink: 0; flex-shrink: 0;
 }
 
+/* Charging panel — Schedule and Charge limit stacked, divider between. */
+.vc-charging-grid {
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    width: 100%;
+    gap: 8px;
+    padding: 0 12px;
+}
+.vc-charging-section {
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+}
+.vc-charging-divider {
+    border-top: 1px solid var(--vc-border-faint);
+    padding-top: 8px;
+}
+
+/* Charge-cap slider — fixed width so it sits next to the toggle tile and
+   readout as a compact cluster, not stretched across the panel. */
+.vc-soc-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 220px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--vc-tile-bg);
+    border: 1px solid var(--vc-border-subtle);
+    outline: none;
+    margin: 0 6px;
+}
+.vc-soc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #00D4AA;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,212,170,0.4);
+}
+.vc-soc-slider::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #00D4AA;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,212,170,0.4);
+}
+
+/* Tiles inside the charging panel are inline-shaped: icon next to label,
+   34px tall to baseline-match the time inputs and segmented control. The
+   square 60px tile look elsewhere stays untouched. */
+.vc-schedule-bar .vc-tile {
+    width: auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    -webkit-flex-direction: row; flex-direction: row;
+    gap: 6px;
+}
+.vc-schedule-bar .vc-tile svg { width: 16px; height: 16px; margin-bottom: 0; }
+.vc-schedule-bar .vc-tile span { font-size: 11px; text-transform: none; letter-spacing: normal; }
+
+/* Charging schedule — stacked rows (window / repeat / days).
+   Wraps the existing flex panel-row into a column grid for proper alignment
+   while keeping each row centered horizontally to match other panels. */
+.vc-schedule { width: 100%; padding: 4px 0; }
+.vc-schedule-grid {
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    -webkit-align-items: stretch; align-items: stretch;
+    width: 100%;
+    gap: 8px;
+    padding: 0 12px;
+}
+.vc-schedule-bar {
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    -webkit-justify-content: center; justify-content: center;
+    gap: 8px;
+    -webkit-flex-wrap: wrap; flex-wrap: wrap;
+}
+/* Spacer is intentionally a no-op — controls sit in a tight centered cluster
+   instead of being pushed to opposite edges of the panel. */
+.vc-schedule-spacer { display: none; }
+.vc-schedule-arrow {
+    color: var(--vc-text-muted); font-size: 16px; line-height: 1;
+    -webkit-flex-shrink: 0; flex-shrink: 0;
+}
+.vc-time {
+    height: 34px; min-width: 92px;
+    border: 1px solid var(--vc-border-subtle);
+    border-radius: 8px;
+    background: var(--vc-tile-bg);
+    color: var(--vc-text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 600;
+    padding: 0 8px;
+    outline: none;
+    text-align: center;
+}
+.vc-time:focus { border-color: #00D4AA; }
+.vc-time:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Segmented control — Once / Every day / Custom. Three-pill group sized to
+   baseline-match the schedule row's time inputs and tiles (34px). */
+.vc-segmented {
+    display: -webkit-inline-flex; display: inline-flex;
+    -webkit-align-items: center; align-items: center;
+    height: 34px;
+    background: var(--vc-tile-bg);
+    border: 1px solid var(--vc-border-subtle);
+    border-radius: 10px;
+    padding: 2px;
+    gap: 2px;
+}
+.vc-seg {
+    height: 28px;
+    padding: 0 12px;
+    border: none; border-radius: 8px;
+    background: transparent;
+    color: var(--vc-text-secondary);
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    -webkit-transition: background .12s, color .12s;
+    transition: background .12s, color .12s;
+}
+.vc-seg:hover { color: var(--vc-text-primary); }
+.vc-seg.on {
+    background: rgba(0,212,170,.16);
+    color: #00D4AA;
+    box-shadow: inset 0 0 0 1px rgba(0,212,170,.35);
+}
+.vc-seg:active { -webkit-transform: scale(.96); transform: scale(.96); }
+
+/* Day chips — only shown when repeat=custom. */
+.vc-day-chips { gap: 4px; }
+.vc-day {
+    height: 30px; min-width: 36px;
+    padding: 0 8px;
+    border: 1px solid var(--vc-border-subtle);
+    border-radius: 8px;
+    background: var(--vc-tile-bg);
+    color: var(--vc-text-secondary);
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .3px;
+    cursor: pointer;
+}
+.vc-day:hover { border-color: rgba(0,212,170,.3); color: var(--vc-text-primary); }
+.vc-day.on { border-color: #00D4AA; background: rgba(0,212,170,.12); color: #00D4AA; }
+.vc-day:active { -webkit-transform: scale(.92); transform: scale(.92); }
+
+/* Reuse .vc-pill as a clickable chip in the schedule row.
+   Status-bar pills retain their default look — only schedule pills are
+   buttons, so they get button affordances when used inline. */
+button.vc-pill {
+    cursor: pointer;
+    background: var(--vc-tile-bg);
+}
+/* Inside the schedule bar, match the row's 34px baseline. */
+.vc-schedule-bar button.vc-pill { height: 34px; padding: 0 12px; }
+button.vc-pill:hover { border-color: rgba(0,212,170,.3); color: var(--vc-text-primary); }
+button.vc-pill.on { border-color: #00D4AA; background: rgba(0,212,170,.12); color: #00D4AA; }
+button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
+
 /* ===== MOBILE RESPONSIVE ===== */
 @media (max-width: 768px) {
     .vc-nav-btn { display: -webkit-flex; display: flex; }
-    .vc-status-bar { top: 10px; left: 56px; right: 10px; }
+    .vc-status-bar { top: calc(10px + env(safe-area-inset-top, 0px)); left: 56px; right: 10px; }
     .vc-bar { left: 2%; right: 2%; }
     .vc-tab { height: 48px; }
     .vc-tab svg { width: 18px; height: 18px; }
@@ -682,9 +861,20 @@
     /* Clear the hamburger button (left:10 width:40 = right edge at 50) so the
        secondary row can't slide under it. Drop the row a touch since the smaller
        pills make the primary row shorter. */
-    .vc-status-bar-secondary { top: 56px; left: 56px; right: 10px; }
+    .vc-status-bar-secondary { top: calc(56px + env(safe-area-inset-top, 0px)); left: 56px; right: 10px; }
     .vc-3d-btn { width: 40px; height: 40px; border-radius: 20px; }
     .vc-3d-btn svg { width: 16px; height: 16px; }
+
+    /* Charging panel — keep the centered cluster, just shrink controls to fit. */
+    .vc-panel.open.vc-panel-tall { max-height: 380px; }
+    .vc-charging-grid { padding: 0 8px; gap: 6px; }
+    .vc-schedule-bar { gap: 6px; }
+    .vc-time { min-width: 80px; height: 32px; font-size: 13px; }
+    .vc-seg { padding: 0 10px; height: 26px; font-size: 10px; }
+    .vc-day { height: 28px; min-width: 32px; font-size: 9px; padding: 0 6px; }
+    .vc-day-chips { gap: 3px; }
+    .vc-soc-slider { width: 160px; }
+    .vc-charging-divider { padding-top: 6px; }
 }
 
 @media (max-width: 480px) {
@@ -711,13 +901,25 @@
     .vc-tile span { font-size: 7px; }
     .vc-mini { width: 28px; height: 28px; }
     .vc-readout { font-size: 12px; min-width: 30px; }
+
+    /* Charging panel at phone scale — fit everything in 320..480px. */
+    .vc-charging-grid { padding: 0 6px; gap: 5px; }
+    .vc-schedule-bar { gap: 4px; }
+    .vc-time { min-width: 64px; height: 30px; font-size: 12px; padding: 0 4px; }
+    .vc-schedule-arrow { font-size: 13px; }
+    .vc-segmented { padding: 1px; gap: 1px; }
+    .vc-seg { padding: 0 7px; height: 24px; font-size: 9px; }
+    .vc-day { height: 26px; min-width: 28px; font-size: 8px; padding: 0 4px; }
+    .vc-soc-slider { width: 120px; }
 }
 
-/* Ultra-short viewports (landscape phone) */
+/* Ultra-short viewports (landscape phone) — keep labels but compact heights. */
 @media (max-height: 500px) {
-    .vc-tab { height: 40px; }
-    .vc-tab span { display: none; }
-    .vc-panel.open { max-height: 140px; padding: 10px 8px; }
+    .vc-tab { height: 40px; min-width: 56px; }
+    .vc-tab svg { width: 14px; height: 14px; margin-bottom: 0; }
+    .vc-tab span { font-size: 8px; }
+    .vc-panel.open { max-height: 160px; padding: 10px 8px; }
+    .vc-panel.open.vc-panel-tall { max-height: 220px; }
     .vc-tile { width: 40px; height: 42px; }
     .vc-tile svg { width: 16px; height: 16px; }
     .vc-mini { width: 26px; height: 26px; }

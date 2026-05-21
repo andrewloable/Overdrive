@@ -22,9 +22,15 @@ public class TelemetryDataCollector {
     private static final long POLL_INTERVAL_MS = 200; // 5 Hz — only used when overlay recording is active
     private static final long SLOW_POLL_INTERVAL_MS = 1000; // 1 Hz fallback when not recording
 
-    // Slow-path sub-polling: turn signals and seatbelts don't change at 5Hz.
-    // Poll them at 1Hz (every 5th fast poll) to save 4 reflection calls per cycle.
+    // Slow-path sub-polling: seatbelts and brake-pedal state don't change at 5Hz.
+    // Poll them at 1Hz (every 5th fast poll) to save reflection calls per cycle.
     private static final int SLOW_FIELD_DIVISOR = 5; // every 5th poll = 1Hz at 200ms base
+
+    // Turn-signal sticky window: how many fast-path ticks to hold "on" after the
+    // last observed flash, to bridge the off-phase of the ~1.5Hz blink cycle.
+    // 3 ticks = ~600ms at 5Hz — long enough to span an off-frame, short enough
+    // that a cancelled indicator clears from the overlay almost immediately.
+    private static final int TURN_STICKY_TICKS = 3;
 
     // BYDAutoSpeedDevice
     private Object speedDevice;
@@ -343,8 +349,56 @@ public class TelemetryDataCollector {
             }
         }
 
-        // ── SLOW PATH: turn signals, brake pedal state, seatbelts (every 5th poll = 1Hz) ──
-        // These change infrequently and don't need 5Hz resolution.
+        // Turn signals (every poll = 5Hz). Read on the fast path so a cancelled
+        // indicator clears from the overlay within ~600ms instead of lingering
+        // for up to 10s. Sticky counter bridges the off-phase of the blink cycle.
+        if (lightDevice != null && getTurnLightFlashStateMethod != null) {
+            try {
+                int flashState = (int) getTurnLightFlashStateMethod.invoke(lightDevice);
+
+                boolean leftNow = (flashState == 2 || flashState == 3);
+                boolean rightNow = (flashState == 4 || flashState == 5);
+                boolean hazardNow = (flashState == 6 || flashState == 7);
+
+                if (hazardNow) { leftNow = true; rightNow = true; }
+
+                if (leftNow) leftTurnStickyCount = TURN_STICKY_TICKS;
+                if (rightNow) rightTurnStickyCount = TURN_STICKY_TICKS;
+
+                leftTurn = leftTurnStickyCount > 0;
+                rightTurn = rightTurnStickyCount > 0;
+
+                if (leftTurnStickyCount > 0) leftTurnStickyCount--;
+                if (rightTurnStickyCount > 0) rightTurnStickyCount--;
+
+                lastLeftTurn = leftTurn;
+                lastRightTurn = rightTurn;
+            } catch (Exception e) {
+                logger.warn("Failed to read turn signal: " + e.getMessage());
+            }
+        }
+
+        // Seatbelt status (every poll = 5Hz). Drawn on the overlay every frame,
+        // so a buckle/unbuckle must reflect within one frame instead of up to 1s.
+        if (pollCount == 0) {
+            probeSeatbeltApis(savedContext);
+        }
+        if (instrumentDeviceForBelt != null && getSafetyBeltStatusMethod != null) {
+            try {
+                boolean[] belts = new boolean[2];
+                int driverRaw = (int) getSafetyBeltStatusMethod.invoke(instrumentDeviceForBelt, 1);
+                int passengerRaw = (int) getSafetyBeltStatusMethod.invoke(instrumentDeviceForBelt, 2);
+                belts[0] = (driverRaw != 0);
+                belts[1] = (passengerRaw != 0);
+                seatbelts = belts;
+                lastSeatbelts = seatbelts;
+            } catch (Exception e) {
+                // Use defaults
+            }
+        }
+
+        // ── SLOW PATH: brake pedal pressed state (every 5th poll = 1Hz) ──
+        // Not drawn on the overlay (renderer uses brakePercent), so 1Hz is fine.
         boolean doSlowFields = (pollCount % SLOW_FIELD_DIVISOR == 0);
 
         if (doSlowFields) {
@@ -356,51 +410,6 @@ public class TelemetryDataCollector {
                     lastBrakePedalPressed = brakePedalPressed;
                 } catch (Exception e) {
                     logger.warn("Failed to read brake pedal state: " + e.getMessage());
-                }
-            }
-
-            // Turn signals
-            if (lightDevice != null && getTurnLightFlashStateMethod != null) {
-                try {
-                    int flashState = (int) getTurnLightFlashStateMethod.invoke(lightDevice);
-                    
-                    boolean leftNow = (flashState == 2 || flashState == 3);
-                    boolean rightNow = (flashState == 4 || flashState == 5);
-                    boolean hazardNow = (flashState == 6 || flashState == 7);
-                    
-                    if (hazardNow) { leftNow = true; rightNow = true; }
-                    
-                    if (leftNow) leftTurnStickyCount = 10;
-                    if (rightNow) rightTurnStickyCount = 10;
-                    
-                    leftTurn = leftTurnStickyCount > 0;
-                    rightTurn = rightTurnStickyCount > 0;
-                    
-                    if (leftTurnStickyCount > 0) leftTurnStickyCount--;
-                    if (rightTurnStickyCount > 0) rightTurnStickyCount--;
-                    
-                    lastLeftTurn = leftTurn;
-                    lastRightTurn = rightTurn;
-                } catch (Exception e) {
-                    logger.warn("Failed to read turn signal: " + e.getMessage());
-                }
-            }
-
-            // Seatbelt: comprehensive probe on first poll to find working API
-            if (pollCount == 0) {
-                probeSeatbeltApis(savedContext);
-            }
-            if (instrumentDeviceForBelt != null && getSafetyBeltStatusMethod != null) {
-                try {
-                    boolean[] belts = new boolean[2];
-                    int driverRaw = (int) getSafetyBeltStatusMethod.invoke(instrumentDeviceForBelt, 1);
-                    int passengerRaw = (int) getSafetyBeltStatusMethod.invoke(instrumentDeviceForBelt, 2);
-                    belts[0] = (driverRaw != 0);
-                    belts[1] = (passengerRaw != 0);
-                    seatbelts = belts;
-                    lastSeatbelts = seatbelts;
-                } catch (Exception e) {
-                    // Use defaults
                 }
             }
         }

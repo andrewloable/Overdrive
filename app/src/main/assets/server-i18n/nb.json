@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Opptak - {0}s",
     "proximity_alert": " Nærhetsvaringstid: {0} Trigger: {1} ({2}) Opptak av opptak..."
   },
+  "vehicle_control": {
+    "cloud_required": "Koble en BYD konto i innstillinger for å bruke denne kontrollen",
+    "cloud_sent": "Sendt via sky",
+    "cloud_unavailable_used_local": "Sky ikke tilgjengelig  brukt direkte tilkobling",
+    "local_sent": "Sendt over direkte tilkobling",
+    "cloud_offline_used_local": "Cloud offline  brukt direkte tilkobling",
+    "local_unavailable_used_cloud": "Direktetilkobling utilgjengelig — sendt via skyen",
+    "cloud_failed": "Ikke kunne nå bilen  prøv igjen når bilen er våken",
+    "rate_limited": "Et kommando er fortsatt i gang  vent et par sekunder",
+    "not_supported": "Denne kontrollen er ikke tilgjengelig akkurat nå",
+    "find_car_label": "Finn en bil",
+    "battery_heat_label": "Hottery Bat",
+    "close_all_windows_label": "alle vinduer lukket"
+  },
   "messages": {
     "logged_out": "Logget ut",
     "bydcloud_connected": "Knytte seg med suksess",

@@ -3,13 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#00E5FF">
+    <meta name="theme-color" content="#00876C">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="../shared/app-icon.webp">
+    <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
     <title data-i18n="app.notifications_title">Notifications - OverDrive</title>
-    <link rel="icon" type="image/webp" href="../shared/app-icon.webp">
+    <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <script src="../shared/theme.js?v=3"></script>
+    <script src="../shared/app-shell.js"></script>
+    <!--
+      Bottom-tab manifest for Notifications. Three task-based tabs:
+        Push     — per-device push permission + per-category toggles
+        Telegram — Two-stage Telegram alerts + tier filter (was on Surveillance)
+        Devices  — registered push subscriptions
+      The Telegram block reuses the legacy IDs (v2TelegramSendStartPing,
+      v2TelegramTierGroup, v2TelegramNotices/Alerts/Critical) so the
+      SurvSettings bindings in shared/surveillance.js keep firing.
+    -->
+    <script>
+        window.OT_TABS = [
+            { id: 'push',     label: 'Push',     i18n: 'notif.tab_push',     svg: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
+            { id: 'telegram', label: 'Telegram', i18n: 'notif.tab_telegram', svg: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
+            { id: 'devices',  label: 'Devices',  i18n: 'notif.tab_devices',  svg: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>', readOnly: true }
+        ];
+    </script>
+    <script src="../shared/app-tabs.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
     <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,162 +200,8 @@
 <body>
     <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <div class="brand-logo">
-                        <img src="../shared/app-icon.webp" alt="OverDrive">
-                    </div>
-                    <div class="brand-text">
-                        <span class="brand-name" data-i18n="app.name">OverDrive</span>
-                        <span class="brand-tagline" data-i18n="app.tagline">Surveillance System</span>
-                        <span class="brand-version" id="appVersion"></span>
-                    </div>
-                </div>
-                <button class="sidebar-close" onclick="toggleSidebar()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-
-            <nav class="sidebar-nav">
-                <a href="index.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 0 8 8"/><circle cx="2" cy="12" r="2"/></svg>
-                    <span data-i18n="nav.live_view">Live View</span>
-                </a>
-                <a href="events.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <span data-i18n="nav.events">Events</span>
-                </a>
-                <a href="surveillance.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    <span data-i18n="nav.surveillance">Surveillance</span>
-                </a>
-                <a href="recording.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
-                    <span data-i18n="nav.recordings">Recordings</span>
-                </a>
-                <a href="performance.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                    <span data-i18n="nav.performance">Performance</span>
-                </a>
-                <a href="abrp.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/><circle cx="18" cy="12" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/></svg>
-                    <span data-i18n="nav.abrp">ABRP</span>
-                </a>
-                <a href="mqtt.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M8.46 15.54A5 5 0 0 1 7 12a5 5 0 0 1 1.46-3.54"/><path d="M15.54 8.46A5 5 0 0 1 17 12a5 5 0 0 1-1.46 3.54"/><path d="M5.64 18.36A9 9 0 0 1 3 12a9 9 0 0 1 2.64-6.36"/><path d="M18.36 5.64A9 9 0 0 1 21 12a9 9 0 0 1-2.64 6.36"/></svg>
-                    <span data-i18n="nav.mqtt">MQTT</span>
-                </a>
-                <a href="trips.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h2v-7l4 4 4-4 4 4 4-4v7h2"/><path d="M4 5h16"/></svg>
-                    <span data-i18n="nav.trips">Trips</span>
-                </a>
-                <a href="notifications.html" class="nav-link active">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    <span data-i18n="nav.notifications">Notifications</span>
-                </a>
-                <a href="vehicle-control.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <span data-i18n="nav.vehicle_control">Vehicle Control</span>
-                </a>
-                <a href="about.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    <span data-i18n="nav.about">About</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="status-card">
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.device"><span class="status-dot" id="connDot"></span>Device</span>
-                        <span class="status-value" id="deviceId">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.acc">ACC</span>
-                        <span class="status-value" id="accValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.battery_12v">
-                            <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="7" width="12" height="10" rx="1"/><path d="M6 10H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2"/><path d="M18 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2"/></svg>12V
-                        </span>
-                        <span class="status-value" id="batteryValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.sentry">Surveillance</span>
-                        <span class="status-value" id="survStatus" data-i18n="status.off">OFF</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.network">
-                            <span id="networkIcon"><svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></span>Net
-                        </span>
-                        <span class="status-value" id="networkValue">--</span>
-                    </div>
-                </div>
-                <!-- EV Battery & Charging Card -->
-                <div class="status-card ev-card" id="evCard">
-                    <div class="ev-header-row">
-                        <span class="ev-title" data-i18n="status.vehicle_status">Vehicle Status</span>
-                        <span class="ev-percent-text" id="evPercentValue">--%</span>
-                    </div>
-                    <div class="ev-svg-container">
-                        <svg viewBox="0 0 320 130" class="ev-car-svg">
-                            <defs>
-                                <linearGradient id="ceramicBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f8fafc"/><stop offset="100%" stop-color="#e2e8f0"/></linearGradient>
-                                <linearGradient id="glassTint" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#020617"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
-                                <linearGradient id="batteryFlow" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#2dd4bf" class="grad-start"/><stop offset="50%" stop-color="#06b6d4" class="grad-mid"/><stop offset="100%" stop-color="#3b82f6" class="grad-end"/></linearGradient>
-                                <pattern id="chargeFlowPattern" x="0" y="0" width="20" height="10" patternUnits="userSpaceOnUse"><rect x="0" y="0" width="10" height="16" fill="rgba(255,255,255,0.4)"/></pattern>
-                                <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#e2e8f0"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#94a3b8"/></linearGradient>
-                            </defs>
-                            <g transform="translate(0, -3)"><circle cx="70" cy="90" r="19" fill="#050505"/><circle cx="250" cy="90" r="19" fill="#050505"/></g>
-                            <path d="M10,65 Q15,50 30,45 L60,38 L100,20 C130,10 180,10 210,22 L260,40 Q280,44 295,52 L310,62 Q315,68 312,78 L275,78 Q250,50 225,78 L95,78 Q70,50 45,78 L15,78 Q5,78 5,68 Q5,62 10,65 Z" fill="url(#ceramicBody)" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.3))"/>
-                            <path d="M95,78 L225,78 L225,98 L95,98 Z" fill="url(#ceramicBody)"/>
-                            <g><path d="M100,24 L210,26 L240,42 L200,42 L100,40 Z" fill="none" stroke="url(#chromeGrad)" stroke-width="1.5"/><path d="M102,26 L208,28 L235,41 L200,41 L102,39 Z" fill="url(#glassTint)"/><path d="M155,27 L160,28 L160,41 L155,40 Z" fill="#020617"/></g>
-                            <rect id="evBatteryFill" x="100" y="80" width="0" height="16" rx="2" fill="url(#batteryFlow)" class="battery-bar"/>
-                            <rect id="evChargeFlow" x="100" y="80" width="0" height="16" rx="2" fill="url(#chargeFlowPattern)" class="charge-flow" opacity="0"/>
-                            <g transform="translate(70, 90)"><circle r="19" fill="#050505"/><circle r="14" fill="#ffffff"/><circle r="14" fill="url(#ceramicBody)" opacity="0.8"/><circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/><path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/><circle r="4" fill="#1e293b"/></g>
-                            <g transform="translate(250, 90)"><circle r="19" fill="#050505"/><circle r="14" fill="#ffffff"/><circle r="14" fill="url(#ceramicBody)" opacity="0.8"/><circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/><path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/><circle r="4" fill="#1e293b"/></g>
-                            <path d="M290,55 L302,53 L298,60 Z" fill="#fff" filter="drop-shadow(0 0 3px cyan)"/>
-                            <path d="M12,58 L18,55 L18,62 Z" fill="#ef4444" opacity="0.9"/>
-                            <g id="svgChargeIcon" transform="translate(160, 5) scale(0)" style="transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"><circle r="12" fill="#00D4AA" stroke="#fff" stroke-width="2"/><path d="M-2,-6 L-4,1 L0,1 L-2,7 L5,-1 L1,-1 Z" fill="#fff"/></g>
-                        </svg>
-                    </div>
-                    <div class="ev-info-row">
-                        <div class="ev-range"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg><span id="evRange">-- km</span></div>
-                        <div class="ev-power-status"><span class="ev-power-val" id="evPower">-- kW</span></div>
-                    </div>
-                    <div class="ev-soh-row" id="evSohRow" style="display:none;">
-                        <span class="ev-soh-label">SOH</span>
-                        <span class="ev-soh-val" id="evSohValue">--%</span>
-                    </div>
-                    <div class="ev-personalized-range" id="evPersonalizedRow" style="display:none;">
-                        <span class="ev-personalized-label" data-i18n="vehicle.personalized_label">⚡ Personalized</span>
-                        <span class="ev-personalized-val" id="evPersonalizedRange">-- km</span>
-                    </div>
-                </div>
-
-                <!-- Fuel Card (PHEV only — hidden for BEVs) -->
-                <div class="status-card fuel-card" id="fuelCard" style="display:none;">
-                    <div class="fuel-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px;color:var(--warning);">
-                            <path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/>
-                            <path d="M3 22h10"/>
-                            <path d="M13 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/>
-                            <path d="M6 14v-3"/>
-                        </svg>
-                        <span class="fuel-title">Fuel</span>
-                        <span class="fuel-percent" id="fuelPercentValue">--%</span>
-                    </div>
-                    <div class="fuel-bar-track">
-                        <div class="fuel-bar-fill" id="fuelBarFill" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
+        <!-- App shell sidebar (rendered by ../shared/app-shell.js) -->
+        <div id="app-shell-mount"></div>
         <!-- Main Content -->
         <main class="main-content">
             <div class="mobile-header">
@@ -360,21 +224,27 @@
 
             <div class="page-body">
                 <div class="notif-page-body">
+                    <!-- Toast-style banner — shown on any tab as a transient
+                         status message (kept outside the tab system so it
+                         can survive a tab switch during a save). -->
                     <div id="status" class="notif-status" style="display:none;"></div>
 
-                    <div id="originBanner" class="notif-status warn" style="display:none;" data-i18n="notif.origin_banner">
-                        Push notifications require Zrok or a reverse proxy. Cloudflare quick tunnels change every restart and would invalidate every subscription. Tailscale serves over plain HTTP and can't be used for Web Push unless using a reverse proxy. Open the dashboard from your reserved Zrok or reverse proxy URL on your phone, Add to Home Screen, then return here to enable.
-                    </div>
-
-                    <div id="backendBanner" class="notif-status warn" style="display:none;" data-i18n="notif.backend_banner">
-                        Notifications backend not initialized. Reserve a Zrok URL via the daemons screen and restart the daemon to enable push delivery.
-                    </div>
-
-                    <div class="notif-section" id="permissionSection">
+                    <div class="notif-section" id="permissionSection" data-tab="push">
                         <h2 data-i18n="notif.push_delivery">Push delivery</h2>
                         <p class="notif-section-sub" data-i18n="notif.push_delivery_sub">
                             Enables alerts on the device you are currently using. Each phone you install the dashboard onto needs to be enabled here once.
                         </p>
+                        <!-- Origin + backend warnings are PUSH-ONLY: they
+                             explain why the per-device push subscribe button
+                             is dead, so they shouldn't bleed onto the
+                             Telegram or Devices tabs (those have nothing to
+                             do with the Web Push origin requirement). -->
+                        <div id="originBanner" class="notif-status warn" style="display:none;margin-bottom:14px;" data-i18n="notif.origin_banner">
+                            Push notifications require Zrok or a reverse proxy. Cloudflare quick tunnels change every restart and would invalidate every subscription. Tailscale serves over plain HTTP and can't be used for Web Push unless using a reverse proxy. Open the dashboard from your reserved Zrok or reverse proxy URL on your phone, Add to Home Screen, then return here to enable.
+                        </div>
+                        <div id="backendBanner" class="notif-status warn" style="display:none;margin-bottom:14px;" data-i18n="notif.backend_banner">
+                            Notifications backend not initialized. Reserve a Zrok URL via the daemons screen and restart the daemon to enable push delivery.
+                        </div>
                         <div class="notif-card" style="padding: 16px 18px;">
                             <div id="permissionRow" class="notif-permission-row">
                                 <div id="permissionState" class="notif-permission-state"></div>
@@ -387,7 +257,7 @@
                         </div>
                     </div>
 
-                    <div class="notif-section">
+                    <div class="notif-section" data-tab="push">
                         <h2 data-i18n="notif.categories">Categories</h2>
                         <p class="notif-section-sub" data-i18n="notif.categories_sub">
                             Toggle which kinds of alerts are pushed to this device. Each category fires when the head unit detects the matching event; what triggers it depends on the related daemon's settings. Hover any row to see what its severity level means.
@@ -398,7 +268,127 @@
                         </div>
                     </div>
 
-                    <div class="notif-section">
+                    <!-- ===== Telegram tab ===== -->
+                    <div class="notif-section" data-tab="telegram" id="telegramSection">
+                        <h2 data-i18n="notif.telegram">Telegram delivery</h2>
+                        <p class="notif-section-sub" data-i18n="notif.telegram_sub">
+                            Send surveillance events to a paired Telegram chat. Pair the bot in the Telegram daemon settings; toggles below decide which severities reach the chat. Off tiers are still recorded — only the message is suppressed.
+                        </p>
+                        <div class="notif-card" style="padding: 6px 0;">
+                            <div class="notif-row">
+                                <div class="notif-row-text">
+                                    <div class="notif-row-label" data-i18n="surveillance.telegram_two_stage">Two-stage Telegram alerts</div>
+                                    <div class="notif-row-note" data-i18n="surveillance.telegram_two_stage_desc">Send a quick "recording started" message, then the photo when it ends. Off by default — the photo alone is usually enough.</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="v2TelegramSendStartPing" onchange="SurvSettings.updateTelegramStartPing()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="v2TelegramTierGroup" style="margin-top:18px;">
+                            <p class="notif-section-sub" data-i18n="surveillance.telegram_tiers_desc">Pick which severity tiers reach your Telegram chat. Off tiers are still recorded; only the message is suppressed.</p>
+                            <div id="v2TelegramTierWarning" class="info-box-warning" style="display:none;margin-bottom:12px;">
+                                <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <span style="font-size:12px;color:var(--warning);" data-i18n="surveillance.telegram_not_paired">Telegram bot isn't paired yet — tier toggles have no effect until you link a bot.</span>
+                            </div>
+                            <div class="notif-card" style="padding: 6px 0;">
+                                <div class="notif-row">
+                                    <div class="notif-row-text">
+                                        <div class="notif-row-label">
+                                            <span class="status-dot" style="background:var(--text-muted);"></span>
+                                            <span data-i18n="surveillance.tier_notice">Notice</span>
+                                        </div>
+                                        <div class="notif-row-note" data-i18n="surveillance.tier_notice_desc">Routine activity (parked cars, distant movement)</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="v2TelegramNotices" onchange="SurvSettings.updateTelegramTiers()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="notif-row">
+                                    <div class="notif-row-text">
+                                        <div class="notif-row-label">
+                                            <span class="status-dot" style="background:#FFB75A;"></span>
+                                            <span data-i18n="surveillance.tier_alert">Alert</span>
+                                        </div>
+                                        <div class="notif-row-note" data-i18n="surveillance.tier_alert_desc">Approaching person, vehicle close enough to warrant attention</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="v2TelegramAlerts" onchange="SurvSettings.updateTelegramTiers()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="notif-row">
+                                    <div class="notif-row-text">
+                                        <div class="notif-row-label">
+                                            <span class="status-dot" style="background:#FF6B6B;"></span>
+                                            <span data-i18n="surveillance.tier_critical">Critical</span>
+                                        </div>
+                                        <div class="notif-row-note" data-i18n="surveillance.tier_critical_desc">Person at very close range — likely tampering / loitering</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="v2TelegramCritical" onchange="SurvSettings.updateTelegramTiers()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== Telegram delivery preferences =====
+                             Lives here (not on telegram.html) so the user has
+                             one place to decide WHAT events arrive via Telegram.
+                             Each toggle persists to the daemon properties file
+                             via /api/telegram/preferences (partial-merge), the
+                             same endpoint the Telegram daemon-behavior page
+                             uses. -->
+                        <p class="notif-section-sub" style="margin-top:22px;" data-i18n="notif.telegram_delivery_sub">What kind of events Telegram receives. Independent from the per-tier filter above — these toggle entire categories on or off.</p>
+                        <div class="notif-card" style="padding: 6px 0;">
+                            <div class="notif-row">
+                                <div class="notif-row-text">
+                                    <div class="notif-row-label" data-i18n="telegram.critical_alerts">Critical alerts</div>
+                                    <div class="notif-row-note" data-i18n="telegram.critical_alerts_desc">Drop-everything events — vehicle health faults, tampering, charging faults. Keep this on.</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="tgPrefCriticalAlerts" onchange="TelegramPrefs.save()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="notif-row">
+                                <div class="notif-row-text">
+                                    <div class="notif-row-label" data-i18n="telegram.connectivity_updates">Connectivity updates</div>
+                                    <div class="notif-row-note" data-i18n="telegram.connectivity_updates_desc">Notify when the daemon starts, stops, or restarts. Useful for diagnostics; chatty in normal use.</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="tgPrefConnectivity" onchange="TelegramPrefs.save()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="notif-row">
+                                <div class="notif-row-text">
+                                    <div class="notif-row-label" data-i18n="telegram.motion_text">Motion text alerts</div>
+                                    <div class="notif-row-note" data-i18n="telegram.motion_text_desc">Send a short text message when surveillance detects motion. Photos / videos are governed by the toggles below.</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="tgPrefMotionText" onchange="TelegramPrefs.save()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="notif-row">
+                                <div class="notif-row-text">
+                                    <div class="notif-row-label" data-i18n="telegram.video_uploads">Send videos</div>
+                                    <div class="notif-row-note" data-i18n="telegram.video_uploads_desc">Upload short clips on Critical events. Costs more bandwidth — disable if you're on a slow tunnel.</div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="tgPrefVideoUploads" onchange="TelegramPrefs.save()">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="notif-section" data-tab="devices">
                         <h2 data-i18n="notif.registered_devices">Registered devices</h2>
                         <p class="notif-section-sub" data-i18n="notif.devices_sub">
                             Every phone that enabled push notifications appears here. Use Remove to deregister a device. Disable on this device above also unsubscribes the current browser locally, while Remove is server-side only.
@@ -419,6 +409,11 @@
     <script src="../shared/pwa-init.js"></script>
     <script src="../shared/core.js"></script>
     <script src="../shared/update-flow.js"></script>
+    <!-- surveillance.js owns the SurvSettings module that backs the Telegram
+         tier toggles. We load it here so the v2TelegramSendStartPing /
+         v2TelegramTierGroup controls hooked into surveillance.js wiring
+         keep firing without a per-page bridge. -->
+    <script src="../shared/surveillance.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -451,8 +446,58 @@
         if (typeof BYD !== 'undefined' && BYD.core) {
             BYD.i18n.init().then(function () {
                 BYD.core.init();
+                // Hydrate the Telegram tab — paints toggle states from
+                // /api/surveillance/config + queries telegram pairing state.
+                if (window.SurvSettings && SurvSettings.initTelegramOnly) {
+                    SurvSettings.initTelegramOnly();
+                }
+                // Telegram delivery preferences (critical / connectivity /
+                // motion text / videos) — persisted via /api/telegram/preferences.
+                if (window.TelegramPrefs) TelegramPrefs.load();
             });
         }
+
+        // ===== Telegram delivery preferences module =====
+        // Lives here (not in shared/surveillance.js) because the four toggles
+        // are notification-page-local — they don't bind to surveillance config
+        // and don't need the heavier SurvSettings init flow. Load + save go
+        // through /api/telegram/preferences (same endpoint telegram.html
+        // uses for autoStartAccOff, partial-merge body).
+        window.TelegramPrefs = (function () {
+            'use strict';
+            function $(id) { return document.getElementById(id); }
+            function tr(k) { return (window.BYD && BYD.i18n) ? (BYD.i18n.t(k) || k) : k; }
+            function toast(msg, kind) {
+                if (window.BYD && BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, kind || 'info');
+            }
+            function load() {
+                fetch('/api/telegram/status', { cache: 'no-store' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (s) {
+                        if ($('tgPrefCriticalAlerts')) $('tgPrefCriticalAlerts').checked = s.criticalAlerts !== false;
+                        if ($('tgPrefConnectivity'))   $('tgPrefConnectivity').checked   = !!s.connectivityUpdates;
+                        if ($('tgPrefMotionText'))     $('tgPrefMotionText').checked     = s.motionText !== false;
+                        if ($('tgPrefVideoUploads'))   $('tgPrefVideoUploads').checked   = !!s.videoUploads;
+                    })
+                    .catch(function () { /* status endpoint unreachable — leave defaults */ });
+            }
+            function save() {
+                var body = {};
+                if ($('tgPrefCriticalAlerts')) body.criticalAlerts      = $('tgPrefCriticalAlerts').checked;
+                if ($('tgPrefConnectivity'))   body.connectivityUpdates = $('tgPrefConnectivity').checked;
+                if ($('tgPrefMotionText'))     body.motionText          = $('tgPrefMotionText').checked;
+                if ($('tgPrefVideoUploads'))   body.videoUploads        = $('tgPrefVideoUploads').checked;
+                fetch('/api/telegram/preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    if (data && data.success) toast(tr('telegram.prefs_saved'), 'success');
+                    else toast(tr('telegram.prefs_save_failed'), 'error');
+                }).catch(function () { toast(tr('telegram.prefs_save_failed'), 'error'); });
+            }
+            return { load: load, save: save };
+        }());
 
         // ==================== ORIGIN GATE ====================
         // Dev escape hatch: ?devPwa=1 lets the page run its full flow against
@@ -609,10 +654,10 @@
                   defaultEnabled: true, severity: 'info',
                   defaultClickUrl: '/vehicle-control.html',
                   note: 'Debounced 10s to ride out brief gaps during plug-in or DC charger handshakes' },
-                { id: 'vehicle.charging.full', label: 'Charging complete (SOC ≥ 99.5%)', group: 'Charging',
-                  defaultEnabled: false, severity: 'info',
+                { id: 'vehicle.charging.full', label: 'Charging complete', group: 'Charging',
+                  defaultEnabled: true, severity: 'warn', bypassQuietHours: true,
                   defaultClickUrl: '/vehicle-control.html',
-                  note: 'Fires once per session when the pack reaches near-full. Suppressed if you plug in an already-full car' },
+                  note: 'Fires once per session when the pack reaches near-full or the BMS marks the session FINISHED. Suppressed if you plug in an already-full car. Bypasses quiet hours so you wake up to an unplug reminder.' },
                 { id: 'vehicle.charging.fault', label: 'Charging fault', group: 'Charging',
                   defaultEnabled: true, severity: 'critical',
                   defaultClickUrl: '/vehicle-control.html',
@@ -698,7 +743,16 @@
             if (!container) return;
             container.innerHTML = '';
 
-            if (state.categories.length === 0) {
+            // Hide categories that are kept in the registry for backwards-
+            // compatibility but shouldn't be user-visible. The legacy
+            // "surveillance.motion" single-stream category is superseded
+            // by the Notice / Alert / Critical tier set below it.
+            var HIDDEN_IDS = { 'surveillance.motion': true };
+            var visible = state.categories.filter(function (c) {
+                return !HIDDEN_IDS[c.id];
+            });
+
+            if (visible.length === 0) {
                 container.innerHTML = '<div class="notif-card"><div class="empty-state">' + escapeHtml(BYD.i18n.t('notif.no_categories')) + '</div></div>';
                 return;
             }
@@ -706,7 +760,7 @@
             // Group by 'group'
             var groups = {};
             var order = [];
-            state.categories.forEach(function (c) {
+            visible.forEach(function (c) {
                 var g = c.group || 'Other';
                 if (!groups[g]) { groups[g] = []; order.push(g); }
                 groups[g].push(c);

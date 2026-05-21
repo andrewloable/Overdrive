@@ -2,6 +2,8 @@ package com.overdrive.app.ui.fragment
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -12,28 +14,53 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.card.MaterialCardView
 import com.overdrive.app.R
-import com.overdrive.app.abrp.AbrpTokenConfig
-import com.overdrive.app.mqtt.MqttConnectionConfig
+import com.overdrive.app.config.UnifiedConfigManager
 import com.overdrive.app.telegram.impl.BotTokenConfig
+import com.overdrive.app.ui.util.navigateDrillDown
+import com.overdrive.app.util.DaemonHttpClient
 import org.json.JSONArray
-import java.io.File
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.util.concurrent.Executors
 
 /**
- * Integrations roll-up: Telegram / ABRP / MQTT cards. Each card navigates to
- * the existing per-integration destination so we don't duplicate any of the
- * native or web settings surfaces.
+ * Integrations roll-up: Telegram / ABRP / MQTT / BYD Cloud cards. Each card
+ * navigates to the existing per-integration destination so we don't duplicate
+ * any of the native or web settings surfaces.
  *
- * Per-card status row shows token-presence at a glance:
- *   - Telegram → BotTokenConfig#hasToken (encrypted SharedPreferences).
- *   - ABRP     → AbrpTokenConfig#hasToken (encrypted SharedPreferences).
- *   - MQTT     → at least one configured connection in the daemon's JSON store
- *                at /data/local/tmp/mqtt_connections.json. The app process can
- *                read that path even though it can't write to it.
+ * Per-card status row reflects live state:
+ *   - Telegram  → BotTokenConfig#hasToken (encrypted SharedPreferences in this
+ *                 process — fast and correct).
+ *   - ABRP      → daemon HTTP /api/abrp/status (upload service running) — the
+ *                 token and config live in the daemon, not the app.
+ *   - MQTT      → daemon HTTP /api/mqtt/status (any connection currently
+ *                 connected) — the connection store is owned by the daemon
+ *                 under /data/local/tmp/ which is not readable by the app UID.
+ *   - BYD Cloud → daemon HTTP /api/bydcloud/status (credentials configured) —
+ *                 raw password is never stored, only derived key hashes live
+ *                 in the unified config.
  *
- * Card click handlers are unchanged — the dot+label binding is purely visual.
+ * Daemon calls run on a background executor and poll every 3 s while the
+ * fragment is resumed so the dot/label tracks reconnects without manual
+ * refresh. Card click handlers are unchanged.
  */
 class IntegrationsFragment : Fragment() {
+
+    private val executor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val daemonPoll = object : Runnable {
+        override fun run() {
+            refreshDaemonStatuses()
+            mainHandler.postDelayed(this, POLL_INTERVAL_MS)
+        }
+    }
+
+    private var telegramConfigured: Boolean = false
+    private var abrpConnected: Boolean = false
+    private var mqttConnected: Boolean = false
+    private var bydCloudConfigured: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,89 +71,144 @@ class IntegrationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<View>(R.id.cardTelegram).setOnClickListener {
-            findNavController().navigate(R.id.telegramSettingsFragment)
+            findNavController().navigateDrillDown(R.id.telegramSettingsFragment)
         }
         view.findViewById<View>(R.id.cardAbrp).setOnClickListener {
-            findNavController().navigate(R.id.abrpSettingsFragment)
+            findNavController().navigateDrillDown(R.id.abrpSettingsFragment)
         }
         view.findViewById<View>(R.id.cardMqtt).setOnClickListener {
-            findNavController().navigate(R.id.mqttFragment)
+            findNavController().navigateDrillDown(R.id.mqttFragment)
+        }
+        view.findViewById<View>(R.id.cardBydCloud).setOnClickListener {
+            findNavController().navigateDrillDown(R.id.bydCloudFragment)
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Token-presence is a fast SharedPreferences read; the MQTT JSON file
-        // is a few KB at most and lives on internal storage. Doing this on the
-        // main thread is acceptable for an integrations roll-up.
-        refreshAllStatuses()
+        // Telegram is a same-process encrypted-prefs read; safe on main thread.
+        refreshTelegramStatus()
+        // ABRP and MQTT live in the daemon — kick off an immediate poll and
+        // schedule periodic refreshes so reconnects/disconnects show up.
+        mainHandler.post(daemonPoll)
     }
 
-    private fun refreshAllStatuses() {
+    override fun onPause() {
+        super.onPause()
+        mainHandler.removeCallbacks(daemonPoll)
+    }
+
+    // ============== Refresh ==============
+
+    private fun refreshTelegramStatus() {
         val view = view ?: return
         val ctx = context ?: return
-
+        telegramConfigured = isTelegramConfigured(ctx)
         bindStatus(
             view,
             dotId = R.id.dotTelegram,
             labelId = R.id.tvTelegramStatus,
-            configured = isTelegramConfigured(ctx)
+            configured = telegramConfigured
         )
-        bindStatus(
-            view,
-            dotId = R.id.dotAbrp,
-            labelId = R.id.tvAbrpStatus,
-            configured = isAbrpConfigured(ctx)
-        )
-        bindStatus(
-            view,
-            dotId = R.id.dotMqtt,
-            labelId = R.id.tvMqttStatus,
-            configured = isMqttConfigured()
-        )
+        bindHero(view)
+    }
+
+    private fun refreshDaemonStatuses() {
+        executor.execute {
+            // Telegram lives in the unified config (cross-process); a forceReload
+            // before reading guarantees the dot tracks daemon-side writes that
+            // happen while this Fragment is still on screen (e.g. user saves a
+            // token in another web tab). Cheap — one JSON re-parse.
+            val ctx = context
+            val telegram = ctx?.let { isTelegramConfigured(it) } ?: telegramConfigured
+            val abrp = fetchAbrpRunning()
+            val mqtt = fetchMqttAnyConnected()
+            val bydCloud = fetchBydCloudConfigured()
+            mainHandler.post {
+                val v = view ?: return@post
+                telegramConfigured = telegram
+                abrpConnected = abrp
+                mqttConnected = mqtt
+                bydCloudConfigured = bydCloud
+                bindStatus(v, R.id.dotTelegram, R.id.tvTelegramStatus, telegramConfigured)
+                bindStatus(v, R.id.dotAbrp, R.id.tvAbrpStatus, abrpConnected)
+                bindStatus(v, R.id.dotMqtt, R.id.tvMqttStatus, mqttConnected)
+                bindStatus(v, R.id.dotBydCloud, R.id.tvBydCloudStatus, bydCloudConfigured)
+                bindHero(v)
+            }
+        }
     }
 
     // ============== Probes ==============
 
     private fun isTelegramConfigured(ctx: Context): Boolean = try {
+        // Force a re-read from disk before checking. The token is written by
+        // the daemon process (web UI POST → /api/telegram/token → daemon
+        // writes /data/local/tmp/overdrive_config.json), and this Fragment
+        // runs in the app process with its own UnifiedConfigManager cache.
+        // Without forceReload() the in-process cache can return the value
+        // observed at app launch — pre-token-save — making the Integrations
+        // card show "Not set up" indefinitely after a successful save.
+        // Same pattern TelegramApiHandler.handleStatus uses for the same
+        // reason. Cost: one re-parse of a small JSON file on each onResume.
+        UnifiedConfigManager.forceReload()
         BotTokenConfig(ctx.applicationContext).hasToken()
     } catch (_: Throwable) {
         false
     }
 
-    private fun isAbrpConfigured(ctx: Context): Boolean = try {
-        AbrpTokenConfig(ctx.applicationContext).hasToken()
-    } catch (_: Throwable) {
-        false
+    /**
+     * ABRP is "connected" when the daemon's upload service reports running.
+     * Running implies a token is configured, the user enabled it, and the
+     * scheduler is alive.
+     */
+    private fun fetchAbrpRunning(): Boolean {
+        val json = fetchDaemonJson("/api/abrp/status") ?: return false
+        if (!json.optBoolean("success", false)) return false
+        val status = json.optJSONObject("status") ?: return false
+        return status.optBoolean("running", false)
     }
 
     /**
-     * MQTT is "configured" when at least one connection in the store has a
-     * broker URL + topic populated. We read the store file directly because
-     * MqttConnectionStore is owned by the daemon process — there's no app-side
-     * singleton to consult. The path is world-readable in practice (created by
-     * an ADB shell) so the app process can read it even though it can't write.
+     * MQTT is "connected" when at least one configured connection in the
+     * daemon's manager is currently connected to its broker.
      */
-    private fun isMqttConfigured(): Boolean = try {
-        val file = File(MQTT_CONFIG_PATH)
-        if (!file.exists() || !file.canRead() || file.length() <= 0L) {
-            false
-        } else {
-            val text = file.readText(Charsets.UTF_8)
-            val arr = JSONArray(text)
-            var anyConfigured = false
-            for (i in 0 until arr.length()) {
-                val obj = arr.optJSONObject(i) ?: continue
-                val cfg = MqttConnectionConfig.fromJson(obj)
-                if (cfg.isConfigured) {
-                    anyConfigured = true
-                    break
-                }
-            }
-            anyConfigured
+    private fun fetchMqttAnyConnected(): Boolean {
+        val json = fetchDaemonJson("/api/mqtt/status") ?: return false
+        if (!json.optBoolean("success", false)) return false
+        val arr: JSONArray = json.optJSONArray("connections") ?: return false
+        for (i in 0 until arr.length()) {
+            val entry = arr.optJSONObject(i) ?: continue
+            val status = entry.optJSONObject("status") ?: continue
+            if (status.optBoolean("connected", false)) return true
         }
-    } catch (_: Throwable) {
-        false
+        return false
+    }
+
+    /**
+     * BYD Cloud is "configured" when the daemon reports stored credentials in
+     * the unified config. The raw password is never persisted — only derived
+     * key hashes — so a configured state means the user has completed setup.
+     */
+    private fun fetchBydCloudConfigured(): Boolean {
+        val json = fetchDaemonJson("/api/bydcloud/status") ?: return false
+        if (!json.optBoolean("success", false)) return false
+        val status = json.optJSONObject("status") ?: return false
+        return status.optBoolean("configured", false)
+    }
+
+    private fun fetchDaemonJson(path: String): JSONObject? {
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = DaemonHttpClient.open(path, "GET", 1500, 2500)
+            if (conn.responseCode != 200) return null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            if (body.isEmpty()) null else JSONObject(body)
+        } catch (_: Throwable) {
+            null
+        } finally {
+            try { conn?.disconnect() } catch (_: Throwable) {}
+        }
     }
 
     // ============== Binding helpers ==============
@@ -159,6 +241,28 @@ class IntegrationsFragment : Fragment() {
         dot.setBackgroundResource(dotRes)
     }
 
+    private fun bindHero(root: View) {
+        val pill = root.findViewById<MaterialCardView>(R.id.heroStatusPill) ?: return
+        val label = root.findViewById<TextView>(R.id.tvHeroStatus) ?: return
+
+        val allReady = telegramConfigured && abrpConnected && mqttConnected && bydCloudConfigured
+        @AttrRes val bgAttr: Int
+        @AttrRes val fgAttr: Int
+        @StringRes val textRes: Int
+        if (allReady) {
+            bgAttr = com.google.android.material.R.attr.colorPrimaryContainer
+            fgAttr = com.google.android.material.R.attr.colorOnPrimaryContainer
+            textRes = R.string.integrations_status_configured
+        } else {
+            bgAttr = com.google.android.material.R.attr.colorSecondaryContainer
+            fgAttr = com.google.android.material.R.attr.colorOnSecondaryContainer
+            textRes = R.string.integrations_status_unknown
+        }
+        pill.setCardBackgroundColor(resolveAttrColor(label.context, bgAttr))
+        label.setText(textRes)
+        label.setTextColor(resolveAttrColor(label.context, fgAttr))
+    }
+
     private fun resolveAttrColor(ctx: Context, @AttrRes attr: Int): Int {
         val tv = TypedValue()
         ctx.theme.resolveAttribute(attr, tv, true)
@@ -166,6 +270,6 @@ class IntegrationsFragment : Fragment() {
     }
 
     companion object {
-        private const val MQTT_CONFIG_PATH = "/data/local/tmp/mqtt_connections.json"
+        private const val POLL_INTERVAL_MS = 3000L
     }
 }

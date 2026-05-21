@@ -125,6 +125,20 @@
     "recording_caption_no_label": " रिकॉर्डिंग - {0}s",
     "proximity_alert": " निकटता अलर्ट समय: {0} ट्रिगर: {1} ({2}) रिकॉर्डिंग शुरू..."
   },
+  "vehicle_control": {
+    "cloud_required": "इस नियंत्रण का उपयोग करने के लिए सेटिंग्स में एक BYD खाता कनेक्ट करें",
+    "cloud_sent": "बादल के माध्यम से भेजा जाता है",
+    "cloud_unavailable_used_local": "क्लाउड अनुपलब्ध  इस्तेमाल किया गया प्रत्यक्ष कनेक्शन",
+    "local_sent": "प्रत्यक्ष कनेक्शन पर भेजा गया",
+    "cloud_offline_used_local": "क्लाउड ऑफ़लाइन  इस्तेमाल किया सीधा कनेक्शन",
+    "local_unavailable_used_cloud": "डायरेक्ट कनेक्शन उपलब्ध नहीं — क्लाउड से भेजा गया",
+    "cloud_failed": "कार तक नहीं पहुंच सका  वाहन जागने पर फिर से प्रयास करें",
+    "rate_limited": "एक कमांड अभी भी चल रहा है  कुछ सेकंड प्रतीक्षा करें",
+    "not_supported": "यह नियंत्रण अभी उपलब्ध नहीं है",
+    "find_car_label": "कार खोजें",
+    "battery_heat_label": "गर्मी की बल्लेबाजी",
+    "close_all_windows_label": "सभी खिड़कियां बंद करें"
+  },
   "messages": {
     "logged_out": "लॉग आउट",
     "bydcloud_connected": "सफलतापूर्वक कनेक्ट किया गया",

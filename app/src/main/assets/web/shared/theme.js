@@ -369,28 +369,49 @@
     }
 
     // ─── Step 6: dynamic favicon / brand-logo selection ────────────────
+    // Two icon families:
+    //   • Baked tile (app-icon-{light,dark}.webp) — bg + glyph, used for
+    //     favicon / apple-touch-icon where the surface has to be self-contained.
+    //   • Transparent glyph (app-icon-glyph-{light,dark}.webp) — alpha + glyph
+    //     only, used for in-page .brand-logo so the container can paint its
+    //     own background from design-system tokens (no luminance mismatch).
     function applyThemeIcons(effective) {
         try {
-            var light = '/shared/app-icon-light.webp';
-            var dark = '/shared/app-icon-dark.webp';
-            var choose = (effective === 'dark') ? dark : light;
+            var isDark = (effective === 'dark');
+            var tile = isDark ? '/shared/app-icon-dark.webp'        : '/shared/app-icon-light.webp';
+            var glyph = isDark ? '/shared/app-icon-glyph-dark.webp' : '/shared/app-icon-glyph-light.webp';
             var fav = document.querySelector('link[rel~="icon"]');
             var at = document.querySelector('link[rel~="apple-touch-icon"]');
             var imgs = document.querySelectorAll('.brand-logo img');
-            if (fav) fav.href = choose;
-            if (at) at.href = choose;
-            for (var i = 0; i < imgs.length; i++) imgs[i].src = choose;
+            if (fav) fav.href = tile;
+            if (at) at.href = tile;
+            for (var i = 0; i < imgs.length; i++) imgs[i].src = glyph;
         } catch (e) { console.warn('applyThemeIcons', e); }
     }
 
-    // Initial apply and observe changes to data-theme
+    // Expose so late-mounted markup (sidebar injected by app-shell.js after
+    // DOMContentLoaded) can re-apply once its <img> elements exist.
+    window.BYD.theme.applyIcons = function () {
+        var v = document.documentElement.getAttribute('data-theme');
+        applyThemeIcons(v === 'light' ? 'light' : 'dark');
+    };
+
+    // Initial apply (favicon only — brand-logo imgs may not exist yet) and
+    // observe future data-theme changes.
     try {
         applyThemeIcons(resolveEffective(readStoredTheme()));
+        // Re-apply on DOMContentLoaded so any markup injected synchronously
+        // during parse (or by scripts running before us) picks up the right
+        // icon. app-shell.js also calls BYD.theme.applyIcons() after mount.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', window.BYD.theme.applyIcons);
+        } else {
+            window.BYD.theme.applyIcons();
+        }
         var mo = new MutationObserver(function (mutations) {
             mutations.forEach(function (m) {
                 if (m.attributeName === 'data-theme') {
-                    var v = document.documentElement.getAttribute('data-theme');
-                    applyThemeIcons(v === 'light' ? 'light' : 'dark');
+                    window.BYD.theme.applyIcons();
                 }
             });
         });

@@ -64,8 +64,14 @@ BYD.map = {
             icon: this.createCarIcon(),
             rotationAngle: 0
         }).addTo(this.map);
-        
+
         this.carMarker.bindPopup('<b>' + BYD.i18n.t('map.your_vehicle') + '</b><br>' + BYD.i18n.t('map.your_vehicle_sub'));
+
+        // Mount the top-down 3D vehicle render onto the marker canvas
+        // now that Leaflet has injected the divIcon's HTML into the
+        // map pane. mountVehicleCanvas is idempotent and tracks the
+        // sidebar's (model, colour) selection automatically.
+        this._mountCarIcon3d();
         
         this.isInitialized = true;
         
@@ -81,10 +87,35 @@ BYD.map = {
         if (BYD.core && BYD.core.lastStatus && BYD.core.lastStatus.gps) {
             this.updateFromStatus(BYD.core.lastStatus.gps);
         }
-        
+
         console.log('[Map] Initialized');
     },
     
+    /**
+     * Mount OverdriveEvCard3D onto the map marker canvas. The canvas
+     * is injected by Leaflet inside `createCarIcon()`'s divIcon HTML,
+     * so we reach it through the live #carIconCanvas in the map pane
+     * (Leaflet renders the divIcon to a positioned <div> with the same
+     * DOM contents we returned).
+     *
+     * If the user's vehicle selection changes (e.g. they pick a new
+     * model on vehicle-control.html and call OverdriveAppShell.refresh
+     * Vehicle()), app-shell.js fans the change out to all aux instances
+     * — so the marker stays in sync without us re-mounting.
+     */
+    _mountCarIcon3d() {
+        const canvas = document.getElementById('carIconCanvas');
+        if (!canvas) return;
+        const shell = window.OverdriveAppShell;
+        if (!shell || typeof shell.mountVehicleCanvas !== 'function') {
+            // Shell loaded after map.init — listen for the ready event
+            // so we still get the 3D render once the API exists.
+            document.addEventListener('app-shell:ready', () => this._mountCarIcon3d(), { once: true });
+            return;
+        }
+        shell.mountVehicleCanvas(canvas, { view: 'top' });
+    },
+
     /**
      * Start GPS tracking on the backend
      */
@@ -134,14 +165,21 @@ BYD.map = {
     },
     
     /**
-     * Create custom car icon using the car-icon-map.webp image (smaller version)
+     * Create custom car icon. Renders the user's selected GLB top-down
+     * via OverdriveEvCard3D — same model and paint colour as the
+     * sidebar EV-card and the Live View camera selector. The wrapper
+     * keeps the same dimensions as the legacy car-icon-map.webp PNG so
+     * Leaflet's iconSize / iconAnchor stay valid and rotation by
+     * `wrapper.style.transform = rotate(heading)` continues to work
+     * (the canvas rotates as a 2D bitmap; the top-down render points
+     * forward along canvas-up so heading=0 = front pointing north).
      */
     createCarIcon() {
         return L.divIcon({
             className: 'car-map-marker',
             html: `
                 <div class="car-icon-wrapper" id="carIconWrapper">
-                    <img src="../shared/car-icon-map.webp" class="car-icon-img" alt="Car">
+                    <canvas id="carIconCanvas" class="car-icon-img" aria-hidden="true"></canvas>
                     <div class="car-pulse"></div>
                 </div>
             `,

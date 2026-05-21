@@ -125,6 +125,20 @@
     "recording_caption_no_label": "วิดีโอ - {0} วิ",
     "proximity_alert": "เตือนเข้าใกล้: {0} บริเวณ: {1} ({2}) กำลังเริ่มบันทึก..."
   },
+  "vehicle_control": {
+    "cloud_required": "เชื่อมบัญชี BYD ในการตั้งค่า เพื่อใช้การควบคุมนี้",
+    "cloud_sent": "ส่งผ่านเมฆ",
+    "cloud_unavailable_used_local": "คลาวไม่ได้ใช้งาน  การเชื่อมต่อตรงที่ใช้งาน",
+    "local_sent": "ส่งผ่านการเชื่อมต่อตรง",
+    "cloud_offline_used_local": "คลาว offline  การเชื่อมต่อโดยตรงที่ใช้",
+    "local_unavailable_used_cloud": "การเชื่อมต่อโดยตรงไม่พร้อมใช้งาน — ส่งผ่านคลาวด์",
+    "cloud_failed": "ไม่สามารถหารถได้  ลองอีกครั้งเมื่อรถตื่น",
+    "rate_limited": "คําสั่งยังคงอยู่ในกระบวนการ รอไม่กี่วินาที",
+    "not_supported": "การควบคุมนี้ไม่ได้มีอยู่ตอนนี้",
+    "find_car_label": "ค้นหารถ",
+    "battery_heat_label": "แพทเทอรี่",
+    "close_all_windows_label": "ทั้งหมดปิดหน้าต่าง"
+  },
   "messages": {
     "logged_out": "ออกจากระบบแล้ว",
     "bydcloud_connected": "เชื่อมต่อสำเร็จ",

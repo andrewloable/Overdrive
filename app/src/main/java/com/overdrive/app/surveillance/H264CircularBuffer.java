@@ -30,9 +30,14 @@ public class H264CircularBuffer {
     // 256KB provides generous headroom for variable bitrate spikes
     private static final int MAX_PACKET_SIZE = 256 * 1024;
     
-    // POOL SIZE: 5 seconds @ 15 FPS = 75 packets + 25 margin = 100
-    // Total memory: 100 × 128KB = 12.5MB (fits in 256MB heap easily)
-    private static final int POOL_CAPACITY = 100;
+    // POOL CEILING: hard cap to bound peak memory regardless of fps. With
+    // 30 fps × 5 s × 256KB = 38 MB worst-case, we allow up to 200 packets
+    // (~50 MB peak). Pool sizing inside the ctor uses configured fps and
+    // adds 25% headroom; this constant only kicks in if duration × fps
+    // somehow exceeds the cap.
+    private static final int POOL_CAPACITY = 200;
+    /** Default fps used when caller doesn't specify. Conservative. */
+    private static final int DEFAULT_FPS_HINT = 15;
     
     /**
      * Mutable Packet wrapper (reusable).
@@ -48,23 +53,30 @@ public class H264CircularBuffer {
             this.info = new MediaCodec.BufferInfo();
         }
         
-        // Copy data without allocation
-        public void copyFrom(ByteBuffer src, MediaCodec.BufferInfo srcInfo) {
+        /**
+         * Copies the source bytes into the pooled direct buffer.
+         *
+         * @return {@code true} on success, {@code false} if the source is
+         *         larger than {@link #MAX_PACKET_SIZE} (caller MUST drop
+         *         the packet — we never grow the buffer at runtime since
+         *         the discarded direct buffer would only be reclaimed via
+         *         the Cleaner / finalizer, leaking native heap until then).
+         */
+        public boolean copyFrom(ByteBuffer src, MediaCodec.BufferInfo srcInfo) {
+            if (this.data.capacity() < srcInfo.size) {
+                // Oversized I-frame spike. Drop rather than reallocate: the
+                // old direct buffer would otherwise wait for the Cleaner.
+                return false;
+            }
             this.info.set(0, srcInfo.size, srcInfo.presentationTimeUs, srcInfo.flags);
             this.isKeyFrame = (srcInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
-            
+
             this.data.clear();
-            
-            // Safety check: resize if needed (rare after increasing MAX_PACKET_SIZE)
-            if (this.data.capacity() < srcInfo.size) {
-                // Silent resize - not critical, just allocate larger buffer
-                this.data = ByteBuffer.allocateDirect(srcInfo.size + 32 * 1024);  // Add 32KB headroom
-            }
-            
             src.position(srcInfo.offset);
             src.limit(srcInfo.offset + srcInfo.size);
             this.data.put(src);
             this.data.flip();
+            return true;
         }
     }
     
@@ -81,31 +93,47 @@ public class H264CircularBuffer {
     private final int minKeyframes;  // Minimum keyframes to keep based on duration
     
     /**
-     * Creates a circular buffer with specified duration.
-     * 
-     * @param durationSeconds Buffer duration in seconds (e.g., 10 for 10 seconds)
+     * Creates a circular buffer sized for the configured pre-record window.
+     * Uses a default fps hint of 15. Prefer the (durationSeconds, fps) ctor
+     * so pool capacity is correct for the actual encoder rate.
      */
     public H264CircularBuffer(int durationSeconds) {
+        this(durationSeconds, DEFAULT_FPS_HINT);
+    }
+
+    /**
+     * Creates a circular buffer sized for {@code durationSeconds × fps}
+     * packets plus 25% headroom, capped at POOL_CAPACITY.
+     *
+     * @param durationSeconds Buffer duration in seconds (e.g., 5)
+     * @param fps             Encoder fps used to size the pool. Pass the
+     *                        encoder's KEY_FRAME_RATE so 30 fps recordings
+     *                        don't exhaust the pool and trigger emergency
+     *                        allocations that leak GC pressure under load.
+     */
+    public H264CircularBuffer(int durationSeconds, int fps) {
         this.maxDurationUs = durationSeconds * 1_000_000L;
-        
-        // Calculate minimum keyframes needed based on duration
-        // With 2-second I-frame interval, we need (duration / 2) + 1 keyframes
-        // Add 1 extra for safety margin
+
+        // Calculate minimum keyframes needed based on duration. With 2-second
+        // I-frame interval, we need (duration / 2) + 1 keyframes; +1 margin.
         this.minKeyframes = (durationSeconds / 2) + 2;
-        
-        // Calculate pool size based on duration (15 FPS assumed)
-        // Add 25% margin for safety
-        int estimatedPackets = durationSeconds * 15;
+
+        // Pool size = duration × fps × 1.25, clamped to POOL_CAPACITY.
+        // Clamped fps to [10..30] so a bogus value can't blow up sizing.
+        int safeFps = Math.max(10, Math.min(30, fps));
+        int estimatedPackets = durationSeconds * safeFps;
         int poolSize = Math.min(estimatedPackets + (estimatedPackets / 4), POOL_CAPACITY);
-        
-        // Pre-allocate the pool (done once at startup)
-        logger.info("Pre-allocating circular buffer pool (" + poolSize + " packets × " + 
-                   (MAX_PACKET_SIZE / 1024) + "KB = " + (poolSize * MAX_PACKET_SIZE / 1024 / 1024) + "MB)...");
+
+        logger.info("Pre-allocating circular buffer pool (" + poolSize + " packets × "
+                + (MAX_PACKET_SIZE / 1024) + "KB = "
+                + (poolSize * MAX_PACKET_SIZE / 1024 / 1024) + "MB) for "
+                + durationSeconds + "s @ " + safeFps + "fps...");
         pool = new ArrayBlockingQueue<>(poolSize);
         for (int i = 0; i < poolSize; i++) {
             pool.offer(new Packet(MAX_PACKET_SIZE));
         }
-        logger.info("Buffer pool ready (" + durationSeconds + "s, minKeyframes=" + minKeyframes + "). Zero-allocation mode active.");
+        logger.info("Buffer pool ready (" + durationSeconds + "s, minKeyframes="
+                + minKeyframes + "). Zero-allocation mode active.");
     }
 
     /**
@@ -117,7 +145,7 @@ public class H264CircularBuffer {
     public synchronized void add(ByteBuffer data, MediaCodec.BufferInfo info) {
         // Borrow a packet from the pool (Instant - no allocation)
         Packet packet = pool.poll();
-        
+
         if (packet == null) {
             // Pool empty? We are generating frames faster than pruning.
             // Force prune to recycle an old packet.
@@ -125,22 +153,34 @@ public class H264CircularBuffer {
                 recyclePacket(buffer.removeFirst());
                 packet = pool.poll();
             }
-            
-            // Still null? Emergency allocation (should never happen with tuned POOL_CAPACITY)
+
+            // Still null? Drop this frame rather than emergency-allocating
+            // a fresh direct ByteBuffer. An emergency packet can't be safely
+            // returned to a full pool (recyclePacket would have to drop it,
+            // leaking its 256KB direct buffer until the Cleaner runs). Pool
+            // sizing already accounts for duration × fps × 1.25; sustained
+            // exhaustion means the encoder is mis-paced, not a transient.
             if (packet == null) {
-                packet = new Packet(MAX_PACKET_SIZE);
-                logger.warn("Pool exhausted! Forced allocation.");
+                logger.warn("Pool exhausted - dropping packet (size=" + info.size
+                        + ", flags=" + info.flags + ")");
+                return;
             }
         }
-        
-        // Copy data (Fast memcpy, no allocation)
-        packet.copyFrom(data, info);
+
+        // Copy data (Fast memcpy, no allocation). Returns false if the source
+        // is larger than MAX_PACKET_SIZE — drop and recycle in that case.
+        if (!packet.copyFrom(data, info)) {
+            logger.warn("Dropping oversized packet (size=" + info.size
+                    + " > " + MAX_PACKET_SIZE + ")");
+            pool.offer(packet);  // Pool slot still owned by us; return it.
+            return;
+        }
         buffer.addLast(packet);
-        
+
         if (packet.isKeyFrame) {
             keyframeCount++;
         }
-        
+
         addCount++;
         
         // Update duration
@@ -160,8 +200,11 @@ public class H264CircularBuffer {
     }
     
     /**
-     * Recycles a packet back to the pool.
-     * 
+     * Recycles a packet back to the pool. Pool capacity equals the number of
+     * packets ever allocated (we never allocate beyond pool size; oversize /
+     * exhaustion paths drop instead — see {@link #add}). offer() therefore
+     * always succeeds.
+     *
      * @param p Packet to recycle
      */
     private void recyclePacket(Packet p) {
@@ -170,7 +213,7 @@ public class H264CircularBuffer {
                 keyframeCount--;
             }
             p.data.clear();
-            pool.offer(p);  // Return to pool for reuse
+            pool.offer(p);
         }
     }
     

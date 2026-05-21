@@ -238,12 +238,15 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         } else if ("AccSentryDaemon".equals(className)) {
             return startAccSentryDaemonWithWatchdog(apkPath, ctx);
         } else {
-            // Generic daemon launch (SentryDaemon etc.)
+            // Generic daemon launch (SentryDaemon etc.).
+            // spawnDetached, NOT execShell — execShell would drain stdout
+            // until the grandchild app_process exits (i.e. forever) and
+            // freeze the polling thread.
             String fullClass = "com.overdrive.app.daemon." + className;
             String cmd = String.format(
-                "nohup CLASSPATH=%s app_process /system/bin --nice-name=%s %s > /data/local/tmp/%s.log 2>&1 &",
+                "CLASSPATH=%s app_process /system/bin --nice-name=%s %s >> /data/local/tmp/%s.log 2>&1",
                 apkPath, className.toLowerCase(), fullClass, className.toLowerCase());
-            ctx.execShell(cmd);
+            ctx.spawnDetached(cmd);
             try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
             return true;
         }
@@ -388,10 +391,13 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         }
         ctx.log("Script written (" + verify.trim() + " lines)");
         
-        // Step 3: Launch watchdog script (same as DaemonLauncher.launchCamDaemonScript)
+        // Step 3: Launch watchdog script (same as DaemonLauncher.launchCamDaemonScript).
+        // spawnDetached — the watchdog re-spawns the daemon forever, so its
+        // stdio never EOFs. Using execShell here would freeze the polling
+        // thread for the lifetime of the watchdog (i.e. until reboot).
         ctx.log("Launching watchdog...");
-        ctx.execShell("nohup sh " + scriptPath + " > /dev/null 2>&1 &");
-        
+        ctx.spawnDetached("sh " + scriptPath);
+
         // Step 4: Verify daemon is running
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
         boolean running = isDaemonRunning(processName, ctx);
@@ -437,10 +443,10 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         ctx.execShell("echo 'done' >> " + scriptPath);
         ctx.execShell("chmod 755 " + scriptPath);
         
-        // Step 3: Launch
+        // Step 3: Launch — spawnDetached, see CameraDaemon launch above for why.
         ctx.log("Launching watchdog...");
-        ctx.execShell("nohup sh " + scriptPath + " > /dev/null 2>&1 &");
-        
+        ctx.spawnDetached("sh " + scriptPath);
+
         // Step 4: Verify
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
         boolean running = isDaemonRunning(processName, ctx);
@@ -602,9 +608,17 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
                 ctx.log("Unknown shell daemon: " + name);
                 return false;
         }
-        
-        ctx.execShell(cmd);
-        
+
+        // Each per-daemon `cmd` above is shaped as `nohup … > log 2>&1 &`.
+        // spawnDetached wraps in `(<inner> </dev/null &)`, so we strip the
+        // outer `nohup` prefix and trailing ` &` to avoid double-backgrounding
+        // syntax noise. The `> log 2>&1` redirect stays — that's the
+        // daemon's own log file. Reparenting to init inside the (...&)
+        // wrapper handles SIGHUP, so dropping `nohup` is safe.
+        String inner = cmd.startsWith("nohup ") ? cmd.substring(6) : cmd;
+        if (inner.endsWith(" &")) inner = inner.substring(0, inner.length() - 2);
+        ctx.spawnDetached(inner);
+
         // Wait and verify
         try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
         
@@ -700,19 +714,12 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
             ctx.execShell("echo '" + url + "' > /data/local/tmp/tunnel_url.txt");
             ctx.log("Tunnel URL saved to file");
             
-            // Send notification message to owner
-            // Read owner_chat_id from config file
-            String ownerStr = ctx.execShell("grep owner_chat_id /data/local/tmp/telegram_config.properties 2>/dev/null | cut -d= -f2");
-            if (ownerStr != null && !ownerStr.trim().isEmpty()) {
-                try {
-                    long ownerChatId = Long.parseLong(ownerStr.trim());
-                    if (ownerChatId > 0) {
-                        ctx.sendMessage(ownerChatId, "🌐 *Tunnel URL*\n" + url);
-                        ctx.log("Tunnel URL notification sent to owner");
-                    }
-                } catch (NumberFormatException e) {
-                    ctx.log("Invalid owner_chat_id in config");
-                }
+            // Send notification message to owner — read from the unified
+            // config (single source of truth shared with the app).
+            long ownerChatId = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            if (ownerChatId > 0) {
+                ctx.sendMessage(ownerChatId, "🌐 *Tunnel URL*\n" + url);
+                ctx.log("Tunnel URL notification sent to owner");
             }
         } catch (Exception e) {
             ctx.log("Error saving tunnel URL: " + e.getMessage());

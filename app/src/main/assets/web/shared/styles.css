@@ -1,56 +1,47 @@
 /**
- * BYD Champ - Professional Dashboard UI
- * Responsive sidebar layout with floating PiP camera
+ * Overdrive — primary stylesheet.
+ *
+ * The base palette / surface / shape / type / motion tokens are imported
+ * from design-tokens.css (generated from dev/design-tokens.json, which
+ * mirrors the native Android M3 palette). This file only defines the
+ * supplemental tokens that don't have a native counterpart (chart palette,
+ * translucent panel-overlays, layout dimensions) and the actual CSS rules.
  */
+@import url("design-tokens.css");
+@import url("app-shell.css");
+@import url("app-tabs.css");
+@import url("app-collapse.css");
 
 :root {
-    /* Brand Colors */
-    --brand-primary: #00D4AA;
-    --brand-secondary: #0EA5E9;
-    --brand-gradient: linear-gradient(135deg, #00D4AA 0%, #0EA5E9 100%);
-    
-    /* Dark Theme */
-    --bg-base: #0F0F12;
-    --bg-surface: #16161A;
-    --bg-elevated: #1E1E24;
-    --bg-hover: #26262E;
+    --brand-gradient: linear-gradient(135deg, var(--primary) 0%, var(--tertiary) 100%);
     --bg-glass: rgba(22, 22, 26, 0.85);
-    
-    /* Text */
-    --text-primary: #FFFFFF;
-    --text-secondary: #A1A1AA;
-    --text-muted: #71717A;
-    
-    /* Status */
-    --success: #22C55E;
-    --warning: #F59E0B;
-    --danger: #EF4444;
 
     /* Chart palette — accents used by data visualizations / legends.
-       These are mid-luminance hues that read OK on either theme; the
-       light-theme overlay below tweaks them for AA contrast on light
-       surfaces. Use these instead of inline hex literals so theme
-       switching cascades through. */
-    --chart-line-1: #00D4AA; /* primary accent line */
-    --chart-line-2: #0EA5E9; /* secondary accent line */
-    --chart-warning: #fbbf24; /* yellow voltage / warning sample */
-    --chart-soh: #a855f7;    /* SOH purple */
-    --chart-batt-1: #2dd4bf; /* battery gradient start (teal) */
-    --chart-batt-2: #06b6d4; /* battery gradient mid (cyan) */
-    --chart-batt-3: #3b82f6; /* battery gradient end (blue) */
+       Mid-luminance hues that read OK on either theme; the light-theme
+       overlay below tweaks them for AA contrast on light surfaces. */
+    --chart-line-1: #00D4AA; /* original brand teal kept as data-viz accent */
+    --chart-line-2: #0EA5E9;
+    --chart-warning: #fbbf24;
+    --chart-soh: #a855f7;
+    --chart-batt-1: #2dd4bf;
+    --chart-batt-2: #06b6d4;
+    --chart-batt-3: #3b82f6;
 
-    /* Borders & Effects */
+    /* Chart canvas labels — read by performance.js via getComputedStyle. */
+    --chart-text: rgba(255, 255, 255, 0.55);
+    --chart-text-strong: #FFFFFF;
+    --chart-grid: rgba(255, 255, 255, 0.06);
+    --chart-crosshair: rgba(255, 255, 255, 0.3);
+    --chart-tooltip-bg: rgba(20, 20, 30, 0.95);
+    --chart-tooltip-border: rgba(255, 255, 255, 0.1);
+    --chart-tooltip-text: #FFFFFF;
+
+    /* Borders & glow */
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-default: rgba(255, 255, 255, 0.1);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
     --shadow-glow: 0 0 20px rgba(0, 212, 170, 0.15);
 
-    /* Overlay surfaces — translucent panels that float over content
-       (toasts, callouts, modal backdrops, fixed cards above maps).
-       Pages used to bake these as raw rgba(10,10,15,…) literals which
-       broke under light theme. The light overrides flip them in lockstep. */
+    /* Translucent overlay surfaces (toasts, modals, cards over maps). */
     --panel-overlay-bg: rgba(10, 10, 15, 0.96);
     --panel-overlay-bg-strong: rgba(15, 15, 20, 0.95);
     --panel-overlay-bg-soft: rgba(0, 0, 0, 0.4);
@@ -58,49 +49,22 @@
     --panel-overlay-bg-deep: rgba(0, 0, 0, 0.6);
     --modal-backdrop: rgba(0, 0, 0, 0.75);
     --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
-    
+
     /* Layout */
     --sidebar-width: 260px;
     --header-height: 64px;
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-full: 9999px;
-    
+    --app-bar-height: 64px;
+
     /* Safe Areas */
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ==================================================================
-   LIGHT THEME OVERLAY
-   Applied when <html data-theme="light"> (set by Android WebViewFragment
-   based on the app's current night mode), or via prefers-color-scheme
-   on first paint when the WebView hasn't received the attribute yet.
-   Same variable names so the rest of the stylesheet doesn't change.
-   Brand teal stays identical across themes for identity continuity.
-================================================================== */
+/* Light-theme overrides — only the supplementals; palette / shadow / shape
+   are flipped automatically by design-tokens.css. */
 :root[data-theme="light"] {
-    --brand-primary: #00876C;
-    --brand-secondary: #00658F;
-    --brand-gradient: linear-gradient(135deg, #00876C 0%, #00658F 100%);
-
-    --bg-base: #F7FAF7;
-    --bg-surface: #ECEFEC;
-    --bg-elevated: #E6E9E6;
-    --bg-hover: #E0E4E1;
     --bg-glass: rgba(247, 250, 247, 0.88);
 
-    --text-primary: #181C1A;
-    --text-secondary: #3F4944;
-    --text-muted: #6F7975;
-
-    --success: #1F7A3F;
-    --warning: #A6601C;
-    --danger: #BA1A1A;
-
-    /* Chart palette — light-theme variants. Deeper / more saturated
-       so labels and dots stay legible on the lighter surface tones. */
     --chart-line-1: #00876C;
     --chart-line-2: #00658F;
     --chart-warning: #B45309;
@@ -109,17 +73,18 @@
     --chart-batt-2: #0369A1;
     --chart-batt-3: #1D4ED8;
 
+    --chart-text: rgba(24, 28, 26, 0.70);
+    --chart-text-strong: #181C1A;
+    --chart-grid: rgba(24, 28, 26, 0.10);
+    --chart-crosshair: rgba(24, 28, 26, 0.40);
+    --chart-tooltip-bg: rgba(247, 250, 247, 0.97);
+    --chart-tooltip-border: rgba(24, 28, 26, 0.15);
+    --chart-tooltip-text: #181C1A;
+
     --border-subtle: rgba(0, 0, 0, 0.06);
     --border-default: rgba(0, 0, 0, 0.10);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
     --shadow-glow: 0 0 20px rgba(0, 135, 108, 0.16);
 
-    /* Light-theme overlay surfaces — light tinted glass with darker edges
-       that read on the light cabin display. The dimmed-overlay tokens stay
-       dark (modal backdrops should be neutral so the foreground card pops
-       on either theme). */
     --panel-overlay-bg: rgba(247, 250, 247, 0.96);
     --panel-overlay-bg-strong: rgba(247, 250, 247, 0.92);
     --panel-overlay-bg-soft: rgba(24, 28, 26, 0.10);
@@ -251,11 +216,26 @@ input, select { font-family: inherit; }
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 12px;
+    overflow: hidden;
+    /* Container takes a design-system surface so the tile blends with the
+       page chrome at any elevation. Glyph webp inside is transparent — no
+       luminance mismatch between baked icon bg and surrounding sidebar. */
+    background: var(--bg-elevated);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.16),
+        0 4px 10px rgba(0, 0, 0, 0.14);
+}
+:root[data-theme="dark"] .brand-logo {
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.45),
+        0 4px 12px rgba(0, 0, 0, 0.40),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .brand-logo img {
-    width: 100%;
-    height: 100%;
+    width: 78%;
+    height: 78%;
     object-fit: contain;
 }
 
@@ -353,6 +333,11 @@ input, select { font-family: inherit; }
 /* === SIDEBAR FOOTER === */
 .sidebar-footer {
     padding: 16px;
+    /* Stack the device-status / EV / fuel cards as flex children so a
+       single `gap` separates them consistently across viewports. */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     border-top: 1px solid var(--border-subtle);
 }
 
@@ -599,6 +584,20 @@ input, select { font-family: inherit; }
     font-size: 14px;
     font-weight: 500;
     margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.setting-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .setting-desc {
@@ -831,12 +830,406 @@ input, select { font-family: inherit; }
 
 .checkbox-item input { display: none; }
 
+/* === M3 OUTLINED TEXT FIELD ====================================
+ * SOTA input pattern used by BYD Cloud and any future credential / data-entry
+ * form. Pure CSS — no JS — leans on the "placeholder-shown" trick so the
+ * floating label sits inside the box when empty, then floats to the border
+ * when the input is focused or filled.
+ *
+ * Markup contract:
+ *   <div class="md-field [md-field-trailing]">
+ *     <input class="md-input" id="x" placeholder=" "> <!-- single space placeholder -->
+ *     <label class="md-label" for="x">Label</label>
+ *     <button class="md-trailing-btn">…</button>     <!-- optional, with md-field-trailing -->
+ *     <span class="md-supporting">Helper text</span> <!-- optional -->
+ *   </div>
+ *
+ * The placeholder MUST be exactly " " (a single space) — not empty — so the
+ * :placeholder-shown selector flips at the right time. Real placeholder text
+ * would defeat the floating-label affordance.
+ *
+ * The supporting-text lives BELOW the input box, outside the border — its
+ * height is part of the .md-field's reserved space so the next field's
+ * margin-top doesn't have to know whether helper text is present.
+ *
+ * Theme-aware via design tokens; no raw hex.
+ */
+.md-field {
+    position: relative;
+    margin-bottom: 14px;
+    /* Reserve room above for the floated label so it never collides with the
+       previous field's supporting-text. */
+    padding-top: 6px;
+}
+.md-field:first-of-type { margin-top: 4px; }
+
+/* The actual input wrapper — gives a single hit-area for the bordered box,
+   independent of the supporting-text below it. */
+.md-field-box {
+    position: relative;
+}
+
+.md-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 56px;
+    /* Top padding clears the floated label; bottom is uniform. */
+    padding: 20px 14px 8px;
+    background: transparent;
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color 160ms ease-out,
+                box-shadow 160ms ease-out,
+                background-color 160ms ease-out;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Selects render to match the rest of the site's `.select-control` chip:
+ * elevated bg, M3 radius, muted chevron asset, native option list with the
+ * surface palette. Floating-label still works because the label sibling
+ * floats whenever the select carries a value (selects always do). */
+select.md-input {
+    padding-right: 40px;
+    cursor: pointer;
+    background-color: var(--bg-elevated);
+    border-color: var(--border-subtle);
+    border-radius: var(--radius-md);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px;
+}
+
+:root[data-theme="light"] select.md-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23586068' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+select.md-input:hover {
+    border-color: var(--border-default);
+}
+
+/* The native <option> list is rendered by the OS — browsers expose only
+   `background` and `color` for theming. Match the rest of the site by
+   using the surface token + primary text token, with the OS picking its
+   own selection / hover highlight. */
+select.md-input option {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    padding: 8px;
+}
+
+/* When the select is the floating-label variant, the label needs a matching
+   background swatch behind it so the cut-through of the border reads clean
+   against the elevated select chip (not the surrounding bg-surface). */
+.md-field-box select.md-input ~ .md-label {
+    background: var(--bg-elevated);
+}
+
+.md-input:hover {
+    border-color: var(--text-muted);
+}
+
+.md-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.15);
+}
+
+.md-input::placeholder { color: transparent; }
+
+.md-label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 6px;
+    pointer-events: none;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--text-muted);
+    background: transparent;
+    /* Use a transition curve that lands the label cleanly on the border
+       without overshoot, regardless of input height. */
+    transition: top 160ms ease-out,
+                transform 160ms ease-out,
+                font-size 160ms ease-out,
+                color 160ms ease-out,
+                background-color 160ms ease-out;
+    max-width: calc(100% - 24px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Float the label when the field is focused OR has a value, OR is a select
+   (selects always have a value, so the label always floats). */
+.md-input:focus ~ .md-label,
+.md-input:not(:placeholder-shown) ~ .md-label,
+select.md-input ~ .md-label {
+    top: 0;
+    transform: translateY(-50%) scale(1);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+}
+
+.md-input:focus ~ .md-label {
+    color: var(--brand-primary);
+}
+
+.md-supporting {
+    display: block;
+    margin: 6px 14px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Trailing icon button (eye, clear, etc.) sits inside the field bounds.
+   Pinned to the .md-field-box so its position is independent of the
+   supporting-text length. */
+.md-field-trailing .md-input { padding-right: 52px; }
+
+.md-trailing-btn {
+    position: absolute;
+    right: 6px;
+    /* Center vertically inside the 56px box (height 40px → 8px margin). */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color 160ms ease-out, color 160ms ease-out;
+}
+.md-trailing-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+.md-trailing-btn svg { width: 20px; height: 20px; }
+
+/* PIN field — monospace + centered + letter-spacing for digit clarity.
+   The label aligns the same way as other md-input rows by floating to the
+   border on focus; resting position uses the SAME font-size / line-height
+   as the standard label to keep the baseline consistent across fields. */
+.md-input-pin {
+    text-align: center;
+    letter-spacing: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    /* Slightly more top padding so the centered text doesn't crash into
+       the floated label on focus. */
+    padding-top: 22px;
+    padding-bottom: 6px;
+}
+
+/* === RECOMMENDATION CALLOUT (expandable) =======================
+ * Native <details> + <summary> for the BYD Cloud "use a secondary
+ * authorization profile" guidance. Closed by default; expands to reveal
+ * a numbered step list. Same identity stripe + glass background as the
+ * rest of the shell so it reads as part of the page, not a tooltip.
+ *
+ * Markup contract:
+ *   <details class="recommend-callout">
+ *     <summary class="recommend-callout-summary">
+ *       <span class="recommend-callout-icon">…</span>
+ *       <span class="recommend-callout-text">…title + sub…</span>
+ *       <span class="recommend-callout-chevron">…</span>
+ *     </summary>
+ *     <ol class="recommend-steps">…</ol>
+ *   </details>
+ */
+.recommend-callout {
+    position: relative;
+    margin-bottom: 18px;
+    padding: 0;
+    background: linear-gradient(135deg, rgba(0, 212, 170, 0.08) 0%, rgba(14, 165, 233, 0.06) 100%);
+    border: 1px solid rgba(0, 212, 170, 0.30);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.recommend-callout::before {
+    /* Identity stripe — same primary→tertiary gradient used elsewhere. */
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--brand-primary) 0%, var(--chart-line-2) 100%);
+}
+
+.recommend-callout-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px 14px 22px;
+    cursor: pointer;
+    list-style: none;
+    -webkit-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background-color 160ms ease-out;
+}
+.recommend-callout-summary::-webkit-details-marker { display: none; }
+.recommend-callout-summary:hover { background: rgba(0, 212, 170, 0.05); }
+
+.recommend-callout-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(0, 212, 170, 0.15);
+    color: var(--brand-primary);
+}
+.recommend-callout-icon svg { width: 18px; height: 18px; }
+
+.recommend-callout-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.recommend-callout-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+.recommend-callout-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.recommend-callout-chevron {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--text-muted);
+    transition: transform 240ms cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+.recommend-callout-chevron svg { width: 16px; height: 16px; }
+.recommend-callout[open] .recommend-callout-chevron { transform: rotate(180deg); }
+
+.recommend-steps {
+    list-style: decimal;
+    margin: 0;
+    padding: 4px 22px 18px 50px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.55;
+}
+.recommend-steps li { padding: 4px 0; }
+.recommend-steps li::marker {
+    color: var(--brand-primary);
+    font-weight: 600;
+}
+.recommend-steps strong { color: var(--text-primary); font-weight: 600; }
+
+/* Action row — used below an .md-field stack to host primary + secondary buttons. */
+.byd-action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+.byd-action-row .btn { flex: 1 1 160px; }
+
+/* Secondary button modifier — outlined variant, used for "Test Connection"
+   when the primary "Save" is teal-filled. Lives here so any tabbed page
+   can reuse it. */
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+}
+.btn-secondary:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 540px) {
+    .byd-action-row .btn { flex: 1 1 100%; }
+}
+
 /* === INFO BOX === */
 .info-box {
     background: var(--bg-elevated);
     border-radius: var(--radius-md);
     padding: 16px;
     margin-top: 16px;
+}
+
+/* Variants — note (neutral) and warning. Each gets a small leading icon
+   beside the text via flex layout. Both variants are stand-alone (don't
+   combine with `.info-box`).
+   The note variant is INTENTIONALLY chrome-less — no background, no
+   border, no radius — so it sits as a flat, leading-icon hint inside an
+   already-elevated `.card-body` surface without reading as a nested box.
+   The warning variant keeps a tinted surface because its job is to draw
+   attention. */
+.info-box-note,
+.info-box-warning {
+    display: flex;
+    align-items: flex-start;
+    margin-top: 12px;
+}
+.info-box-note {
+    padding: 4px 0 0;
+    background: transparent;
+    border: 0;
+}
+.info-box-warning {
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.30);
+}
+.info-box-note > .info-icon,
+.info-box-warning > .info-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    /* Nudge to optical-center with the first line of body text — body sits
+       at the box's flex baseline, the icon glyph reads slightly low at its
+       SVG bounding box. 2px lift lines them up. */
+    margin-top: 1px;
+}
+.info-box-note > .info-icon { color: var(--brand-primary); }
+
+.info-box-note > *:not(.info-icon),
+.info-box-warning > *:not(.info-icon) {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-box-warning > .info-icon { color: var(--warning); }
+
+/* When the body of an info-box-note is just a `.info-note` text line
+   (no info-row table inside), tighten its line-height so the icon and
+   text share a common vertical centerline at small sizes. */
+.info-box-note .info-note {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
 }
 
 .info-row {
@@ -1195,7 +1588,49 @@ input, select { font-family: inherit; }
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
+    transition: background-color 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out;
 }
+
+/* When the user is on the map tab (body.live-map-active flips on it),
+   the mobile header floats translucent over the map so the leaflet tiles
+   paint edge-to-edge to the very top of the viewport. The hamburger and
+   brand stay readable thanks to the saturated blur and the soft shadow.
+   The map-overlay-actions (My Location / Directions FABs) shift down so
+   they don't crash into the floating header. */
+.live-view-page.live-view-page .main-content { /* no-op — selector tightening to keep specificity stable */ }
+
+@media (max-width: 768px) {
+    body.live-map-active.live-view-page .mobile-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        background: var(--bg-glass, rgba(22, 22, 26, 0.55));
+        -webkit-backdrop-filter: saturate(180%) blur(14px);
+                backdrop-filter: saturate(180%) blur(14px);
+        border-bottom: 1px solid transparent;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    /* Push the floating action buttons below the header so the hamburger
+       isn't crowded against the My Location chip. */
+    body.live-map-active #panelMap .map-overlay-actions {
+        top: calc(72px + env(safe-area-inset-top, 0px));
+    }
+
+    /* On the map tab the mobile-header is position:absolute (floats over
+       the map), so the mini-preview chip sitting at top:70/80px slides
+       under it once safe-area-inset-top kicks in (PWA standalone iOS).
+       On the cameras tab the header is position:relative — it pushes
+       content down already, so we only lift here. */
+    body.live-map-active .mini-preview {
+        top: calc(70px + env(safe-area-inset-top, 0px));
+    }
+}
+
+/* On wider viewports the mobile-header is hidden anyway (display:none
+   above 768px), so nothing to do — the map already fills the panel. */
 
 /* === SPLIT VIEW LAYOUT === */
 .live-split-view {
@@ -1404,6 +1839,9 @@ input, select { font-family: inherit; }
     pointer-events: none;
 }
 
+/* Bottom info strip on the Live View map tab (distance + last-GPS-update).
+   Backdrop, text colour, and the brand-tinted accents flip with theme so
+   the strip doesn't read as a black slab on a light cabin display. */
 .map-info-bar {
     display: flex;
     justify-content: center;
@@ -1411,9 +1849,10 @@ input, select { font-family: inherit; }
     padding: 14px 20px;
     padding-bottom: 14px;
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(180deg, rgba(10, 20, 20, 0.9) 0%, rgba(5, 15, 15, 0.95) 100%);
-    border-top: 1px solid rgba(0,212,170,0.2);
-    backdrop-filter: blur(16px);
+    background: var(--bg-glass, rgba(10, 20, 20, 0.9));
+    border-top: 1px solid var(--lv-pill-border, rgba(255, 255, 255, 0.10));
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
 }
 
 .map-info-bar .map-info-item {
@@ -1422,14 +1861,14 @@ input, select { font-family: inherit; }
     gap: 8px;
     font-size: 13px;
     font-weight: 500;
-    color: rgba(255,255,255,0.85);
+    color: var(--lv-overlay-text, rgba(255, 255, 255, 0.85));
 }
 
 .map-info-bar .map-info-item svg {
     width: 16px;
     height: 16px;
-    color: #00D4AA;
-    filter: drop-shadow(0 0 4px rgba(0,212,170,0.4));
+    color: var(--brand-primary);
+    filter: drop-shadow(0 0 4px rgba(0, 212, 170, 0.40));
 }
 
 /* Cameras Panel — outer background flips with theme. The inner
@@ -2231,7 +2670,10 @@ input, select { font-family: inherit; }
         width: 280px;
     }
     
-    .sidebar.open { transform: translateX(0); z-index: 300; }
+    /* On mobile the sidebar must layer ABOVE the bottom-tab bar so the user
+       sees the full nav when the hamburger is open. The tab bar is at z=400
+       (set in app-tabs.css) so we sit above it; the overlay sits between. */
+    .sidebar.open { transform: translateX(0); z-index: 500; }
     
     .sidebar-close {
         display: flex;
@@ -2513,7 +2955,10 @@ input, select { font-family: inherit; }
     z-index: 99;
 }
 
-.sidebar-overlay.show { display: block; z-index: 250; }
+/* Overlay sits between the bottom-tabs (z=400) and the open sidebar (z=500)
+   so a tap on the dimmed area dismisses the menu without leaking the click
+   to the tab bar underneath. */
+.sidebar-overlay.show { display: block; z-index: 450; }
 
 /* === UNSAVED INDICATOR === */
 .unsaved-indicator {
@@ -2554,18 +2999,14 @@ input, select { font-family: inherit; }
 .ev-card {
     /* Theme-aware gradient — dark slate in dark mode, soft tinted-white in
        light mode. Was previously hardcoded `#1e293b → #0f172a` which left
-       the bottom card on the sidebar visibly black under light theme. */
+       the bottom card on the sidebar visibly black under light theme.
+       Spacing from the .status-card above it is provided by
+       .sidebar-footer's flex `gap` — no per-card margin needed. */
     background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-surface) 100%);
     border: 1px solid var(--border-default);
     border-radius: 16px;
     padding: 16px;
     box-shadow: var(--shadow-md);
-}
-
-@media (max-width: 768px) {
-    .ev-card {
-        margin-top: 16px;
-    }
 }
 
 .ev-header-row {
@@ -2592,7 +3033,7 @@ input, select { font-family: inherit; }
 
 .ev-svg-container {
     width: 100%;
-    height: 130px;
+    height: 200px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -2606,31 +3047,12 @@ input, select { font-family: inherit; }
     overflow: visible;
 }
 
-/* Battery Bar Transition */
-.battery-bar {
-    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-    filter: drop-shadow(0 0 5px rgba(0, 212, 170, 0.4));
-}
+/* Battery + charging viz used to be a separate <rect> bar with a
+   moving-stripe pattern. That layer is gone; the GLB body's emissive
+   channel now carries SOC-tinted glow and the slow charging pulse (see
+   ev-card-3d.js setSocPercent / setCharging). The bolt icon below
+   stays as the only overlay badge — it pops in on .charging. */
 
-/* Charging Flow Animation */
-.charge-flow {
-    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-}
-
-.ev-card.charging .charge-flow {
-    opacity: 1;
-}
-
-.ev-card.charging #chargeFlowPattern rect {
-    animation: flowPulse 1s infinite alternate;
-}
-
-@keyframes flowPulse {
-    0% { fill-opacity: 0.2; }
-    100% { fill-opacity: 0.6; }
-}
-
-/* Pop Icon */
 .ev-card.charging #svgChargeIcon {
     transform: translate(160px, 5px) scale(1.2);
 }
@@ -2784,64 +3206,193 @@ input, select { font-family: inherit; }
     margin-right: 2px;
 }
 
-/* ==================== RECORDING MODE SELECTOR ==================== */
+/* ==================== RECORDING MODE SELECTOR (SOTA M3) ==================
+ * Each mode is a tappable card with:
+ *   - 56dp tonal icon container on the leading edge (M3 list-item lockup)
+ *   - title + description in the body
+ *   - trailing M3 radio dot that animates on selection
+ *   - selected state: 2dp primary border + tonal-primary background +
+ *     accent glow stripe, matching the .card collapse + accent-stripe identity
+ *
+ * Theme-aware via tokens (--surface, --primary, --on-surface) so light + dark
+ * modes both look right; no raw hex.
+ */
 
 .mode-selector {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
+}
+
+@media (max-width: 540px) {
+    .mode-selector { grid-template-columns: 1fr; }
 }
 
 .mode-option {
     cursor: pointer;
     display: block;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .mode-option input[type="radio"] {
-    display: none;
+    /* Hide visually but stay focusable for keyboards / a11y. */
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px; border: 0;
+    clip: rect(0 0 0 0);
+    overflow: hidden;
 }
 
 .mode-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
     padding: 16px;
-    border: 2px solid rgba(148, 163, 184, 0.2);
-    border-radius: 12px;
-    background: rgba(15, 23, 42, 0.4);
-    transition: all 0.2s ease;
-}
-
-.mode-option input[type="radio"]:checked + .mode-card {
-    border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+    padding-right: 44px; /* room for the trailing radio */
+    min-height: 88px;
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    background: var(--bg-elevated);
+    transition: border-color 200ms ease-out,
+                background-color 200ms ease-out,
+                box-shadow 200ms ease-out,
+                transform 120ms ease-out;
 }
 
 .mode-card:hover {
-    border-color: rgba(148, 163, 184, 0.4);
-    background: rgba(15, 23, 42, 0.6);
+    border-color: var(--border-default);
+    background: var(--bg-hover, var(--surface-container-high));
 }
 
-.mode-header {
+.mode-card:active { transform: scale(0.99); }
+
+.mode-option input[type="radio"]:focus-visible + .mode-card {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+.mode-option input[type="radio"]:checked + .mode-card {
+    border-color: var(--brand-primary);
+    background: rgba(0, 212, 170, 0.08);
+    box-shadow: 0 0 0 1px var(--brand-primary), var(--shadow-glow);
+}
+
+/* Identity stripe — left-edge accent that lights up only on the selected
+   card. Matches the sidebar active-link inset stripe so the "selected"
+   metaphor is consistent across the shell. */
+.mode-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--brand-primary);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+}
+
+.mode-option input[type="radio"]:checked + .mode-card::before {
+    opacity: 1;
+}
+
+/* Block-level icon chip. Must be `display: flex` (not inline-flex) — Chrome 58
+   on the BYD head-unit fails to expand an inline-flex container to its declared
+   width/height when the inline SVG child has no intrinsic dimensions, leaving
+   the icon collapsed to 0x0. Position relative + a centered absolute SVG would
+   also work, but plain `display: flex` matches modern browsers and is enough
+   once the SVGs themselves carry width/height attributes (see recording.html). */
+.mode-icon {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    justify-content: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    box-sizing: border-box;
+    transition: background-color 200ms ease-out,
+                color 200ms ease-out,
+                border-color 200ms ease-out;
 }
 
-.mode-icon {
-    font-size: 24px;
-    line-height: 1;
+.mode-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.mode-option input[type="radio"]:checked + .mode-card .mode-icon {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: var(--bg-base);
+}
+
+.mode-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .mode-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
-    color: #f1f5f9;
+    color: var(--text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
 }
 
 .mode-desc {
-    font-size: 13px;
-    color: #94a3b8;
+    font-size: 12px;
+    color: var(--text-muted);
     line-height: 1.4;
+}
+
+/* Trailing radio indicator — purely visual; the real input is .sr-only-ish.
+   A 2dp ring + a 10dp inner dot matches M3 radio anatomy. */
+.mode-radio {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border-default);
+    background: transparent;
+    transition: border-color 200ms ease-out;
+    flex-shrink: 0;
+}
+
+.mode-radio::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    transform: scale(0);
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+.mode-option input[type="radio"]:checked + .mode-card .mode-radio {
+    border-color: var(--brand-primary);
+}
+
+.mode-option input[type="radio"]:checked + .mode-card .mode-radio::after {
+    transform: scale(1);
+}
+
+/* "None" mode reads as the safer default; tag it with .mode-card-default so
+   the accent uses a muted ring instead of full primary fill. Optional — only
+   applies when the markup adds the modifier class. */
+.mode-card-default .mode-icon {
+    color: var(--text-muted);
 }
 
 /* ==================== PROXIMITY TIMELINE VISUAL ==================== */
@@ -3116,3 +3667,134 @@ input, select { font-family: inherit; }
     padding-bottom: 14px;
 }
 .lang-sheet-auto .lang-sheet-name { color: var(--brand-primary); }
+
+/* === Modal (SOH battery-capacity picker) === */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-backdrop);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+}
+
+/* === SOH battery-capacity modal — theme-aware fields ===
+ * The legacy modal pinned colors inline (background:var(--bg-elevated) etc.)
+ * which read fine in dark mode but produced weak contrast on the light-theme
+ * surface. Pulling the rules out as classes lets each token resolve normally
+ * for the active theme. */
+.soh-modal-card {
+    /* Slightly more breathing room than .modal-card defaults; modal needs
+       to host two stacked field rows + a 3-button action row cleanly. */
+    padding: 22px 22px 18px;
+}
+.soh-modal-title {
+    margin: 0 0 18px 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+.soh-modal-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 14px 0 6px;
+    font-weight: 600;
+}
+.soh-modal-label:first-of-type { margin-top: 0; }
+
+.soh-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color 160ms ease-out, box-shadow 160ms ease-out;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.soh-modal-input::placeholder { color: var(--text-muted); }
+.soh-modal-input:hover { border-color: var(--text-muted); }
+.soh-modal-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.15);
+}
+
+/* Capacity (number) — monospace digits read better than proportional. */
+.soh-modal-input-num {
+    font-family: var(--family-mono, 'JetBrains Mono', monospace);
+    font-size: 16px;
+    letter-spacing: 0.02em;
+}
+
+/* Model selector — site-consistent chevron, theme-aware option list. */
+.soh-modal-select {
+    padding-right: 36px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+}
+:root[data-theme="light"] .soh-modal-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23586068' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.soh-modal-select option {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.soh-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+}
+
+/* Stacked-button fallback on narrow viewports so labels don't crash. */
+@media (max-width: 480px) {
+    .soh-modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    .soh-modal-actions .btn { width: 100%; }
+}
+
+#sohCapacityRow:hover {
+    background: var(--bg-hover);
+}
+.soh-row-source {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.soh-caption {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.35;
+}

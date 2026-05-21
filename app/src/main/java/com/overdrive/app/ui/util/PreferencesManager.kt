@@ -24,9 +24,13 @@ object PreferencesManager {
     private const val KEY_ZROK_UNIQUE_NAME = "zrok_unique_name"
     private const val KEY_ZROK_ENABLE_TOKEN = "zrok_enable_token"
     private const val KEY_LOGS_EXPANDED = "logs_expanded"
-    
+
     private var prefs: SharedPreferences? = null
-    
+    // Held so theme-mode changes can poke the floating overlay service —
+    // a Service doesn't see AppCompatDelegate.setDefaultNightMode() the way
+    // an Activity does, so we ask it to rebuild itself explicitly.
+    private var appContextRef: Context? = null
+
     /**
      * Initialize with application context. Call once in Application.onCreate().
      * Uses device-encrypted storage to support Direct Boot scenarios.
@@ -34,6 +38,7 @@ object PreferencesManager {
      */
     fun init(context: Context) {
         val appContext = context.applicationContext
+        appContextRef = appContext
         
         // Use device-encrypted storage for Direct Boot support
         val storageContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -96,6 +101,17 @@ object PreferencesManager {
     fun setThemeMode(mode: Int) {
         requirePrefs().edit().putInt(KEY_THEME_MODE, mode).apply()
         AppCompatDelegate.setDefaultNightMode(mode)
+        // Nudge the floating overlay so the recording/trip pill repaints
+        // against the newly-chosen palette. AppCompat only refires
+        // onConfigurationChanged for foreground Activities; a plain Service
+        // wouldn't notice the flip otherwise.
+        appContextRef?.let { ctx ->
+            try {
+                com.overdrive.app.overlay.StatusOverlayService.refreshTheme(ctx)
+            } catch (e: Throwable) {
+                Log.w(TAG, "overlay theme refresh failed: ${e.message}")
+            }
+        }
     }
 
     // Enabled Daemons

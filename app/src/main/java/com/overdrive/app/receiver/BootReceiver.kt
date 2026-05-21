@@ -33,9 +33,31 @@ class BootReceiver : BroadcastReceiver() {
     
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
-        
+
         Log.d(TAG, "Received broadcast: $action")
-        
+
+        // Forward plug edges to ChargingDetector BEFORE the debounce gate.
+        // The debounce only protects daemon restarts from thrashing; plug
+        // edges must always reach the detector or a quick unplug-replug
+        // sequence will lose the second connect event and the detector will
+        // miss the start of the new charging session.
+        when (action) {
+            Intent.ACTION_POWER_CONNECTED -> {
+                try {
+                    com.overdrive.app.monitor.ChargingDetector.getInstance().onPowerConnected()
+                } catch (e: Exception) {
+                    Log.w(TAG, "ChargingDetector connect notify failed: ${e.message}")
+                }
+            }
+            Intent.ACTION_POWER_DISCONNECTED -> {
+                try {
+                    com.overdrive.app.monitor.ChargingDetector.getInstance().onPowerDisconnected()
+                } catch (e: Exception) {
+                    Log.w(TAG, "ChargingDetector disconnect notify failed: ${e.message}")
+                }
+            }
+        }
+
         // Debounce rapid restarts
         val now = System.currentTimeMillis()
         if (now - lastStartTime < MIN_RESTART_INTERVAL) {
@@ -109,9 +131,20 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_SCREEN_ON,
             Intent.ACTION_SCREEN_OFF,  // Delegated from ScreenOffReceiver
             Intent.ACTION_USER_PRESENT,
-            "android.intent.action.USER_UNLOCKED",
+            "android.intent.action.USER_UNLOCKED" -> {
+                startDaemons(context, action)
+            }
+
+            // Plug-in is also a wake-worthy event so the daemon comes
+            // up to record the overnight charge session. (The detector
+            // notification already fired above, before debounce.)
             Intent.ACTION_POWER_CONNECTED -> {
                 startDaemons(context, action)
+            }
+            // POWER_DISCONNECTED: detector was notified before debounce.
+            // No daemon restart needed.
+            Intent.ACTION_POWER_DISCONNECTED -> {
+                // intentionally no-op here
             }
             
             // BYD ACC ON events - start daemons

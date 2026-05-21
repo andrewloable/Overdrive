@@ -244,6 +244,10 @@ public class HttpServer {
             String websocketKey = null;
             String upgradeHeader = null;
             String rangeHeader = null;
+            // Conditional GET — if the client (Chrome WebView's HTTP cache)
+            // sends If-None-Match matching our ETag, we return 304 instead of
+            // re-streaming the whole file. Used for cached event recordings.
+            String ifNoneMatchHeader = null;
             String cookieHeader = null;
             String authHeader = null;
             // Reverse-proxy fingerprints — used by AuthMiddleware to disable
@@ -267,6 +271,8 @@ public class HttpServer {
                     upgradeHeader = line.substring(8).trim();
                 } else if (lower.startsWith("range:")) {
                     rangeHeader = line.substring(6).trim();
+                } else if (lower.startsWith("if-none-match:")) {
+                    ifNoneMatchHeader = line.substring(14).trim();
                 } else if (lower.startsWith("cookie:")) {
                     cookieHeader = line.substring(7).trim();
                 } else if (lower.startsWith("authorization:")) {
@@ -408,7 +414,7 @@ public class HttpServer {
             }
 
             // Route to modular handlers first
-            if (routeToHandlers(method, path, body, rangeHeader, out)) {
+            if (routeToHandlers(method, path, body, rangeHeader, ifNoneMatchHeader, out)) {
                 // Handled by a modular handler
             }
             // Static pages
@@ -456,6 +462,14 @@ public class HttpServer {
             } else if (path.equals("/vehicle-control.html") || path.equals("/vehicle-control")) {
                 if (!serveStaticFile(out, "local/vehicle-control.html")) {
                     HttpResponse.sendError(out, 404, "vehicle-control.html not found");
+                }
+            } else if (path.equals("/telegram.html") || path.equals("/telegram")) {
+                if (!serveStaticFile(out, "local/telegram.html")) {
+                    HttpResponse.sendError(out, 404, "telegram.html not found");
+                }
+            } else if (path.equals("/byd-cloud.html") || path.equals("/byd-cloud")) {
+                if (!serveStaticFile(out, "local/byd-cloud.html")) {
+                    HttpResponse.sendError(out, 404, "byd-cloud.html not found");
                 }
             } else if (path.equals("/notifications.html") || path.equals("/notifications")) {
                 if (!serveStaticFile(out, "local/notifications.html")) {
@@ -572,11 +586,12 @@ public class HttpServer {
      * Routes requests to modular API handlers.
      * @return true if handled by a handler
      */
-    private boolean routeToHandlers(String method, String path, String body, String rangeHeader, OutputStream out) throws Exception {
+    private boolean routeToHandlers(String method, String path, String body, String rangeHeader,
+                                     String ifNoneMatchHeader, OutputStream out) throws Exception {
         // Recordings API (with Range header support for video seeking) + thumbnails + event timelines
-        if (path.startsWith("/api/recordings") || path.startsWith("/video/") || 
+        if (path.startsWith("/api/recordings") || path.startsWith("/video/") ||
             path.startsWith("/thumb/") || path.startsWith("/api/events/")) {
-            return RecordingsApiHandler.handleWithRange(method, path, body, rangeHeader, out);
+            return RecordingsApiHandler.handleWithRange(method, path, body, rangeHeader, ifNoneMatchHeader, out);
         }
         
         // Surveillance API
@@ -615,6 +630,14 @@ public class HttpServer {
         // MQTT API
         if (path.startsWith("/api/mqtt/")) {
             return MqttApiHandler.handle(method, path, body, out);
+        }
+
+        // Telegram bot config API (token / pairing PIN / owner / preferences).
+        // Reads + writes /data/local/tmp/telegram_config.properties directly
+        // — same file the native TelegramSettingsFragment writes via ADB
+        // shell. The HTTP daemon runs as UID shell so direct writes work.
+        if (path.startsWith("/api/telegram/")) {
+            return TelegramApiHandler.handle(method, path, body, out);
         }
         
         // Trip Analytics API
@@ -722,8 +745,10 @@ public class HttpServer {
         boolean vehicleReady = waitForVehicleDataReady(1500);
         status.put("vehicleDataReady", vehicleReady);
 
-        // App version — read from persisted version file (written by AppUpdater)
-        // Falls back to BuildConfig.VERSION_NAME if file doesn't exist yet
+        // App version — read from the persisted version file written by
+        // AppUpdater after a successful install. Falls back to
+        // "Manually Installed" when the file is missing (fresh sideload
+        // before any check-for-update has run).
         status.put("appVersion", com.overdrive.app.updater.AppUpdater.getDisplayVersionFromFile());
         status.put("recording", TcpCommandServer.getRecordingCameras());
         status.put("viewing", TcpCommandServer.getViewOnlyCameras());

@@ -17,9 +17,15 @@ import java.util.Calendar
 object RecordingScanner {
     private const val TAG = "RecordingScanner"
     
-    // Legacy paths for backward compatibility (migration)
-    private const val LEGACY_RECORDINGS_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files"
-    private const val LEGACY_SENTRY_DIR = "$LEGACY_RECORDINGS_DIR/sentry_events"
+    // Legacy paths for backward compatibility (migration). The base dir
+    // historically held a `recordings/` subdir for dashcam clips and a
+    // `sentry_events/` subdir for surveillance clips; some very old builds
+    // wrote dashcam clips directly into the base dir, so we scan both.
+    private const val LEGACY_BASE_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files"
+    private const val LEGACY_RECORDINGS_DIR = "$LEGACY_BASE_DIR/recordings"
+    private const val LEGACY_RECORDINGS_DIR_FLAT = LEGACY_BASE_DIR
+    private const val LEGACY_SENTRY_DIR = "$LEGACY_BASE_DIR/sentry_events"
+    private const val LEGACY_PROXIMITY_DIR = "$LEGACY_BASE_DIR/proximity_events"
     
     // Simple cache to prevent IO spam on UI refresh
     private var cachedRecordings: List<RecordingFile>? = null
@@ -50,27 +56,33 @@ object RecordingScanner {
         for (dir in sm.allRecordingsDirs) {
             scanDirectoryDedup(dir, RecordingFile.RecordingType.NORMAL, normal, seenNormal)
         }
-        // Also scan legacy location
-        val legacyDir = File(LEGACY_RECORDINGS_DIR)
-        if (legacyDir.exists()) {
-            scanDirectoryDedup(legacyDir, RecordingFile.RecordingType.NORMAL, normal, seenNormal)
+        // Legacy locations (some installs wrote into <base>/recordings,
+        // others directly into the base dir). Both checked, deduped on name.
+        for (path in listOf(LEGACY_RECORDINGS_DIR, LEGACY_RECORDINGS_DIR_FLAT)) {
+            val dir = File(path)
+            if (dir.exists()) {
+                scanDirectoryDedup(dir, RecordingFile.RecordingType.NORMAL, normal, seenNormal)
+            }
         }
-        
+
         val sentry = mutableListOf<RecordingFile>()
         val seenSentry = mutableSetOf<String>()
         for (dir in sm.allSurveillanceDirs) {
             scanDirectoryDedup(dir, RecordingFile.RecordingType.SENTRY, sentry, seenSentry)
         }
-        // Also scan legacy sentry location
         val legacySentryDir = File(LEGACY_SENTRY_DIR)
         if (legacySentryDir.exists()) {
             scanDirectoryDedup(legacySentryDir, RecordingFile.RecordingType.SENTRY, sentry, seenSentry)
         }
-        
+
         val proximity = mutableListOf<RecordingFile>()
         val seenProximity = mutableSetOf<String>()
         for (dir in sm.allProximityDirs) {
             scanDirectoryDedup(dir, RecordingFile.RecordingType.PROXIMITY, proximity, seenProximity)
+        }
+        val legacyProximityDir = File(LEGACY_PROXIMITY_DIR)
+        if (legacyProximityDir.exists()) {
+            scanDirectoryDedup(legacyProximityDir, RecordingFile.RecordingType.PROXIMITY, proximity, seenProximity)
         }
         
         val allFiles = (normal + sentry + proximity).sortedByDescending { it.timestamp }

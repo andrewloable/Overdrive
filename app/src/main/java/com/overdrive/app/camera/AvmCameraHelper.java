@@ -18,11 +18,11 @@ public final class AvmCameraHelper {
     private static final String BMM_CAMERA_INFO_CLASS = "android.hardware.BmmCameraInfo";
 
     /** Panoramic camera tags to try, in priority order. */
-    // Order matches DiPlus C3941c.java:122-147: pano_h → pano_l → apa → byd_apa.
-    // On dual-named DiLink builds, `apa` is the canonical name and `byd_apa` is a
-    // legacy alias — preferring the canonical name avoids breaking when BYD retires
-    // the alias.
-    private static final String[] PANO_TAGS = {"pano_h", "pano_l", "apa", "byd_apa"};
+    // Matches the cascade in BmmCameraInfo.processCamProperty:242-260 verbatim:
+    // pano_h → pano_l → byd_apa → apa. The jar's cascade is if/else if so only
+    // one of these is ever populated per device — order here only matters if a
+    // future jar build relaxes the cascade.
+    private static final String[] PANO_TAGS = {"pano_h", "pano_l", "byd_apa", "apa"};
 
     private AvmCameraHelper() {}
 
@@ -44,11 +44,12 @@ public final class AvmCameraHelper {
                 Class<?> sp = Class.forName("android.os.SystemProperties");
                 java.lang.reflect.Method get = sp.getMethod("get", String.class);
                 String camSort = (String) get.invoke(null, "vehicle.config.cam_sort");
-                logger.info("vehicle.config.cam_sort = " + (camSort != null && !camSort.isEmpty() ? "'" + camSort + "'" : "(empty/null)"));
+                logger.info("vehicle.config.cam_sort = "
+                    + (camSort != null && !camSort.isEmpty() ? "'" + camSort + "'" : "(empty/null)"));
             } catch (Exception e) {
                 logger.warn("Could not read vehicle.config.cam_sort: " + e.getMessage());
             }
-            
+
             // Enumerate all known tags and their resolved IDs
             java.lang.reflect.Method getCameraId = bmmClass.getDeclaredMethod("getCameraId", String.class);
             getCameraId.setAccessible(true);
@@ -114,6 +115,39 @@ public final class AvmCameraHelper {
             return false;
         } catch (Exception e) {
             logger.warn("setCameraFps failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Binds a MediaCodec encoder's frame rate to the BYD camera HAL via
+     * AVMCamera.setMediaCodecFps(MediaCodec, int). This is a separate JNI
+     * path from setCameraFps — when the HAL refuses setCameraFps, this one
+     * may still succeed because it ties the encoder's KEY_FRAME_RATE to the
+     * camera emission rate without going through the sensor-rate validation.
+     *
+     * Pass the encoder MediaCodec instance (not its surface). Returns true
+     * on success.
+     */
+    public static boolean setMediaCodecFps(Object cameraObj, android.media.MediaCodec codec, int fps) {
+        if (cameraObj == null || codec == null) return false;
+        try {
+            java.lang.reflect.Method m = cameraObj.getClass().getDeclaredMethod(
+                    "setMediaCodecFps", android.media.MediaCodec.class, int.class);
+            m.setAccessible(true);
+            Object result = m.invoke(cameraObj, codec, fps);
+            boolean ok = result instanceof Boolean && (Boolean) result;
+            if (ok) {
+                logger.info("MediaCodec FPS bound to " + fps);
+            } else {
+                logger.warn("setMediaCodecFps(" + fps + ") returned false");
+            }
+            return ok;
+        } catch (NoSuchMethodException e) {
+            logger.warn("setMediaCodecFps not available on this AVMCamera version");
+            return false;
+        } catch (Exception e) {
+            logger.warn("setMediaCodecFps failed: " + e.getMessage());
             return false;
         }
     }

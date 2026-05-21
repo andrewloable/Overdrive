@@ -141,6 +141,7 @@ class DaemonsFragment : Fragment() {
                 currentToken?.let { editToken.setText(it) }
                 
                 val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+                    .setIcon(R.drawable.ic_link)
                     .setTitle(getString(R.string.dialog_zrok_token_title))
                     .setMessage(getString(R.string.dialog_zrok_token_message))
                     .setView(dialogView)
@@ -222,6 +223,7 @@ class DaemonsFragment : Fragment() {
             }
 
             val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+                .setIcon(R.drawable.ic_mqtt)
                 .setTitle(getString(R.string.dialog_tailscale_settings_title))
                 .setMessage(getString(R.string.dialog_tailscale_settings_message))
                 .setView(dialogView)
@@ -255,6 +257,7 @@ class DaemonsFragment : Fragment() {
         val context = context ?: return
 
         com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_tailscale_proxy_enable_title))
             .setMessage(getString(R.string.dialog_tailscale_proxy_enable_message))
             .setPositiveButton(getString(R.string.dialog_enable)) { _, _ ->
@@ -271,6 +274,7 @@ class DaemonsFragment : Fragment() {
         val context = context ?: return
         
         com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_zrok_reset_title))
             .setMessage(getString(R.string.dialog_zrok_reset_message))
             .setPositiveButton(getString(R.string.dialog_reset)) { _, _ ->
@@ -325,6 +329,7 @@ class DaemonsFragment : Fragment() {
         val context = context ?: return
 
         com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_tailscale_reset_title))
             .setMessage(getString(R.string.dialog_tailscale_reset_message))
             .setPositiveButton(getString(R.string.dialog_reset)) { _, _ ->

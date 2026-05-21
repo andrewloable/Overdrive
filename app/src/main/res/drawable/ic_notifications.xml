@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols Rounded: notifications (24px, weight 400, fill 0).
+
+  Uses the canonical 960x960 viewport with y flipped to keep the path
+  coordinates in their original (unscaled) form. Earlier revision wrapped
+  the path in a <group> with scaleX/scaleY=0.025 + translateY=24 so the
+  viewBox could stay 24x24, but on Chrome 58 / Android 7.1 head-units the
+  inner-group transform path was occasionally clipped on the trailing edge,
+  making the bell + clapper look cropped on the right. Going straight to
+  the original viewport renders the icon with no transform clipping.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <group
+        android:translateY="960">
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M160-200q-17 0-28.5-11.5T120-240q0-17 11.5-28.5T160-280h40v-280q0-83 50-147.5T380-792v-28q0-25 17.5-42.5T440-880q25 0 42.5 17.5T500-820v28q80 20 130 84.5T680-560v280h40q17 0 28.5 11.5T760-240q0 17-11.5 28.5T720-200H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM280-280h400v-280q0-83-58.5-141.5T480-760q-83 0-141.5 58.5T280-560v280Z" />
+    </group>
+</vector>

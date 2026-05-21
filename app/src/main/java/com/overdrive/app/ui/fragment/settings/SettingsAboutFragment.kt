@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import com.overdrive.app.BuildConfig
 import com.overdrive.app.R
+import com.overdrive.app.ui.MainActivity
 import com.overdrive.app.updater.AppUpdater
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -42,7 +43,9 @@ import java.io.InputStreamReader
  *
  * Renders identity (brand, version, build), MIT license + GitHub source
  * deep-links, and the "Check for updates" action. Version is pulled from
- * [BuildConfig.VERSION_NAME] at runtime.
+ * [AppUpdater.getDisplayVersion] at runtime — that's the GitHub release
+ * string written by the updater, falling back to "Manually Installed"
+ * when no update has been performed yet.
  */
 class SettingsAboutFragment : Fragment() {
 
@@ -61,13 +64,33 @@ class SettingsAboutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Show the locally-tracked installed version (set by AppUpdater
-        // after a successful download from GitHub). Falls back to the
-        // BuildConfig name on first run before any update has been
-        // applied. This matches what the URL bar / daemon report.
-        view.findViewById<TextView>(R.id.tvAboutVersion).text =
-            AppUpdater.getDisplayVersion(requireContext())
+        // Show the locally-tracked installed version immediately so the row
+        // never sits blank, then refresh in the background with the published
+        // version on the configured channel from GitHub Releases — that's the
+        // value the user actually wants to see ("am I current?"). Both calls
+        // are routed through the AppUpdater so behavior matches the rest of
+        // the update surface (proxy detection, channel, label format).
+        val versionView = view.findViewById<TextView>(R.id.tvAboutVersion)
+        versionView.text = AppUpdater.getDisplayVersion(requireContext())
         view.findViewById<TextView>(R.id.tvAboutBuild).text = BuildConfig.APPLICATION_ID
+
+        AppUpdater(requireContext()).fetchLatestReleaseVersion(
+            object : AppUpdater.RemoteVersionCallback {
+                override fun onResult(version: String) {
+                    if (!isAdded) return
+                    if (version.isNotBlank()) {
+                        versionView.text = version
+                    }
+                }
+                override fun onError(error: String?) {
+                    // Silent — the local fallback is already visible.
+                }
+            }
+        )
+
+        view.findViewById<View>(R.id.cardCheckUpdate).setOnClickListener {
+            (activity as? MainActivity)?.invokeCheckForUpdates()
+        }
 
         view.findViewById<View>(R.id.cardLicense).setOnClickListener {
             openExternal(getString(R.string.settings_about_license_url))

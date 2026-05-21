@@ -123,12 +123,4 @@ public class BYDAutoChargingDevice extends AbsBYDAutoDevice {
     public double getChargingPower() {
         return 0.0d;
     }
-
-    public int setChargeStopCapacityState(int i) {
-        return 0;
-    }
-
-    public int setChargeStopSwitchState(int i) {
-        return 0;
-    }
 }

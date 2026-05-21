@@ -52,11 +52,24 @@
                 android:orientation="vertical"
                 android:padding="@dimen/card_padding_hero">
 
+                <!-- Brand overline. Anchors identity inside a neutral hero
+                     surface without a heavy logo/gradient overlay. -->
+                <TextView
+                    android:id="@+id/heroOverline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.10"
+                    android:text="@string/app_name"
+                    android:textAllCaps="true"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textColor="?attr/colorPrimary" />
+
                 <TextView
                     android:id="@+id/heroGreeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/dashboard_greeting_morning"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/dashboard_hero_headline"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold" />
@@ -69,6 +82,63 @@
                     android:text="@string/dashboard_subtitle_all_systems"
                     android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
                     android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <!--
+                  Hero status row. Three small tonal chips that summarize the
+                  health of the three at-a-glance signals (tunnel state,
+                  daemons running, recording state) right under the greeting,
+                  so the dashboard reads as identity-with-status, not as a
+                  flat surface. Each chip's text is owned by DashboardFragment.
+
+                  Existing IDs preserved (consumed by DashboardFragment.kt
+                  already where applicable); new chip IDs are namespaced
+                  under heroChip*.
+                -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/heroChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:chipSpacingHorizontal="8dp"
+                    app:singleLine="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/heroChipTunnel"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="false"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:text="@string/dashboard_tunnel_offline"
+                        app:chipIconTint="?attr/colorOnSurfaceVariant"
+                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                        app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/heroChipServices"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="false"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:text="@string/dashboard_daemons_running_default"
+                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                        app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/heroChipRecording"
+                        style="@style/Widget.Material3.Chip.Assist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="false"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:text="@string/dashboard_metric_recordings"
+                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                        app:chipStrokeWidth="0dp" />
+                </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -481,66 +551,57 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Row 3: Settings (single 2-up cell + invisible spacer to keep
-             the tile's rendered width identical to row 1/2 cells). -->
-        <LinearLayout
+        <!-- Row 3: Vehicle tile spans the full width of two cells (replaces the
+             previous Settings + Vehicle pairing — Settings remains reachable from
+             the nav rail). The Vehicle tile is the only controllable car-state
+             surface on the dashboard, so it earns the wider canvas to show the
+             selected model + capacity inline rather than truncating. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/metricVehicle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginBottom="@dimen/card_gap_vertical"
-            android:baselineAligned="false">
+            android:minHeight="@dimen/grid_tile_min_height"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+            app:cardCornerRadius="@dimen/card_radius_standard"
+            app:cardElevation="0dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/quickSettings"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="@dimen/card_gap_horizontal_half"
-                android:minHeight="@dimen/grid_tile_min_height"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding_standard">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="@dimen/card_icon_standard"
+                    android:layout_height="@dimen/card_icon_standard"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_vehicle_control"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/metricVehicleValue"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/card_padding_standard">
+                    android:layout_marginTop="14dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/dashboard_vehicle_tap_to_set"
+                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textStyle="bold" />
 
-                    <ImageView
-                        android:layout_width="@dimen/card_icon_standard"
-                        android:layout_height="@dimen/card_icon_standard"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_settings"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="@string/dashboard_action_settings"
-                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/dashboard_action_settings_subtitle"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/card_gap_horizontal_half" />
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/dashboard_metric_vehicle"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

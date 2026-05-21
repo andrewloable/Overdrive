@@ -2106,22 +2106,13 @@ public class AccSentryDaemon {
      */
     private static boolean isTelegramAutoStartEnabled() {
         try {
-            java.io.File configFile = new java.io.File(getTelegramConfigFile());
-            log("Checking telegram config: " + getTelegramConfigFile());
-            
-            if (!configFile.exists()) {
-                log("Telegram config file does not exist");
-                return false;
-            }
-            
-            java.util.Properties props = new java.util.Properties();
-            try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
-                props.load(fis);
-            }
-            
-            String autoStart = props.getProperty("auto_start_acc_off", "false");
-            log("Telegram auto_start_acc_off = " + autoStart);
-            return "true".equalsIgnoreCase(autoStart);
+            // Force-reload so a toggle the user just flipped from the app UI
+            // (different UID, different mtime tick) is visible immediately
+            // rather than after the cache expires.
+            com.overdrive.app.config.UnifiedConfigManager.forceReload();
+            boolean enabled = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isAutoStartAccOff();
+            log("Telegram autoStartAccOff = " + enabled);
+            return enabled;
         } catch (Exception e) {
             log("Error reading telegram config: " + e.getMessage());
             return false;

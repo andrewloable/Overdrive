@@ -61,7 +61,7 @@
                         android:id="@+id/heroGreeting"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/dashboard_greeting_morning"
+                        android:text="@string/dashboard_hero_headline"
                         android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                         android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
@@ -468,12 +468,14 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Settings tile (action) — same dimensions as the metric tiles -->
+            <!-- Vehicle tile — spans the slot the Settings tile used to take
+                 (weight=2) so it has room to show model + capacity inline.
+                 Settings is reachable from the navigation rail. -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/quickSettings"
+                android:id="@+id/metricVehicle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_weight="2"
                 android:layout_marginStart="@dimen/card_gap_horizontal_half"
                 android:minHeight="@dimen/grid_tile_min_height"
                 android:clickable="true"
@@ -492,14 +494,17 @@
                         android:layout_width="@dimen/card_icon_standard"
                         android:layout_height="@dimen/card_icon_standard"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_settings"
+                        android:src="@drawable/ic_vehicle_control"
                         app:tint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:id="@+id/metricVehicleValue"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:text="@string/dashboard_action_settings"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/dashboard_vehicle_tap_to_set"
                         android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
                         android:textColor="?attr/colorOnSurface"
                         android:textStyle="bold" />
@@ -508,7 +513,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="@string/dashboard_action_settings_subtitle"
+                        android:text="@string/dashboard_metric_vehicle"
                         android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>

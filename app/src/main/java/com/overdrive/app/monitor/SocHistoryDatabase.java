@@ -409,46 +409,51 @@ public class SocHistoryDatabase {
                 logger.debug("Failed to get remaining kWh: " + e.getMessage());
             }
             
-            // SOTA: Update SOH estimate from energy readings.
-            //
-            // Rest-state gating: only treat the reading as authoritative
-            // (eligible to seed currentSoh) when the car is genuinely at
-            // rest — speed=0, gear=P, AC off, not charging, low cell-spread.
-            // Otherwise we still compute rawEnergySoh for the "Energy" tile
-            // on the dashboard but don't let HVAC/accessory load skew the
-            // active SOH downward.
-            if (remainingKwh > 0 && soc > 0) {
-                try {
-                    com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
-                    if (sohEst != null) {
-                        // If capacity was cleared (e.g., after SOH reset), re-detect it
-                        // so the periodic tick can re-seed SOH without a daemon restart.
-                        if (sohEst.getNominalCapacityKwh() <= 0) {
-                            sohEst.autoDetectCarModel(
-                                com.overdrive.app.daemon.CameraDaemon.getAppContext());
-                        }
-                        // If we now have capacity but no estimate, seed it
-                        if (sohEst.getNominalCapacityKwh() > 0 && !sohEst.hasEstimate()) {
-                            sohEst.seedInitialEstimate();
-                        }
-
-                        boolean atRest = isVehicleAtRest();
-                        double highCellV = Double.NaN;
-                        try {
-                            com.overdrive.app.byd.BydDataCollector col = com.overdrive.app.byd.BydDataCollector.getInstance();
-                            if (col != null && col.isInitialized()) {
-                                com.overdrive.app.byd.BydVehicleData vd = col.getData();
-                                if (vd != null && !Double.isNaN(vd.highCellVoltage)) {
-                                    highCellV = vd.highCellVoltage;
-                                }
-                            }
-                        } catch (Exception ignored) { /* keep highCellV = NaN */ }
-
-                        sohEst.updateFromEnergy(remainingKwh, soc, highCellV, atRest);
+            // Shape B: live formula drives SOH directly from this tick's
+            // remainKwh + SOC. Feed RAW vd.remainKwh, never the synthesized
+            // value from getBatteryRemainPowerKwh — the synthesizer falls
+            // back to (soc/100 × nominal × currentSoh/100) on PHEV / bad-BMS
+            // paths, which would loop currentSoh into itself and freeze
+            // the formula at its initial seed forever.
+            try {
+                com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+                if (sohEst != null) {
+                    if (sohEst.getNominalCapacityKwh() <= 0) {
+                        sohEst.autoDetectCarModel(
+                            com.overdrive.app.daemon.CameraDaemon.getAppContext());
                     }
-                } catch (Exception e) {
-                    logger.debug("SOH update failed: " + e.getMessage());
+                    if (sohEst.getNominalCapacityKwh() > 0 && !sohEst.hasEstimate()) {
+                        sohEst.seedInitialEstimate();
+                    }
+
+                    double rawRemainKwh = Double.NaN;
+                    double highCellV = Double.NaN;
+                    try {
+                        com.overdrive.app.byd.BydDataCollector col = com.overdrive.app.byd.BydDataCollector.getInstance();
+                        if (col != null && col.isInitialized()) {
+                            com.overdrive.app.byd.BydVehicleData vd = col.getData();
+                            if (vd != null) {
+                                if (!Double.isNaN(vd.remainKwh)) rawRemainKwh = vd.remainKwh;
+                                if (!Double.isNaN(vd.highCellVoltage)) highCellV = vd.highCellVoltage;
+                            }
+                        }
+                    } catch (Exception ignored) { /* leave NaN */ }
+
+                    if (rawRemainKwh > 0 && soc > 0
+                            && sohEst.getNominalCapacityKwh() > 0) {
+                        double impliedCap = rawRemainKwh / (soc / 100.0);
+                        double nominal = sohEst.getNominalCapacityKwh();
+                        double ratio = impliedCap / nominal;
+                        // Skip when raw BMS reads outside 50-150% of nominal —
+                        // those are firmware-junk values, not real degradation.
+                        if (ratio >= 0.5 && ratio <= 1.5) {
+                            boolean atRest = isVehicleAtRest();
+                            sohEst.updateFromEnergy(rawRemainKwh, soc, highCellV, atRest);
+                        }
+                    }
                 }
+            } catch (Exception e) {
+                logger.debug("SOH update failed: " + e.getMessage());
             }
             
             // HV battery thermal data — from BydDataCollector (has real cell temps via Integer.TYPE)

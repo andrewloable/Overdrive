@@ -125,6 +125,20 @@
     "recording_caption_no_label": "录音 - {0}",
     "proximity_alert": "近距离警报时间:{0}触发器:{1} ({2}) 录音开始..."
   },
+  "vehicle_control": {
+    "cloud_required": "在设置中连接BYD帐户以使用此控制",
+    "cloud_sent": "通过云发送",
+    "cloud_unavailable_used_local": "云无法使用 使用直接连接",
+    "local_sent": "通过直接连接发送",
+    "cloud_offline_used_local": "云线下 使用直接连接",
+    "local_unavailable_used_cloud": "直接连接不可用 — 通过云端发送",
+    "cloud_failed": "不能到达车,当车醒的时候再试一次.",
+    "rate_limited": "一个命令仍在进行 等几秒钟",
+    "not_supported": "这个控制器目前不用.",
+    "find_car_label": "找个车",
+    "battery_heat_label": "热量电池",
+    "close_all_windows_label": "所有的窗户关闭"
+  },
   "messages": {
     "logged_out": "登录出来",
     "bydcloud_connected": "成功连接",

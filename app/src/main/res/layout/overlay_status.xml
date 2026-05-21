@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Floating status pill: shows only configured items, tap ✗ to restart -->
+<!-- Floating status pill: shows only configured items, tap to restart -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/pillContainer"
     android:layout_width="wrap_content"

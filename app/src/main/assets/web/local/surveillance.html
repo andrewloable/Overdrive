@@ -4,18 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title data-i18n="app.surveillance_title">Surveillance - OverDrive</title>
-    <link rel="icon" type="image/webp" href="../shared/app-icon.webp">
+    <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="../shared/app-icon.webp">
+    <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#00E5FF">
+    <meta name="theme-color" content="#00876C">
     <script src="../shared/theme.js?v=3"></script>
+    <script src="../shared/app-shell.js"></script>
+    <!--
+      Per-page bottom-tab manifest. Five tabs grouped by user task:
+        General   — mode toggle + schedule + deterrent (when/how surveillance runs)
+        Detection — detection settings, ROI zones, safe locations (what + where)
+        Recording — pre/post buffer, codec, fps (how events are captured)
+        Storage   — limit, location, BYD dashcam cleanup (where files live)
+        Advanced  — developer / debug switches
+      BYD Cloud account is its own page (byd-cloud.html) — accessed from the
+      sidebar Integrations group, since it belongs with ABRP and MQTT.
+      Cards are tagged via `data-tab` attributes on each <div class="card">.
+    -->
+    <script>
+        window.OT_TABS = [
+            { id: 'general',   label: 'General',   i18n: 'surveillance.tab_general',   svg: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+            { id: 'detection', label: 'Detection', i18n: 'surveillance.tab_detection', svg: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' },
+            { id: 'recording', label: 'Recording', i18n: 'surveillance.tab_recording', svg: '<path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/>' },
+            { id: 'storage',   label: 'Storage',   i18n: 'surveillance.tab_storage',   svg: '<line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>' },
+            { id: 'advanced',  label: 'Advanced',  i18n: 'surveillance.tab_advanced',  svg: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' }
+        ];
+    </script>
+    <script src="../shared/app-tabs.js"></script>
     <link rel="stylesheet" href="../shared/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        .dev-arrow.open { transform: rotate(90deg); }
+        /* Per-camera detection toggles — 2-column on tablets, single column on
+           narrow phones so the toggle never runs out of room next to the label. */
+        .surv-camera-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding-bottom: 16px;
+        }
+        @media (max-width: 540px) {
+            .surv-camera-grid { grid-template-columns: 1fr; gap: 4px; }
+        }
+        /* BYD Cloud credential inputs — let them stretch on narrow viewports
+           rather than the inline 240px/200px caps that make the field look
+           tiny with a wrapped label above. */
+        @media (max-width: 540px) {
+            .byd-input { max-width: none !important; width: 100%; }
+            .byd-pin-input { max-width: 100% !important; }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jmuxer@2.0.4/dist/jmuxer.min.js"></script>
     <link rel="stylesheet" href="../shared/leaflet.css" />
@@ -28,250 +67,8 @@
 <body>
     <div class="app-layout">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <div class="brand-logo">
-                        <img src="../shared/app-icon.webp" alt="OverDrive">
-                    </div>
-                    <div class="brand-text">
-                        <span class="brand-name" data-i18n="app.name">OverDrive</span>
-                        <span class="brand-tagline" data-i18n="app.tagline">Surveillance System</span>
-                        <span class="brand-version" id="appVersion"></span>
-                    </div>
-                </div>
-                <button class="sidebar-close" onclick="toggleSidebar()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="index.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/>
-                        <path d="M2 12a9 9 0 0 0 8 8"/><circle cx="2" cy="12" r="2"/>
-                    </svg>
-                    <span data-i18n="nav.live_view">Live View</span>
-                </a>
-                <a href="events.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <span data-i18n="nav.events">Events</span>
-                </a>
-                <a href="surveillance.html" class="nav-link active">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    <span data-i18n="nav.surveillance">Surveillance</span>
-                </a>
-                <a href="recording.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m22 8-6 4 6 4V8Z"/>
-                        <rect width="14" height="12" x="2" y="6" rx="2"/>
-                    </svg>
-                    <span data-i18n="nav.recordings">Recordings</span>
-                </a>
-                <a href="performance.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
-                    <span data-i18n="nav.performance">Performance</span>
-                </a>
-                <a href="abrp.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 18l6-6-6-6"/>
-                        <circle cx="18" cy="12" r="3"/>
-                        <circle cx="6" cy="6" r="3"/>
-                        <circle cx="6" cy="18" r="3"/>
-                    </svg>
-                    <span data-i18n="nav.abrp">ABRP</span>
-                </a>
-                <a href="mqtt.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <circle cx="12" cy="12" r="2"/>
-                        <path d="M8.46 15.54A5 5 0 0 1 7 12a5 5 0 0 1 1.46-3.54"/>
-                        <path d="M15.54 8.46A5 5 0 0 1 17 12a5 5 0 0 1-1.46 3.54"/>
-                        <path d="M5.64 18.36A9 9 0 0 1 3 12a9 9 0 0 1 2.64-6.36"/>
-                        <path d="M18.36 5.64A9 9 0 0 1 21 12a9 9 0 0 1-2.64 6.36"/>
-                    </svg>
-                    <span data-i18n="nav.mqtt">MQTT</span>
-                </a>
-                <a href="trips.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 17h2v-7l4 4 4-4 4 4 4-4v7h2"/>
-                        <path d="M4 5h16"/>
-                    </svg>
-                    <span data-i18n="nav.trips">Trips</span>
-                </a>
-                <a href="notifications.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <span data-i18n="nav.notifications">Notifications</span>
-                </a>
-                <a href="vehicle-control.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <span data-i18n="nav.vehicle_control">Vehicle Control</span>
-                </a>
-                <a href="about.html" class="nav-link">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    <span data-i18n="nav.about">About</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="status-card">
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.device">
-                            <span class="status-dot" id="connDot"></span>
-                            Device
-                        </span>
-                        <span class="status-value" id="deviceId">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.acc">ACC</span>
-                        <span class="status-value" id="accValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.battery_12v">
-                            <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="7" width="12" height="10" rx="1"/><path d="M6 10H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2"/><path d="M18 10h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2"/>
-                            </svg>
-                            12V
-                        </span>
-                        <span class="status-value" id="batteryValue">--</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.sentry">Surveillance</span>
-                        <span class="status-value" id="survStatus" data-i18n="status.off">OFF</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-label" data-i18n="status.network">
-                            <span id="networkIcon"><svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></span>Net
-                        </span>
-                        <span class="status-value" id="networkValue">--</span>
-                    </div>
-                </div>
-                <!-- EV Battery & Charging Card -->
-                <div class="status-card ev-card" id="evCard">
-                    <div class="ev-header-row">
-                        <span class="ev-title" data-i18n="status.vehicle_status">Vehicle Status</span>
-                        <span class="ev-percent-text" id="evPercentValue">--%</span>
-                    </div>
-                    <div class="ev-svg-container">
-                        <svg viewBox="0 0 320 130" class="ev-car-svg">
-                            <defs>
-                                <linearGradient id="ceramicBody" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#ffffff"/>
-                                    <stop offset="60%" stop-color="#f8fafc"/>
-                                    <stop offset="100%" stop-color="#e2e8f0"/>
-                                </linearGradient>
-                                <linearGradient id="glassTint" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#020617"/>
-                                    <stop offset="100%" stop-color="#1e293b"/>
-                                </linearGradient>
-                                <linearGradient id="batteryFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#2dd4bf" class="grad-start"/>
-                                    <stop offset="50%" stop-color="#06b6d4" class="grad-mid"/>
-                                    <stop offset="100%" stop-color="#3b82f6" class="grad-end"/>
-                                </linearGradient>
-                                <pattern id="chargeFlowPattern" x="0" y="0" width="20" height="10" patternUnits="userSpaceOnUse">
-                                    <rect x="0" y="0" width="10" height="16" fill="rgba(255,255,255,0.4)"/>
-                                </pattern>
-                                <linearGradient id="chromeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#e2e8f0"/>
-                                    <stop offset="50%" stop-color="#ffffff"/>
-                                    <stop offset="100%" stop-color="#94a3b8"/>
-                                </linearGradient>
-                                <filter id="liquidDepth">
-                                    <feInnerShadow dx="0" dy="2" stdDeviation="1" flood-color="rgba(0,0,0,0.1)"/>
-                                </filter>
-                            </defs>
-                            <g transform="translate(0, -3)">
-                                <circle cx="70" cy="90" r="19" fill="#050505"/>
-                                <circle cx="250" cy="90" r="19" fill="#050505"/>
-                            </g>
-                            <path d="M10,65 Q15,50 30,45 L60,38 L100,20 C130,10 180,10 210,22 L260,40 Q280,44 295,52 L310,62 Q315,68 312,78 L275,78 Q250,50 225,78 L95,78 Q70,50 45,78 L15,78 Q5,78 5,68 Q5,62 10,65 Z" fill="url(#ceramicBody)" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.3))"/>
-                            <path d="M95,78 L225,78 L225,98 L95,98 Z" fill="url(#ceramicBody)"/>
-                            <g>
-                                <path d="M100,24 L210,26 L240,42 L200,42 L100,40 Z" fill="none" stroke="url(#chromeGrad)" stroke-width="1.5"/>
-                                <path d="M102,26 L208,28 L235,41 L200,41 L102,39 Z" fill="url(#glassTint)"/>
-                                <path d="M155,27 L160,28 L160,41 L155,40 Z" fill="#020617"/>
-                            </g>
-                            <rect id="evBatteryFill" x="100" y="80" width="0" height="16" rx="2" fill="url(#batteryFlow)" class="battery-bar" filter="url(#liquidDepth)"/>
-                            <rect id="evChargeFlow" x="100" y="80" width="0" height="16" rx="2" fill="url(#chargeFlowPattern)" class="charge-flow" opacity="0"/>
-                            <g transform="translate(70, 90)">
-                                <circle r="19" fill="#050505"/>
-                                <circle r="14" fill="#ffffff"/>
-                                <circle r="14" fill="url(#ceramicBody)" opacity="0.8"/>
-                                <circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/>
-                                <path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/>
-                                <circle r="4" fill="#1e293b"/>
-                            </g>
-                            <g transform="translate(250, 90)">
-                                <circle r="19" fill="#050505"/>
-                                <circle r="14" fill="#ffffff"/>
-                                <circle r="14" fill="url(#ceramicBody)" opacity="0.8"/>
-                                <circle r="14" fill="none" stroke="#e2e8f0" stroke-width="1"/>
-                                <path d="M0,-14 L0,14 M-12,-7 L12,7 M-12,7 L12,-7" stroke="#cbd5e1" stroke-width="2"/>
-                                <circle r="4" fill="#1e293b"/>
-                            </g>
-                            <path d="M290,55 L302,53 L298,60 Z" fill="#fff" filter="drop-shadow(0 0 3px cyan)"/>
-                            <path d="M12,58 L18,55 L18,62 Z" fill="#ef4444" opacity="0.9"/>
-                            <g id="svgChargeIcon" transform="translate(160, 5) scale(0)" style="transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-                                <circle r="12" fill="#00D4AA" stroke="#fff" stroke-width="2"/>
-                                <path d="M-2,-6 L-4,1 L0,1 L-2,7 L5,-1 L1,-1 Z" fill="#fff"/>
-                            </g>
-                        </svg>
-                    </div>
-                    <div class="ev-info-row">
-                        <div class="ev-range">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2v20M2 12h20"/>
-                            </svg>
-                            <span id="evRange">-- km</span>
-                        </div>
-                        <div class="ev-power-status">
-                            <span class="ev-power-val" id="evPower">-- kW</span>
-                        </div>
-                    </div>
-                    <div class="ev-soh-row" id="evSohRow" style="display:none;">
-                        <span class="ev-soh-label">SOH</span>
-                        <span class="ev-soh-val" id="evSohValue">--%</span>
-                    </div>
-                    <div class="ev-personalized-range" id="evPersonalizedRow" style="display:none;">
-                        <span class="ev-personalized-label" data-i18n="surveillance.personalized_label">⚡ Personalized</span>
-                        <span class="ev-personalized-val" id="evPersonalizedRange">-- km</span>
-                    </div>
-                </div>
-
-                <!-- Fuel Card (PHEV only — hidden for BEVs) -->
-                <div class="status-card fuel-card" id="fuelCard" style="display:none;">
-                    <div class="fuel-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px;color:var(--warning);">
-                            <path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/>
-                            <path d="M3 22h10"/>
-                            <path d="M13 10h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 6"/>
-                            <path d="M6 14v-3"/>
-                        </svg>
-                        <span class="fuel-title" data-i18n="surveillance.fuel_label">Fuel</span>
-                        <span class="fuel-percent" id="fuelPercentValue">--%</span>
-                    </div>
-                    <div class="fuel-bar-track">
-                        <div class="fuel-bar-fill" id="fuelBarFill" style="width:0%"></div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
+        <!-- App shell sidebar (rendered by ../shared/app-shell.js) -->
+        <div id="app-shell-mount"></div>
         <!-- Main Content -->
         <main class="main-content">
             <div class="mobile-header">
@@ -296,7 +93,7 @@
 
             <div class="page-body">
                 <!-- Surveillance Mode -->
-                <div class="card">
+                <div class="card" data-tab="general">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -328,7 +125,7 @@
                 </div>
 
                 <!-- Safe Locations -->
-                <div class="card">
+                <div class="card" data-tab="detection">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -384,7 +181,8 @@
 
                             <!-- Add Button -->
                             <button class="btn btn-primary" style="width:100%; margin-top:12px;" onclick="SafeLocations.addCurrentZone()">
-                                📍 <span data-i18n="surveillance.add_zone">Add This Zone</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <span data-i18n="surveillance.add_zone">Add this zone</span>
                             </button>
 
                             <!-- Saved Zones List -->
@@ -394,7 +192,7 @@
                 </div>
 
                 <!-- Detection Settings -->
-                <div class="card">
+                <div class="card" data-tab="detection">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -490,7 +288,7 @@
                                 <div class="setting-desc" data-i18n="surveillance.camera_controls_desc">Enable or disable detection per camera</div>
                             </div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-bottom:16px;">
+                        <div class="surv-camera-grid">
                             <div class="setting-row" style="border-bottom:none;padding:8px 0;">
                                 <div class="setting-info"><div class="setting-name" style="font-size:13px;" data-i18n="surveillance.camera_front">Front</div></div>
                                 <div class="setting-control">
@@ -583,128 +381,53 @@
                         </div>
                         <div class="setting-hint" data-i18n="surveillance.detect_objects_hint">Select which objects YOLO AI should identify. Motion detection triggers regardless — AI classifies what was detected.</div>
 
-                        <!-- Telegram integration (advanced) -->
+                        <!-- Telegram delivery moved to notifications.html (Telegram tab).
+                             Same input IDs (v2TelegramSendStartPing, v2TelegramTierGroup,
+                             v2TelegramNotices/Alerts/Critical) are preserved over there
+                             so SurvSettings bindings keep firing without any glue. -->
+                    </div>
+                </div>
+
+                <!-- Developer / debug toggles — extracted from the Detection card so
+                     they live on the dedicated Advanced tab. Same input IDs preserved
+                     so SurvSettings.updateV2Dev() / loadConfig() bindings keep working. -->
+                <div class="card" data-tab="advanced">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            <span data-i18n="surveillance.developer">Developer</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
                         <div class="setting-row">
                             <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.telegram_two_stage">Two-stage Telegram alerts</div>
-                                <div class="setting-desc" data-i18n="surveillance.telegram_two_stage_desc">Send a quick "recording started" message, then the photo when it ends. Off by default — the photo alone is usually enough.</div>
+                                <div class="setting-name" data-i18n-attr="title:surveillance.motion_heatmap_title" title="Shows colored blocks on the live stream indicating where motion is detected." data-i18n="surveillance.motion_heatmap">Motion Heatmap</div>
+                                <div class="setting-desc" data-i18n="surveillance.motion_heatmap_desc">Overlay motion detection zones on stream</div>
                             </div>
                             <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="v2TelegramSendStartPing" onchange="SurvSettings.updateTelegramStartPing()">
+                                <label class="toggle-switch" data-i18n-attr="title:surveillance.motion_heatmap_title" title="Shows colored blocks on the live stream indicating where motion is detected.">
+                                    <input type="checkbox" id="v2MotionHeatmap" onchange="SurvSettings.updateV2Dev()">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Per-tier Telegram filter — mirrors the push tier toggles
-                             so a Telegram-only user can mute background-noise alerts.
-                             NOTICE off by default (matches push), ALERT and CRITICAL on.
-                             The whole `v2TelegramTierGroup` is greyed out when the bot
-                             isn't paired (loaded from /api/settings/telegram-status). -->
-                        <div id="v2TelegramTierGroup">
                         <div class="setting-row" style="border-bottom:none;">
                             <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.telegram_tiers">Telegram severity filter</div>
-                                <div class="setting-desc" data-i18n="surveillance.telegram_tiers_desc">Pick which severity tiers reach your Telegram chat. Off tiers are still recorded; only the message is suppressed.</div>
-                                <div id="v2TelegramTierWarning"
-                                     class="setting-desc"
-                                     style="display:none; margin-top:6px; padding:8px 10px;
-                                            border-radius:8px; background:rgba(245,158,11,0.10);
-                                            border:1px solid rgba(245,158,11,0.25);
-                                            color:var(--warning);"
-                                     data-i18n="surveillance.telegram_not_paired">Telegram bot isn't paired yet — tier toggles have no effect until you link a bot.</div>
-                            </div>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" style="display:flex;align-items:center;gap:8px;">
-                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-muted);"></span>
-                                    <span data-i18n="surveillance.tier_notice">Notice</span>
-                                </div>
-                                <div class="setting-desc" data-i18n="surveillance.tier_notice_desc">Routine activity (parked cars, distant movement)</div>
+                                <div class="setting-name" data-i18n-attr="title:surveillance.filter_debug_log_title" title="Logs detailed filter decisions for each detection." data-i18n="surveillance.filter_debug_log">Filter Debug Log</div>
+                                <div class="setting-desc" data-i18n="surveillance.filter_debug_log_desc">Log detailed filter decisions</div>
                             </div>
                             <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="v2TelegramNotices" onchange="SurvSettings.updateTelegramTiers()">
+                                <label class="toggle-switch" data-i18n-attr="title:surveillance.filter_debug_log_title" title="Logs detailed filter decisions for each detection.">
+                                    <input type="checkbox" id="v2FilterDebugLog" onchange="SurvSettings.updateV2Dev()">
                                     <span class="toggle-slider"></span>
                                 </label>
-                            </div>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" style="display:flex;align-items:center;gap:8px;">
-                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FFB75A;"></span>
-                                    <span data-i18n="surveillance.tier_alert">Alert</span>
-                                </div>
-                                <div class="setting-desc" data-i18n="surveillance.tier_alert_desc">Approaching person, vehicle close enough to warrant attention</div>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="v2TelegramAlerts" onchange="SurvSettings.updateTelegramTiers()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" style="display:flex;align-items:center;gap:8px;">
-                                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FF6B6B;"></span>
-                                    <span data-i18n="surveillance.tier_critical">Critical</span>
-                                </div>
-                                <div class="setting-desc" data-i18n="surveillance.tier_critical_desc">Person at very close range — likely tampering / loitering</div>
-                            </div>
-                            <div class="setting-control">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="v2TelegramCritical" onchange="SurvSettings.updateTelegramTiers()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        </div><!-- /#v2TelegramTierGroup -->
-
-                        <!-- Developer Section (collapsible) -->
-                        <div style="border-top:1px solid var(--border-subtle);padding-top:12px;">
-                            <div class="setting-row" style="border-bottom:none;cursor:pointer;" onclick="document.getElementById('v2DevContent').style.display = document.getElementById('v2DevContent').style.display === 'none' ? 'block' : 'none'; this.querySelector('.dev-arrow').classList.toggle('open');">
-                                <div class="setting-info">
-                                    <div class="setting-name" style="font-size:13px;color:var(--text-muted);">
-                                        <svg class="dev-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;transition:transform 0.2s;"><polyline points="9 18 15 12 9 6"/></svg>
-                                        <span data-i18n="surveillance.developer">Developer</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="v2DevContent" style="display:none;">
-                                <div class="setting-row">
-                                    <div class="setting-info">
-                                        <div class="setting-name" data-i18n-attr="title:surveillance.motion_heatmap_title" title="Shows colored blocks on the live stream indicating where motion is detected." data-i18n="surveillance.motion_heatmap">Motion Heatmap</div>
-                                        <div class="setting-desc" data-i18n="surveillance.motion_heatmap_desc">Overlay motion detection zones on stream</div>
-                                    </div>
-                                    <div class="setting-control">
-                                        <label class="toggle-switch" data-i18n-attr="title:surveillance.motion_heatmap_title" title="Shows colored blocks on the live stream indicating where motion is detected.">
-                                            <input type="checkbox" id="v2MotionHeatmap" onchange="SurvSettings.updateV2Dev()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="setting-row" style="border-bottom:none;">
-                                    <div class="setting-info">
-                                        <div class="setting-name" data-i18n-attr="title:surveillance.filter_debug_log_title" title="Logs detailed filter decisions for each detection." data-i18n="surveillance.filter_debug_log">Filter Debug Log</div>
-                                        <div class="setting-desc" data-i18n="surveillance.filter_debug_log_desc">Log detailed filter decisions</div>
-                                    </div>
-                                    <div class="setting-control">
-                                        <label class="toggle-switch" data-i18n-attr="title:surveillance.filter_debug_log_title" title="Logs detailed filter decisions for each detection.">
-                                            <input type="checkbox" id="v2FilterDebugLog" onchange="SurvSettings.updateV2Dev()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Detection Zones (Per-Camera ROI) -->
-                <div class="card">
+                <div class="card" data-tab="detection">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>
@@ -760,7 +483,7 @@
                 </div>
 
                 <!-- Surveillance Schedule -->
-                <div class="card">
+                <div class="card" data-tab="general">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -799,7 +522,7 @@
                 </div>
 
                 <!-- Deterrent Action -->
-                <div class="card">
+                <div class="card" data-tab="general">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -815,151 +538,24 @@
                             </div>
                             <div class="setting-control">
                                 <select class="select-control" id="deterrentAction" onchange="SurvSettings.updateDeterrent(this.value)">
-                                    <option value="silent" data-i18n="surveillance.deterrent_silent_option">🔇 Silent (record only)</option>
-                                    <option value="flash_lights" data-i18n="surveillance.deterrent_flash_option">💡 Flash Lights</option>
-                                    <option value="find_car" data-i18n="surveillance.deterrent_horn_option">📢 Horn + Lights</option>
+                                    <option value="silent" data-i18n="surveillance.deterrent_silent_option">Silent (record only)</option>
+                                    <option value="flash_lights" data-i18n="surveillance.deterrent_flash_option">Flash lights</option>
+                                    <option value="find_car" data-i18n="surveillance.deterrent_horn_option">Horn + lights</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="setting-hint" data-i18n="surveillance.deterrent_hint">Flash Lights and Horn + Lights use BYD's cloud API. The command bounces off BYD's servers to the car's T-Box. Requires BYD Cloud account setup below.</div>
+                        <div class="setting-hint" data-i18n="surveillance.deterrent_hint_v2">Flash Lights and Horn + Lights use BYD's cloud API. Set up your BYD Cloud account on the BYD Cloud page (sidebar → Integrations → BYD Cloud) to enable these.</div>
                         <div id="deterrentWarning" class="info-box" style="display:none; border-color:var(--warning); background:rgba(245,158,11,0.08); margin-top:8px;">
                             <div style="display:flex; align-items:center; gap:8px; color:var(--warning);">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span style="font-size:13px;" data-i18n="surveillance.deterrent_warning">BYD Cloud account not configured. Set up your credentials below to enable cloud deterrents.</span>
+                                <span style="font-size:13px;"><span data-i18n="surveillance.deterrent_warning_v2">BYD Cloud account not configured.</span> <a href="byd-cloud.html" style="color:var(--warning); text-decoration:underline;" data-i18n="surveillance.deterrent_warning_link">Open BYD Cloud →</a></span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BYD Cloud Account -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-                            <span data-i18n="surveillance.byd_cloud_title">BYD Cloud Account</span>
-                        </div>
-                        <span class="status-badge inactive" id="bydCloudBadge" data-i18n="surveillance.byd_badge_not_set">NOT SET</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="setting-hint" style="margin-bottom:12px;" data-i18n="surveillance.byd_cloud_hint">Connect your BYD app account to enable remote commands (door lock, flash lights, horn). Only derived key hashes are stored — your raw password is never saved.</div>
-
-                        <!-- Connected info (shown when configured) -->
-                        <div id="bydCloudInfo" style="display:none; margin-bottom:12px;">
-                            <div class="info-box">
-                                <div class="info-row"><span class="label" data-i18n="surveillance.byd_vin">VIN</span><span class="value" id="bydVinDisplay">—</span></div>
-                                <div class="info-row"><span class="label" data-i18n="surveillance.byd_account">Account</span><span class="value" id="bydAccountDisplay">—</span></div>
-                            </div>
-                        </div>
-
-                        <!-- Credential form (always visible for setup or edit) -->
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.byd_region">Server Region</div>
-                                <div class="setting-desc" data-i18n="surveillance.byd_region_desc">Must match the region your BYD account was registered in. If unsure, try Europe (EU) first — it's the default for most overseas accounts.</div>
-                            </div>
-                            <div class="setting-control">
-                                <select class="select-control" id="bydRegion">
-                                    <option value="eu" data-i18n="surveillance.byd_region_eu">🇪🇺 Europe (default)</option>
-                                    <option value="in" data-i18n="surveillance.byd_region_in">🇮🇳 India</option>
-                                    <option value="au" data-i18n="surveillance.byd_region_au">🇦🇺 Australia</option>
-                                    <option value="sg" data-i18n="surveillance.byd_region_sg">🇸🇬 Singapore</option>
-                                    <option value="br" data-i18n="surveillance.byd_region_br">🇧🇷 Brazil</option>
-                                    <option value="jp" data-i18n="surveillance.byd_region_jp">🇯🇵 Japan</option>
-                                    <option value="kr-ali" data-i18n="surveillance.byd_region_kr">🇰🇷 Korea</option>
-                                    <option value="sa" data-i18n="surveillance.byd_region_sa">🇸🇦 Saudi Arabia</option>
-                                    <option value="tr" data-i18n="surveillance.byd_region_tr">🇹🇷 Turkey</option>
-                                    <option value="mx" data-i18n="surveillance.byd_region_mx">🇲🇽 Mexico</option>
-                                    <option value="id" data-i18n="surveillance.byd_region_id">🇮🇩 Indonesia</option>
-                                    <option value="vn" data-i18n="surveillance.byd_region_vn">🇻🇳 Vietnam</option>
-                                    <option value="no" data-i18n="surveillance.byd_region_no">🇳🇴 Norway</option>
-                                    <option value="uz" data-i18n="surveillance.byd_region_uz">🇺🇿 Uzbekistan</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info"><div class="setting-name" data-i18n="surveillance.byd_email">Email</div></div>
-                            <div class="setting-control">
-                                <input type="email" class="text-input" id="bydEmail" placeholder="your@email.com" data-i18n-attr="placeholder:surveillance.byd_email_placeholder" style="width:100%;max-width:240px;padding:8px 12px;border:1px solid var(--border-default);border-radius:8px;background:var(--bg-elevated);color:var(--text-primary);font-size:13px;">
-                            </div>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.byd_password">Password</div>
-                                <div class="setting-desc" id="bydPasswordHint" data-i18n="surveillance.byd_pwd_hint">Your BYD app login password</div>
-                            </div>
-                            <div class="setting-control" style="display:flex; align-items:center; gap:6px;">
-                                <input type="password" class="text-input" id="bydPassword" placeholder="BYD app password" data-i18n-attr="placeholder:surveillance.byd_pwd_placeholder" style="width:100%;max-width:200px;padding:8px 12px;border:1px solid var(--border-default);border-radius:8px;background:var(--bg-elevated);color:var(--text-primary);font-size:13px;">
-                                <button type="button" onclick="BydCloud.togglePasswordVisibility('bydPassword', this)" style="background:none;border:1px solid var(--border-default);border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--text-muted);flex-shrink:0;" data-i18n-attr="title:surveillance.byd_password_toggle_title" title="Show/hide password">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="setting-row" style="border-bottom:none;">
-                            <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.byd_pin">Control PIN</div>
-                                <div class="setting-desc" id="bydPinHint" data-i18n="surveillance.byd_pin_hint">The 4-6 digit PIN you set in the official BYD app</div>
-                            </div>
-                            <div class="setting-control">
-                                <input type="password" class="text-input" id="bydPin" placeholder="123456" maxlength="6" style="width:100%;max-width:120px;padding:8px 12px;border:1px solid var(--border-default);border-radius:8px;background:var(--bg-elevated);color:var(--text-primary);font-size:13px;text-align:center;letter-spacing:4px;">
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:12px;">
-                            <button class="btn btn-primary" onclick="BydCloud.saveCredentials()" id="bydSaveBtn" style="flex:1;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                <span data-i18n="surveillance.save_credentials">Save Credentials</span>
-                            </button>
-                            <button class="btn" onclick="BydCloud.testConnection()" id="bydTestBtn" disabled style="flex:1; border:1px solid var(--border-default); color:var(--text-muted);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                                <span data-i18n="surveillance.test_connection">Test Connection</span>
-                            </button>
-                        </div>
-                        <div id="bydCloudStatus" style="display:none; margin-top:10px; padding:10px 12px; border-radius:8px; font-size:13px;"></div>
-                        
-                        <!-- Cloud Push Status (only shown when verified) -->
-                        <div id="bydCloudPushSection" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border-default);">
-                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text-primary);">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                                    <span data-i18n="surveillance.byd_cloud_push">Cloud Push</span>
-                                    <span id="bydPushBadge" class="status-badge inactive" style="font-size:11px; padding:2px 8px;">—</span>
-                                </div>
-                                <span id="bydPushAge" style="font-size:12px; color:var(--text-muted);">—</span>
-                            </div>
-                            <div id="bydPushData" style="display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary);">
-                                <span id="bydPushLock">—</span>
-                                <span id="bydPushSoc">—</span>
-                                <span id="bydPushCharging">—</span>
-                            </div>
-                        </div>
-
-                        <!-- Cloud Data Merge Toggle (only shown when verified) -->
-                        <div id="bydCloudMergeSection" style="display:none; margin-top:12px;">
-                            <div class="setting-row" style="border-bottom:none;">
-                                <div class="setting-info">
-                                    <div class="setting-name" data-i18n="surveillance.byd_cloud_merge">Use cloud for vehicle data</div>
-                                    <div class="setting-desc" data-i18n="surveillance.byd_cloud_merge_desc">SOC, charging, and temperature from BYD cloud — may be more accurate when parked</div>
-                                </div>
-                                <div class="setting-control">
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="bydCloudMergeToggle" onchange="BydCloud.toggleCloudDataMerge(this.checked)">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Clear button (only shown when configured) -->
-                        <div id="bydClearSection" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-subtle);">
-                            <button class="btn btn-danger" onclick="BydCloud.clearCredentials()" style="width:100%;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                <span data-i18n="surveillance.byd_clear">Clear Credentials</span>
-                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Recording Settings -->
-                <div class="card">
+                <div class="card" data-tab="recording">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
@@ -994,20 +590,38 @@
                         </div>
                         <div class="setting-row">
                             <div class="setting-info">
-                                <div class="setting-name" data-i18n="recording.video_quality_title">Video Quality</div>
-                                <div class="setting-desc" data-i18n="surveillance.video_quality_desc_size">Higher quality = larger files</div>
+                                <div class="setting-name">
+                                    <span data-i18n="recording.recording_quality">Recording Quality</span>
+                                    <span class="setting-badge" data-i18n="recording.applies_live">Applies live</span>
+                                </div>
+                                <div class="setting-desc" data-i18n="recording.recording_quality_desc">Higher tiers preserve more detail at the cost of more storage. Output is a 2560×1920 mosaic of four 1280×960 cameras.</div>
                             </div>
                             <div class="setting-control">
-                                <div class="btn-group" id="bitrateBtns">
-                                    <button class="btn-toggle" data-value="LOW" onclick="SurvSettings.setBitrate('LOW')" data-i18n="recording.qual_low">Low</button>
-                                    <button class="btn-toggle active" data-value="MEDIUM" onclick="SurvSettings.setBitrate('MEDIUM')" data-i18n="recording.qual_med">Med</button>
-                                    <button class="btn-toggle" data-value="HIGH" onclick="SurvSettings.setBitrate('HIGH')" data-i18n="recording.qual_high">High</button>
+                                <div class="btn-group btn-group-vertical" id="survQualityBtns">
+                                    <button class="btn-toggle" data-value="ECONOMY"  onclick="SurvSettings.setRecordingQuality('ECONOMY')">
+                                        <span class="tier-name" data-i18n="recording.tier_economy">Economy</span>
+                                    </button>
+                                    <button class="btn-toggle" data-value="STANDARD" onclick="SurvSettings.setRecordingQuality('STANDARD')">
+                                        <span class="tier-name" data-i18n="recording.tier_standard">Standard</span>
+                                    </button>
+                                    <button class="btn-toggle active" data-value="HIGH" onclick="SurvSettings.setRecordingQuality('HIGH')">
+                                        <span class="tier-name" data-i18n="recording.tier_high">High</span>
+                                    </button>
+                                    <button class="btn-toggle" data-value="PREMIUM" onclick="SurvSettings.setRecordingQuality('PREMIUM')">
+                                        <span class="tier-name" data-i18n="recording.tier_premium">Premium</span>
+                                    </button>
+                                    <button class="btn-toggle" data-value="MAX" onclick="SurvSettings.setRecordingQuality('MAX')">
+                                        <span class="tier-name" data-i18n="recording.tier_max">Max</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         <div class="setting-row">
                             <div class="setting-info">
-                                <div class="setting-name" data-i18n="recording.codec">Video Codec</div>
+                                <div class="setting-name">
+                                    <span data-i18n="recording.codec">Video Codec</span>
+                                    <span class="setting-badge" data-i18n="recording.applies_live">Applies live</span>
+                                </div>
                                 <div class="setting-desc" data-i18n="recording.codec_desc">H.265 produces 50% smaller files</div>
                             </div>
                             <div class="setting-control">
@@ -1019,19 +633,35 @@
                         </div>
                         <div class="setting-row">
                             <div class="setting-info">
-                                <div class="setting-name" data-i18n="recording.camera_fps">Camera FPS</div>
-                                <div class="setting-desc" data-i18n="surveillance.camera_fps_desc">Shared with recording. Takes effect on next ACC OFF.</div>
+                                <div class="setting-name">
+                                    <span data-i18n="recording.camera_fps">Camera FPS</span>
+                                    <span class="setting-badge" data-i18n="recording.applies_live">Applies live</span>
+                                </div>
+                                <div class="setting-desc" data-i18n="recording.camera_fps_desc">Frame rate for recording &amp; surveillance.</div>
                             </div>
                             <div class="setting-control">
                                 <div class="btn-group" id="survFpsBtns">
-                                    <button class="btn-toggle" data-value="8" onclick="SurvSettings.setFps(8)">8</button>
+                                    <button class="btn-toggle" data-value="10" onclick="SurvSettings.setFps(10)">10</button>
                                     <button class="btn-toggle active" data-value="15" onclick="SurvSettings.setFps(15)">15</button>
+                                    <button class="btn-toggle" data-value="20" onclick="SurvSettings.setFps(20)">20</button>
                                     <button class="btn-toggle" data-value="25" onclick="SurvSettings.setFps(25)">25</button>
+                                    <button class="btn-toggle" data-value="30" onclick="SurvSettings.setFps(30)">30</button>
                                 </div>
                             </div>
                         </div>
                         <div class="info-box">
-                            <div class="info-row"><span class="label" data-i18n="recording.est_file_size">Est. file size (2 min)</span><span class="value" id="estFileSize" data-i18n="surveillance.estimate_size_default">~22-30 MB</span></div>
+                            <div class="info-row">
+                                <span class="label" data-i18n="recording.active_estimate">At your settings</span>
+                                <span class="value" id="survActiveEstimate">— Mbps · — / hr · ~—</span>
+                            </div>
+                            <div class="info-row" style="font-size: 0.85em; opacity: 0.7;">
+                                <span class="label" data-i18n="recording.native_resolution">Native</span>
+                                <span class="value">2560×1920 mosaic · 4 × 1280×960 cameras</span>
+                            </div>
+                            <div class="info-row" id="survFpsClampRow" style="display: none; font-size: 0.85em;">
+                                <span class="label" data-i18n="recording.fps_actual">Measured FPS</span>
+                                <span class="value" id="survFpsActual">—</span>
+                            </div>
                         </div>
                         <div class="timeline-visual">
                             <div class="timeline-segment timeline-pre" id="timelinePre" data-i18n="surveillance.timeline_pre">PRE</div>
@@ -1045,7 +675,7 @@
                 </div>
 
                 <!-- Surveillance Storage -->
-                <div class="card">
+                <div class="card" data-tab="storage">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1066,8 +696,8 @@
                             </div>
                             <div class="setting-control">
                                 <div class="btn-group" id="survStorageTypeBtns">
-                                    <button class="btn-toggle active" data-value="INTERNAL" onclick="SurvSettings.setStorageType('INTERNAL')" data-i18n="trip.settings.storage_internal">📱 Internal</button>
-                                    <button class="btn-toggle" data-value="SD_CARD" onclick="SurvSettings.setStorageType('SD_CARD')" id="btnSurvSdCard" data-i18n="trip.settings.storage_sd">💾 SD Card</button>
+                                    <button class="btn-toggle active" data-value="INTERNAL" onclick="SurvSettings.setStorageType('INTERNAL')" data-i18n="trip.settings.storage_internal">Internal</button>
+                                    <button class="btn-toggle" data-value="SD_CARD" onclick="SurvSettings.setStorageType('SD_CARD')" id="btnSurvSdCard" data-i18n="trip.settings.storage_sd">SD card</button>
                                 </div>
                             </div>
                         </div>
@@ -1114,7 +744,7 @@
                 </div>
 
                 <!-- BYD Dashcam Cleanup (shown when SD card selected) -->
-                <div class="card" id="cdrCleanupCard" style="display:none;">
+                <div class="card" data-tab="storage" id="cdrCleanupCard" style="display:none;">
                     <div class="card-header">
                         <div class="card-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1139,9 +769,10 @@
                             </div>
                         </div>
                         <!-- Recommend banner (shown only when API says recommendAutoCleanup) -->
-                        <div class="info-box" id="cdrRecommendBanner" style="display:none;background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.3);">
+                        <div class="info-box-warning" id="cdrRecommendBanner" style="display:none;">
+                            <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                             <div class="info-row" style="color:var(--warning);">
-                                <span class="label" data-i18n="recording.cdr_recommend_label">⚠️ Recommended</span>
+                                <span class="label" data-i18n="recording.cdr_recommend_label_v2">Recommended</span>
                                 <span class="value" data-i18n="recording.cdr_recommend_text">Overdrive uses SD — enable cleanup to keep space free</span>
                             </div>
                         </div>
@@ -1192,8 +823,9 @@
                             </div>
                         </div>
                         <!-- Manual Cleanup Button -->
-                        <button class="btn btn-danger" style="width:100%;margin-top:12px;" onclick="SurvSettings.triggerCdrCleanup()" data-i18n="recording.cdr_cleanup_now">
-                            🗑️ Clean Up Now
+                        <button class="btn btn-danger" style="width:100%;margin-top:12px;" onclick="SurvSettings.triggerCdrCleanup()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            <span data-i18n="recording.cdr_cleanup_now_v2">Clean up now</span>
                         </button>
                         <!-- Stats -->
                         <div class="info-box" style="margin-top:12px;">
@@ -1221,7 +853,6 @@
     <script src="../shared/pwa-init.js"></script>
     <script src="../shared/core.js"></script>
     <script src="../shared/update-flow.js"></script>
-    <script src="../shared/pip.js"></script>
     <script src="../shared/surveillance.js"></script>
     <script src="../shared/safe-locations.js"></script>
     <script src="../shared/roi-schedule.js"></script>
@@ -1232,7 +863,6 @@
         }
         BYD.i18n.init().then(function () {
             BYD.core.init();
-            BYD.pip.init();
             SurvSettings.init();
             SafeLocations.init();
             RoiEditor.init();

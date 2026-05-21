@@ -75,11 +75,16 @@ public final class PushSink implements NotificationBus.Sink {
 
         long now = System.currentTimeMillis();
         ExecutorService exec = null; // lazy
+        // Categories may opt out of the quiet-hours block at the registry level
+        // (e.g. charging complete — the whole point is to wake the user so they
+        // unplug). CRITICAL severity also bypasses, as before.
+        boolean categoryBypassesQuiet = meta.bypassQuietHours;
         for (PushSubscription sub : all) {
             if (sub.isMuted(event.category)) continue;
             if (event.severity.ordinal() < sub.minSeverity.ordinal()) continue;
             if (sub.inQuietHours(now)
-                    && event.severity != NotificationEvent.Severity.CRITICAL) {
+                    && event.severity != NotificationEvent.Severity.CRITICAL
+                    && !categoryBypassesQuiet) {
                 continue;
             }
             if (exec == null) exec = executor();

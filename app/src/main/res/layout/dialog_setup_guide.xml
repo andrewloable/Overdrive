@@ -28,7 +28,7 @@
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
             android:textColor="?attr/colorOnPrimaryContainer"
             android:visibility="gone"
-            tools:text="Updated to v11.0 — re-confirm autostart"
+            tools:text="Updated — re-confirm autostart"
             tools:visibility="visible" />
 
         <!-- Title -->

@@ -976,49 +976,19 @@ class DaemonLauncher(
     }
     
     /**
-     * Write output_dir and apk_path to telegram config file so daemon can find event recordings
-     * and AccSentryDaemon can launch telegram daemon with correct classpath.
+     * Write output_dir and apk_path to the unified telegram config so the
+     * daemon can find event recordings and AccSentryDaemon can launch the
+     * telegram daemon with the correct classpath. Cross-UID safe — the
+     * unified config file is world-RW.
      */
     private fun writeOutputDirToTelegramConfig() {
         try {
-            val outputDir = context.getExternalFilesDir(null)?.absolutePath 
+            val outputDir = context.getExternalFilesDir(null)?.absolutePath
                 ?: "/sdcard/DCIM/BYDCam"
             val apkPath = context.applicationInfo.sourceDir
-            
-            val configFile = java.io.File("/data/local/tmp/telegram_config.properties")
-            val props = java.util.Properties()
-            
-            // Load existing config if present
-            if (configFile.exists()) {
-                java.io.FileInputStream(configFile).use { fis ->
-                    props.load(fis)
-                }
-            }
-            
-            // Update output_dir and apk_path
-            props.setProperty("output_dir", outputDir)
-            props.setProperty("apk_path", apkPath)
-            
-            // Write back via ADB shell (daemon runs as shell user)
-            val propsContent = buildString {
-                props.forEach { key, value ->
-                    append("$key=$value\n")
-                }
-            }
-            
-            // Use echo to write file (works with shell permissions)
-            val escapedContent = propsContent.replace("\"", "\\\"").replace("\n", "\\n")
-            adbShellExecutor.execute(
-                command = "echo -e \"$escapedContent\" > /data/local/tmp/telegram_config.properties",
-                callback = object : AdbShellExecutor.ShellCallback {
-                    override fun onSuccess(output: String) {
-                        logManager.debug(TAG, "Wrote output_dir and apk_path to telegram config")
-                    }
-                    override fun onError(error: String) {
-                        logManager.warn(TAG, "Failed to write telegram config: $error")
-                    }
-                }
-            )
+            com.overdrive.app.telegram.config.UnifiedTelegramConfig
+                .setLaunchPaths(outputDir, apkPath)
+            logManager.debug(TAG, "Wrote outputDir/apkPath to unified telegram config")
         } catch (e: Exception) {
             logManager.warn(TAG, "Error writing telegram config: ${e.message}")
         }

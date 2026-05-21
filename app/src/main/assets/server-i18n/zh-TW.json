@@ -125,6 +125,20 @@
     "recording_caption_no_label": " 錄音 - {0}",
     "proximity_alert": "近距離警報時間: {0} 引發器: {1} ({2}) 錄音開始..."
   },
+  "vehicle_control": {
+    "cloud_required": "在設定中連接BYD帳戶,",
+    "cloud_sent": "透過雲端發送",
+    "cloud_unavailable_used_local": "雲端無法使用 使用直接連接",
+    "local_sent": "透過直接連接發送",
+    "cloud_offline_used_local": "雲端無線 使用直接連接",
+    "local_unavailable_used_cloud": "直接連線不可用 — 透過雲端傳送",
+    "cloud_failed": "當車子醒來時再試一次.",
+    "rate_limited": "命令仍在進行中 等待幾秒",
+    "not_supported": "這種控制器目前無法使用.",
+    "find_car_label": "找一個車",
+    "battery_heat_label": "熱熱的電池",
+    "close_all_windows_label": "所有的窗戶關閉"
+  },
   "messages": {
     "logged_out": "已登入",
     "bydcloud_connected": "成功連接",

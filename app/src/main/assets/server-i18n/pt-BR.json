@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Registros - {0}s",
     "proximity_alert": " Tempo de alerta de proximidade: {0} Trigger: {1} ({2}) A gravação começou..."
   },
+  "vehicle_control": {
+    "cloud_required": "Conectar uma conta BYD em Configurações para usar este controle",
+    "cloud_sent": "Enviado através da nuvem",
+    "cloud_unavailable_used_local": "Nuvem indisponível  conexão direta usada",
+    "local_sent": "Enviado através da ligação direta",
+    "cloud_offline_used_local": "Conexão direta usada offline em nuvem",
+    "local_unavailable_used_cloud": "Conexão direta indisponível — enviado pela nuvem",
+    "cloud_failed": "Não conseguiu chegar ao carro  tente novamente quando o veículo estiver acordado",
+    "rate_limited": "Um comando ainda está em andamento.",
+    "not_supported": "Este controlo não está disponível neste momento.",
+    "find_car_label": "Encontre um carro .",
+    "battery_heat_label": "Bateria de calor",
+    "close_all_windows_label": "Todas as janelas fechadas"
+  },
   "messages": {
     "logged_out": "Desligado .",
     "bydcloud_connected": "Conectado com sucesso",

@@ -264,9 +264,19 @@
              filled-pill primary CTA + flat-text neutral as MaterialAlertDialog. -->
         <item name="materialAlertDialogTitleTextStyle">@style/MaterialAlertDialog.Overdrive.Title</item>
         <item name="materialAlertDialogBodyTextStyle">@style/MaterialAlertDialog.Overdrive.Body</item>
+        <item name="materialAlertDialogTitleIconStyle">@style/MaterialAlertDialog.Overdrive.TitleIcon</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.Overdrive.M3.Button.Dialog.Primary</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.Overdrive.M3.Button.Dialog.Neutral</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.Overdrive.M3.Button.Dialog.Neutral</item>
+    </style>
+
+    <!-- Tinted, centered, M3-sized title icon used by setIcon() — keeps
+         every dialog icon at colorPrimary, 32dp square, identity-aligned. -->
+    <style name="MaterialAlertDialog.Overdrive.TitleIcon" parent="MaterialAlertDialog.Material3.Title.Icon">
+        <item name="android:tint">?attr/colorPrimary</item>
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
     </style>
 
     <!-- Settings row helpers (used by fragment_settings.xml cards). The

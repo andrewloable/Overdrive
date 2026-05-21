@@ -62,17 +62,88 @@ class WebViewFragment : Fragment() {
     var css = [
         // === Global: hide page-internal navigation. The Android shell already
         //     provides the nav rail + top app bar, so the in-page sidebar,
-        //     mobile header, and floating mini-preview tab switcher are all
-        //     redundant and visually noisy. ===
+        //     mobile header, page-header title, and floating mini-preview tab
+        //     switcher are all redundant and visually noisy. ===
         '.sidebar, .sidebar-overlay, .mobile-header { display: none !important; }',
+        // The activity's MaterialToolbar already shows the page title; hiding
+        // the in-page <header class="page-header"> kills the duplicate title.
+        '.page-header { display: none !important; }',
+        // Sidebar is hidden in the embedded WebView, so collapse the
+        // CSS variable that anchored sticky elements (.bottom-tabs,
+        // .footer-bar) to the right of where the sidebar used to live.
+        // Without this the bottom-tab bar leaves a 260px gap on the left
+        // and only fills half the viewport in landscape.
+        ':root { --sidebar-width: 0px !important; }',
         '.main-content { margin-left: 0 !important; padding-top: 0 !important; }',
+        '.bottom-tabs { left: 0 !important; right: 0 !important; }',
         '.pip-container, .pip-toggle-btn, #pipToggleBtn, #pipContainer { display: none !important; }',
         '.toast-container { z-index: 20000 !important; bottom: 70px !important; }',
-        '.page-header { padding-top: 12px !important; }',
         '.page-body { padding-bottom: 80px !important; }',
         '.footer-bar { bottom: 0 !important; left: 0 !important; right: 0 !important;',
         '              padding: 12px 16px !important; padding-bottom: 12px !important;',
         '              z-index: 10000 !important; }',
+
+        // === Strip the persistent yellow focus ring Chrome leaves on
+        //     buttons after a tap. The active tab is already conveyed by
+        //     the .is-active pill background; the trailing focus outline
+        //     reads as a stuck "stale highlight" and the user reports it
+        //     as a continuous yellow box that lingers until they tap
+        //     somewhere else. CSS alone cannot fully suppress the WebView
+        //     focus rect on Chrome 58 — we ALSO blur the button on click
+        //     below in JS. ===
+        '.bottom-tab, .bottom-tab:focus, .bottom-tab:focus-visible,',
+        '.bottom-tab:active { outline: none !important; box-shadow: none !important;',
+        '                     background-image: none !important; }',
+        'button:focus, button:focus-visible { outline: none !important; }',
+        '* { -webkit-tap-highlight-color: transparent !important; }',
+
+        // === Generic icon-then-text spacing inside the WebView shell.
+        //     Across pages (recording.html / surveillance.html / mqtt.html
+        //     / about.html / abrp.html / telegram.html ...) icon+title rows
+        //     use `display:flex; gap:` to space the leading SVG from its
+        //     label. Chrome 58 on the BYD head-unit honors `gap` only
+        //     intermittently — on some firmware builds the icon and the
+        //     text end up touching. Belt-and-braces fix: bump gap AND add
+        //     a margin-right shim on every direct SVG child of an
+        //     icon-bearing row so the spacing always shows. Scoped to
+        //     [data-app-shell="1"] so the standalone web tunnel keeps its
+        //     authored spacing. ===
+        '[data-app-shell="1"] .card-title { gap: 12px !important; }',
+        '[data-app-shell="1"] .card-title > svg { margin-right: 6px !important; }',
+        '[data-app-shell="1"] .info-box-note > .info-icon,',
+        '[data-app-shell="1"] .info-box-warning > .info-icon { margin-right: 12px !important; }',
+        '[data-app-shell="1"] .tier-card { gap: 16px !important; }',
+        '[data-app-shell="1"] .tier-card > .tier-icon { margin-right: 8px !important; }',
+        '[data-app-shell="1"] .credit-row { gap: 16px !important; }',
+        '[data-app-shell="1"] .credit-row > .credit-avatar { margin-right: 4px !important; }',
+        // Settings rows that pair a leading SVG with a label.
+        '[data-app-shell="1"] .setting-row > svg:first-child,',
+        '[data-app-shell="1"] .setting-info > svg:first-child { margin-right: 12px !important; }',
+
+        // === Recording-mode chip sizing inside the embedded WebView only.
+        //     The 44dp chip + 22px glyph the standalone web shell uses reads
+        //     too heavy in the in-app WebView — the head-unit window is
+        //     narrower than the desktop / tunnel viewport, so the icon
+        //     dominates the row. Shrink the chip to 32dp and the SVG to
+        //     16px ONLY when the page is hosted by the Android shell
+        //     (data-app-shell="1") so the standalone tunnel stays untouched. ===
+        '[data-app-shell="1"] .mode-icon {',
+        '   flex: 0 0 32px !important; width: 32px !important; height: 32px !important;',
+        '   border-radius: 9px !important; }',
+        '[data-app-shell="1"] .mode-icon svg {',
+        '   width: 16px !important; height: 16px !important; }',
+        // gap: bumped to 18px so the icon chip doesn't crowd the title.
+        // Chrome 58 supports flex `gap` here (the WebView constraint that
+        // forced margin-based shims only applies inside the 3D vehicle-
+        // control overlay; PWA pages can use modern flex gap).
+        '[data-app-shell="1"] .mode-card {',
+        '   gap: 18px !important; padding: 12px !important;',
+        '   padding-right: 44px !important; min-height: 0 !important; }',
+        // Belt-and-braces margin shim — if any earlier rule clobbers gap,
+        // the chip still gets a visible breathing space before the body.
+        '[data-app-shell="1"] .mode-icon { margin-right: 6px !important; }',
+        '[data-app-shell="1"] .mode-name { font-size: 13px !important; }',
+        '[data-app-shell="1"] .mode-desc { font-size: 11px !important; }',
 
         // === Live View (index.html) tweaks ===
         // The mini-preview is the only Map ↔ Cameras toggle on this page,
@@ -126,6 +197,33 @@ class WebViewFragment : Fragment() {
     var s = document.createElement('style');
     s.textContent = css;
     document.head.appendChild(s);
+
+    // === Blur focused .bottom-tab on click + after each tab swap.
+    //     Chrome 58 keeps the focus ring drawn until the user taps
+    //     somewhere outside the button; calling blur() drops the focus
+    //     so the visual highlight clears immediately. The .is-active
+    //     pill remains, so the active tab is still obvious. ===
+    function patchBottomTabsBlur() {
+        var bar = document.querySelector('.bottom-tabs');
+        if (!bar) return false;
+        bar.addEventListener('click', function (ev) {
+            var btn = ev.target;
+            while (btn && btn !== bar && !(btn.classList && btn.classList.contains('bottom-tab'))) {
+                btn = btn.parentNode;
+            }
+            if (btn && btn !== bar && typeof btn.blur === 'function') {
+                setTimeout(function () { try { btn.blur(); } catch (e) {} }, 0);
+            }
+        }, true);
+        return true;
+    }
+    if (!patchBottomTabsBlur()) {
+        // Tab bar is built by app-tabs.js after DOMContentLoaded; observe.
+        var tabsObserver = new MutationObserver(function () {
+            if (patchBottomTabsBlur()) tabsObserver.disconnect();
+        });
+        tabsObserver.observe(document.body, { childList: true, subtree: true });
+    }
 
     // Replace fetch() to bypass sing-box proxy for localhost
     if (window.AndroidBridge && !window._fetchPatched) {
@@ -189,6 +287,17 @@ class WebViewFragment : Fragment() {
     private var btnRetry: MaterialButton? = null
     private var currentUrl: String? = null
     private var pageLoadFailed = false
+    // True between onPageStarted and onPageFinished / onReceivedError. The
+    // auth-cookie retry consults this so it doesn't fire a reload() during
+    // an in-flight load — overlapping loadUrl + reload on Chrome 58 WebView
+    // is the source of the "spinner forever" hang.
+    private var loadInProgress = false
+    // Only allow the auth retry to trigger one reload across the fragment's
+    // lifetime. After the first auth-driven reload, any further auth state
+    // changes are picked up by the caller (Settings → Re-login → manual
+    // retry) rather than by silently reloading whatever page the user is
+    // currently looking at.
+    private var authReloadFired = false
 
     // Pending callback from onShowFileChooser — must be invoked exactly once,
     // with either the selected URIs or null on cancel.
@@ -331,7 +440,26 @@ class WebViewFragment : Fragment() {
                                 
                                 val headers = mutableMapOf<String, String>()
                                 connection.headerFields?.forEach { (k, v) ->
-                                    if (k != null && v.isNotEmpty()) headers[k] = v.last()
+                                    if (k == null || v.isEmpty()) return@forEach
+                                    val lower = k.lowercase()
+                                    // Same filter as the localhost branch:
+                                    // Content-Encoding/Length and hop-by-hop
+                                    // headers describe the upstream
+                                    // connection, not the WebView one. CDNs
+                                    // commonly gzip; without this filter
+                                    // WebView re-decodes an already-decoded
+                                    // stream and the resource fails to
+                                    // render.
+                                    if (lower == "content-encoding" ||
+                                        lower == "content-length" ||
+                                        lower == "transfer-encoding" ||
+                                        lower == "connection" ||
+                                        lower == "keep-alive" ||
+                                        lower == "proxy-authenticate" ||
+                                        lower == "trailer" ||
+                                        lower == "te" ||
+                                        lower == "upgrade") return@forEach
+                                    headers[k] = v.last()
                                 }
                                 headers["Access-Control-Allow-Origin"] = "*"
                                 response.responseHeaders = headers
@@ -359,6 +487,13 @@ class WebViewFragment : Fragment() {
                         val connection = java.net.URL(url).openConnection(java.net.Proxy.NO_PROXY) as java.net.HttpURLConnection
                         connection.connectTimeout = 5000
                         connection.readTimeout = 30000
+                        // Don't auto-follow 3xx — AuthMiddleware emits a 302
+                        // → /login.html for unauthenticated page requests, and
+                        // we need WebView to see that redirect so the address
+                        // bar / history reflects the login page. With auto-
+                        // follow, WebView sees a 200 from /login.html under
+                        // the *original* URL, breaking back navigation.
+                        connection.instanceFollowRedirects = false
 
                         // 2. Forward Range Header (VITAL for video)
                         // Chrome sends "Range: bytes=0-" to start playback
@@ -368,11 +503,23 @@ class WebViewFragment : Fragment() {
                             android.util.Log.d("WebViewProxy", "Request Range: $range")
                         }
 
-                        // Forward remaining request headers
+                        // Forward remaining request headers, but strip
+                        // conditional-GET headers (If-None-Match /
+                        // If-Modified-Since). Reason: shouldInterceptRequest's
+                        // synthetic responses don't merge with WebView's HTTP
+                        // cache the way real network responses do, so a 304
+                        // from the daemon returns to WebView as "200 OK with
+                        // empty body" and breaks the video element. By
+                        // forcing the daemon to always 200, we let
+                        // Cache-Control: max-age + immutable on the daemon's
+                        // response satisfy repeat playback from cache without
+                        // revalidation. ETag is still useful for external
+                        // tunnel clients that bypass this intercept.
                         request.requestHeaders?.forEach { (key, value) ->
-                            if (key != "Range") {
-                                connection.setRequestProperty(key, value)
-                            }
+                            if (key.equals("Range", ignoreCase = true)) return@forEach
+                            if (key.equals("If-None-Match", ignoreCase = true)) return@forEach
+                            if (key.equals("If-Modified-Since", ignoreCase = true)) return@forEach
+                            connection.setRequestProperty(key, value)
                         }
 
                         // Inject Auth
@@ -387,7 +534,15 @@ class WebViewFragment : Fragment() {
                         val stream = if (connection.responseCode in 200..399) {
                             connection.inputStream
                         } else {
-                            connection.errorStream ?: return null
+                            // 4xx/5xx — prefer the server's error body, but if
+                            // there is none, surface a synthetic 503 instead of
+                            // returning null. Returning null falls back to the
+                            // system proxy (sing-box) for localhost, which
+                            // hangs without firing onReceivedError.
+                            connection.errorStream
+                                ?: return synthesize503(
+                                    "HTTP ${connection.responseCode} (no error body)"
+                                )
                         }
                         val length = connection.contentLength
 
@@ -412,14 +567,40 @@ class WebViewFragment : Fragment() {
 
                         // 5. Force Response Headers
                         val headers = mutableMapOf<String, String>()
-                        // Copy relevant headers from server
+                        // Copy server headers, but drop:
+                        //   - Content-Encoding: HttpURLConnection transparently
+                        //     gunzips, so the stream we hand to WebView is
+                        //     already decoded — leaving the header would tell
+                        //     WebView to decode again and fail.
+                        //   - Content-Length: keyed off the server's
+                        //     (possibly compressed) length; we recompute
+                        //     below from connection.contentLength which
+                        //     reflects the post-decompression stream when
+                        //     the server didn't gzip, and the manual
+                        //     override is safer than a stale value.
+                        //   - Hop-by-hop headers: Transfer-Encoding /
+                        //     Connection / Keep-Alive / Proxy-Authenticate /
+                        //     Trailer / TE / Upgrade. These describe the
+                        //     server↔intercept connection, not the
+                        //     intercept↔WebView one.
                         connection.headerFields?.forEach { (k, v) ->
-                            if (k != null && v.isNotEmpty()) headers[k] = v.last()
+                            if (k == null || v.isEmpty()) return@forEach
+                            val lower = k.lowercase()
+                            if (lower == "content-encoding" ||
+                                lower == "content-length" ||
+                                lower == "transfer-encoding" ||
+                                lower == "connection" ||
+                                lower == "keep-alive" ||
+                                lower == "proxy-authenticate" ||
+                                lower == "trailer" ||
+                                lower == "te" ||
+                                lower == "upgrade") return@forEach
+                            headers[k] = v.last()
                         }
                         // MANUAL OVERRIDES: Ensure these exist even if server forgot them
                         headers["Access-Control-Allow-Origin"] = "*"
                         headers["Accept-Ranges"] = "bytes"  // Tells player "You can seek"
-                        if (!headers.containsKey("Content-Length") && length > 0) {
+                        if (length > 0) {
                             headers["Content-Length"] = length.toString()
                         }
                         response.responseHeaders = headers
@@ -435,12 +616,57 @@ class WebViewFragment : Fragment() {
                         return response
                     } catch (e: Exception) {
                         android.util.Log.e("WebViewProxy", "Failed: $url - ${e.message}")
-                        return null
+                        // CRITICAL: never return null for a 127.0.0.1 URL.
+                        // Returning null tells WebView "fetch this yourself" —
+                        // and WebView's default path goes through the system
+                        // HTTP proxy (sing-box on :8119), which has no route
+                        // back to localhost. The request hangs without ever
+                        // firing onReceivedError, so the loading overlay
+                        // stays up forever. Synthesize a 503 instead so the
+                        // WebView treats it as a real error and fires
+                        // onReceivedError → showError() → user sees the retry
+                        // button.
+                        return synthesize503(e.message ?: "connection failed")
                     }
                 }
+
+                /**
+                 * Build a 503 WebResourceResponse to return when a localhost
+                 * fetch fails. Surfacing the failure to WebView lets
+                 * onReceivedError fire and the user reach the retry overlay,
+                 * instead of hanging on the system proxy fallback.
+                 */
+                private fun synthesize503(reason: String): WebResourceResponse {
+                    val body = "{\"error\":\"daemon_unreachable\",\"reason\":${
+                        org.json.JSONObject.quote(reason)
+                    }}"
+                    val stream = java.io.ByteArrayInputStream(body.toByteArray(Charsets.UTF_8))
+                    val resp = WebResourceResponse("application/json", "utf-8", stream)
+                    resp.setStatusCodeAndReasonPhrase(503, "Service Unavailable")
+                    resp.responseHeaders = mapOf(
+                        "Cache-Control" to "no-store",
+                        "Connection" to "close"
+                    )
+                    return resp
+                }
                 
+                override fun onPageStarted(
+                    view: WebView?, url: String?, favicon: android.graphics.Bitmap?
+                ) {
+                    super.onPageStarted(view, url, favicon)
+                    // Clear the failure flag at the START of every navigation so a
+                    // stale `pageLoadFailed=true` from a previous error can't
+                    // suppress showContent() on the retry's onPageFinished. The
+                    // flag stays cleared unless onReceivedError fires for *this*
+                    // load.
+                    pageLoadFailed = false
+                    loadInProgress = true
+                    showLoading()
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    loadInProgress = false
                     if (!pageLoadFailed) {
                         showContent()
                         // Theme: tag <html data-theme="…"> BEFORE INJECT_JS so any
@@ -458,6 +684,7 @@ class WebViewFragment : Fragment() {
                 ) {
                     if (request?.isForMainFrame == true) {
                         pageLoadFailed = true
+                        loadInProgress = false
                         showError()
                     }
                 }
@@ -760,9 +987,22 @@ class WebViewFragment : Fragment() {
                 cm.setCookie("http://127.0.0.1:${CameraDaemon.HTTP_PORT}", "byd_session=$jwt; Path=/; Max-Age=31536000")
                 cm.flush()
                 android.util.Log.d("WebView", "Auth cookie set${if (attempt > 0) " (attempt ${attempt + 1})" else ""}")
-                if (attempt > 0) {
-                    // Auth came online after the page already tried to
-                    // load — reload so it picks up the now-valid cookie.
+                if (attempt > 0 && !authReloadFired) {
+                    // Auth came online after the page already tried to load.
+                    // Only fire the reload once, and only if no other load is
+                    // currently in flight — overlapping loadUrl + reload on
+                    // Chrome 58 WebView can swallow onPageFinished and leave
+                    // the loading overlay stuck forever.
+                    if (loadInProgress) {
+                        // A load is happening right now (probably the initial
+                        // one from loadPage()). Re-poll in a moment so we
+                        // reload once it settles, instead of racing it.
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            injectAuthCookie(attempt)
+                        }, 500)
+                        return
+                    }
+                    authReloadFired = true
                     webView?.reload()
                 }
             } else if (attempt < 10) {

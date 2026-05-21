@@ -2,7 +2,6 @@ package com.overdrive.app.server;
 
 import android.content.Context;
 
-import com.overdrive.app.BuildConfig;
 import com.overdrive.app.daemon.CameraDaemon;
 import com.overdrive.app.updater.AppUpdater;
 
@@ -128,7 +127,7 @@ public class UpdateApiHandler {
                 try {
                     r.put("available", false);
                     r.put("error", error != null ? error : "unknown");
-                    r.put("currentVersion", BuildConfig.VERSION_NAME);
+                    r.put("currentVersion", AppUpdater.getDisplayVersionFromFile());
                 } catch (Exception ignored) {}
                 resultRef[0] = r;
                 signal(lock, done);

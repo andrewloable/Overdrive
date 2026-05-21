@@ -17,7 +17,6 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -238,41 +237,72 @@ public class TelegramBotDaemon {
     
     private static boolean loadConfig() {
         try {
-            File configFile = new File(PATH_TELEGRAM_CONFIG());
-            if (!configFile.exists()) {
-                log("Config file not found: " + PATH_TELEGRAM_CONFIG());
-                return false;
-            }
-            
-            Properties props = new Properties();
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                props.load(fis);
-            }
-            
-            botToken = props.getProperty("bot_token");
+            // Ensure UnifiedConfigManager is initialized in this process —
+            // the daemon is launched fresh via app_process and doesn't share
+            // the app's static state. init() is a no-op when the file already
+            // exists and triggers legacy migration if it doesn't.
+            com.overdrive.app.config.UnifiedConfigManager.init();
+            // Pull any state still in /data/local/tmp/telegram_config.properties
+            // into the unified store. Idempotent — no-op after first call.
+            com.overdrive.app.telegram.config.UnifiedTelegramConfig.migrateLegacyIfNeeded();
+
+            botToken = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getBotToken();
             if (botToken == null || botToken.isEmpty()) {
-                log("bot_token not set in config");
+                log("bot_token not set in unified config");
                 return false;
             }
-            
-            String ownerStr = props.getProperty("owner_chat_id", "-1");
-            ownerChatId = Long.parseLong(ownerStr);
-            
-            // Load video uploads preference (default OFF)
-            String videoUploadsStr = props.getProperty("video_uploads", "false");
-            videoUploadsEnabled = "true".equalsIgnoreCase(videoUploadsStr);
-            
+
+            ownerChatId = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            videoUploadsEnabled = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isVideoUploads();
+
             log("Config loaded: token=***" + botToken.substring(Math.max(0, botToken.length() - 6)));
             log("Owner chat ID: " + (ownerChatId > 0 ? ownerChatId : "not set"));
             log("Video uploads: " + (videoUploadsEnabled ? "enabled" : "disabled"));
-            
+
             return true;
         } catch (Exception e) {
             log("Config load error: " + e.getMessage());
             return false;
         }
     }
-    
+
+    /**
+     * Re-read shared state from the unified config. Called once per long-poll
+     * cycle so a token clear, owner unpair, or preference toggle made by the
+     * app/web UI takes effect within a single poll interval rather than
+     * requiring a daemon restart. forceReload bypasses the in-process mtime
+     * cache so a write made by the OTHER UID is picked up immediately.
+     *
+     * Logs only on transitions to keep the log file readable — every poll
+     * cycle would otherwise emit identical "token / owner / video_uploads"
+     * lines forever.
+     */
+    private static void refreshConfigFromUnified() {
+        try {
+            com.overdrive.app.config.UnifiedConfigManager.forceReload();
+
+            String newToken = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getBotToken();
+            long newOwner = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            boolean newVideo = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isVideoUploads();
+
+            if (newToken != null && !newToken.isEmpty() && !newToken.equals(botToken)) {
+                log("Bot token changed from unified config; updating");
+                botToken = newToken;
+            }
+            if (newOwner != ownerChatId) {
+                log("Owner changed: " + ownerChatId + " → " + (newOwner > 0 ? newOwner : "cleared"));
+                ownerChatId = newOwner;
+            }
+            if (newVideo != videoUploadsEnabled) {
+                log("Video uploads changed: " + videoUploadsEnabled + " → " + newVideo);
+                videoUploadsEnabled = newVideo;
+            }
+        } catch (Exception e) {
+            // Don't kill the poll loop on a config read blip.
+            log("refreshConfigFromUnified error: " + e.getMessage());
+        }
+    }
+
     private static long lastProxyCheckTime = 0;
     private static boolean lastProxyState = false; // true = proxy was available
 
@@ -392,12 +422,45 @@ public class TelegramBotDaemon {
             public String execShell(String command) {
                 return TelegramBotDaemon.execShell(command);
             }
-            
+
+            @Override
+            public boolean spawnDetached(String command) {
+                return TelegramBotDaemon.spawnDetached(command);
+            }
+
             @Override
             public void log(String message) {
                 TelegramBotDaemon.log(message);
             }
         });
+    }
+
+    /**
+     * Spawn a long-lived process detached. Mirrors AppUpdater.runDetachedInstall
+     * (AppUpdater.java:741-745). Use this — never execShell — for any command
+     * that backgrounds a daemon (app_process, cloudflared, zrok, tailscaled,
+     * sing-box, watchdog scripts). execShell drains stdout to EOF, which
+     * blocks forever when the grandchild keeps the inherited fd open.
+     *
+     * Returns true on successful spawn (the inner command may still fail —
+     * we don't wait to find out), false if the parent shell couldn't start.
+     */
+    private static boolean spawnDetached(String command) {
+        // (... &) wrapper backgrounds inside a subshell that exits in ms,
+        // reparenting the grandchild to init.
+        // </dev/null on the inner command + ProcessBuilder Redirects close
+        // every stdio descriptor so no pipe is held open by the parent.
+        String wrapped = "(" + command + " </dev/null &)";
+        try {
+            ProcessBuilder pb = new ProcessBuilder("sh", "-c", wrapped);
+            pb.redirectOutput(ProcessBuilder.Redirect.to(new java.io.File("/dev/null")));
+            pb.redirectError(ProcessBuilder.Redirect.to(new java.io.File("/dev/null")));
+            pb.start();
+            return true;
+        } catch (java.io.IOException e) {
+            log("spawnDetached failed: " + e.getMessage());
+            return false;
+        }
     }
     
     // ==================== IPC SERVER ====================
@@ -735,6 +798,22 @@ public class TelegramBotDaemon {
     }
     
     private static void pollUpdates() throws Exception {
+        // Refresh shared state from the unified config every poll cycle so
+        // a clear/unpair/preference-toggle made by the app or web UI takes
+        // effect within one long-poll interval (~30s) rather than requiring
+        // a daemon restart. forceReload() bypasses the in-process mtime
+        // cache to pick up cross-UID writes immediately.
+        refreshConfigFromUnified();
+
+        if (botToken == null || botToken.isEmpty()) {
+            // Token cleared from the UI — sleep instead of hitting the
+            // Telegram API with an empty token (which 404s in a tight loop
+            // and floods the log). The next refresh that finds a token
+            // resumes polling automatically.
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            return;
+        }
+
         String url = TELEGRAM_API_BASE() + botToken + "/getUpdates?timeout=30&offset=" + (lastUpdateId + 1);
         
         Request request = new Request.Builder().url(url).get().build();
@@ -918,19 +997,16 @@ public class TelegramBotDaemon {
             return;
         }
         
-        // Validate PIN against the one generated by the app UI
-        String expectedPin = null;
+        // Validate PIN against the one written by the app UI / web tab.
+        // forceReload bypasses the in-process cache so a PIN that was just
+        // written by the app process (different UID, different mtime tick)
+        // is visible to us immediately.
+        String expectedPin = "";
         long pinExpiry = 0;
         try {
-            File configFile = new File(PATH_TELEGRAM_CONFIG());
-            if (configFile.exists()) {
-                Properties props = new Properties();
-                try (FileInputStream fis = new FileInputStream(configFile)) {
-                    props.load(fis);
-                }
-                expectedPin = props.getProperty("pair_pin", "");
-                pinExpiry = Long.parseLong(props.getProperty("pair_pin_expiry", "0"));
-            }
+            com.overdrive.app.config.UnifiedConfigManager.forceReload();
+            expectedPin = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getPairPin();
+            pinExpiry = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getPairPinExpiry();
         } catch (Exception e) {
             log("Error reading pair PIN from config: " + e.getMessage());
         }
@@ -962,17 +1038,7 @@ public class TelegramBotDaemon {
     
     private static void clearPairPinFromConfig() {
         try {
-            File configFile = new File(PATH_TELEGRAM_CONFIG());
-            if (!configFile.exists()) return;
-            Properties props = new Properties();
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                props.load(fis);
-            }
-            props.remove("pair_pin");
-            props.remove("pair_pin_expiry");
-            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
-                props.store(fos, "Telegram Bot Config");
-            }
+            com.overdrive.app.telegram.config.UnifiedTelegramConfig.clearPairPin();
         } catch (Exception e) {
             log("Error clearing pair PIN: " + e.getMessage());
         }
@@ -995,7 +1061,16 @@ public class TelegramBotDaemon {
                     .build();
             
             try (Response response = httpClient.newCall(request).execute()) {
-                return response.isSuccessful();
+                if (!response.isSuccessful()) {
+                    // Surface 4xx/5xx so silent failures (e.g. 400
+                    // "can't parse entities" from Markdown content the
+                    // bot helper didn't escape) stop being invisible.
+                    String respBody = response.body() != null
+                            ? response.body().string() : "";
+                    log("sendMessage HTTP " + response.code() + ": " + respBody);
+                    return false;
+                }
+                return true;
             }
         } catch (Exception e) {
             log("sendMessage error: " + e.getMessage());
@@ -1040,7 +1115,13 @@ public class TelegramBotDaemon {
                     .build();
             
             try (Response response = httpClient.newCall(request).execute()) {
-                return response.isSuccessful();
+                if (!response.isSuccessful()) {
+                    String respBody = response.body() != null
+                            ? response.body().string() : "";
+                    log("sendMessageWithButtons HTTP " + response.code() + ": " + respBody);
+                    return false;
+                }
+                return true;
             }
         } catch (Exception e) {
             log("sendMessageWithButtons error: " + e.getMessage());
@@ -1359,9 +1440,20 @@ public class TelegramBotDaemon {
         }
     }
     
+    /**
+     * Bounded shell exec: 30 s ceiling on waitFor + an explicit destroyForcibly
+     * on timeout. Use ONLY for short-lived commands (ps, pgrep, cat, pm path,
+     * ls, echo, rm, kill). For long-lived spawns use {@link #spawnDetached}.
+     *
+     * The 30 s budget is generous for the read-only commands that actually
+     * call this; the point is a hard ceiling so a hung binary or zombie pipe
+     * can't permanently freeze the polling thread (which would lock /pair,
+     * /events, and every other handler until reboot).
+     */
     private static String execShell(String command) {
+        Process p = null;
         try {
-            Process p = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
+            p = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
             StringBuilder output = new StringBuilder();
             String line;
@@ -1370,34 +1462,26 @@ public class TelegramBotDaemon {
                 output.append(line);
             }
             reader.close();
-            p.waitFor();
+            if (!p.waitFor(30, TimeUnit.SECONDS)) {
+                log("Shell timeout after 30s, destroying: " + command);
+                p.destroyForcibly();
+                return null;
+            }
             return output.toString();
         } catch (Exception e) {
             log("Shell error: " + e.getMessage());
+            if (p != null) {
+                try { p.destroyForcibly(); } catch (Exception ignored) {}
+            }
             return null;
         }
     }
     
     private static void saveOwnerToConfig(long chatId, String username, String firstName) {
         try {
-            File configFile = new File(PATH_TELEGRAM_CONFIG());
-            Properties props = new Properties();
-            
-            if (configFile.exists()) {
-                try (FileInputStream fis = new FileInputStream(configFile)) {
-                    props.load(fis);
-                }
-            }
-            
-            props.setProperty("owner_chat_id", String.valueOf(chatId));
-            props.setProperty("owner_username", username);
-            props.setProperty("owner_first_name", firstName);
-            
-            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(configFile)) {
-                props.store(fos, "Telegram Bot Config");
-            }
-            
-            log("Owner saved to config: " + chatId);
+            com.overdrive.app.telegram.config.UnifiedTelegramConfig.setOwner(
+                    chatId, username, firstName, System.currentTimeMillis());
+            log("Owner saved to unified config: " + chatId);
         } catch (Exception e) {
             log("Save owner error: " + e.getMessage());
         }

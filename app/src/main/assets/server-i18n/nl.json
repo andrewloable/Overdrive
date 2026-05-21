@@ -125,6 +125,20 @@
     "recording_caption_no_label": " Opname - {0}'s",
     "proximity_alert": " Nabijheid Alert Tijd: {0} Trigger: {1} ({2}) Opname begint..."
   },
+  "vehicle_control": {
+    "cloud_required": "Verbind een BYD-account in Instellingen om deze bediening te gebruiken",
+    "cloud_sent": "Gestuurd via de wolk",
+    "cloud_unavailable_used_local": "Cloud niet beschikbaar  Gebruikte directe verbinding",
+    "local_sent": "Gestuurd via directe verbinding",
+    "cloud_offline_used_local": "Cloud offline  gebruikte directe verbinding",
+    "local_unavailable_used_cloud": "Directe verbinding niet beschikbaar — via de cloud verzonden",
+    "cloud_failed": "Ik kon de auto niet bereiken. Probeer opnieuw als de auto wakker is.",
+    "rate_limited": "Een opdracht is nog in progress  wacht een paar seconden",
+    "not_supported": "Deze controle is niet beschikbaar op dit moment.",
+    "find_car_label": "Zoek een auto .",
+    "battery_heat_label": "Heat Battery",
+    "close_all_windows_label": "alle ramen dicht"
+  },
   "messages": {
     "logged_out": "Ik heb me uitgeschakeld .",
     "bydcloud_connected": "Succesvol verbonden",

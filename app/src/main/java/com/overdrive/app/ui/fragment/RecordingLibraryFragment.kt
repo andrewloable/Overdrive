@@ -59,21 +59,28 @@ class RecordingLibraryFragment : Fragment() {
          *  control. */
         const val ARG_HIDE_INTERNAL_FILTERS = "hide_internal_filters"
 
+        /** When true, the fragment hides its internal date row (parent owns
+         *  date selection). Embedded mode in [RecordingsFragment] sets both
+         *  flags so the entire chrome lives in the parent header. */
+        const val ARG_HIDE_INTERNAL_DATE = "hide_internal_date"
+
         /** Convenience factory for embedded use. */
         fun newInstanceEmbedded(): RecordingLibraryFragment =
             RecordingLibraryFragment().apply {
                 arguments = Bundle().apply {
                     putBoolean(ARG_HIDE_INTERNAL_FILTERS, true)
+                    putBoolean(ARG_HIDE_INTERNAL_DATE, true)
                 }
             }
     }
 
-    // -------- Date row --------
-    private lateinit var tvSelectedDate: TextView
-    private lateinit var tvDayClipCount: TextView
-    private lateinit var cardDateJump: MaterialCardView
-    private lateinit var btnPrevDay: MaterialButton
-    private lateinit var btnNextDay: MaterialButton
+    // -------- Date row (may be GONE if parent owns date selection) --------
+    private var tvSelectedDate: TextView? = null
+    private var tvDayClipCount: TextView? = null
+    private var cardDateJump: MaterialCardView? = null
+    private var btnPrevDay: MaterialButton? = null
+    private var btnNextDay: MaterialButton? = null
+    private var dateRowContainer: View? = null
 
     // -------- Filter bar --------
     private var filterBar: View? = null
@@ -114,9 +121,23 @@ class RecordingLibraryFragment : Fragment() {
     // Date state: we keep using a Calendar instance so the existing
     // loadRecordingsForSelectedDate() logic (year/month/selectedDay) is a
     // mechanical move from the old implementation.
+    //
+    // dateNarrowed = false means "show everything, sorted newest first".
+    // Flipped to true the first time the user explicitly picks a date or
+    // taps a prev/next-day arrow. Prevents the empty-list-on-first-load
+    // symptom where the default "today" filter hid every clip captured on
+    // any prior day.
     private val calendar = Calendar.getInstance()
     private var selectedDay = calendar.get(Calendar.DAY_OF_MONTH)
+    private var dateNarrowed: Boolean = false
     private var currentFilter = RecordingFilter.ALL
+    /**
+     * Optional secondary type to include alongside [currentFilter]. Used so
+     * the parent's "Dashcam" segment can request NORMAL + PROXIMITY in one
+     * list — proximity-radar clips are recorded by the dashcam encoder, not
+     * the surveillance one, so they belong to the Dashcam tab.
+     */
+    private var extraFilter: RecordingFilter? = null
 
     // v3 actor + severity filter state — unchanged semantics
     private val actorClassFilter = mutableSetOf<String>()  // lowercased class group names
@@ -137,6 +158,13 @@ class RecordingLibraryFragment : Fragment() {
      * global full-screen [VideoPlayerFragment] via nav action.
      */
     var onPlayRecording: ((RecordingFile) -> Unit)? = null
+
+    /**
+     * Fires every time the visible recording list changes (after filters /
+     * date apply). Used by [RecordingsFragment] to keep the inline player's
+     * prev/next playlist in sync with what the user actually sees.
+     */
+    var onListChanged: ((List<RecordingFile>) -> Unit)? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -167,6 +195,10 @@ class RecordingLibraryFragment : Fragment() {
         // sheet — but visually the user sees just the date row and the list.
         if (arguments?.getBoolean(ARG_HIDE_INTERNAL_FILTERS, false) == true) {
             filterBar?.visibility = View.GONE
+        }
+        // Embedded mode: parent owns the date row too.
+        if (arguments?.getBoolean(ARG_HIDE_INTERNAL_DATE, false) == true) {
+            dateRowContainer?.visibility = View.GONE
         }
 
         checkPermissionsAndScan()
@@ -219,12 +251,13 @@ class RecordingLibraryFragment : Fragment() {
     }
 
     private fun initViews(view: View) {
-        // Date row
+        // Date row — present in standalone layouts only.
         tvSelectedDate = view.findViewById(R.id.tvSelectedDate)
         tvDayClipCount = view.findViewById(R.id.tvDayClipCount)
         cardDateJump = view.findViewById(R.id.cardDateJump)
         btnPrevDay = view.findViewById(R.id.btnPrevDay)
         btnNextDay = view.findViewById(R.id.btnNextDay)
+        dateRowContainer = view.findViewById(R.id.dateRowContainer)
 
         // Filter bar
         filterBar = view.findViewById(R.id.filterBar)
@@ -249,14 +282,47 @@ class RecordingLibraryFragment : Fragment() {
     }
 
     /**
-     * Public entry point so a parent fragment (e.g. RecordingsFragment's
-     * segmented Dashcam / Surveillance control) can drive the source filter
-     * without needing to find and click the internal chips.
+     * Atomically apply every filter dimension AND trigger one reload.
+     *
+     * This is the single API the parent ([RecordingsFragment]) uses for
+     * segment / date / chip changes. Before this consolidation we had four
+     * separate setters; calling them in sequence after a segment switch
+     * triggered three or four overlapping reloads on the single-thread
+     * scan executor and races between them produced stale lists. One
+     * atomic call = one reload, with all state already in place.
+     *
+     * Safe to call before [onViewCreated] (e.g. immediately after a child
+     * fragment commit). State is captured into fields synchronously; the
+     * subsequent [onViewCreated] runs its own load with the captured state.
      */
-    fun setSourceFilter(filter: RecordingFilter) {
-        if (currentFilter == filter) return
-        currentFilter = filter
-        if (view != null) {
+    fun applyAll(
+        source: RecordingFilter,
+        actorClasses: Set<String>,
+        severity: Set<String>,
+        year: Int,
+        month: Int,
+        day: Int,
+        extraSource: RecordingFilter? = null,
+        narrowToDate: Boolean = false
+    ) {
+        currentFilter = source
+        extraFilter = extraSource
+        actorClassFilter.clear()
+        actorClassFilter.addAll(actorClasses.map { it.lowercase() })
+        severityFilter.clear()
+        severityFilter.addAll(severity.map { it.uppercase() })
+        calendar.set(year, month, 1)
+        selectedDay = day
+        // Caller decides whether to narrow. The parent flips this true only
+        // when the user explicitly picks a date or taps prev/next-day; the
+        // initial mount call passes false so the user sees ALL recordings,
+        // not just clips that happen to share today's date.
+        dateNarrowed = narrowToDate
+
+        if (view != null && ::recordingAdapter.isInitialized) {
+            com.overdrive.app.ui.util.RecordingScanner.invalidateCache()
+            updateDateHeader()
+            renderActiveFilters()
             loadRecordingsForSelectedDate()
         }
     }
@@ -425,9 +491,9 @@ class RecordingLibraryFragment : Fragment() {
     // -----------------------------------------------------------------
 
     private fun setupClickListeners() {
-        cardDateJump.setOnClickListener { showDatePicker() }
-        btnPrevDay.setOnClickListener { shiftSelectedDay(-1) }
-        btnNextDay.setOnClickListener { shiftSelectedDay(+1) }
+        cardDateJump?.setOnClickListener { showDatePicker() }
+        btnPrevDay?.setOnClickListener { shiftSelectedDay(-1) }
+        btnNextDay?.setOnClickListener { shiftSelectedDay(+1) }
         btnOpenFilters?.setOnClickListener { openFilterSheet() }
     }
 
@@ -461,6 +527,7 @@ class RecordingLibraryFragment : Fragment() {
             val d = cal.get(Calendar.DAY_OF_MONTH)
             calendar.set(y, m, 1)
             selectedDay = d
+            dateNarrowed = true
             updateDateHeader()
             loadRecordingsForSelectedDate()
         }
@@ -500,6 +567,7 @@ class RecordingLibraryFragment : Fragment() {
 
         calendar.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), 1)
         selectedDay = cal.get(Calendar.DAY_OF_MONTH)
+        dateNarrowed = true
         updateDateHeader()
         loadRecordingsForSelectedDate()
     }
@@ -522,15 +590,17 @@ class RecordingLibraryFragment : Fragment() {
             add(Calendar.DAY_OF_YEAR, -1)
         }
 
-        tvSelectedDate.text = when (selectedCal.timeInMillis) {
+        tvSelectedDate?.text = when (selectedCal.timeInMillis) {
             today.timeInMillis -> getString(R.string.recording_lib_date_today)
             yesterday.timeInMillis -> getString(R.string.recording_lib_date_yesterday)
             else -> dayHeaderFormat.format(Date(selectedCal.timeInMillis))
         }
 
         // Disable forward-day button when we're already on today.
-        btnNextDay.isEnabled = selectedCal.timeInMillis < today.timeInMillis
-        btnNextDay.alpha = if (btnNextDay.isEnabled) 1f else 0.4f
+        btnNextDay?.let {
+            it.isEnabled = selectedCal.timeInMillis < today.timeInMillis
+            it.alpha = if (it.isEnabled) 1f else 0.4f
+        }
     }
 
     // -----------------------------------------------------------------
@@ -589,20 +659,43 @@ class RecordingLibraryFragment : Fragment() {
                     files?.take(5)?.forEach { Log.d(TAG, "  - ${it.name}") }
                 }
 
-                val allRecordings = RecordingScanner.getRecordingsForDate(requireContext(), year, month, selectedDay)
-                Log.d(TAG, "Found ${allRecordings.size} recordings for date")
-
-                val typeFiltered = when (currentFilter) {
-                    RecordingFilter.ALL -> allRecordings
-                    RecordingFilter.NORMAL -> allRecordings.filter { it.type == RecordingFile.RecordingType.NORMAL }
-                    RecordingFilter.SENTRY -> allRecordings.filter { it.type == RecordingFile.RecordingType.SENTRY }
-                    RecordingFilter.PROXIMITY -> allRecordings.filter { it.type == RecordingFile.RecordingType.PROXIMITY }
+                val allRecordings = if (dateNarrowed) {
+                    RecordingScanner.getRecordingsForDate(requireContext(), year, month, selectedDay)
+                } else {
+                    RecordingScanner.scanRecordings(requireContext())
                 }
+                Log.d(TAG, "Found ${allRecordings.size} recordings (narrowed=$dateNarrowed)")
+
+                val acceptedTypes = mutableSetOf<RecordingFile.RecordingType>()
+                fun include(f: RecordingFilter) {
+                    when (f) {
+                        RecordingFilter.ALL -> {
+                            acceptedTypes += RecordingFile.RecordingType.NORMAL
+                            acceptedTypes += RecordingFile.RecordingType.SENTRY
+                            acceptedTypes += RecordingFile.RecordingType.PROXIMITY
+                        }
+                        RecordingFilter.NORMAL ->     acceptedTypes += RecordingFile.RecordingType.NORMAL
+                        RecordingFilter.SENTRY ->     acceptedTypes += RecordingFile.RecordingType.SENTRY
+                        RecordingFilter.PROXIMITY ->  acceptedTypes += RecordingFile.RecordingType.PROXIMITY
+                    }
+                }
+                include(currentFilter)
+                extraFilter?.let { include(it) }
+                val typeFiltered = allRecordings.filter { it.type in acceptedTypes }
 
                 val recordings = if (actorClassFilter.isEmpty() && severityFilter.isEmpty()) {
                     typeFiltered
                 } else {
                     typeFiltered.filter { rec ->
+                        // Clips with no sidecar (e.g. continuous Dashcam
+                        // captures) bypass actor/severity narrowing — there's
+                        // no signal to gate on, and excluding them entirely
+                        // would empty the Dashcam list whenever any chip is
+                        // active. This mirrors the events.html "no metadata =
+                        // pass through" rule.
+                        val hasSidecar = rec.peakSeverity != null ||
+                            rec.actorClasses.isNotEmpty()
+                        if (!hasSidecar) return@filter true
                         val classOk = actorClassFilter.isEmpty()
                                 || rec.actorClasses.any { it.lowercase() in actorClassFilter }
                         val sevOk = severityFilter.isEmpty()
@@ -627,23 +720,30 @@ class RecordingLibraryFragment : Fragment() {
     private fun renderRecordings(recordings: List<RecordingFile>) {
         currentList = recordings
 
-        // Day clip count pill on the date jump card. We show the total
-        // matching the source filter only — actor/severity filters are
-        // additive narrowings, but the pill is meant to represent the day's
-        // total clips, so we show the raw count here.
-        if (recordings.isNotEmpty()) {
-            tvDayClipCount.visibility = View.VISIBLE
-            tvDayClipCount.text = resources.getQuantityStringSafe(
-                R.string.recording_lib_clip_count_one,
-                R.string.recording_lib_clip_count,
-                recordings.size
-            )
-        } else {
-            tvDayClipCount.visibility = View.GONE
+        // Day clip count pill on the date jump card. Only meaningful while
+        // a single day is selected — across-all-days the parent header
+        // already shows the global total, and a second pill saying e.g.
+        // "320 clips" next to "All days" is just noise.
+        tvDayClipCount?.let { pill ->
+            if (dateNarrowed && recordings.isNotEmpty()) {
+                pill.visibility = View.VISIBLE
+                pill.text = resources.getQuantityStringSafe(
+                    R.string.recording_lib_clip_count_one,
+                    R.string.recording_lib_clip_count,
+                    recordings.size
+                )
+            } else {
+                pill.visibility = View.GONE
+            }
         }
 
-        // Decoration mode: single-day always, since the list is filtered to one day.
-        sectionHeaderDecoration?.singleDayMode = true
+        onListChanged?.invoke(recordings)
+
+        // Decoration mode: time-of-day buckets only when the user has narrowed
+        // to a single day. When the list spans every day, group by date instead
+        // — otherwise a clip from Tuesday morning and one from Friday morning
+        // both fall under "MORNING" together, which reads as a bug.
+        sectionHeaderDecoration?.singleDayMode = dateNarrowed
 
         if (recordings.isEmpty()) {
             recyclerRecordings.visibility = View.GONE
@@ -686,12 +786,26 @@ class RecordingLibraryFragment : Fragment() {
             return
         }
         try {
+            // Build a playlist from the currently visible list so the player
+            // can offer prev/next that respects the user's filters & date.
+            val paths = currentList.map { it.path }.toTypedArray()
+            val titles = currentList.map { it.name }.toTypedArray()
+            val idx = currentList.indexOfFirst { it.path == recording.path }
             val bundle = Bundle().apply {
                 putString(VideoPlayerFragment.ARG_VIDEO_PATH, recording.path)
                 putString(VideoPlayerFragment.ARG_VIDEO_TITLE, recording.name)
+                if (paths.isNotEmpty()) {
+                    putStringArray(VideoPlayerFragment.ARG_PLAYLIST_PATHS, paths)
+                    putStringArray(VideoPlayerFragment.ARG_PLAYLIST_TITLES, titles)
+                    putInt(VideoPlayerFragment.ARG_PLAYLIST_INDEX, idx.coerceAtLeast(0))
+                }
             }
             androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                .navigate(R.id.action_global_videoPlayer, bundle)
+                .navigate(
+                    R.id.action_global_videoPlayer,
+                    bundle,
+                    com.overdrive.app.ui.util.NavOptionsExt.m3SharedAxisZ()
+                )
         } catch (e: Exception) {
             try {
                 val uri = recording.contentUri ?: FileProvider.getUriForFile(
@@ -712,6 +826,7 @@ class RecordingLibraryFragment : Fragment() {
 
     private fun confirmDelete(recording: RecordingFile) {
         MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_delete)
             .setTitle(getString(R.string.dialog_delete_recording_title))
             .setMessage(getString(R.string.dialog_delete_recording_message, recording.name))
             .setNegativeButton(getString(R.string.action_cancel), null)
@@ -735,6 +850,7 @@ class RecordingLibraryFragment : Fragment() {
         if (selected.isEmpty()) return
 
         MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_delete)
             .setTitle(resources.getQuantityString(R.plurals.delete_recordings_title, selected.size, selected.size))
             .setMessage(resources.getQuantityString(R.plurals.delete_recordings_message, selected.size, selected.size))
             .setNegativeButton(getString(R.string.action_cancel), null)
@@ -782,7 +898,12 @@ class RecordingLibraryFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         RecordingScanner.invalidateCache()
-        loadRecordingsForSelectedDate()
+        // When embedded, the parent's onResume re-applies every filter
+        // dimension atomically via applyAll(). Re-loading here using THIS
+        // fragment's own (possibly stale) date state caused a brief flash
+        // of the wrong list before the parent's apply landed.
+        val embedded = arguments?.getBoolean(ARG_HIDE_INTERNAL_FILTERS, false) == true
+        if (!embedded) loadRecordingsForSelectedDate()
     }
 
     override fun onDestroyView() {

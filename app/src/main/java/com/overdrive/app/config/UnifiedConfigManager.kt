@@ -198,11 +198,14 @@ object UnifiedConfigManager {
         if (!surveillance.has("deterrentAction")) surveillance.put("deterrentAction", "silent")
         if (!surveillance.has("deterrentCooldownSeconds")) surveillance.put("deterrentCooldownSeconds", 15)
         
-        // Recording defaults
+        // Recording defaults. The canonical key is `recordingQuality` (ECONOMY..MAX).
+        // `quality` is the legacy mirror; `bitrate` (LOW/MEDIUM/HIGH) is no longer
+        // seeded — it would drift from the active tier and confuse cross-channel
+        // readers. Keep it only if a user actually has it from a pre-migration install.
         if (!recording.has("mode")) recording.put("mode", "NONE")  // Default: no recording
-        if (!recording.has("bitrate")) recording.put("bitrate", "MEDIUM")
+        if (!recording.has("recordingQuality")) recording.put("recordingQuality", "STANDARD")
+        if (!recording.has("quality")) recording.put("quality", recording.optString("recordingQuality", "STANDARD"))
         if (!recording.has("codec")) recording.put("codec", "H264")
-        if (!recording.has("quality")) recording.put("quality", "NORMAL")
         
         // Streaming defaults
         if (!streaming.has("quality")) streaming.put("quality", "MEDIUM")
@@ -224,6 +227,16 @@ object UnifiedConfigManager {
             config.put("tripAnalytics", it)
         }
         if (!tripAnalytics.has("enabled")) tripAnalytics.put("enabled", false)
+
+        // Floating status pill segment visibility. Independent of whether the
+        // underlying feature (recording / trip analytics) is enabled — these
+        // only gate the pill segments so users can hide either without
+        // surrendering SYSTEM_ALERT_WINDOW or disabling the feature itself.
+        val statusOverlay = config.optJSONObject("statusOverlay") ?: JSONObject().also {
+            config.put("statusOverlay", it)
+        }
+        if (!statusOverlay.has("cameraVisible")) statusOverlay.put("cameraVisible", true)
+        if (!statusOverlay.has("tripVisible")) statusOverlay.put("tripVisible", true)
         
         // BYD Cloud defaults
         val bydCloud = config.optJSONObject("bydCloud") ?: JSONObject().also {
@@ -287,47 +300,70 @@ object UnifiedConfigManager {
         val success = saveConfigInternal(config)
         if (success) {
             cachedConfig = config
-            lastModified.set(System.currentTimeMillis())
+            // Track the file's actual mtime, NOT wall-clock — the cache
+            // freshness check at loadConfig() compares fs mtime against
+            // this value to detect cross-process writes. If we stored
+            // System.currentTimeMillis() here, the saved mtime would
+            // (almost always) be greater than the file's mtime, so the
+            // fileModified <= lastModified check would never trip and
+            // a cross-UID write would never invalidate the cache.
+            lastModified.set(File(CONFIG_PATH).lastModified())
             notifyListeners("all", config)
         }
         return success
     }
     
     private fun saveConfigInternal(config: JSONObject): Boolean {
-        return try {
-            val configFile = File(CONFIG_PATH)
-            configFile.parentFile?.mkdirs()
+        val configFile = File(CONFIG_PATH)
+        configFile.parentFile?.mkdirs()
+        val payload = config.toString(2)
 
-            // Atomic write: write to a sibling .tmp file, then rename. The rename
-            // is a single inode swap on the filesystem, so power loss either
-            // leaves the old file intact or fully promotes the new one — never
-            // a half-written corrupt config that would wipe user settings (FPS,
-            // surveillance prefs, etc.) on next boot.
-            val tmpFile = File(configFile.parentFile, configFile.name + ".tmp")
-            FileWriter(tmpFile).use { writer ->
-                writer.write(config.toString(2))
-            }
-
-            // World-readable AND world-writable: this file is shared across
-            // UID 2000 (CameraDaemon, AccSentryDaemon) and UID 10xxx (app UI
-            // process). Tightening to owner-only would prevent cross-UID
-            // writes — whichever UID creates the file first becomes the
-            // owner, and all other processes lose write access.
+        // Atomic write: write to a sibling .tmp file, then rename. The rename
+        // is a single inode swap on the filesystem, so power loss either
+        // leaves the old file intact or fully promotes the new one — never
+        // a half-written corrupt config that would wipe user settings.
+        //
+        // The catch matters: when the app UID (10xxx) writes here, it
+        // can't always create new files in /data/local/tmp/ (the dir is
+        // typically owned by shell:shell with the sticky bit). The tmp
+        // create throws FileNotFoundException/EACCES. Without this catch,
+        // every app-side write would fail, the cache would never be
+        // updated, and `loadConfig` would re-enter `init()` →
+        // `migrateFromLegacy()` on every subsequent call — producing the
+        // ANR storm in the Connect-and-Test flow.
+        val tmpFile = File(configFile.parentFile, configFile.name + ".tmp")
+        try {
+            FileWriter(tmpFile).use { it.write(payload) }
             tmpFile.setReadable(true, false)
             tmpFile.setWritable(true, false)
+            if (tmpFile.renameTo(configFile)) {
+                Log.i(TAG, "Config saved to $CONFIG_PATH (atomic)")
+                return true
+            }
+            Log.w(TAG, "Atomic rename failed; falling back to direct write")
+        } catch (e: Exception) {
+            Log.w(TAG, "Tmp-write path unavailable (${e.message}); falling back to direct write")
+        }
 
-            if (!tmpFile.renameTo(configFile)) {
-                Log.e(TAG, "Atomic rename failed; falling back to direct write")
-                FileWriter(configFile).use { writer ->
-                    writer.write(config.toString(2))
-                }
+        // Fallback: write directly to the existing world-RW file. The
+        // daemon (UID 2000) creates it on first boot with 0666, so the
+        // app UID can open it for writing even though it can't create
+        // new files in /data/local/tmp/. We lose atomicity here — a
+        // crash mid-write corrupts the file — but for the cross-UID
+        // case it's the only path that works, and corruption is
+        // recoverable on next boot via the legacy-migration fallback.
+        return try {
+            if (!configFile.exists()) {
+                Log.e(TAG, "Config file missing and tmp-create denied; cannot save")
+                false
+            } else {
+                FileWriter(configFile).use { it.write(payload) }
                 configFile.setReadable(true, false)
                 configFile.setWritable(true, false)
-                tmpFile.delete()
+                try { tmpFile.delete() } catch (_: Exception) {}
+                Log.i(TAG, "Config saved to $CONFIG_PATH (direct)")
+                true
             }
-
-            Log.i(TAG, "Config saved to $CONFIG_PATH")
-            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save config: ${e.message}")
             false
@@ -465,6 +501,27 @@ object UnifiedConfigManager {
     @JvmStatic
     fun setTripAnalytics(tripAnalytics: JSONObject): Boolean {
         return updateSection("tripAnalytics", tripAnalytics)
+    }
+
+    /**
+     * Get status-overlay (floating pill) visibility section.
+     * Each segment defaults to visible=true so installs that pre-date this
+     * setting see no behavior change.
+     */
+    @JvmStatic
+    fun getStatusOverlay(): JSONObject {
+        return loadConfig().optJSONObject("statusOverlay") ?: JSONObject().apply {
+            put("cameraVisible", true)
+            put("tripVisible", true)
+        }
+    }
+
+    /**
+     * Update status-overlay (floating pill) visibility section.
+     */
+    @JvmStatic
+    fun setStatusOverlay(statusOverlay: JSONObject): Boolean {
+        return updateSection("statusOverlay", statusOverlay)
     }
     
     /**

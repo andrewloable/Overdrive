@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded: cloud_off (24px, weight 400, fill 0)
+     Used for the WebView "camera daemon unreachable" empty state. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateY="24">
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="m813-104-92-91q-1 .51-1 1t-1 .51H260q-83 0-141.5-58.5T60-393q0-69 41-122t105-69q3-12 7.5-23t9.5-22L75-790q-11-11-11-28t11-28q11-11 28-11t28 11l737 737q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm-553-89h440l-557-557q-2 12-3.5 23.5T138-702v40h-39q-50 12-84.5 51T140-518q0 50 35 84.5t85 34.5h440Zm508-93L412-660q15-58 65-99t117-41q83 0 141.5 58.5T794-600h6q66 0 113 47t47 113q0 47-25.5 84.5T868-294l-100-92Z"/>
+    </group>
+</vector>

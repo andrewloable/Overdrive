@@ -2,8 +2,10 @@ package com.overdrive.app.server;
 
 import com.overdrive.app.byd.BydDataCollector;
 import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.byd.cloud.BydCloudClient;
 import com.overdrive.app.byd.cloud.BydCloudConfig;
+import com.overdrive.app.byd.routing.VehicleCommandRouter;
+import com.overdrive.app.byd.routing.VehicleCommandRouter.CommandResult;
+import com.overdrive.app.byd.routing.VehicleCommandRouter.VehicleCommand;
 import com.overdrive.app.logging.DaemonLogger;
 
 import org.json.JSONArray;
@@ -12,17 +14,29 @@ import org.json.JSONObject;
 import java.io.OutputStream;
 
 /**
- * API handler for the Vehicle Control page.
- * 
+ * API handler for the Vehicle Control page. All write endpoints route
+ * through {@link VehicleCommandRouter}, which decides per command whether to
+ * attempt cloud first, fall back to SDK, or treat as cloud-only / SDK-only.
+ *
  * Endpoints:
- *   GET  /api/vehicle/state       — current door/window/trunk/lock state from BydVehicleData
- *   POST /api/vehicle/lock        — lock via BYD Cloud
- *   POST /api/vehicle/unlock      — unlock via BYD Cloud
- *   POST /api/vehicle/trunk       — open/close/stop trunk (local HAL)
- *   POST /api/vehicle/window      — window control (local HAL)
- *   POST /api/vehicle/flash       — flash lights via BYD Cloud
- *   GET  /api/vehicle/cloud-status — BYD Cloud connection status
- *   GET  /api/vehicle/cloud-lock   — cached cloud lock state, refreshes via REST if stale
+ *   GET  /api/vehicle/state         — current door/window/trunk/lock state
+ *   GET  /api/vehicle/cloud-status  — BYD Cloud connection status
+ *   GET  /api/vehicle/cloud-lock    — cached cloud lock state (REST refresh if stale)
+ *   POST /api/vehicle/lock          — CLOUD_FIRST
+ *   POST /api/vehicle/unlock        — CLOUD_FIRST
+ *   POST /api/vehicle/trunk         — open=cloud-unlock+SDK, close/stop=SDK
+ *   POST /api/vehicle/window        — area=0+close=CLOUD_FIRST, others SDK_ONLY
+ *   POST /api/vehicle/flash         — CLOUD_FIRST (cloud-only on this gen)
+ *   POST /api/vehicle/find-car      — CLOUD_FIRST (cloud-only on this gen)
+ *   POST /api/vehicle/climate       — power=CLOUD_FIRST, set_temp/set_fan=SDK_ONLY
+ *   POST /api/vehicle/seat          — SDK_ONLY
+ *   POST /api/vehicle/lights        — SDK_ONLY
+ *   POST /api/vehicle/adas          — SDK_ONLY
+ *   POST /api/vehicle/battery-heat  — CLOUD_ONLY
+ *   GET  /api/vehicle/charging-schedule  — local mirror { enabled, startChargeTime, endChargeTime, chargeWay }
+ *   POST /api/vehicle/charging-schedule  — { startChargeTime, endChargeTime, chargeWay, enabled } CLOUD_ONLY
+ *   GET  /api/vehicle/charge-cap         — { percent, enabled, supported } SDK_ONLY (BYDAutoChargingDevice.getChargeStopCapacityState)
+ *   POST /api/vehicle/charge-cap         — { percent?, enabled? } SDK_ONLY
  */
 public class VehicleControlApiHandler {
 
@@ -103,6 +117,42 @@ public class VehicleControlApiHandler {
             return true;
         }
 
+        // POST /api/vehicle/find-car
+        if (cleanPath.equals("/api/vehicle/find-car") && method.equals("POST")) {
+            handleFindCar(out);
+            return true;
+        }
+
+        // POST /api/vehicle/battery-heat
+        if (cleanPath.equals("/api/vehicle/battery-heat") && method.equals("POST")) {
+            handleBatteryHeat(out, body);
+            return true;
+        }
+
+        // GET /api/vehicle/charging-schedule
+        if (cleanPath.equals("/api/vehicle/charging-schedule") && method.equals("GET")) {
+            handleGetChargingSchedule(out);
+            return true;
+        }
+
+        // POST /api/vehicle/charging-schedule
+        if (cleanPath.equals("/api/vehicle/charging-schedule") && method.equals("POST")) {
+            handleChargingSchedule(out, body);
+            return true;
+        }
+
+        // GET /api/vehicle/charge-cap
+        if (cleanPath.equals("/api/vehicle/charge-cap") && method.equals("GET")) {
+            handleGetChargeCap(out);
+            return true;
+        }
+
+        // POST /api/vehicle/charge-cap
+        if (cleanPath.equals("/api/vehicle/charge-cap") && method.equals("POST")) {
+            handleChargeCap(out, body);
+            return true;
+        }
+
         return false;
     }
 
@@ -131,12 +181,21 @@ public class VehicleControlApiHandler {
         // processes on most BYD firmwares (returns INVALID(0) for every area).
         // So we overlay the BYD cloud snapshot's per-door lock fields here. If
         // both the SDK and cloud are unavailable, values stay at -1.
+        // BYD bodywork SDK area numbering swaps L↔R on the FRONT axis vs the
+        // physical doors: array index 0 (SDK "LEFT_FRONT") is physically
+        // right-front, index 1 is left-front. The REAR axis on this car
+        // matches the SDK declaration as-is — see DoorEventNotifier for the
+        // open/close-event side of this mapping. The rear pair below is a
+        // pre-existing assumption from this code path and has not yet been
+        // field-verified for lock state; if a single-door bench test on a
+        // real car shows rear lock state arriving with the same asymmetric
+        // pattern, swap [2]↔[3] back to SDK order ([2]=lr, [3]=rr).
         JSONObject doors = new JSONObject();
         if (data.doorLockStatus != null && data.doorLockStatus.length >= 7) {
-            doors.put("lf", data.doorLockStatus[0]);
-            doors.put("rf", data.doorLockStatus[1]);
-            doors.put("lr", data.doorLockStatus[2]);
-            doors.put("rr", data.doorLockStatus[3]);
+            doors.put("rf", data.doorLockStatus[0]);
+            doors.put("lf", data.doorLockStatus[1]);
+            doors.put("rr", data.doorLockStatus[2]);
+            doors.put("lr", data.doorLockStatus[3]);
             doors.put("trunk", data.doorLockStatus[4]);
             doors.put("hood", data.doorLockStatus[5]);
             doors.put("overall", data.doorLockStatus[6]);
@@ -238,6 +297,11 @@ public class VehicleControlApiHandler {
             for (int v : data.seatCool) cool.put(v);
             seats.put("cool", cool);
         }
+        // ventilatedSeats: hardware capability. Cars without ventilated seats
+        // (Atto 3 base, certain Seal trims) report hasFeature("SEAT_VENTILATING")=0
+        // and the BYD cloud returns 1001 on VENTILATIONHEATING. JS uses this
+        // to grey out the cool buttons.
+        seats.put("ventilatedSupported", BydDataCollector.getInstance().isSeatVentilationSupported());
         response.put("seats", seats);
 
         // Climate — only report AC state if vehicle power is on (powerLevel >= 2)
@@ -348,140 +412,92 @@ public class VehicleControlApiHandler {
     }
 
     /**
-     * Lock the car via BYD Cloud API.
+     * Lock the car via the routing layer (cloud-first → SDK fallback).
      */
     private static void handleLock(OutputStream out) throws Exception {
-        JSONObject response = new JSONObject();
-        try {
-            BydCloudClient client = getCloudClient();
-            boolean success = client.lock(getVin());
-            logger.info("Lock: cloud lock result=" + success);
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", "lock");
-        } catch (Exception e) {
-            logger.warn("Lock command failed: " + e.getMessage());
-            response.put("success", false);
-            response.put("error", e.getMessage());
-        }
-        HttpResponse.sendJson(out, response.toString());
+        CommandResult r = VehicleCommandRouter.getInstance()
+                .execute(new VehicleCommandRouter.LockCommand());
+        logger.info("Lock: routed result=" + r.outcome + " path=" + r.path);
+        HttpResponse.sendJson(out, routedResponse(r, "lock").toString());
     }
 
     /**
-     * Unlock the car via BYD Cloud API.
+     * Unlock the car via the routing layer.
      */
     private static void handleUnlock(OutputStream out) throws Exception {
-        JSONObject response = new JSONObject();
-        try {
-            BydCloudClient client = getCloudClient();
-            boolean success = client.unlock(getVin());
-            logger.info("Unlock: cloud unlock result=" + success);
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", "unlock");
-        } catch (Exception e) {
-            logger.warn("Unlock command failed: " + e.getMessage());
-            response.put("success", false);
-            response.put("error", e.getMessage());
-        }
-        HttpResponse.sendJson(out, response.toString());
+        CommandResult r = VehicleCommandRouter.getInstance()
+                .execute(new VehicleCommandRouter.UnlockCommand());
+        logger.info("Unlock: routed result=" + r.outcome + " path=" + r.path);
+        HttpResponse.sendJson(out, routedResponse(r, "unlock").toString());
     }
 
     /**
-     * Trunk control.
-     * Open: Unlocks car first (via cloud) to avoid alarm, then opens trunk (local HAL).
-     * Close: Locks car (via cloud) which also closes the trunk.
+     * Find car (horn + lights) — cloud-only on this BYD generation.
+     */
+    private static void handleFindCar(OutputStream out) throws Exception {
+        CommandResult r = VehicleCommandRouter.getInstance()
+                .execute(new VehicleCommandRouter.FindCarCommand());
+        logger.info("FindCar: routed result=" + r.outcome + " path=" + r.path);
+        HttpResponse.sendJson(out, routedResponse(r, "find-car").toString());
+    }
+
+    /**
+     * Battery preconditioning heat — cloud-only.
+     * Body: { "enabled": bool }
+     */
+    private static void handleBatteryHeat(OutputStream out, String body) throws Exception {
+        boolean enabled = false;
+        if (body != null && !body.isEmpty()) {
+            try { enabled = new JSONObject(body).optBoolean("enabled", false); } catch (Exception ignored) {}
+        }
+        CommandResult r = VehicleCommandRouter.getInstance()
+                .execute(new VehicleCommandRouter.BatteryHeatCommand(enabled));
+        logger.info("BatteryHeat: routed result=" + r.outcome + " enabled=" + enabled);
+        JSONObject resp = routedResponse(r, "battery-heat");
+        try { resp.put("enabled", enabled); } catch (Exception ignored) {}
+        HttpResponse.sendJson(out, resp.toString());
+    }
+
+    /**
+     * Trunk control routed via the command router.
+     * Open: cloud unlock → SDK tailgate (router enforces the safety: motor only fires on unlock SUCCESS).
+     * Close / stop: SDK direct.
      * Body: { "action": "open" | "close" | "stop" }
      */
     private static void handleTrunk(OutputStream out, String body) throws Exception {
-        JSONObject response = new JSONObject();
-        try {
-            String action = "open";
-            if (body != null && !body.isEmpty()) {
-                JSONObject req = new JSONObject(body);
-                action = req.optString("action", "open");
-            }
-
-            BydDataCollector collector = BydDataCollector.getInstance();
-            boolean success;
-            switch (action) {
-                case "close":
-                    // Close trunk via local HAL (direct motor command)
-                    success = collector.closeTailgate();
-                    logger.info("Trunk close: local HAL closeTailgate result=" + success);
-                    break;
-                case "stop":
-                    success = collector.stopTailgate();
-                    break;
-                case "open":
-                default:
-                    // ALWAYS unlock before opening trunk. The CAN bus lock status is unreliable
-                    // (often returns -1/unknown), so we cannot trust it to skip the unlock step.
-                    // Sending unlock when already unlocked is harmless on most BYD models —
-                    // the cloud API returns success and the body controller ignores the redundant command.
-                    // The alternative (skipping unlock and triggering the alarm) is far worse.
-                    response.put("step", "unlocking");
-                    boolean unlockSuccess = false;
-                    try {
-                        BydCloudClient client = getCloudClient();
-                        unlockSuccess = client.unlock(getVin());
-                        logger.info("Trunk open: cloud unlock result=" + unlockSuccess);
-                        response.put("unlocked", unlockSuccess);
-                        if (unlockSuccess) {
-                            // Wait for unlock to take effect before opening trunk
-                            Thread.sleep(2000);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("Trunk open: cloud unlock failed: " + e.getMessage());
-                        response.put("unlockError", e.getMessage());
-                        unlockSuccess = false;
-                    }
-
-                    // SAFETY: Do NOT open trunk if unlock failed — this triggers the alarm.
-                    // The car may still be locked; opening the tailgate motor while locked
-                    // causes the body controller to fire the anti-theft alarm.
-                    if (!unlockSuccess) {
-                        response.put("success", false);
-                        response.put("error", Messages.get("errors.vehicle_trunk_unlock_failed"));
-                        response.put("action", action);
-                        HttpResponse.sendJson(out, response.toString());
-                        return;
-                    }
-
-                    response.put("step", "opening");
-                    success = collector.openTailgate();
-                    break;
-            }
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", action);
-        } catch (Exception e) {
-            logger.warn("Trunk command failed: " + e.getMessage());
-            response.put("success", false);
-            response.put("error", e.getMessage());
+        String action = "open";
+        if (body != null && !body.isEmpty()) {
+            try { action = new JSONObject(body).optString("action", "open"); }
+            catch (Exception ignored) {}
         }
-        HttpResponse.sendJson(out, response.toString());
+        VehicleCommand cmd;
+        if ("close".equals(action)) cmd = new VehicleCommandRouter.TrunkCloseCommand();
+        else if ("stop".equals(action)) cmd = new VehicleCommandRouter.TrunkStopCommand();
+        else cmd = new VehicleCommandRouter.TrunkOpenCommand();
+
+        CommandResult r = VehicleCommandRouter.getInstance().execute(cmd);
+        logger.info("Trunk: action=" + action + " routed result=" + r.outcome + " path=" + r.path);
+        JSONObject resp = routedResponse(r, action);
+        HttpResponse.sendJson(out, resp.toString());
     }
 
     /**
-     * Window control via local HAL (BydDataCollector).
+     * Window control routed through the command router.
      * Body: one of:
      *   { "area": 1-4 (LF/RF/LR/RR) or 0 for all, "command": 1=open, 2=close, 3=stop }
      *   { "area": 1-4,                              "targetPercent": 0..100 }
      *   { "area": 5-6, (Sunroof and Sunshade),      "targetPercent": 0..100 }
      *
-     * targetPercent triggers closed-loop positioning: backend drives the
-     * window and auto-stops at the target. Returns immediately; the motion
-     * continues on a background thread.
+     * area=0 + command=2 routes through CloseAllWindowsCommand (CLOUD_FIRST,
+     * with cloud CLOSEWINDOW). All other paths are SDK_ONLY.
      */
     private static void handleWindow(OutputStream out, String body) throws Exception {
         JSONObject response = new JSONObject();
         try {
             JSONObject req = new JSONObject(body);
             int area = req.optInt("area", 0);
-            BydDataCollector collector = BydDataCollector.getInstance();
 
+            // targetPercent → SDK closed-loop positioning
             if (req.has("targetPercent")) {
                 if (area < 1 || area > 6) {
                     response.put("success", false);
@@ -490,61 +506,52 @@ public class VehicleControlApiHandler {
                     return;
                 }
                 int target = req.getInt("targetPercent");
-                boolean scheduled = collector.moveWindowToPercent(area, target);
-                logger.info("Window: area=" + areaName(area) + " target=" + target
-                    + "% scheduled=" + scheduled);
-                response.put("success", true);
-                response.put("scheduled", scheduled);
-                response.put("area", area);
-                response.put("targetPercent", target);
-                HttpResponse.sendJson(out, response.toString());
+                CommandResult r = VehicleCommandRouter.getInstance()
+                        .execute(new VehicleCommandRouter.WindowMoveCommand(area, 0, target));
+                logger.info("Window: area=" + areaName(area) + " target=" + target + "% " + r.outcome);
+                JSONObject resp = routedResponse(r, "window-target");
+                resp.put("area", area);
+                resp.put("targetPercent", target);
+                HttpResponse.sendJson(out, resp.toString());
                 return;
             }
 
             int command = req.optInt("command", 2); // default close
-            boolean success;
-            if (area == 0) {
-                success = collector.setAllWindowsCommand(command);
+            VehicleCommand cmd;
+            // "Close all" gets the cloud CLOSEWINDOW path (works while car is asleep).
+            if (area == 0 && command == 2) {
+                cmd = new VehicleCommandRouter.CloseAllWindowsCommand();
             } else {
-                success = collector.setWindowCommand(area, command);
+                cmd = new VehicleCommandRouter.WindowMoveCommand(area, command, null);
             }
-            logger.info("Window: area=" + areaName(area) + " cmd=" + windowCmdName(command)
-                + " result=" + success);
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("area", area);
-            response.put("command", command);
+            CommandResult r = VehicleCommandRouter.getInstance().execute(cmd);
+            logger.info("Window: area=" + areaName(area) + " cmd=" + windowCmdName(command) + " " + r.outcome);
+            JSONObject resp = routedResponse(r, "window");
+            resp.put("area", area);
+            resp.put("command", command);
+            HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Window command failed: " + e.getMessage());
             response.put("success", false);
             response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
         }
-        HttpResponse.sendJson(out, response.toString());
     }
 
     /**
-     * Flash lights via BYD Cloud API.
+     * Flash lights routed via the router.
      */
     private static void handleFlash(OutputStream out) throws Exception {
-        JSONObject response = new JSONObject();
-        try {
-            BydCloudClient client = getCloudClient();
-            boolean success = client.flashLightsNoWait(getVin());
-            logger.info("Flash: cloud flashLights dispatched=" + success);
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", "flash");
-        } catch (Exception e) {
-            logger.warn("Flash command failed: " + e.getMessage());
-            response.put("success", false);
-            response.put("error", e.getMessage());
-        }
-        HttpResponse.sendJson(out, response.toString());
+        CommandResult r = VehicleCommandRouter.getInstance()
+                .execute(new VehicleCommandRouter.FlashLightsCommand());
+        logger.info("Flash: routed result=" + r.outcome + " path=" + r.path);
+        HttpResponse.sendJson(out, routedResponse(r, "flash").toString());
     }
 
     /**
-     * Climate control via local HAL.
+     * Climate control routed through the command router.
+     * power_on / power_off → CLOUD_FIRST (OPENAIR / CLOSEAIR with SDK fallback).
+     * set_temp / set_fan   → SDK_ONLY (no granular cloud command exposed).
      * Body: { "action": "power_on"|"power_off"|"set_temp"|"set_fan",
      *         "zone": 1|2, "temp": 17-33, "fan": 1-7 }
      */
@@ -553,30 +560,27 @@ public class VehicleControlApiHandler {
         try {
             JSONObject req = new JSONObject(body);
             String action = req.optString("action", "");
-            BydDataCollector collector = BydDataCollector.getInstance();
-            boolean success = false;
-
-            String detail;
+            VehicleCommand cmd;
             switch (action) {
-                case "power_on":
-                    success = collector.setAcPower(true);
-                    detail = "";
+                case "power_on": {
+                    double t = req.optDouble("temp", 22);
+                    cmd = new VehicleCommandRouter.ClimateOnCommand(t);
                     break;
+                }
                 case "power_off":
-                    success = collector.setAcPower(false);
-                    detail = "";
+                    cmd = new VehicleCommandRouter.ClimateOffCommand();
                     break;
-                case "set_temp":
+                case "set_temp": {
                     int zone = req.optInt("zone", 1);
-                    double temp = req.optDouble("temp", 22);
-                    success = collector.setAcTemperature(zone, temp);
-                    detail = " zone=" + zone + " temp=" + temp + "°C";
+                    double t = req.optDouble("temp", 22);
+                    cmd = new VehicleCommandRouter.ClimateSetTempCommand(zone, t);
                     break;
-                case "set_fan":
+                }
+                case "set_fan": {
                     int fan = req.optInt("fan", 3);
-                    success = collector.setAcFanLevel(fan);
-                    detail = " fan=" + fan;
+                    cmd = new VehicleCommandRouter.ClimateSetFanCommand(fan);
                     break;
+                }
                 default:
                     logger.warn("Climate: unknown action '" + action + "'");
                     response.put("success", false);
@@ -584,25 +588,28 @@ public class VehicleControlApiHandler {
                     HttpResponse.sendJson(out, response.toString());
                     return;
             }
-            logger.info("Climate: action=" + action + detail + " result=" + success);
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", action);
+            CommandResult r = VehicleCommandRouter.getInstance().execute(cmd);
+            logger.info("Climate: action=" + action + " " + r.outcome + " path=" + r.path);
+            JSONObject resp = routedResponse(r, action);
+            HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Climate command failed: " + e.getMessage());
             response.put("success", false);
             response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
         }
-        HttpResponse.sendJson(out, response.toString());
     }
 
     /**
-     * Seat heating/ventilation/memory-recall via local HAL.
-     * Body: { "action": "heating"|"ventilation"|"position", "position": 1-4, "level": 0-3 }
-     * Position: 1=driver, 2=passenger, 3=rear-left, 4=rear-right
-     * Level: 0=off, 1=low, 2=medium, 3=high (clamped to 0-2 internally)
-     * For action="position", `position` is the stored memory slot (1-2).
+     * Seat heating / ventilation / memory-recall — cloud-first (VENTILATIONHEATING)
+     * with SDK fallback. The cloud command is stateful, so heat+vent commands need
+     * the FULL state of driver+passenger seats. The JS keeps that state and sends
+     * it on every seat command.
+     *
+     * Body: { "action": "heating"|"ventilation"|"position",
+     *         "position": 1-4, "level": 0-3,
+     *         "driverHeat": 0-2, "driverVent": 0-2,
+     *         "passengerHeat": 0-2, "passengerVent": 0-2 }
      */
     private static void handleSeat(OutputStream out, String body) throws Exception {
         JSONObject response = new JSONObject();
@@ -611,34 +618,35 @@ public class VehicleControlApiHandler {
             String action = req.optString("action", "heating");
             int position = req.optInt("position", 1);
             int level = req.optInt("level", 0);
-            BydDataCollector collector = BydDataCollector.getInstance();
-            boolean success;
-
+            int dh = req.optInt("driverHeat", 0);
+            int dv = req.optInt("driverVent", 0);
+            int ph = req.optInt("passengerHeat", 0);
+            int pv = req.optInt("passengerVent", 0);
+            VehicleCommand cmd;
             if ("ventilation".equals(action)) {
-                success = collector.setSeatVentilation(position, level);
+                cmd = new VehicleCommandRouter.SeatVentCommand(position, level, dh, dv, ph, pv);
             } else if ("position".equals(action)) {
-                success = collector.setSeatMemoryPosition(position);
+                cmd = new VehicleCommandRouter.SeatMemoryCommand(position);
             } else {
-                success = collector.setSeatHeating(position, level);
+                cmd = new VehicleCommandRouter.SeatHeatCommand(position, level, dh, dv, ph, pv);
             }
+            CommandResult r = VehicleCommandRouter.getInstance().execute(cmd);
             logger.info("Seat: action=" + action + " pos=" + seatPosName(position)
-                + " level=" + level + " result=" + success);
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("action", action);
-            response.put("position", position);
-            response.put("level", level);
+                    + " level=" + level + " " + r.outcome);
+            JSONObject resp = routedResponse(r, action);
+            resp.put("position", position);
+            resp.put("level", level);
+            HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Seat command failed: " + e.getMessage());
             response.put("success", false);
             response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
         }
-        HttpResponse.sendJson(out, response.toString());
     }
 
     /**
-     * Light controls.
+     * Light controls — SDK_ONLY routed.
      * Body: { "target": "dayTimeLight", "enable": true|false }
      */
     private static void handleLights(OutputStream out, String body) throws Exception {
@@ -647,38 +655,29 @@ public class VehicleControlApiHandler {
             JSONObject req = new JSONObject(body);
             String target = req.optString("target", null);
             boolean enable = req.optBoolean("enable", true);
-            BydDataCollector collector = BydDataCollector.getInstance();
-            boolean success = false;
-            String errorKey = null;
-
-            if ("dayTimeLight".equals(target)) {
-                success = collector.setDayTimeLight(enable);
-                if (!success) errorKey = "errors.vehicle_drl_set_failed";
-            } else {
-                errorKey = "errors.vehicle_unsupported_target_with_target";
+            if (!"dayTimeLight".equals(target)) {
+                response.put("success", false);
+                response.put("error", Messages.get("errors.vehicle_unsupported_target_with_target", target));
+                HttpResponse.sendJson(out, response.toString());
+                return;
             }
-            logger.info("Lights: target=" + target + " enable=" + enable
-                    + " result=" + success);
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("target", target);
-            response.put("enable", enable);
-            if (errorKey != null) {
-                response.put("error", "errors.vehicle_unsupported_target_with_target".equals(errorKey)
-                        ? Messages.get(errorKey, target)
-                        : Messages.get(errorKey));
-            }
+            CommandResult r = VehicleCommandRouter.getInstance()
+                    .execute(new VehicleCommandRouter.LightsCommand(enable));
+            logger.info("Lights: target=dayTimeLight enable=" + enable + " " + r.outcome);
+            JSONObject resp = routedResponse(r, "lights");
+            resp.put("target", target);
+            resp.put("enable", enable);
+            HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Light command failed: " + e.getMessage());
             response.put("success", false);
             response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
         }
-        HttpResponse.sendJson(out, response.toString());
     }
 
     /**
-     * ADAS controls.
+     * ADAS controls — SDK_ONLY routed.
      * Body: { "target": "speedLimitWarning", "enable": true|false }
      */
     private static void handleAdas(OutputStream out, String body) throws Exception {
@@ -687,34 +686,243 @@ public class VehicleControlApiHandler {
             JSONObject req = new JSONObject(body);
             String target = req.optString("target", null);
             boolean enable = req.optBoolean("enable", true);
-            BydDataCollector collector = BydDataCollector.getInstance();
-            boolean success = false;
-            String errorKey = null;
-
-            if ("speedLimitWarning".equals(target)) {
-                success = collector.setSpeedLimitWarning(enable);
-                if (!success) errorKey = "errors.vehicle_slw_set_failed";
-            } else {
-                errorKey = "errors.vehicle_unsupported_target_with_target";
+            if (!"speedLimitWarning".equals(target)) {
+                response.put("success", false);
+                response.put("error", Messages.get("errors.vehicle_unsupported_target_with_target", target));
+                HttpResponse.sendJson(out, response.toString());
+                return;
             }
-            logger.info("Adas: target=" + target + " enable=" + enable
-                    + " result=" + success);
-
-            response.put("success", true);
-            response.put("commandSuccess", success);
-            response.put("target", target);
-            response.put("enable", enable);
-            if (errorKey != null) {
-                response.put("error", "errors.vehicle_unsupported_target_with_target".equals(errorKey)
-                        ? Messages.get(errorKey, target)
-                        : Messages.get(errorKey));
-            }
+            CommandResult r = VehicleCommandRouter.getInstance()
+                    .execute(new VehicleCommandRouter.AdasSpeedLimitWarningCommand(enable));
+            logger.info("Adas: target=speedLimitWarning enable=" + enable + " " + r.outcome);
+            JSONObject resp = routedResponse(r, "adas");
+            resp.put("target", target);
+            resp.put("enable", enable);
+            HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Adas command failed: " + e.getMessage());
             response.put("success", false);
             response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
         }
-        HttpResponse.sendJson(out, response.toString());
+    }
+
+    /**
+     * Charging schedule — CLOUD_ONLY. Wraps BYD's saveOrUpdate (window + repeat)
+     * and changeChargeStatue (master switch). Payload mirrors pyBYD:
+     * <pre>
+     *   { startChargeTime: "HH:MM",
+     *     endChargeTime:   "HH:MM" | "full",
+     *     chargeWay:       "s" | "e" | "0,1,2,3,4",
+     *     enabled:         boolean }
+     * </pre>
+     * If only {@code enabled} is provided, the master toggle runs alone.
+     */
+    private static void handleChargingSchedule(OutputStream out, String body) throws Exception {
+        JSONObject response = new JSONObject();
+        try {
+            JSONObject req = (body == null || body.isEmpty()) ? new JSONObject() : new JSONObject(body);
+            boolean hasStart = req.has("startChargeTime");
+            boolean hasEnd = req.has("endChargeTime");
+            boolean hasWay = req.has("chargeWay");
+            boolean hasEnabled = req.has("enabled");
+            boolean scheduleFields = hasStart || hasEnd || hasWay;
+            if (!scheduleFields && !hasEnabled) {
+                response.put("success", false);
+                response.put("error", Messages.get("errors.vehicle_unknown_action_with_action", "charging-schedule"));
+                HttpResponse.sendJson(out, response.toString());
+                return;
+            }
+            if (scheduleFields && !(hasStart && hasEnd && hasWay)) {
+                response.put("success", false);
+                response.put("error", "startChargeTime, endChargeTime, and chargeWay must be provided together");
+                HttpResponse.sendJson(out, response.toString());
+                return;
+            }
+
+            // Toggle-only request — just hit changeChargeStatue.
+            if (!scheduleFields) {
+                boolean enabled = req.getBoolean("enabled");
+                CommandResult r = VehicleCommandRouter.getInstance()
+                        .execute(new VehicleCommandRouter.SmartChargingToggleCommand(enabled));
+                logger.info("ChargingSchedule: toggle enabled=" + enabled + " " + r.outcome);
+                JSONObject resp = routedResponse(r, "smart-charging-toggle");
+                resp.put("enabled", enabled);
+                HttpResponse.sendJson(out, resp.toString());
+                return;
+            }
+
+            // Full save — saveOrUpdate carries its own status, no pre-toggle needed.
+            String start = req.getString("startChargeTime");
+            String end = req.getString("endChargeTime");
+            String way = req.getString("chargeWay");
+            boolean enabled = hasEnabled ? req.getBoolean("enabled") : true;
+            CommandResult r = VehicleCommandRouter.getInstance()
+                    .execute(new VehicleCommandRouter.ChargeScheduleCommand(start, end, way, enabled));
+            logger.info("ChargingSchedule: save start=" + start + " end=" + end
+                    + " way=" + way + " enabled=" + enabled + " " + r.outcome);
+            JSONObject resp = routedResponse(r, "charge-schedule");
+            resp.put("startChargeTime", start);
+            resp.put("endChargeTime", end);
+            resp.put("chargeWay", way);
+            resp.put("enabled", enabled);
+            HttpResponse.sendJson(out, resp.toString());
+        } catch (Exception e) {
+            logger.warn("ChargingSchedule command failed: " + e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
+        }
+    }
+
+    /**
+     * Charging-schedule state. BYD's smartCharge/homePage endpoint returns
+     * telemetry only (no echo of the configured schedule), so our source of
+     * truth is {@link SmartChargeCache}, a local mirror updated on every
+     * successful saveOrUpdate / changeChargeStatue.
+     */
+    private static void handleGetChargingSchedule(OutputStream out) throws Exception {
+        JSONObject resp = new JSONObject();
+        try {
+            BydCloudConfig cfg = BydCloudConfig.fromUnifiedConfig();
+            if (!cfg.isConfigured() || cfg.vin == null || cfg.vin.isEmpty()) {
+                resp.put("success", true);
+                resp.put("supported", false);
+                resp.put("reason", "cloud_not_configured");
+                HttpResponse.sendJson(out, resp.toString());
+                return;
+            }
+            com.overdrive.app.byd.cloud.BydCloudClient client =
+                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().getSharedClient();
+            if (client == null) {
+                resp.put("success", true);
+                resp.put("supported", false);
+                resp.put("reason", "cloud_client_unavailable");
+                HttpResponse.sendJson(out, resp.toString());
+                return;
+            }
+            Boolean enabled = com.overdrive.app.byd.cloud.SmartChargeCache.getEnabled();
+            String start = com.overdrive.app.byd.cloud.SmartChargeCache.getStartChargeTime();
+            String end = com.overdrive.app.byd.cloud.SmartChargeCache.getEndChargeTime();
+            String way = com.overdrive.app.byd.cloud.SmartChargeCache.getChargeWay();
+            resp.put("success", true);
+            resp.put("supported", true);
+            if (enabled == null) resp.put("enabled", JSONObject.NULL);
+            else resp.put("enabled", enabled.booleanValue());
+            resp.put("startChargeTime", start == null ? JSONObject.NULL : start);
+            resp.put("endChargeTime", end == null ? JSONObject.NULL : end);
+            resp.put("chargeWay", way == null ? JSONObject.NULL : way);
+            logger.info("ChargingSchedule GET (local cache) → enabled=" + enabled
+                    + " start=" + start + " end=" + end + " way=" + way);
+        } catch (Exception e) {
+            logger.warn("ChargingSchedule read failed: " + e.getMessage());
+            resp.put("success", false);
+            resp.put("error", e.getMessage());
+        }
+        HttpResponse.sendJson(out, resp.toString());
+    }
+
+    /**
+     * BEV charge cap — SDK_ONLY via BYDAutoChargingDevice
+     * setChargeStopCapacityState + setChargeStopSwitchState. The Seal HAL
+     * historically reports getChargeStopSupportConfig=0; the collector probes
+     * via write-then-read-back on the first successful POST and the GET
+     * returns supported=false on no-op trims so the UI can hide the section.
+     *
+     * <p>Body: {@code { percent?: 50..100, enabled?: bool }}.
+     * When both are present the toggle runs first so a freshly-enabled cap
+     * picks up the new percent.
+     */
+    private static void handleChargeCap(OutputStream out, String body) throws Exception {
+        JSONObject response = new JSONObject();
+        try {
+            JSONObject req = (body == null || body.isEmpty()) ? new JSONObject() : new JSONObject(body);
+            boolean hasPercent = req.has("percent");
+            boolean hasEnabled = req.has("enabled");
+            if (!hasPercent && !hasEnabled) {
+                response.put("success", false);
+                response.put("error", Messages.get("errors.vehicle_unknown_action_with_action", "charge-cap"));
+                HttpResponse.sendJson(out, response.toString());
+                return;
+            }
+
+            CommandResult last = null;
+            String action = null;
+
+            if (hasEnabled) {
+                boolean enabled = req.getBoolean("enabled");
+                CommandResult r = VehicleCommandRouter.getInstance()
+                        .execute(new VehicleCommandRouter.ChargeCapToggleCommand(enabled));
+                logger.info("ChargeCap: toggle enabled=" + enabled + " " + r.outcome);
+                last = r;
+                action = "charge-cap-toggle";
+                if (r.outcome != VehicleCommandRouter.Outcome.SUCCESS && hasPercent) {
+                    JSONObject resp = routedResponse(r, action);
+                    resp.put("enabled", enabled);
+                    HttpResponse.sendJson(out, resp.toString());
+                    return;
+                }
+            }
+
+            if (hasPercent) {
+                int percent = req.getInt("percent");
+                if (percent < 50 || percent > 100) {
+                    response.put("success", false);
+                    response.put("error", "percent must be 50..100 (got " + percent + ")");
+                    HttpResponse.sendJson(out, response.toString());
+                    return;
+                }
+                CommandResult r = VehicleCommandRouter.getInstance()
+                        .execute(new VehicleCommandRouter.ChargeCapPercentCommand(percent));
+                logger.info("ChargeCap: percent=" + percent + " " + r.outcome);
+                last = r;
+                action = "charge-cap-percent";
+            }
+
+            JSONObject resp = routedResponse(last, action);
+            if (hasPercent) resp.put("percent", req.getInt("percent"));
+            if (hasEnabled) resp.put("enabled", req.getBoolean("enabled"));
+            // Surface the probe result so the UI can hide on the next paint.
+            Boolean supported = BydDataCollector.getInstance().isChargeCapSupported();
+            if (supported != null) resp.put("supported", supported.booleanValue());
+            HttpResponse.sendJson(out, resp.toString());
+        } catch (Exception e) {
+            logger.warn("ChargeCap command failed: " + e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            HttpResponse.sendJson(out, response.toString());
+        }
+    }
+
+    /**
+     * BEV charge cap state — SDK reads. Returns last-known target percent and
+     * on/off, plus a {@code supported} flag derived from the write-read-back
+     * probe (null until the user has saved at least once).
+     */
+    private static void handleGetChargeCap(OutputStream out) throws Exception {
+        JSONObject resp = new JSONObject();
+        try {
+            BydDataCollector collector = BydDataCollector.getInstance();
+            int percent = collector.getChargeCapPercent();
+            int enabled = collector.getChargeCapEnabled();
+            Boolean supported = collector.isChargeCapSupported();
+            resp.put("success", true);
+            resp.put("percent", percent >= 0 ? percent : JSONObject.NULL);
+            if (enabled == 0) resp.put("enabled", false);
+            else if (enabled == 1) resp.put("enabled", true);
+            else resp.put("enabled", JSONObject.NULL);
+            // Tri-state: null = not yet probed (show optimistically),
+            //           true/false = probe result from last write.
+            if (supported == null) resp.put("supported", JSONObject.NULL);
+            else resp.put("supported", supported.booleanValue());
+            logger.info("ChargeCap GET → percent=" + percent + " enabled=" + enabled
+                    + " supported=" + supported);
+        } catch (Exception e) {
+            logger.warn("ChargeCap read failed: " + e.getMessage());
+            resp.put("success", false);
+            resp.put("error", e.getMessage());
+        }
+        HttpResponse.sendJson(out, resp.toString());
     }
 
     // ==================== LOG HELPERS ====================
@@ -765,33 +973,31 @@ public class VehicleControlApiHandler {
         return -1;
     }
 
-    private static String getVin() throws Exception {
-        BydCloudConfig config = BydCloudConfig.fromUnifiedConfig();
-        if (!config.isConfigured() || config.vin.isEmpty()) {
-            throw new Exception("BYD Cloud not configured or VIN missing");
-        }
-        return config.vin;
-    }
-
-    private static BydCloudClient getCloudClient() throws Exception {
-        BydCloudConfig config = BydCloudConfig.fromUnifiedConfig();
-        if (!config.isConfigured()) {
-            throw new Exception("BYD Cloud not configured. Set up credentials in Settings → BYD Cloud.");
-        }
-
-        // Reuse the shared client owned by BydCloudDataProvider — creating a
-        // fresh client here would race the MQTT subscriber's login() and
-        // invalidate its session token (visible as code=1005 from the EMQ
-        // broker endpoint). The shared client's session is already verified.
-        BydCloudClient client = com.overdrive.app.byd.cloud.BydCloudDataProvider
-                .getInstance().getSharedClient();
-        if (client == null) {
-            throw new Exception("BYD Cloud client not initialized. Verify credentials in Settings → BYD Cloud.");
-        }
-        // Re-verify the control PIN if needed — a no-op if already done.
-        if (!config.vin.isEmpty()) {
-            client.verifyControlPassword(config.vin);
-        }
-        return client;
+    /**
+     * Build the response JSON shape the new vehicle-control UI expects:
+     *   { success, path, latencyMs, message, action, outcome, commandSuccess }
+     * — `success` is true on routed SUCCESS,
+     * — `path` is "cloud" / "local" / "cloud-then-local" / "none",
+     * — `message` is a localized user-facing string,
+     * — `commandSuccess` mirrors `success` so legacy UI branches still work.
+     */
+    private static JSONObject routedResponse(CommandResult r, String action) {
+        JSONObject resp = new JSONObject();
+        try {
+            boolean success = r.outcome == VehicleCommandRouter.Outcome.SUCCESS;
+            resp.put("success", success);
+            resp.put("commandSuccess", success);
+            resp.put("path", r.pathString());
+            resp.put("latencyMs", r.latencyMs);
+            resp.put("message", r.displayMessage);
+            resp.put("outcome", r.outcome.name().toLowerCase());
+            resp.put("action", action);
+            if (!success && r.error != null && r.error.getMessage() != null) {
+                resp.put("error", r.error.getMessage());
+            } else if (!success) {
+                resp.put("error", r.displayMessage);
+            }
+        } catch (Exception ignored) {}
+        return resp;
     }
 }

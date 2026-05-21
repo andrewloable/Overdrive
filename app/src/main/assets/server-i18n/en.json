@@ -125,6 +125,20 @@
     "recording_caption_no_label": "📹 Recording - {0}s",
     "proximity_alert": "🚨 Proximity Alert\nTime: {0}\nTrigger: {1} ({2})\nRecording started..."
   },
+  "vehicle_control": {
+    "cloud_required": "Connect a BYD account in Settings to use this control",
+    "cloud_sent": "Sent via cloud",
+    "cloud_unavailable_used_local": "Cloud unavailable — used direct connection",
+    "local_sent": "Sent over direct connection",
+    "cloud_offline_used_local": "Cloud offline — used direct connection",
+    "local_unavailable_used_cloud": "Direct connection unavailable — sent via cloud",
+    "cloud_failed": "Couldn't reach the car — try again when the vehicle is awake",
+    "rate_limited": "A command is still in progress — wait a few seconds",
+    "not_supported": "This control isn't available right now",
+    "find_car_label": "Find car",
+    "battery_heat_label": "Battery heat",
+    "close_all_windows_label": "Close all windows"
+  },
   "messages": {
     "logged_out": "Logged out",
     "bydcloud_connected": "Connected successfully",

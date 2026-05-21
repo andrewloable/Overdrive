@@ -33,6 +33,14 @@
     <!-- Borders -->
     <color name="border_default">#26000000</color>
 
+    <!-- Floating status overlay (Recording / Trip pill).
+         Used by drawable/overlay_pill_background.xml so the pill flips
+         tone with the app's day/night setting. The light variants give a
+         translucent pearl pill with a faint brand-tinted ring; the night
+         variants live in values-night/colors.xml. -->
+    <color name="overlay_pill_background">#E6F7FAF7</color>
+    <color name="overlay_pill_stroke">#3300876C</color>
+
     <!-- Status — AA on light surfaces -->
     <color name="status_success">#1F7A3F</color>
     <color name="status_warning">#A6601C</color>

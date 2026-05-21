@@ -1,6 +1,8 @@
 package com.overdrive.app.ui.fragment.settings
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +14,8 @@ import com.overdrive.app.R
 import com.overdrive.app.ui.MainActivity
 import com.overdrive.app.ui.util.RecordingScanner
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * Settings → Privacy & data pane.
@@ -29,6 +33,16 @@ import java.util.Locale
  * scanner regression never blanks the page.
  */
 class SettingsPrivacyFragment : Fragment() {
+
+    /**
+     * Single-thread executor for the storage scan. Off-main is mandatory:
+     * StorageManager's first-init in the UI process forks shell processes
+     * (`sm list-volumes`, /proc/mounts probes, sleep loops to await SD-card
+     * mount). On the main thread that's an ANR — which the user perceives
+     * as a crash when they tap the Privacy & data row.
+     */
+    private var scanExecutor: ExecutorService? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,19 +66,44 @@ class SettingsPrivacyFragment : Fragment() {
         view?.let { populateStorage(it) }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        scanExecutor?.shutdownNow()
+        scanExecutor = null
+    }
+
     private fun populateStorage(root: View) {
         val tvClips = root.findViewById<TextView>(R.id.tvPrivacyClipsValue) ?: return
         val tvSize = root.findViewById<TextView>(R.id.tvPrivacySizeValue) ?: return
-        val ctx = context ?: return
-        try {
-            val all = RecordingScanner.scanRecordings(ctx)
-            val totalBytes = all.sumOf { it.sizeBytes }
-            tvClips.text = formatClipCount(all.size)
-            tvSize.text = formatSize(totalBytes)
-        } catch (t: Throwable) {
-            Log.w(TAG, "Storage scan failed: ${t.message}")
-            tvClips.setText(R.string.settings_privacy_storage_unavailable)
-            tvSize.setText(R.string.settings_privacy_storage_unavailable)
+        val ctx = context?.applicationContext ?: return
+
+        val executor = scanExecutor
+            ?: Executors.newSingleThreadExecutor { r ->
+                Thread(r, "PrivacyStorageScan").apply {
+                    isDaemon = true
+                    priority = Thread.MIN_PRIORITY
+                }
+            }.also { scanExecutor = it }
+
+        executor.execute {
+            val result: Pair<Int, Long>? = try {
+                val all = RecordingScanner.scanRecordings(ctx)
+                all.size to all.sumOf { it.sizeBytes }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Storage scan failed: ${t.message}")
+                null
+            }
+            mainHandler.post {
+                if (!isAdded || view == null) return@post
+                if (result == null) {
+                    tvClips.setText(R.string.settings_privacy_storage_unavailable)
+                    tvSize.setText(R.string.settings_privacy_storage_unavailable)
+                } else {
+                    val (count, totalBytes) = result
+                    tvClips.text = formatClipCount(count)
+                    tvSize.text = formatSize(totalBytes)
+                }
+            }
         }
     }
 

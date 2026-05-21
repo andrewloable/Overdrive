@@ -126,17 +126,26 @@ public class HardwareEventRecorderGpu {
     private long postRecordStopTime = 0;
     
     // SOTA: Async pre-record flush queue (eliminates blocking on motion trigger)
-    // Packets are queued here and written by drainEncoder() on the GL thread
+    // Packets are queued here and written by drainEncoder() on the GL thread.
+    // Bounded to prevent OOM under SD-card stalls — at 30 fps a stalled SD
+    // card would otherwise let this grow without bound.
     private final ConcurrentLinkedQueue<H264CircularBuffer.Packet> pendingFlushQueue = new ConcurrentLinkedQueue<>();
     private volatile boolean flushInProgress = false;
     private volatile long actualPreRecordDurationMs = 0;  // Actual duration of flushed pre-record buffer
-    
+
     // SOTA: Muxer write queue — decouples encoder dequeue from SD card I/O.
     // The encoder dequeue loop copies frame data and releases the encoder buffer
     // immediately, then pushes to this queue. A dedicated disk writer thread
     // polls the queue and writes to the muxer. This prevents SD card I/O stalls
     // (which can be 50-100ms during garbage collection) from blocking the encoder,
     // which would cause the GPU to stall and drop camera frames.
+    //
+    // Capacity reasoning: at worst-case 30 fps × ~256KB per packet, 300 entries
+    // = ~75 MB ceiling. SD stalls beyond ~10 seconds at 30 fps drop oldest
+    // non-keyframes (drop-policy in offerMuxerPacket). Daemon stays alive
+    // instead of OOMing.
+    private static final int MUXER_WRITE_QUEUE_CAPACITY = 300;
+
     private static class MuxerPacket {
         final ByteBuffer data;
         final MediaCodec.BufferInfo info;
@@ -150,8 +159,56 @@ public class HardwareEventRecorderGpu {
             info = new MediaCodec.BufferInfo();
             info.set(0, srcInfo.size, srcInfo.presentationTimeUs, srcInfo.flags);
         }
+
+        boolean isKeyFrame() {
+            return (info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
+        }
     }
-    private final ConcurrentLinkedQueue<MuxerPacket> muxerWriteQueue = new ConcurrentLinkedQueue<>();
+    // Use Deque for drop-oldest semantics. Bounded capacity prevents unbounded
+    // growth under SD-card backpressure.
+    private final java.util.concurrent.LinkedBlockingDeque<MuxerPacket> muxerWriteQueue =
+        new java.util.concurrent.LinkedBlockingDeque<>(MUXER_WRITE_QUEUE_CAPACITY);
+    private final java.util.concurrent.atomic.AtomicLong muxerDropCount =
+        new java.util.concurrent.atomic.AtomicLong(0);
+
+    /**
+     * Add a packet to the muxer write queue. If the queue is full, drop the
+     * oldest non-keyframe packet to make room. If the queue is full and
+     * everything in it is a keyframe (extreme stall), drop the new packet
+     * unless it's also a keyframe (in which case drop the oldest keyframe).
+     *
+     * Logged every 30 drops so a chronic SD-card stall is visible in the
+     * field instead of silently corrupting recordings.
+     */
+    private void offerMuxerPacket(MuxerPacket packet) {
+        if (muxerWriteQueue.offer(packet)) {
+            return;
+        }
+        // Queue full. Walk from the head looking for a non-keyframe to drop.
+        java.util.Iterator<MuxerPacket> it = muxerWriteQueue.iterator();
+        boolean dropped = false;
+        while (it.hasNext()) {
+            MuxerPacket head = it.next();
+            if (!head.isKeyFrame()) {
+                it.remove();
+                dropped = true;
+                break;
+            }
+        }
+        if (!dropped) {
+            // All entries are keyframes — drop the oldest. This only happens
+            // under multi-second SD stalls; the recording will have a gap
+            // but the daemon stays alive.
+            muxerWriteQueue.pollFirst();
+        }
+        // Now there's space.
+        muxerWriteQueue.offer(packet);
+        long n = muxerDropCount.incrementAndGet();
+        if (n % 30 == 1) {
+            logger.warn("Muxer write queue saturated — dropped " + n
+                + " packets total. SD card likely stalled.");
+        }
+    }
     private volatile boolean diskWriterRunning = false;
     private Thread diskWriterThread;
     
@@ -352,7 +409,18 @@ public class HardwareEventRecorderGpu {
             throw createError[0];
         }
         encoder = encoderResult[0];
-        logger.info("MediaCodec encoder created");
+        // Confirm the negotiated codec name on this device, not just our intent.
+        // If the device-side codec selection silently downgraded HEVC→AVC (rare,
+        // but possible if the platform encoder list rejects HEVC for our params),
+        // this log line surfaces it instead of leaving the user to guess from
+        // file sizes.
+        try {
+            String negotiatedName = encoder.getName();
+            logger.info("MediaCodec encoder created (codec=" + finalCodecMimeType
+                    + ", impl=" + negotiatedName + ")");
+        } catch (Exception ignored) {
+            logger.info("MediaCodec encoder created");
+        }
         
         // Configure encoder with timeout
         logger.info("Configuring encoder...");
@@ -464,14 +532,20 @@ public class HardwareEventRecorderGpu {
         if (usePreRecordBuffer) {
             synchronized (bufferLock) {
                 int desiredSec = Math.max(1, preRecordDurationSeconds);
+                // Pass the encoder's fps so the buffer pool is sized for
+                // duration × fps + headroom. Without this, switching to
+                // 30 fps recording exhausts the pool (sized for 15 fps) and
+                // triggers emergency allocations under sustained load.
                 if (sharedPreRecordBuffer == null) {
-                    logger.info("Allocating NEW pre-record buffer (" + desiredSec + " sec)...");
-                    sharedPreRecordBuffer = new H264CircularBuffer(desiredSec);
+                    logger.info("Allocating NEW pre-record buffer (" + desiredSec
+                        + " sec @ " + fps + "fps)...");
+                    sharedPreRecordBuffer = new H264CircularBuffer(desiredSec, fps);
                 } else {
                     long desiredUs = desiredSec * 1_000_000L;
                     if (sharedPreRecordBuffer.getMaxDurationUs() != desiredUs) {
-                        logger.info("Resizing existing pre-record buffer to " + desiredSec + " sec");
-                        sharedPreRecordBuffer = new H264CircularBuffer(desiredSec);
+                        logger.info("Resizing existing pre-record buffer to "
+                            + desiredSec + " sec @ " + fps + "fps");
+                        sharedPreRecordBuffer = new H264CircularBuffer(desiredSec, fps);
                     } else {
                         logger.info("Reusing EXISTING pre-record buffer (Zero-Allocation)");
                         sharedPreRecordBuffer.clear();  // Clear old data but keep allocated memory
@@ -511,7 +585,7 @@ public class HardwareEventRecorderGpu {
                 // Only recreate if duration is different (avoid 23MB allocation on every settings change)
                 if (sharedPreRecordBuffer.getMaxDurationUs() != currentMaxDurationUs) {
                     logger.info("Pre-record duration changed, recreating buffer: " + clamped + " seconds");
-                    sharedPreRecordBuffer = new H264CircularBuffer(clamped);
+                    sharedPreRecordBuffer = new H264CircularBuffer(clamped, fps);
                     preRecordBuffer = sharedPreRecordBuffer;
                 } else {
                     logger.info("Pre-record buffer already at " + clamped + " seconds, clearing only");
@@ -1145,18 +1219,22 @@ public class HardwareEventRecorderGpu {
         }
         
         if (encoder != null) {
+            // Note: by the time we reach release(), stopRecording() above
+            // has already finalized any active recording (drained and stopped
+            // the muxer). Final-frame-loss is handled there. We just stop
+            // and release the codec.
             try {
                 encoder.stop();
             } catch (Exception e) {
                 logger.error( "Error stopping encoder", e);
             }
-            
+
             try {
                 encoder.release();
             } catch (Exception e) {
                 logger.error( "Error releasing encoder", e);
             }
-            
+
             encoder = null;
         }
         
@@ -1164,7 +1242,22 @@ public class HardwareEventRecorderGpu {
             inputSurface.release();
             inputSurface = null;
         }
-        
+
+        // Clear the shared pre-record buffer if THIS instance owned it. The
+        // buffer is static + shared across encoder reinits to avoid 23MB
+        // realloc, but stale packets from a previous codec/resolution must
+        // not survive into the next event recording. Without this, a crash
+        // path that skips stopRecording() leaves packets in the buffer that
+        // the next instance will flush into its first event MP4.
+        if (preRecordBuffer != null) {
+            synchronized (bufferLock) {
+                if (preRecordBuffer == sharedPreRecordBuffer) {
+                    sharedPreRecordBuffer.clear();
+                }
+            }
+            preRecordBuffer = null;
+        }
+
         logger.info( "Released");
     }
     
@@ -1410,7 +1503,7 @@ public class HardwareEventRecorderGpu {
             H264CircularBuffer.Packet queuedPacket;
             while ((queuedPacket = pendingFlushQueue.poll()) != null) {
                 // Push pre-record packets to the muxer write queue (same path as live frames)
-                muxerWriteQueue.add(new MuxerPacket(queuedPacket.data, queuedPacket.info));
+                offerMuxerPacket(new MuxerPacket(queuedPacket.data, queuedPacket.info));
                 flushedCount++;
             }
             if (flushedCount > 0) {
@@ -1507,7 +1600,7 @@ public class HardwareEventRecorderGpu {
                     // The disk writer thread handles the actual SD card I/O, preventing
                     // I/O stalls from blocking the encoder dequeue loop.
                     if (isWritingToFile && muxerStarted && !flushInProgress) {
-                        muxerWriteQueue.add(new MuxerPacket(outputBuffer, bufferInfo));
+                        offerMuxerPacket(new MuxerPacket(outputBuffer, bufferInfo));
                     }
                     
                     // PATH B: Send to network (if streaming)

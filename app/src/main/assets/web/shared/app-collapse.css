@@ -1,0 +1,104 @@
+/*
+ * Overdrive — Collapsible card visuals.
+ *
+ * Pairs with app-collapse.js. The script tags every wired-up <div class="card">
+ * with .card-header-collapsible on its header; this file gives that header a
+ * pointer cursor, a rotating chevron, and a body slide animation when the
+ * outer card flips into .is-collapsed.
+ *
+ * No raw hex values — tokens come from design-tokens.css via styles.css.
+ */
+
+.card-header-collapsible {
+    cursor: pointer;
+    -webkit-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background-color 160ms ease-out;
+    /* Override the default .card-header space-between so a header with a
+       title + a badge + a chevron lays out cleanly:
+         [icon title]  [badge]                        [chevron]
+       The badge sits adjacent to the title (with a gap), and the chevron
+       gets pushed to the trailing edge by its own margin-left:auto. */
+    justify-content: flex-start;
+}
+/* Margin-based gap shim — Chrome 58 (BYD head-unit floor) doesn't support
+   `gap:` on flex containers (added in Chrome 84). Use sibling-margin so
+   the visual outcome matches modern browsers. */
+.card-header-collapsible > * + * { margin-left: 12px; }
+
+.card-header-collapsible:hover {
+    background: var(--surface-container-high, var(--bg-elevated));
+}
+
+.card-header-collapsible:focus-visible {
+    outline: 2px solid var(--primary, var(--brand-primary));
+    outline-offset: -2px;
+}
+
+/* Chevron — flips to point up when expanded, down when collapsed.
+   `margin-left: auto` anchors it to the trailing edge of the flex header
+   regardless of how many siblings (title, badge, indicator) are present,
+   so the affordance stays predictable across every card. */
+.card-collapse-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: auto;
+    color: var(--text-muted, var(--on-surface-variant));
+    border-radius: 50%;
+    flex-shrink: 0;
+    order: 99; /* always last in flex even if appended mid-stream */
+    transition: transform 240ms cubic-bezier(0.2, 0.8, 0.4, 1.0),
+                background-color 160ms ease-out,
+                color 160ms ease-out;
+    /* Default = expanded. Chevron points UP. */
+    transform: rotate(180deg);
+}
+
+.card-collapse-chevron svg {
+    width: 18px;
+    height: 18px;
+}
+
+.card.is-collapsed .card-collapse-chevron {
+    /* Collapsed = chevron points DOWN (matches the "tap to open" affordance). */
+    transform: rotate(0deg);
+}
+
+.card-header-collapsible:hover .card-collapse-chevron {
+    background: var(--bg-hover, rgba(0,0,0,0.06));
+    color: var(--text-primary, var(--on-surface));
+}
+
+/* Body collapse animation — drives off max-height + opacity.
+   The script writes max-height inline; CSS only owns the transition curve. */
+.card > .card-body {
+    overflow: hidden;
+    transition: max-height 280ms cubic-bezier(0.2, 0.0, 0.2, 1.0),
+                opacity 200ms ease-out,
+                padding 240ms cubic-bezier(0.2, 0.0, 0.2, 1.0);
+}
+
+.card.is-collapsed > .card-body {
+    /* Inline max-height: 0 from JS handles the slide, but we also zero the
+       padding so the collapsed card is a clean header-only strip. The
+       transition above animates the padding shrink/grow. */
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Drop the bottom border on the header when the card is collapsed so the
+   collapsed strip reads as a single piece, not a header + empty body. */
+.card.is-collapsed > .card-header {
+    border-bottom-color: transparent;
+}
+
+/* Mute the trailing margin between collapsed cards so a stack of closed cards
+   doesn't add up to dead air on long pages. */
+.card.is-collapsed + .card.is-collapsed {
+    margin-top: 12px;
+}

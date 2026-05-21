@@ -125,6 +125,20 @@
     "recording_caption_no_label": " 記録 - {0}",
     "proximity_alert": "接近警報時間: {0} トリガー: {1} ({2}) 録画開始..."
   },
+  "vehicle_control": {
+    "cloud_required": "BYD アカウントを設定で接続する",
+    "cloud_sent": "クラウドで送信される",
+    "cloud_unavailable_used_local": "クラウド利用不可 直接接続使用",
+    "local_sent": "直接接続で送信",
+    "cloud_offline_used_local": "クラウドオフライン 直接接続使用",
+    "local_unavailable_used_cloud": "直接接続が利用できません — クラウド経由で送信しました",
+    "cloud_failed": "車にたどり着けませんでした 車両が起きるときにもう一度試してみてください",
+    "rate_limited": "命令はまだ進行中です 待って数秒",
+    "not_supported": "この制御は現在利用できません",
+    "find_car_label": "車を探す",
+    "battery_heat_label": "熱気球",
+    "close_all_windows_label": "すべての窓を閉じる"
+  },
   "messages": {
     "logged_out": "ログアウト",
     "bydcloud_connected": "成功した接続",

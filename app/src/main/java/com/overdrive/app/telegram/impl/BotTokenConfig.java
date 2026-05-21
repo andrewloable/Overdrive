@@ -1,21 +1,16 @@
 package com.overdrive.app.telegram.impl;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
-import androidx.security.crypto.EncryptedSharedPreferences;
-import androidx.security.crypto.MasterKey;
 
 import com.overdrive.app.telegram.IBotTokenConfig;
+import com.overdrive.app.telegram.config.UnifiedTelegramConfig;
 import com.overdrive.app.telegram.model.BotInfo;
 import com.overdrive.app.telegram.model.ValidationResult;
 
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -23,191 +18,157 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * Bot token configuration with encrypted storage and Telegram API validation.
- * 
- * Note: Daemon config file (/data/local/tmp/telegram_config.properties) is written
- * via ADB shell from TelegramSettingsFragment because app process can't write to
- * /data/local/tmp directly.
+ * Bot token configuration backed by {@link UnifiedTelegramConfig}.
+ *
+ * Token + bot identity live in the unified JSON config (encrypted with the
+ * same {@code CredentialCipher} we use for BYD Cloud credentials). Both the
+ * app process and the shell-UID daemon read from the same place — no more
+ * ADB-shell hop, no more split-brain between {@code SharedPreferences} and
+ * the daemon's properties file.
+ *
+ * The {@link Context} parameter is kept for API stability but is no longer
+ * used; the unified config is process-global.
  */
 public class BotTokenConfig implements IBotTokenConfig {
-    
-    private static final String TAG = "BotTokenConfig";
-    
-    private static final String PREFS_NAME = "telegram_bot_prefs";
-    private static final String KEY_TOKEN = "bot_token";
-    private static final String KEY_BOT_ID = "bot_id";
-    private static final String KEY_BOT_USERNAME = "bot_username";
-    private static final String KEY_BOT_FIRST_NAME = "bot_first_name";
-    
+
     private static final String TELEGRAM_API_BASE = "https://api.telegram.org/bot";
-    
-    private final SharedPreferences prefs;
+
     private final OkHttpClient httpClient;
-    
+
+    @SuppressWarnings("unused")
     public BotTokenConfig(Context context) {
-        this.prefs = createEncryptedPrefs(context);
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .build();
     }
-    
-    /**
-     * Constructor with custom OkHttpClient (for proxy support).
-     */
+
+    /** Constructor with custom OkHttpClient (for proxy support). */
+    @SuppressWarnings("unused")
     public BotTokenConfig(Context context, OkHttpClient httpClient) {
-        this.prefs = createEncryptedPrefs(context);
         this.httpClient = httpClient;
     }
-    
-    private SharedPreferences createEncryptedPrefs(Context context) {
-        try {
-            MasterKey masterKey = new MasterKey.Builder(context)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build();
-            
-            return EncryptedSharedPreferences.create(
-                    context,
-                    PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            );
-        } catch (GeneralSecurityException | IOException e) {
-            return context.getSharedPreferences(PREFS_NAME + "_fallback", Context.MODE_PRIVATE);
-        }
-    }
-    
+
     @Override
     public void saveToken(String token) {
-        prefs.edit().putString(KEY_TOKEN, token).apply();
-        // Note: Daemon config file is written via ADB shell from TelegramSettingsFragment
-        // because app process can't write to /data/local/tmp directly
+        // Bot identity is written separately on the next saveBotInfo() call.
+        // We need to preserve any existing identity here; setBotToken with
+        // -1/"" would overwrite it.
+        BotInfo cached = getCachedBotInfo();
+        long botId = cached != null ? cached.getBotId() : -1;
+        String username = cached != null ? cached.getUsername() : "";
+        String firstName = cached != null ? cached.getFirstName() : "";
+        UnifiedTelegramConfig.setBotToken(token, botId, username, firstName);
     }
-    
-    /**
-     * Note: Direct file write to /data/local/tmp doesn't work from app process.
-     * Config writing is handled via ADB shell in TelegramSettingsFragment.
-     * This method is kept for reference but is effectively a no-op.
-     */
-    @SuppressWarnings("unused")
-    private void writeToDaemonConfig(String key, String value) {
-        // App process (UID 10xxx) cannot write to /data/local/tmp
-        // Config is written via ADB shell from TelegramSettingsFragment
-        Log.d(TAG, "writeToDaemonConfig called - delegated to TelegramSettingsFragment via ADB shell");
-    }
-    
-    /**
-     * Note: Direct file write to /data/local/tmp doesn't work from app process.
-     * Owner info is written by the daemon itself when /pair command is received.
-     * This method is kept for reference but is effectively a no-op.
-     */
-    @SuppressWarnings("unused")
-    public void writeOwnerToDaemonConfig(long chatId, String username, String firstName) {
-        // App process (UID 10xxx) cannot write to /data/local/tmp
-        // Owner is saved by daemon when /pair command is received
-        Log.d(TAG, "writeOwnerToDaemonConfig called - owner is saved by daemon via /pair command");
-    }
-    
+
     @Override
     @Nullable
     public String getToken() {
-        return prefs.getString(KEY_TOKEN, null);
+        String t = UnifiedTelegramConfig.getBotToken();
+        return (t == null || t.isEmpty()) ? null : t;
     }
-    
+
     @Override
     public boolean hasToken() {
-        String token = getToken();
-        return token != null && !token.isEmpty();
+        return UnifiedTelegramConfig.hasBotToken();
     }
-    
+
     @Override
     public void clearToken() {
-        prefs.edit()
-                .remove(KEY_TOKEN)
-                .remove(KEY_BOT_ID)
-                .remove(KEY_BOT_USERNAME)
-                .remove(KEY_BOT_FIRST_NAME)
-                .apply();
-        
-        // Also clear from daemon config
-        clearTokenFromDaemonConfig();
+        UnifiedTelegramConfig.setBotToken("", -1, "", "");
     }
-    
-    /**
-     * Note: Direct file write to /data/local/tmp doesn't work from app process.
-     * Token clearing from daemon config should be handled via ADB shell if needed.
-     */
-    @SuppressWarnings("unused")
-    private void clearTokenFromDaemonConfig() {
-        // App process (UID 10xxx) cannot write to /data/local/tmp
-        Log.d(TAG, "clearTokenFromDaemonConfig called - would need ADB shell to clear");
-    }
-    
+
     @Override
     public ValidationResult validateToken(String token) {
         if (token == null || token.isEmpty()) {
             return ValidationResult.failure("Token is empty");
         }
-        
+
         // Basic format check: should be like "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
         if (!token.contains(":") || token.length() < 30) {
             return ValidationResult.failure("Invalid token format");
         }
-        
+
         try {
             String url = TELEGRAM_API_BASE + token + "/getMe";
             Request request = new Request.Builder()
                     .url(url)
                     .get()
                     .build();
-            
+
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     return ValidationResult.failure("HTTP " + response.code());
                 }
-                
+
                 String body = response.body() != null ? response.body().string() : "";
                 JSONObject json = new JSONObject(body);
-                
+
                 if (!json.optBoolean("ok", false)) {
                     String desc = json.optString("description", "Unknown error");
                     return ValidationResult.failure(desc);
                 }
-                
+
                 JSONObject result = json.getJSONObject("result");
                 BotInfo botInfo = new BotInfo(
                         result.getLong("id"),
                         result.optString("username", ""),
                         result.optString("first_name", "")
                 );
-                
+
                 return ValidationResult.success(botInfo);
             }
         } catch (Exception e) {
             return ValidationResult.failure("Network error: " + e.getMessage());
         }
     }
-    
+
     @Override
     @Nullable
     public BotInfo getCachedBotInfo() {
-        long botId = prefs.getLong(KEY_BOT_ID, -1);
-        if (botId == -1) return null;
-        
+        long botId = UnifiedTelegramConfig.getBotId();
+        if (botId <= 0) return null;
         return new BotInfo(
                 botId,
-                prefs.getString(KEY_BOT_USERNAME, ""),
-                prefs.getString(KEY_BOT_FIRST_NAME, "")
+                UnifiedTelegramConfig.getBotUsername(),
+                UnifiedTelegramConfig.getBotFirstName()
         );
     }
-    
+
+    @Override
+    public void saveTokenAndBotInfo(String token, BotInfo botInfo) {
+        // Single underlying write. Prefer this over the saveBotInfo +
+        // saveToken pair when both are known together (validate-and-save
+        // flow): one updateSection avoids the empty-identity race window
+        // and halves the disk I/O — important because the unified config
+        // file is a full JSON rewrite per call.
+        UnifiedTelegramConfig.setBotToken(
+                token,
+                botInfo.getBotId(),
+                botInfo.getUsername(),
+                botInfo.getFirstName()
+        );
+    }
+
     @Override
     public void saveBotInfo(BotInfo botInfo) {
-        prefs.edit()
-                .putLong(KEY_BOT_ID, botInfo.getBotId())
-                .putString(KEY_BOT_USERNAME, botInfo.getUsername())
-                .putString(KEY_BOT_FIRST_NAME, botInfo.getFirstName())
-                .apply();
+        // Single updateSection regardless of whether the token is already
+        // set — bundle id/username/first_name into one delta. With a token,
+        // we re-encrypt to preserve it (cheap; ~1ms AES) so we don't have
+        // to read+write twice.
+        String token = UnifiedTelegramConfig.getBotToken();
+        if (token == null || token.isEmpty()) {
+            org.json.JSONObject delta = new org.json.JSONObject();
+            try {
+                delta.put(UnifiedTelegramConfig.K_BOT_ID, botInfo.getBotId());
+                delta.put(UnifiedTelegramConfig.K_BOT_USERNAME, botInfo.getUsername());
+                delta.put(UnifiedTelegramConfig.K_BOT_FIRST_NAME, botInfo.getFirstName());
+            } catch (Exception ignored) {}
+            com.overdrive.app.config.UnifiedConfigManager.updateSection(
+                    UnifiedTelegramConfig.SECTION, delta);
+            return;
+        }
+        UnifiedTelegramConfig.setBotToken(token, botInfo.getBotId(),
+                botInfo.getUsername(), botInfo.getFirstName());
     }
 }

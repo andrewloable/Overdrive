@@ -15,16 +15,22 @@ import androidx.navigation.fragment.findNavController
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.overdrive.app.BuildConfig
 import com.overdrive.app.R
+import com.overdrive.app.config.UnifiedConfigManager
 import com.overdrive.app.ui.MainActivity
+import org.json.JSONObject
+import com.overdrive.app.updater.AppUpdater
 import com.overdrive.app.ui.dialog.LanguagePickerDialog
 import com.overdrive.app.ui.fragment.settings.SettingsAppearanceFragment
 import com.overdrive.app.ui.fragment.settings.SettingsDaemonsFragment
+import com.overdrive.app.ui.fragment.settings.SettingsOverlayFragment
 import com.overdrive.app.ui.fragment.settings.SettingsPrivacyFragment
 import com.overdrive.app.ui.fragment.settings.SettingsRecordingFragment
 import com.overdrive.app.ui.fragment.settings.SettingsSurveillanceFragment
 import com.overdrive.app.ui.util.PreferencesManager
+import com.overdrive.app.ui.util.navigateDrillDown
 import java.util.Locale
 
 /**
@@ -62,6 +68,7 @@ class SettingsFragment : Fragment() {
         APPEARANCE(R.string.settings_section_appearance, R.drawable.ic_dashboard),
         RECORDING(R.string.settings_section_recording, R.drawable.ic_recording, navigates = true),
         SURVEILLANCE(R.string.settings_section_surveillance, R.drawable.ic_sentry, navigates = true),
+        OVERLAY(R.string.settings_section_overlay, R.drawable.ic_overlay_rec_active),
         DAEMONS(R.string.settings_section_daemons, R.drawable.ic_services),
         PRIVACY(R.string.settings_section_privacy, R.drawable.ic_delete),
     }
@@ -92,6 +99,7 @@ class SettingsFragment : Fragment() {
             setupQuickThemeTile(view)
             setupLanguagePicker(view)
             setupSectionShortcuts(view)
+            setupOverlayToggles(view)
             setupResetRow(view)
             setupFooter(view)
         }
@@ -190,6 +198,7 @@ class SettingsFragment : Fragment() {
         Section.APPEARANCE -> SettingsAppearanceFragment()
         Section.RECORDING -> SettingsRecordingFragment()
         Section.SURVEILLANCE -> SettingsSurveillanceFragment()
+        Section.OVERLAY -> SettingsOverlayFragment()
         Section.DAEMONS -> SettingsDaemonsFragment()
         Section.PRIVACY -> SettingsPrivacyFragment()
     }
@@ -270,14 +279,55 @@ class SettingsFragment : Fragment() {
 
     private fun setupSectionShortcuts(view: View) {
         view.findViewById<View>(R.id.cardSectionRecording)?.setOnClickListener {
-            findNavController().navigate(R.id.recordingSettingsWebFragment)
+            findNavController().navigateDrillDown(R.id.recordingSettingsWebFragment)
         }
         view.findViewById<View>(R.id.cardSectionSurveillance)?.setOnClickListener {
-            findNavController().navigate(R.id.surveillanceSettingsWebFragment)
+            findNavController().navigateDrillDown(R.id.surveillanceSettingsWebFragment)
         }
         view.findViewById<View>(R.id.cardSectionDaemons)?.setOnClickListener {
-            findNavController().navigate(R.id.daemonsFragment)
+            findNavController().navigateDrillDown(R.id.daemonsFragment)
         }
+    }
+
+    /**
+     * Portrait status-overlay toggles. The two switches gate the floating
+     * pill segments via [UnifiedConfigManager]'s `statusOverlay` section
+     * (file-backed so the daemon UID can read the same value). The service
+     * polls this on every tick — no restart needed.
+     */
+    private fun setupOverlayToggles(view: View) {
+        val swCamera = view.findViewById<SwitchMaterial>(R.id.swOverlayCamera) ?: return
+        val swTrip = view.findViewById<SwitchMaterial>(R.id.swOverlayTrip) ?: return
+        val rowCamera = view.findViewById<View>(R.id.rowOverlayCamera)
+        val rowTrip = view.findViewById<View>(R.id.rowOverlayTrip)
+
+        val cfg = UnifiedConfigManager.getStatusOverlay()
+        swCamera.isChecked = cfg.optBoolean("cameraVisible", true)
+        swTrip.isChecked = cfg.optBoolean("tripVisible", true)
+
+        rowCamera?.setOnClickListener { swCamera.isChecked = !swCamera.isChecked }
+        rowTrip?.setOnClickListener { swTrip.isChecked = !swTrip.isChecked }
+
+        swCamera.setOnCheckedChangeListener { _, checked ->
+            UnifiedConfigManager.setStatusOverlay(JSONObject().put("cameraVisible", checked))
+            kickOverlayRefresh()
+        }
+        swTrip.setOnCheckedChangeListener { _, checked ->
+            UnifiedConfigManager.setStatusOverlay(JSONObject().put("tripVisible", checked))
+            kickOverlayRefresh()
+        }
+    }
+
+    /**
+     * Nudge the overlay service to re-poll immediately so a toggle flip
+     * feels instant instead of waiting up to 3s for the next scheduled
+     * poll (or 10s when ACC is off). The service's onStartCommand
+     * cancels its in-flight delayed poll and fires one straight away
+     * when re-entered, which is exactly what we need here.
+     */
+    private fun kickOverlayRefresh() {
+        val ctx = context ?: return
+        com.overdrive.app.overlay.StatusOverlayService.startIfPermitted(ctx)
     }
 
     private fun setupResetRow(view: View) {
@@ -295,7 +345,7 @@ class SettingsFragment : Fragment() {
         val tv = view.findViewById<TextView>(R.id.tvSettingsFooter) ?: return
         tv.text = getString(
             R.string.settings_footer_format,
-            BuildConfig.VERSION_NAME,
+            AppUpdater.getDisplayVersion(requireContext()),
             BuildConfig.APPLICATION_ID
         )
     }

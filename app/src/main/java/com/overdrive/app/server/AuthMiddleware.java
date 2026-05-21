@@ -97,6 +97,27 @@ public class AuthMiddleware {
             return true;
         }
 
+        // Tier 0.5 — signed thumb token. Browsers and Web Push service
+        // workers fetch /thumb/<file>?t=<jws> as a plain HTTPS GET (no
+        // Authorization header is available because the fetch happens
+        // inside the OS notification banner, FCM image fetch, or iOS
+        // notification service). Accept the request iff the token's
+        // {@code sub} claim matches the requested filename and it is not
+        // expired.
+        if (path.startsWith("/thumb/")) {
+            String[] split = splitPathAndQuery(path);
+            String pathOnly = split[0];
+            String token = queryParam(split[1], "t");
+            if (token != null) {
+                String filename = pathOnly.substring("/thumb/".length());
+                String decoded = urlDecode(filename);
+                if (AuthManager.validateThumbToken(decoded, token)
+                        || AuthManager.validateThumbToken(filename, token)) {
+                    return true;
+                }
+            }
+        }
+
         // Tier 1 — JWT validation. This is the primary path: WebView (cookie),
         // frontend pages (Authorization header via auth.js), native callers
         // (cookie via DaemonHttpClient).
@@ -212,6 +233,32 @@ public class AuthMiddleware {
         } catch (Exception e) {
             return s;
         }
+    }
+
+    private static String urlDecode(String s) {
+        try {
+            return java.net.URLDecoder.decode(s, "UTF-8");
+        } catch (Exception e) {
+            return s;
+        }
+    }
+
+    private static String[] splitPathAndQuery(String path) {
+        int q = path.indexOf('?');
+        if (q < 0) return new String[] { path, "" };
+        return new String[] { path.substring(0, q), path.substring(q + 1) };
+    }
+
+    private static String queryParam(String query, String name) {
+        if (query == null || query.isEmpty()) return null;
+        for (String pair : query.split("&")) {
+            int eq = pair.indexOf('=');
+            if (eq < 0) continue;
+            if (name.equals(pair.substring(0, eq))) {
+                return urlDecode(pair.substring(eq + 1));
+            }
+        }
+        return null;
     }
     
     private static void log(String message) {

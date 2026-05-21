@@ -6,8 +6,6 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.StatFs
-import android.text.format.Formatter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -37,7 +35,6 @@ import com.overdrive.app.ui.viewmodel.DaemonsViewModel
 import com.overdrive.app.ui.viewmodel.MainViewModel
 import com.overdrive.app.ui.viewmodel.RecordingViewModel
 import com.overdrive.app.util.DeviceIdGenerator
-import java.io.File
 import java.util.Calendar
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -61,6 +58,11 @@ class DashboardFragment : Fragment() {
     private lateinit var heroCard: MaterialCardView
     private lateinit var heroGreeting: TextView
     private lateinit var heroSubtitle: TextView
+    // Hero status chips (3): tunnel state, services running, recording state.
+    // Bound lazily (chipGroup may be absent on landscape variant).
+    private var heroChipTunnel: com.google.android.material.chip.Chip? = null
+    private var heroChipServices: com.google.android.material.chip.Chip? = null
+    private var heroChipRecording: com.google.android.material.chip.Chip? = null
 
     // Metric tiles
     private lateinit var metricRecordings: MaterialCardView
@@ -91,9 +93,14 @@ class DashboardFragment : Fragment() {
     private var isTokenVisible = false
 
     // Quick-action tiles (cards now, not buttons — they share dimensions
-    // with the metric tiles so the dashboard reads as one rhythm).
+    // with the metric tiles so the dashboard reads as one rhythm). The
+    // Settings tile was removed in the wide-Vehicle layout — Settings is
+    // still reachable from the navigation rail.
     private lateinit var quickLive: MaterialCardView
-    private lateinit var quickSettings: MaterialCardView
+
+    // Vehicle tile — battery capacity + model summary. Tap opens a dialog.
+    private var metricVehicle: MaterialCardView? = null
+    private var metricVehicleValue: TextView? = null
 
     // Background work for storage / recording-count tiles. Single thread is enough
     // — both probes are just a directory walk, and serializing them keeps disk I/O
@@ -140,12 +147,18 @@ class DashboardFragment : Fragment() {
         wireClicks()
         observeViewModels()
 
-        heroGreeting.text = greetingForTime()
+        // Hero headline is a static brand statement, not a time-of-day greeting.
+        // The "Good morning / Good night" line read as concierge UI; an
+        // infotainment cockpit benefits more from a stable identity headline
+        // paired with the live status row of chips below it. See
+        // dashboard_hero_headline (default: "Cockpit").
+        heroGreeting.setText(R.string.dashboard_hero_headline)
         tvDeviceId.text = DeviceIdGenerator.generateDeviceId(requireContext())
         loadAuthState()
 
         // First paint of the metric tiles. onResume will refresh on every return.
         refreshMetricsTiles()
+        refreshVehicleTile()
 
         // Insights carousel — initialize provider once; bump visit counter so
         // the welcome-on-first-install insight is exclusive to visit #0.
@@ -162,7 +175,14 @@ class DashboardFragment : Fragment() {
         // Cheap-but-not-free disk walk: refresh on every resume so the storage
         // and today's-clip-count numbers update after the user records, deletes,
         // or sentry events fire while the dashboard wasn't on screen.
+        //
+        // Drop the scanner cache first — deletions in other fragments don't
+        // notify the dashboard, so without this the tile and the carousel
+        // could read up to 5s of stale data after the user navigates back
+        // from the recordings page.
+        RecordingScanner.invalidateCache()
         refreshMetricsTiles()
+        refreshVehicleTile()
         // Always rebuild the insight list on resume — data may have changed
         // while we were backgrounded (new clips, finished charging session,
         // SOC delta from a parking session that ended off-screen, etc.).
@@ -193,6 +213,10 @@ class DashboardFragment : Fragment() {
         heroCard = view.findViewById(R.id.heroCard)
         heroGreeting = view.findViewById(R.id.heroGreeting)
         heroSubtitle = view.findViewById(R.id.heroSubtitle)
+        // Hero status chips — present in portrait, may be absent in landscape.
+        heroChipTunnel = view.findViewById(R.id.heroChipTunnel)
+        heroChipServices = view.findViewById(R.id.heroChipServices)
+        heroChipRecording = view.findViewById(R.id.heroChipRecording)
 
         metricRecordings = view.findViewById(R.id.metricRecordings)
         metricRecordingsValue = view.findViewById(R.id.metricRecordingsValue)
@@ -215,26 +239,30 @@ class DashboardFragment : Fragment() {
         btnRegenerateToken = view.findViewById(R.id.btnRegenerateToken)
 
         quickLive = view.findViewById(R.id.quickLive)
-        quickSettings = view.findViewById(R.id.quickSettings)
+
+        // Vehicle tile present in both portrait and landscape layouts.
+        metricVehicle = view.findViewById(R.id.metricVehicle)
+        metricVehicleValue = view.findViewById(R.id.metricVehicleValue)
     }
 
     private fun wireClicks() {
-        // Tile taps deep-link to the matching destination.
+        // Tile taps deep-link to peer rail destinations. Use the same M3
+        // fade-through motion the rail itself uses so the user can't tell
+        // whether they tapped the tile or the rail icon.
+        val fadeThrough = com.overdrive.app.ui.util.NavOptionsExt.m3FadeThrough()
         metricRecordings.setOnClickListener {
-            findNavController().navigate(R.id.recordingsFragment)
+            findNavController().navigate(R.id.recordingsFragment, null, fadeThrough)
         }
         metricTunnel.setOnClickListener {
-            findNavController().navigate(R.id.daemonsFragment)
+            findNavController().navigate(R.id.daemonsFragment, null, fadeThrough)
         }
         cardDaemons.setOnClickListener {
-            findNavController().navigate(R.id.daemonsFragment)
+            findNavController().navigate(R.id.daemonsFragment, null, fadeThrough)
         }
         quickLive.setOnClickListener {
-            findNavController().navigate(R.id.liveViewFragment)
+            findNavController().navigate(R.id.liveViewFragment, null, fadeThrough)
         }
-        quickSettings.setOnClickListener {
-            findNavController().navigate(R.id.settingsFragment)
-        }
+        metricVehicle?.setOnClickListener { showVehicleCapacityDialog() }
 
         btnToggleToken.setOnClickListener { toggleTokenVisibility() }
         btnCopyToken.setOnClickListener { copyTokenToClipboard() }
@@ -253,12 +281,14 @@ class DashboardFragment : Fragment() {
             // moment a daemon is being launched, without waiting for RUNNING.
             updateHeroSubtitle(running, total, computeCoreHealth(states))
             rebuildTunnelChips()
+            refreshHeroChips()
         }
 
         // Tunnel URL → tile state + chip refresh.
         val rebuild = Observer<String?> { _ ->
             rebuildTunnelChips()
             updateTunnelTile()
+            refreshHeroChips()
         }
         daemonsViewModel.cloudflaredController.tunnelUrl.observe(viewLifecycleOwner, rebuild)
         daemonsViewModel.zrokController.tunnelUrl.observe(viewLifecycleOwner, rebuild)
@@ -269,14 +299,41 @@ class DashboardFragment : Fragment() {
         // observer just toggles the red-dot prefix without re-walking the disk.
         recordingViewModel.isRecording.observe(viewLifecycleOwner) { _ ->
             renderRecordingsValue()
+            refreshHeroChips()
+        }
+    }
+
+    /**
+     * Push the latest tunnel / services / recording status into the three
+     * hero chips. Each chip just mirrors the corresponding metric tile
+     * value, but at the top of the hero they're discoverable at-a-glance
+     * without needing to scan the 5-tile grid.
+     *
+     * Lazy-tolerates absent chips (landscape variant has no hero chips).
+     */
+    private fun refreshHeroChips() {
+        heroChipTunnel?.text = metricTunnelValue.text
+        heroChipServices?.text = tvDaemonsStatus.text
+        val recording = recordingViewModel.isRecording.value == true
+        heroChipRecording?.text = if (recording) {
+            getString(R.string.dashboard_chip_recording_active)
+        } else {
+            getString(R.string.dashboard_chip_recording_idle)
         }
     }
 
     // ============== Metric tiles (storage + today's recordings) ==============
 
     /**
-     * Walks the recordings directory on a background thread, then posts both
-     * the storage-used string and today's clip count back to the UI.
+     * Walks the recordings directories on a background thread via the
+     * shared [RecordingScanner], then posts today's clip count back.
+     *
+     * Uses the same source-of-truth as [RecordingsFragment] so the dashboard
+     * tile and the recordings page can never disagree. The scanner already
+     * walks active + alternate + legacy paths for cam_* / surveillance /
+     * proximity, dedupes by filename, and exposes parsed-from-filename
+     * timestamps — counting via mtime here would have missed every clip
+     * whose file was copied after capture (different mtime than filename).
      */
     private fun refreshMetricsTiles() {
         val ctx = context?.applicationContext ?: return
@@ -285,59 +342,27 @@ class DashboardFragment : Fragment() {
 
         executor.execute {
             var clipCountToday = 0
-            var usedBytes = 0L
-            var freeBytes = 0L
             try {
-                val recordingsDir = RecordingScanner.getRecordingsDir(ctx)
-                val sentryDir = RecordingScanner.getSentryEventsDir(ctx)
-
-                // Total used = every .mp4 across both dirs (matches what the
-                // diagnostics Storage tile already shows).
-                usedBytes += sumMp4Sizes(recordingsDir)
-                usedBytes += sumMp4Sizes(sentryDir)
-
-                // Today's clips: count files modified between local-time
-                // midnight and now, across both dirs.
                 val startOfDayMs = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
-                clipCountToday += countMp4SinceMtime(recordingsDir, startOfDayMs)
-                clipCountToday += countMp4SinceMtime(sentryDir, startOfDayMs)
-
-                // Free bytes on whichever filesystem actually backs the
-                // recordings dir (internal vs. SD).
-                val statFsTarget = when {
-                    recordingsDir.exists() -> recordingsDir
-                    sentryDir.exists() -> sentryDir
-                    else -> null
-                }
-                if (statFsTarget != null) {
-                    try {
-                        val stat = StatFs(statFsTarget.absolutePath)
-                        freeBytes = stat.availableBytes
-                    } catch (_: Throwable) {
-                        freeBytes = 0L
-                    }
-                }
+                clipCountToday = RecordingScanner.scanRecordings(ctx)
+                    .count { it.timestamp >= startOfDayMs }
             } catch (_: Throwable) {
                 // Leave defaults — still post so the tile updates off "—".
             }
 
-            val usedHuman = Formatter.formatShortFileSize(ctx, usedBytes)
-            val freeHuman = Formatter.formatShortFileSize(ctx, freeBytes)
-
             mainHandler.post {
                 if (!isAdded || view == null) return@post
-                // The combined tile shows a single label line: the
-                // localized "Today's recordings" suffixed with the storage
-                // figure. Keeps the tile structure identical to every
-                // other metric tile (icon → value → label) so heights
-                // match across the grid.
-                val baseLabel = getString(R.string.dashboard_metric_recordings)
-                metricStorageValue.text = "$baseLabel · $usedHuman"
+                // Tile is a single-line label so it never ellipsizes on
+                // longer locales (fr/de). Storage figure used to be appended
+                // here ("Today's recordings · 8.4 GB"); we dropped it because
+                // localized strings made the line overflow on the BYD tile
+                // width. Storage lives in its own surfaces.
+                metricStorageValue.text = getString(R.string.dashboard_metric_recordings)
 
                 todayClipCount = clipCountToday
                 renderRecordingsValue()
@@ -359,39 +384,6 @@ class DashboardFragment : Fragment() {
         } else {
             todayClipCount.toString()
         }
-    }
-
-    private fun sumMp4Sizes(dir: File): Long {
-        if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return 0L
-        val files = dir.listFiles() ?: return 0L
-        var sum = 0L
-        for (f in files) {
-            if (f.isFile && f.name.endsWith(".mp4")) sum += f.length()
-        }
-        return sum
-    }
-
-    private fun countMp4SinceMtime(dir: File, sinceMs: Long): Int {
-        if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return 0
-        val files = dir.listFiles() ?: return 0
-        var n = 0
-        for (f in files) {
-            if (f.isFile && f.name.endsWith(".mp4") && f.length() > 0L &&
-                f.lastModified() >= sinceMs
-            ) n++
-        }
-        return n
-    }
-
-    private fun greetingForTime(): String {
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        val keyRes = when (hour) {
-            in 5..11 -> R.string.dashboard_greeting_morning
-            in 12..16 -> R.string.dashboard_greeting_afternoon
-            in 17..21 -> R.string.dashboard_greeting_evening
-            else -> R.string.dashboard_greeting_night
-        }
-        return getString(keyRes)
     }
 
     private fun updateHeroSubtitle(running: Int, total: Int, coreHealth: CoreHealth) {
@@ -824,6 +816,7 @@ class DashboardFragment : Fragment() {
 
     private fun showRegenerateConfirmation() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+            .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_regenerate_token_title))
             .setMessage(getString(R.string.dialog_regenerate_token_message))
             .setPositiveButton(getString(R.string.dialog_regenerate)) { _, _ -> regenerateToken() }
@@ -873,6 +866,373 @@ class DashboardFragment : Fragment() {
             }
         }
         loadAuthState()
+    }
+
+    // ============== Vehicle tile ==============
+
+    /**
+     * Read /api/performance/soh/nominal + /api/models/selected and render
+     * "82.5 kWh · BYD Seal" or "Tap to set" if no nominal yet.
+     *
+     * Both calls run on a worker thread (HTTP). Defaults survive a daemon
+     * boot race — the tile flashes "Tap to set" until the first successful
+     * round-trip lands.
+     */
+    private fun refreshVehicleTile() {
+        val tile = metricVehicleValue ?: return
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            var nominalKwh = 0.0
+            var modelId: String? = null
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh/nominal", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    if (!json.isNull("nominalKwh")) {
+                        nominalKwh = json.optDouble("nominalKwh", 0.0)
+                    }
+                }
+                conn.disconnect()
+            } catch (_: Throwable) { /* keep defaults */ }
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/models/selected", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    val m = json.optString("modelId", "")
+                    if (m.isNotEmpty()) modelId = m
+                }
+                conn.disconnect()
+            } catch (_: Throwable) {}
+
+            mainHandler.post {
+                if (!isAdded || view == null) return@post
+                if (nominalKwh > 0) {
+                    tile.text = if (modelId != null) {
+                        getString(R.string.dashboard_vehicle_summary, nominalKwh, modelId.replaceFirstChar { it.uppercase() })
+                    } else {
+                        String.format("%.1f kWh", nominalKwh)
+                    }
+                } else {
+                    tile.text = getString(R.string.dashboard_vehicle_tap_to_set)
+                }
+            }
+        }
+    }
+
+    /**
+     * Dialog with capacity input + model dropdown. POSTs to
+     * /api/performance/soh/nominal and /api/models/selected.
+     */
+    private fun showVehicleCapacityDialog() {
+        val ctx = context ?: return
+
+        // Inflate the M3 layout (outlined inputs + ExposedDropdownMenu).
+        val dialogView = layoutInflater.inflate(
+            R.layout.dialog_vehicle_capacity, null, false)
+
+        val summaryCapacity = dialogView.findViewById<TextView>(R.id.vehicleSummaryCapacity)
+        val summarySoh = dialogView.findViewById<TextView>(R.id.vehicleSummarySoh)
+        val summaryEffective = dialogView.findViewById<TextView>(R.id.vehicleSummaryEffective)
+        val summaryModel = dialogView.findViewById<TextView>(R.id.vehicleSummaryModel)
+        val summaryCalibration = dialogView.findViewById<TextView>(R.id.vehicleSummaryCalibration)
+        val summaryDivider = dialogView.findViewById<View>(R.id.vehicleSummaryDivider)
+        val capInput = dialogView.findViewById<
+            com.google.android.material.textfield.TextInputEditText>(R.id.vehicleCapacityInput)
+        val modelDropdown = dialogView.findViewById<
+            com.google.android.material.textfield.MaterialAutoCompleteTextView>(
+            R.id.vehicleModelDropdown)
+
+        // Track the selected model's id locally (the dropdown's text holds
+        // the user-facing title; the id is what we POST). Each entry also
+        // carries the manifest's canonical nominalKwh so picking a model
+        // can auto-fill the capacity input. The list is refreshed from
+        // the manifest below.
+        data class ModelEntry(val id: String, val title: String, val nominalKwh: Double)
+        val modelEntries = mutableListOf<ModelEntry>()
+        var selectedModelId: String? = null
+        modelDropdown.setOnItemClickListener { _, _, position, _ ->
+            if (position in modelEntries.indices) {
+                val entry = modelEntries[position]
+                selectedModelId = entry.id
+                // Auto-fill the capacity field with the manifest's
+                // canonical nominalKwh for this model. The user can still
+                // edit it before saving — this is just a sensible starting
+                // value rather than leaving the field showing the previous
+                // model's number.
+                if (entry.nominalKwh > 0) {
+                    capInput.setText(String.format("%.1f", entry.nominalKwh))
+                }
+            }
+        }
+
+        // Pre-populate from the current state via background fetch.
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            var initialKwh = 0.0
+            val modelIds = mutableListOf<ModelEntry>()
+            var initialModelId: String? = null
+
+            // Full status fields for the summary section.
+            var nominalKwh = 0.0
+            var nominalSource = "unset"
+            var displaySoh = -1.0
+            var displaySource = "unavailable"
+            var estimatedKwh = 0.0
+            var statusModelId: String? = null
+            var calSoh = 0.0
+            var calTs = 0L
+
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh/nominal", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    if (!json.isNull("nominalKwh")) initialKwh = json.optDouble("nominalKwh", 0.0)
+                }
+                conn.disconnect()
+            } catch (_: Throwable) {}
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    nominalKwh = json.optDouble("nominalCapacityKwh", 0.0)
+                    nominalSource = json.optString("nominalSource", "unset")
+                    displaySoh = json.optDouble("displaySoh", -1.0)
+                    displaySource = json.optString("displaySource", "unavailable")
+                    val est = json.optDouble("estimatedCapacityKwh", -1.0)
+                    if (est > 0) estimatedKwh = est
+                    if (!json.isNull("modelId")) {
+                        statusModelId = json.optString("modelId", "").ifEmpty { null }
+                    }
+                    val calObj = json.optJSONObject("calibration")
+                    if (calObj != null) {
+                        calSoh = calObj.optDouble("soh", -1.0)
+                        calTs = calObj.optLong("timestampMs", 0L)
+                    }
+                }
+                conn.disconnect()
+            } catch (_: Throwable) {}
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/models/manifest", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    val arr = json.optJSONArray("models")
+                    if (arr != null) {
+                        for (i in 0 until arr.length()) {
+                            val m = arr.getJSONObject(i)
+                            val id = m.optString("id", "")
+                            // Manifest uses "name" for the canonical user-facing
+                            // string ("BYD Seal", etc.) and falls back to the id.
+                            // The previous version read "title" first which never
+                            // existed in our manifest, so models showed as the
+                            // id text. Ordering: name → title → id.
+                            val title = when {
+                                m.optString("name", "").isNotEmpty() -> m.optString("name")
+                                m.optString("title", "").isNotEmpty() -> m.optString("title")
+                                else -> id
+                            }
+                            // nominalKwh is the manifest's canonical pack
+                            // capacity for this model. 0 means the manifest
+                            // doesn't carry a value for it; the dropdown
+                            // listener treats 0 as "don't touch the input".
+                            val kwh = m.optDouble("nominalKwh", 0.0)
+                            if (id.isNotEmpty()) modelIds.add(ModelEntry(id, title, kwh))
+                        }
+                    }
+                }
+                conn.disconnect()
+            } catch (_: Throwable) {}
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/models/selected", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    val m = json.optString("modelId", "")
+                    if (m.isNotEmpty()) initialModelId = m
+                }
+                conn.disconnect()
+            } catch (_: Throwable) {}
+
+            val finalNominalKwh = nominalKwh
+            val finalNominalSource = nominalSource
+            val finalDisplaySoh = displaySoh
+            val finalDisplaySource = displaySource
+            val finalEstimatedKwh = estimatedKwh
+            val finalStatusModelId = statusModelId ?: initialModelId
+            val finalCalSoh = calSoh
+            val finalCalTs = calTs
+
+            mainHandler.post {
+                if (!isAdded || view == null) return@post
+
+                // Capacity input — current user value if any.
+                if (initialKwh > 0) capInput.setText(String.format("%.1f", initialKwh))
+
+                // Model dropdown — populate using a Material adapter so the
+                // popup uses M3 list-item styling. setText(filter=false) sets
+                // the displayed value without filtering the list.
+                modelEntries.clear()
+                modelEntries.addAll(modelIds)
+                val titles = modelIds.map { it.title }
+                val adapter = android.widget.ArrayAdapter(
+                    ctx,
+                    com.google.android.material.R.layout.m3_auto_complete_simple_item,
+                    titles)
+                modelDropdown.setAdapter(adapter)
+                if (initialModelId != null) {
+                    val idx = modelIds.indexOfFirst { it.id == initialModelId }
+                    if (idx >= 0) {
+                        modelDropdown.setText(titles[idx], false)
+                        selectedModelId = initialModelId
+                    }
+                }
+
+                // Populate summary section. Each line shows only when its data
+                // is meaningful — keeps the dialog tight when the daemon is
+                // still seeding.
+                val capacityText = if (finalNominalKwh > 0) {
+                    val suffix = when (finalNominalSource) {
+                        "user" -> " (" + getString(R.string.soh_dialog_source_user) + ")"
+                        "auto" -> " (" + getString(R.string.soh_dialog_source_auto) + ")"
+                        else -> ""
+                    }
+                    String.format("%.1f kWh", finalNominalKwh) + suffix
+                } else {
+                    getString(R.string.soh_dialog_capacity_not_detected)
+                }
+                summaryCapacity.text = getString(R.string.vehicle_dialog_summary_capacity, capacityText)
+                summaryCapacity.visibility = View.VISIBLE
+
+                val sohText = when {
+                    finalDisplaySoh > 0 && finalDisplaySource == "live" ->
+                        String.format("%.1f%% (live)", finalDisplaySoh)
+                    finalDisplaySoh > 0 && finalDisplaySource == "calibration" ->
+                        String.format("%.1f%% (from last charge)", finalDisplaySoh)
+                    else -> getString(R.string.vehicle_dialog_soh_unavailable)
+                }
+                summarySoh.text = getString(R.string.vehicle_dialog_summary_soh, sohText)
+                summarySoh.visibility = View.VISIBLE
+
+                if (finalEstimatedKwh > 0) {
+                    summaryEffective.text = getString(
+                        R.string.vehicle_dialog_summary_effective, finalEstimatedKwh)
+                    summaryEffective.visibility = View.VISIBLE
+                }
+
+                val modelText = if (finalStatusModelId != null) modelDisplayName(finalStatusModelId)
+                else getString(R.string.soh_dialog_model_not_selected)
+                summaryModel.text = getString(R.string.vehicle_dialog_summary_model, modelText)
+                summaryModel.visibility = View.VISIBLE
+
+                if (finalCalSoh > 0 && finalCalTs > 0) {
+                    val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        .format(java.util.Date(finalCalTs))
+                    summaryCalibration.text = getString(
+                        R.string.vehicle_dialog_summary_calibration, finalCalSoh, date)
+                    summaryCalibration.visibility = View.VISIBLE
+                }
+
+                summaryDivider.visibility = View.VISIBLE
+            }
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.Theme_Overdrive_M3_Dialog)
+            .setTitle(getString(R.string.vehicle_dialog_title))
+            .setView(dialogView)
+            .setPositiveButton(getString(R.string.vehicle_dialog_save)) { _, _ ->
+                val raw = capInput.text?.toString()?.trim().orEmpty()
+                val kwh = raw.toDoubleOrNull()
+                if (kwh == null || kwh < 15.0 || kwh > 120.0) {
+                    Toast.makeText(ctx, getString(R.string.vehicle_dialog_invalid_capacity), Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                postNominalAndModel(kwh, selectedModelId)
+            }
+            .setNeutralButton(getString(R.string.vehicle_dialog_reset)) { _, _ ->
+                postNominal(null)
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun postNominal(kwh: Double?) {
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh/nominal", "POST", 3000, 5000)
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                val body = if (kwh == null) "{\"nominalKwh\":null}" else "{\"nominalKwh\":$kwh}"
+                conn.outputStream.use { it.write(body.toByteArray()) }
+                conn.responseCode
+                conn.disconnect()
+            } catch (_: Throwable) {}
+            mainHandler.post { refreshVehicleTile() }
+        }
+    }
+
+    private fun postNominalAndModel(kwh: Double, modelId: String?) {
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            try {
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh/nominal", "POST", 3000, 5000)
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.outputStream.use { it.write("{\"nominalKwh\":$kwh}".toByteArray()) }
+                conn.responseCode
+                conn.disconnect()
+            } catch (_: Throwable) {}
+
+            if (!modelId.isNullOrEmpty()) {
+                try {
+                    val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                        "/api/models/selected", "POST", 3000, 5000)
+                    conn.doOutput = true
+                    conn.setRequestProperty("Content-Type", "application/json")
+                    conn.outputStream.use { it.write("{\"modelId\":\"$modelId\"}".toByteArray()) }
+                    conn.responseCode
+                    conn.disconnect()
+                } catch (_: Throwable) {}
+            }
+
+            mainHandler.post { refreshVehicleTile() }
+        }
+    }
+
+    private fun modelDisplayName(modelId: String?): String {
+        return when (modelId?.lowercase()) {
+            null -> "—"
+            "seal" -> "BYD Seal"
+            "atto3", "atto-3" -> "BYD Atto 3"
+            "atto2", "atto-2" -> "BYD Atto 2"
+            "atto1", "atto-1" -> "BYD Atto 1"
+            "han" -> "BYD Han"
+            "tang" -> "BYD Tang"
+            "song" -> "BYD Song"
+            "qin" -> "BYD Qin"
+            "dolphin" -> "BYD Dolphin"
+            "seagull" -> "BYD Seagull"
+            "sealion6" -> "BYD Sealion 6"
+            "sealion7" -> "BYD Sealion 7"
+            "sealu", "seal-u" -> "BYD Seal U"
+            else -> modelId.replaceFirstChar { it.uppercase() }
+        }
     }
 
     companion object {

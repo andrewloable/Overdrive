@@ -374,20 +374,38 @@ public class CameraDaemon {
         // This ensures the encoder is created with the correct settings
         HttpServer.loadPersistedSettings();
         
-        // Seed version file if it doesn't exist yet (daemon runs as shell, can write /data/local/tmp/)
-        // This ensures the /status API always returns the correct app version
+        // Note: we deliberately don't seed the version file here. The
+        // updater writes it after a successful install with the actual
+        // GitHub release string (e.g. "alpha-v15.6"). Until the user has
+        // run a check-for-update the file is absent and
+        // AppUpdater.getDisplayVersionFromFile() returns the
+        // DISPLAY_VERSION_FALLBACK ("Manually Installed") which is more
+        // accurate than seeding gradle's BuildConfig.VERSION_NAME stub
+        // ("11.0") that has no relationship to the release the user
+        // actually installed.
+
+
+        // ImageReader FPS probe sentinel: when /data/local/tmp/run_imagereader_probe
+        // exists, run AvmImageReaderFpsProbe BEFORE initSurveillance so the probe
+        // has exclusive HAL access. Verifies whether replacing the live pipeline's
+        // SurfaceTexture consumer with an ImageReader unblocks the ~8.5 fps panoramic
+        // throttle (see CAMERA_FPS_INVESTIGATION.md). Sentinel is consumed (deleted)
+        // so the probe runs once per `touch` invocation.
         try {
-            java.io.File versionFile = new java.io.File(com.overdrive.app.updater.AppUpdater.VERSION_FILE);
-            if (!versionFile.exists()) {
-                java.io.FileWriter fw = new java.io.FileWriter(versionFile);
-                fw.write(com.overdrive.app.BuildConfig.VERSION_NAME);
-                fw.close();
-                log("Seeded version file: " + com.overdrive.app.BuildConfig.VERSION_NAME);
+            File irProbeSentinel = new File("/data/local/tmp/run_imagereader_probe");
+            if (irProbeSentinel.exists()) {
+                log("=== ImageReader probe sentinel detected — running probe ===");
+                File irProbeDir = new File("/data/local/tmp/imagereader_probe");
+                new com.overdrive.app.camera.AvmImageReaderFpsProbe(irProbeDir).run();
+                if (!irProbeSentinel.delete()) {
+                    log("WARN: Could not delete ImageReader probe sentinel " + irProbeSentinel);
+                }
+                log("=== ImageReader probe finished — continuing with normal startup ===");
             }
-        } catch (Exception e) {
-            log("Could not seed version file: " + e.getMessage());
+        } catch (Throwable t) {
+            log("ImageReader probe invocation failed: " + t.getMessage());
         }
-        
+
         // Initialize surveillance module (will use loaded settings)
         initSurveillance();
 
@@ -1399,11 +1417,12 @@ public class CameraDaemon {
             }
             // Enable surveillance mode (motion detection)
             gpuPipeline.enableSurveillance();
-            // Keep com.byd.avc warm so the AVM HAL keeps delivering real
-            // pixels during long sentry sessions. Without this the cameras
-            // go cold and the surveillance frames become ALL_BLACK.
-            startAvcKeepAliveIfNeeded();
-            log("Surveillance mode activated successfully");
+            // AVC keep-alive intentionally NOT started for the surveillance flow.
+            // The 60s `am start com.byd.avc/.MainActivity` poke appears to perturb
+            // the camera HAL and drag panoramic FPS down over time. Recording-mode
+            // and streaming flows still warm/keep-alive AVC via RecordingModeManager
+            // and StreamingApiHandler; ACC-OFF sentry runs without it for now.
+            log("Surveillance mode activated successfully (no AVC keep-alive)");
         } catch (Exception e) {
             log("ERROR: Failed to enable surveillance: " + e.getMessage());
         }
@@ -1976,9 +1995,10 @@ public class CameraDaemon {
                 }
                 gpuPipeline.setRecordingMode(
                     com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.SENTRY);
-                // Keep com.byd.avc warm during sentry to prevent the AVM
-                // HAL from going cold (ALL_BLACK frames) on long parks.
-                startAvcKeepAliveIfNeeded();
+                // AVC keep-alive intentionally NOT started for the sentry/ACC-OFF
+                // surveillance flow — see CameraDaemon.enableSurveillance() for
+                // the full reasoning. Recording-mode and streaming flows still
+                // poke AVC; only this surveillance path runs without it.
                 // Door lock gate: surveillance is armed only after doors are locked.
                 // This prevents false motion events from the owner exiting the car.
                 // Three parallel sources fire concurrently (cloud MQTT, device-SDK
@@ -2240,28 +2260,27 @@ public class CameraDaemon {
     }
     
     /**
-     * Set recording quality/mode.
+     * Set recording quality tier — single user-facing knob that bundles
+     * bitrate + perceptual quality. Accepts the new tier names
+     * (ECONOMY/STANDARD/HIGH/PREMIUM/MAX). Anything else falls back to
+     * STANDARD per the migration policy.
      */
     public static void setRecordingQuality(String quality) {
         if (gpuPipeline == null) return;
-        
-        com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode mode;
-        switch (quality.toUpperCase()) {
-            case "LOW":
-            case "SENTRY":
-                mode = com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.SENTRY;
-                break;
-            case "REDUCED":
-                mode = com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.SENTRY;
-                break;
-            case "NORMAL":
-            default:
-                mode = com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.NORMAL;
-                break;
+        if (gpuPipeline.getConfig() == null) {
+            log("setRecordingQuality: config is null, skipping");
+            return;
         }
-        
-        gpuPipeline.setRecordingMode(mode);
-        log("Recording quality set to: " + quality + " (mode=" + mode + ")");
+
+        com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality tier =
+            com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(quality);
+
+        gpuPipeline.getConfig().setRecordingQuality(tier);
+        int effectiveBitrate = gpuPipeline.getConfig().getEffectiveBitrate();
+        gpuPipeline.applyBitrateChange(effectiveBitrate);
+        log("Recording quality set to: " + tier
+            + " (" + effectiveBitrate / 1_000_000 + " Mbps for "
+            + gpuPipeline.getConfig().getVideoCodec() + ")");
     }
     
     /**
@@ -2278,44 +2297,22 @@ public class CameraDaemon {
     }
     
     /**
-     * Set recording bitrate (2, 3, or 6 Mbps).
+     * @deprecated use {@link #setRecordingQuality(String)} with one of
+     *             ECONOMY / STANDARD / HIGH / PREMIUM / MAX. Old LOW/MEDIUM/
+     *             HIGH bitrate strings are mapped to the closest tier.
      */
+    @Deprecated
     public static void setRecordingBitrate(String bitrate) {
-        if (gpuPipeline == null) {
-            log("setRecordingBitrate: gpuPipeline is null, skipping");
-            return;
+        if (bitrate == null) return;
+        String tier;
+        switch (bitrate.toUpperCase()) {
+            case "LOW":    tier = "ECONOMY"; break;
+            case "MEDIUM": tier = "STANDARD"; break;
+            case "HIGH":   tier = "HIGH"; break;
+            default:       tier = "STANDARD"; break;
         }
-        
-        try {
-            com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset preset;
-            switch (bitrate.toUpperCase()) {
-                case "LOW":
-                    preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.LOW;
-                    break;
-                case "HIGH":
-                    preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.HIGH;
-                    break;
-                case "MEDIUM":
-                default:
-                    preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.MEDIUM;
-                    break;
-            }
-            
-            if (gpuPipeline.getConfig() == null) {
-                log("setRecordingBitrate: config is null, skipping");
-                return;
-            }
-            
-            gpuPipeline.getConfig().setBitratePreset(preset);
-            // Use codec-aware bitrate (H.265 uses lower bitrate for same quality)
-            int effectiveBitrate = gpuPipeline.getConfig().getEffectiveBitrate();
-            gpuPipeline.applyBitrateChange(effectiveBitrate);
-            log("Recording bitrate set to: " + bitrate + " (" + effectiveBitrate / 1_000_000 + " Mbps for " + 
-                gpuPipeline.getConfig().getVideoCodec() + ")");
-        } catch (Exception e) {
-            log("setRecordingBitrate error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        log("setRecordingBitrate(" + bitrate + ") → mapping to recordingQuality=" + tier);
+        setRecordingQuality(tier);
     }
     
     /**
@@ -2357,13 +2354,24 @@ public class CameraDaemon {
     }
     
     /**
-     * Get current recording bitrate setting.
+     * Get current recording quality tier (ECONOMY..MAX).
+     * Canonical accessor — prefer this over the deprecated bitrate alias.
      */
+    public static String getRecordingQuality() {
+        if (gpuPipeline == null || gpuPipeline.getConfig() == null) return "STANDARD";
+        return gpuPipeline.getConfig().getRecordingQuality().name();
+    }
+
+    /**
+     * Get current recording bitrate setting.
+     * @deprecated Use {@link #getRecordingQuality()} for the canonical tier.
+     */
+    @Deprecated
     public static String getRecordingBitrate() {
         if (gpuPipeline == null) return "MEDIUM";
         return gpuPipeline.getConfig().getBitratePreset().name();
     }
-    
+
     /**
      * Get current recording codec setting.
      */
@@ -2702,6 +2710,19 @@ public class CameraDaemon {
         try {
             File idFile = new File(PATH_DEVICE_ID_FILE());
             if (idFile.exists()) {
+                // Self-heal for older installs: the legacy saveDeviceId()
+                // didn't chmod the file, leaving it at the shell-UID-only
+                // mode 0600 default. The app UID couldn't read it, fell
+                // back to the "overdrive-default-device" sentinel, derived
+                // a different AES key, and silently failed to decrypt every
+                // stored credential. setReadable(true, false) is idempotent
+                // — no-op if it's already world-readable from a recent
+                // install. Apply on every daemon start so a re-deploy
+                // repairs older devices automatically.
+                try {
+                    idFile.setReadable(true, false);
+                    idFile.setWritable(true, false);
+                } catch (Exception ignored) {}
                 java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(idFile));
                 String fileId = reader.readLine();
                 reader.close();
@@ -2753,6 +2774,17 @@ public class CameraDaemon {
             java.io.FileWriter writer = new java.io.FileWriter(idFile);
             writer.write(id);
             writer.close();
+            // Files created in /data/local/tmp by the shell-UID daemon land
+            // at mode 0600 owned by shell. The app UID can't read them at
+            // that mode, so CredentialCipher.readDid() falls through to the
+            // "overdrive-default-device" sentinel and derives a different
+            // AES key — every encrypted credential (telegram bot token,
+            // BYD-cloud password) decodes to "" in the app process.
+            // Set world-readable so both UIDs read the same DID and derive
+            // the same key. setWritable too so the app can update the DID
+            // if a future migration ever needs to.
+            idFile.setReadable(true, false);
+            idFile.setWritable(true, false);
         } catch (Exception e) {
             log("WARN: Could not save device ID to file: " + e.getMessage());
         }

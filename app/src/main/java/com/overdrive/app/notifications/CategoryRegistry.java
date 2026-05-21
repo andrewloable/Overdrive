@@ -25,9 +25,17 @@ public final class CategoryRegistry {
         public final String severity;
         public final String defaultClickUrl;
         public final String note;
+        /**
+         * When true, this category delivers even during the user's configured
+         * quiet hours. Reserved for events the user explicitly wants regardless
+         * of time of day (e.g. charging complete — the whole point is to wake
+         * them so they unplug). Defaults to false.
+         */
+        public final boolean bypassQuietHours;
 
         Entry(String id, String label, String group, boolean defaultEnabled,
-              String severity, String defaultClickUrl, String note) {
+              String severity, String defaultClickUrl, String note,
+              boolean bypassQuietHours) {
             this.id = id;
             this.label = label;
             this.group = group;
@@ -35,6 +43,7 @@ public final class CategoryRegistry {
             this.severity = severity;
             this.defaultClickUrl = defaultClickUrl;
             this.note = note;
+            this.bypassQuietHours = bypassQuietHours;
         }
     }
 
@@ -83,7 +92,8 @@ public final class CategoryRegistry {
                     c.optBoolean("defaultEnabled", true),
                     c.optString("severity", "info"),
                     c.optString("defaultClickUrl", "/"),
-                    c.optString("note", null)
+                    c.optString("note", null),
+                    c.optBoolean("bypassQuietHours", false)
             );
             // Duplicate IDs would silently overwrite (LinkedHashMap.put returns
             // the previous value); log + skip the second occurrence so config

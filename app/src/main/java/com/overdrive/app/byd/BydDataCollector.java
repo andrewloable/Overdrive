@@ -238,6 +238,15 @@ public class BydDataCollector {
         // Register listeners
         registerAllListeners();
 
+        // Runtime receiver for power-cable plug edges. Manifest receiver
+        // BootReceiver already covers cold-boot delivery, but Android
+        // delivers POWER_CONNECTED/DISCONNECTED to runtime-registered
+        // receivers more reliably while the process is alive — and the
+        // ChargingDetector needs these edges within milliseconds of the
+        // user plugging in so the fused state doesn't lag a 5s collect
+        // cycle waiting for BMS to catch up.
+        registerPlugEdgeReceiver();
+
         // Bridge BYD door-state events to push notifications. Safe to start
         // here — the door listener is only invoked once the bodywork HAL
         // fires onDoorStateChanged, which requires registerAllListeners to
@@ -326,7 +335,7 @@ public class BydDataCollector {
 
     private java.util.concurrent.ScheduledExecutorService pollScheduler;
     private static final long POLL_INTERVAL_MS = 5000; // 5 seconds when ACC on
-    private static final long POLL_INTERVAL_PARKED_MS = 30000; // 30 seconds when ACC off
+    private static final long POLL_INTERVAL_PARKED_MS = 90000; // 90 seconds when ACC off — listener callbacks keep the snapshot fresh between polls
     private String lastSummaryHash = "";
 
     private void startPolling() {
@@ -362,7 +371,50 @@ public class BydDataCollector {
             pollScheduler.shutdownNow();
             pollScheduler = null;
         }
+        unregisterPlugEdgeReceiver();
         initialized = false;
+    }
+
+    private android.content.BroadcastReceiver plugEdgeReceiver;
+
+    private void registerPlugEdgeReceiver() {
+        if (context == null) return;
+        // Idempotent — re-init flow tears down and re-registers.
+        unregisterPlugEdgeReceiver();
+        plugEdgeReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context ctx, android.content.Intent intent) {
+                if (intent == null || intent.getAction() == null) return;
+                com.overdrive.app.monitor.ChargingDetector det =
+                    com.overdrive.app.monitor.ChargingDetector.getInstance();
+                switch (intent.getAction()) {
+                    case android.content.Intent.ACTION_POWER_CONNECTED:
+                        det.onPowerConnected();
+                        break;
+                    case android.content.Intent.ACTION_POWER_DISCONNECTED:
+                        det.onPowerDisconnected();
+                        break;
+                }
+            }
+        };
+        try {
+            android.content.IntentFilter f = new android.content.IntentFilter();
+            f.addAction(android.content.Intent.ACTION_POWER_CONNECTED);
+            f.addAction(android.content.Intent.ACTION_POWER_DISCONNECTED);
+            context.registerReceiver(plugEdgeReceiver, f);
+            logger.info("Plug-edge receiver registered (CONNECTED/DISCONNECTED)");
+        } catch (Exception e) {
+            logger.debug("registerPlugEdgeReceiver failed: " + e.getMessage());
+            plugEdgeReceiver = null;
+        }
+    }
+
+    private void unregisterPlugEdgeReceiver() {
+        if (context == null || plugEdgeReceiver == null) return;
+        try {
+            context.unregisterReceiver(plugEdgeReceiver);
+        } catch (Exception ignored) {}
+        plugEdgeReceiver = null;
     }
 
     private Object initDevice(String className, String shortName) {
@@ -480,9 +532,42 @@ public class BydDataCollector {
     // ACC state: when off, skip polling speed/engine/gearbox (always 0 when parked)
     private volatile boolean accIsOn = true;
 
+    /**
+     * Threshold below which a post-ACC-OFF engine-power reading is treated
+     * as plausible "current flowing into pack" (plug-in charging) rather
+     * than ECU residue. Values more positive than this (above the deadband)
+     * are rejected when accIsOn==false because the ICE cannot be running
+     * with the key removed — those readings are stale/noisy.
+     */
+    private static final double ENGINE_POWER_CHARGING_DEADBAND = 0.3;
+
     /** Called by CameraDaemon when ACC state changes. Adjusts poll rate accordingly. */
     public void setAccState(boolean isOn) {
+        boolean wasOn = this.accIsOn;
         this.accIsOn = isOn;
+
+        // Notify the fused charging detector first so it can invalidate
+        // ACC-dependent signals (enginePowerKw goes stale once ACC is off
+        // and must not be reused as charging evidence).
+        com.overdrive.app.monitor.ChargingDetector.getInstance().updateAccState(isOn);
+
+        // ACC just transitioned OFF: also clear the snapshot's enginePowerKw
+        // so any consumer reading the snapshot directly (not through the
+        // detector) doesn't see a stale value from the last drive while the
+        // car sits parked. Other ACC-gated fields (speedKmh, brake/accel, gear)
+        // are refreshed by the next poll cycle which already skips collectSpeed
+        // / collectGearbox when ACC is off — only enginePower needs an
+        // explicit wipe because we *deliberately* keep collecting it on the
+        // ACC-off "possibly charging" branch and a stale value there would
+        // confuse the detector's inference layer.
+        if (wasOn && !isOn) {
+            BydVehicleData current = snapshot.get();
+            if (current != null && !Double.isNaN(current.enginePowerKw)) {
+                snapshot.set(current.toBuilder().enginePowerKw(Double.NaN).build());
+                logger.info("ACC OFF: invalidated stale enginePowerKw");
+            }
+        }
+
         // Restart poll scheduler at the appropriate rate
         if (pollScheduler != null && !pollScheduler.isShutdown()) {
             pollScheduler.shutdownNow();
@@ -581,7 +666,9 @@ public class BydDataCollector {
         // Cloud data merge (when toggle enabled and data is fresh)
         mergeCloudData(b);
 
-        snapshot.set(b.build());
+        BydVehicleData built = b.build();
+        snapshot.set(built);
+        pushChargingEvidence(built);
     }
 
     /**
@@ -629,8 +716,37 @@ public class BydDataCollector {
         // Cloud data merge (when toggle enabled and data is fresh)
         mergeCloudData(b);
 
-        snapshot.set(b.build());
+        BydVehicleData built = b.build();
+        snapshot.set(built);
+        pushChargingEvidence(built);
         lastCoreCollectTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Push the latest snapshot into the fused ChargingDetector so its
+     * inference layer can reason about fresh power-flow / gun / gear data.
+     * The detector's L1 (BMS edge) and L2 (Power.isCharging) inputs come
+     * from listener callbacks and the explicit poll above; this method
+     * supplies L3 evidence.
+     */
+    private void pushChargingEvidence(BydVehicleData built) {
+        if (built == null) return;
+        // Resolve gear from authoritative GearMonitor (returns last-known
+        // value even when its monitor stops on ACC OFF). On a parked car
+        // that's always P. The detector uses gear==P as an L3 guard.
+        int gearNow;
+        try {
+            com.overdrive.app.monitor.GearMonitor gm =
+                com.overdrive.app.monitor.GearMonitor.getInstance();
+            gearNow = gm.getCurrentGear();
+        } catch (Exception e) {
+            gearNow = (built.gearMode != BydVehicleData.UNAVAILABLE)
+                ? built.gearMode
+                : com.overdrive.app.monitor.GearMonitor.GEAR_P;
+        }
+        com.overdrive.app.monitor.ChargingDetector.getInstance()
+            .updatePollEvidence(built, gearNow,
+                com.overdrive.app.monitor.GearMonitor.GEAR_P);
     }
 
     private void collectBodywork(BydVehicleData.Builder b) {
@@ -656,7 +772,20 @@ public class BydDataCollector {
             // Battery remaining energy — try multiple APIs in priority order.
             // Priority 1: PowerDevice.getBatteryRemainPowerEV() — most accurate for BEVs.
             // On PHEVs this may return stale values when ICE is running — validate against SOC.
-            if (Double.isNaN(b.remainKwh) && powerDevice != null) {
+            //
+            // NOTE: We deliberately do NOT gate the priority-1/2 reads on
+            // `Double.isNaN(b.remainKwh)`. Because `b` is built from the previous snapshot
+            // via toBuilder(), gating on NaN means we only ever read these getters ONCE
+            // (the very first poll after init), and the value freezes thereafter —
+            // observable as "Remaining kWh stuck at last seen value when the vehicle is
+            // off". The validation block below already protects the cached value from HAL
+            // garbage: out-of-range readings are skipped (not written), so the last-known
+            // good value is preserved when the BYD HAL goes flaky after ACC OFF.
+            //
+            // We track whether priority 1 or 2 wrote a fresh kWh this cycle so the
+            // priority-3 capacity fallback (older SDKs only) doesn't clobber it.
+            boolean kwhWrittenThisCycle = false;
+            if (powerDevice != null) {
                 try {
                     Object evKwh = BydDeviceHelper.callGetter(powerDevice, "getBatteryRemainPowerEV");
                     if (evKwh instanceof Number) {
@@ -668,16 +797,21 @@ public class BydDataCollector {
                                 double impliedCap = evVal / (soc / 100.0);
                                 if (impliedCap >= 10 && impliedCap <= 130) {
                                     b.remainKwh(evVal);
-                                    logger.debug("remainKwh from getBatteryRemainPowerEV: " + 
+                                    kwhWrittenThisCycle = true;
+                                    logger.debug("remainKwh from getBatteryRemainPowerEV: " +
                                         String.format("%.1f", evVal));
                                 } else {
-                                    logger.debug("getBatteryRemainPowerEV rejected: " + 
-                                        String.format("%.1f", evVal) + " kWh at " + 
-                                        String.format("%.0f", soc) + "% SOC → implied " + 
+                                    logger.debug("getBatteryRemainPowerEV rejected: " +
+                                        String.format("%.1f", evVal) + " kWh at " +
+                                        String.format("%.0f", soc) + "% SOC → implied " +
                                         String.format("%.1f", impliedCap) + " kWh");
                                 }
-                            } else {
-                                b.remainKwh(evVal);  // No SOC to validate, accept
+                            } else if (Double.isNaN(b.remainKwh)) {
+                                // No SOC to validate against. Only accept the unvalidated
+                                // reading on first poll (when there is no prior cached value
+                                // to risk overwriting with HAL garbage).
+                                b.remainKwh(evVal);
+                                kwhWrittenThisCycle = true;
                             }
                         }
                     }
@@ -685,9 +819,14 @@ public class BydDataCollector {
                     logger.debug("getBatteryRemainPowerEV failed: " + e.getMessage());
                 }
             }
-            
+
             // Priority 2: StatisticDevice.getRemainingBatteryPower() — returns int (0.1 kWh units)
-            if (Double.isNaN(b.remainKwh) && statisticDevice != null) {
+            // Only consulted when Priority 1 did NOT succeed this cycle. Without this guard,
+            // both sources race every cycle and last-writer-wins; on Seal we observed
+            // Priority 1 reporting 16.5 kWh (correct → 82.5 kWh nominal at 20% SOC) being
+            // overwritten by Priority 2 reporting 20.6 kWh (wrong → 103 kWh implied), which
+            // poisoned every downstream auto-detection.
+            if (!kwhWrittenThisCycle && statisticDevice != null) {
                 try {
                     Object rawPower = BydDeviceHelper.callGetter(statisticDevice, "getRemainingBatteryPower");
                     if (rawPower instanceof Number) {
@@ -700,11 +839,14 @@ public class BydDataCollector {
                                 double impliedCap = kwh / (soc / 100.0);
                                 if (impliedCap >= 10 && impliedCap <= 130) {
                                     b.remainKwh(kwh);
-                                    logger.debug("remainKwh from getRemainingBatteryPower: " + 
+                                    kwhWrittenThisCycle = true;
+                                    logger.debug("remainKwh from getRemainingBatteryPower: " +
                                         String.format("%.1f", kwh) + " (raw=" + rawVal + ")");
                                 }
-                            } else {
+                            } else if (Double.isNaN(b.remainKwh)) {
+                                // No SOC to validate. Only accept on first poll — see Priority 1 note.
                                 b.remainKwh(kwh);
+                                kwhWrittenThisCycle = true;
                             }
                         }
                     }
@@ -722,34 +864,20 @@ public class BydDataCollector {
                 double capVal = ((Number) cap).doubleValue();
                 if (capVal > 0) b.capacityAh(capVal);
 
-                // SOTA: Feed capacity-Ah SOH estimation.
-                // Only valid if capVal looks like an Ah rating (50-350 range) and we have pack voltage.
-                // If it's in 0.1 kWh units (older models), it'll be <120 and change with SOC — skip those.
-                if (capVal >= 50 && capVal <= 350) {
-                    try {
-                        com.overdrive.app.abrp.SohEstimator sohEst =
-                            com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-                        if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
-                            // Cell count is CONFIGURATION, not a computed signal — pack
-                            // voltage / 3.2V undercounts at low SOC (Seal Premium @ 18% SOC:
-                            // 501.5V / 3.2 = 157s, but pack is actually 172s). Deriving from
-                            // nominalKwh / (Ah × 3.2) is tautological and produces SOH = 100%.
-                            // Look up the canonical cell count for the detected pack kWh.
-                            int cellCount = com.overdrive.app.abrp.SohEstimator
-                                .cellCountForCapacity(sohEst.getNominalCapacityKwh());
-                            
-                            if (cellCount >= 90 && cellCount <= 200) {
-                                sohEst.updateFromCapacityAh(capVal, cellCount);
-                            }
-                        }
-                    } catch (Exception e) {
-                        logger.debug("Capacity-Ah SOH update failed: " + e.getMessage());
-                    }
-                }
-
-                // Fallback for older models where the prior priorities didn't fill remainKwh:
-                // getBatteryCapacity() / 10.0 gives remaining kWh
-                if (Double.isNaN(b.remainKwh) && capVal > 0) {
+                // Fallback for older models where Priorities 1/2 are unavailable:
+                // getBatteryCapacity() returns remaining energy in 0.1 kWh units (changes
+                // with SOC). Skip when the value looks like a static Ah rating (50-350
+                // range, handled by the SOH-feed block above) — otherwise we'd overwrite
+                // a real kWh reading with an Ah number scaled by 10. Also skip if
+                // priorities 1 or 2 already wrote a fresh validated kWh this cycle, so
+                // this fallback truly stays a fallback.
+                //
+                // No `Double.isNaN(b.remainKwh)` guard here: on the older SDKs that need
+                // this fallback, this is the only signal, and gating on NaN would freeze
+                // it at the first poll's value (the bug this whole block was rewritten
+                // to fix). The 1-120 kWh sanity window protects against junk readings.
+                boolean looksLikeAhRating = (capVal >= 50 && capVal <= 350);
+                if (!kwhWrittenThisCycle && !looksLikeAhRating && capVal > 0) {
                     double kwhFromCap = capVal / 10.0;
                     // Plausible remaining energy range for any BYD model: 1-120 kWh
                     if (kwhFromCap > 1.0 && kwhFromCap < 120.0) {
@@ -1129,6 +1257,26 @@ public class BydDataCollector {
 
             Object charger = BydDeviceHelper.callGetter(chargingDevice, "getChargerWorkState");
             if (charger instanceof Number) b.chargerWorkState(((Number) charger).intValue());
+
+            // BYDAutoPowerDevice.isCharging() — independent ground truth from
+            // the power MCU. Used by ChargingDetector as the L2 cross-check
+            // that catches the PHEV "BMS stuck at 15 IDLE while charging" bug.
+            // Tri-state: null when the device is unavailable or the call fails.
+            Boolean powerIsCharging = null;
+            if (powerDevice != null) {
+                try {
+                    Object pic = BydDeviceHelper.callGetter(powerDevice, "isCharging");
+                    if (pic instanceof Boolean) {
+                        powerIsCharging = (Boolean) pic;
+                    } else if (pic instanceof Number) {
+                        powerIsCharging = ((Number) pic).intValue() != 0;
+                    }
+                } catch (Exception e) {
+                    logger.debug("collectCharging Power.isCharging error: " + e.getMessage());
+                }
+            }
+            com.overdrive.app.monitor.ChargingDetector.getInstance()
+                .updatePowerIsCharging(powerIsCharging);
 
             // Feature ID for battery device state, fallback to named getter
             try {
@@ -2279,71 +2427,44 @@ public class BydDataCollector {
     private void collectStatisticExtended(BydVehicleData.Builder b) {
         if (statisticDevice == null) return;
 
-        // SOH: typed getter, then feature ID fallback. Validated 0-100.
-        // Once both paths are confirmed unavailable for this firmware, we
-        // latch in SohEstimator and skip these reflection calls forever.
+        // OEM SOH: read for the b.sohPercent display fallback only. The
+        // SohEstimator no longer consumes this signal — Shape B drives the
+        // live SOH from the energy formula, calibration is a separate anchor.
         try {
-            com.overdrive.app.abrp.SohEstimator sohEst =
-                com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+            Integer sohValue = null;
+            try {
+                Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
+                if (result instanceof Integer) {
+                    sohValue = (Integer) result;
+                } else if (result instanceof Double) {
+                    sohValue = (int) ((Double) result).doubleValue();
+                } else if (result instanceof Float) {
+                    sohValue = (int) ((Float) result).floatValue();
+                }
+            } catch (NoSuchMethodError nsme) {
+                // method missing — try feature ID below
+            } catch (Exception e) {
+                if (!(e.getCause() instanceof NoSuchMethodError)) {
+                    logger.debug("SOH getter failed: " + e.getMessage());
+                }
+            }
 
-            if (sohEst != null && sohEst.isOemSohUnavailable()) {
-                // Skip — already determined this firmware doesn't have it.
-            } else {
-                Integer sohValue = null;
-                boolean methodMissing = false;
-                boolean featureMissing = false;
-
+            if (sohValue == null || sohValue < 0 || sohValue > 100) {
                 try {
-                    Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
-                    if (result instanceof Integer) {
-                        sohValue = (Integer) result;
-                    } else if (result instanceof Double) {
-                        sohValue = (int) ((Double) result).doubleValue();
-                    } else if (result instanceof Float) {
-                        sohValue = (int) ((Float) result).floatValue();
+                    Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
+                    if (sohVal != null) {
+                        int raw = BydDeviceHelper.getIntValue(sohVal);
+                        if (raw >= 0 && raw <= 100) {
+                            sohValue = raw;
+                        }
                     }
-                } catch (NoSuchMethodError nsme) {
-                    methodMissing = true;
                 } catch (Exception e) {
-                    if (e.getCause() instanceof NoSuchMethodError) {
-                        methodMissing = true;
-                    } else {
-                        logger.debug("SOH getter failed: " + e.getMessage());
-                    }
+                    logger.debug("SOH feature ID failed: " + e.getMessage());
                 }
+            }
 
-                if (sohValue == null || sohValue < 0 || sohValue > 100) {
-                    try {
-                        Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
-                        if (sohVal != null) {
-                            int raw = BydDeviceHelper.getIntValue(sohVal);
-                            if (raw >= 0 && raw <= 100) {
-                                sohValue = raw;
-                            } else {
-                                featureMissing = true;
-                            }
-                        } else {
-                            featureMissing = true;
-                        }
-                    } catch (Exception e) {
-                        featureMissing = true;
-                        logger.debug("SOH feature ID failed: " + e.getMessage());
-                    }
-                }
-
-                if (sohValue != null && sohValue >= 0 && sohValue <= 100) {
-                    b.sohPercent(sohValue);
-                    if (sohEst != null) {
-                        try {
-                            sohEst.updateFromOem(sohValue);
-                        } catch (Exception e) {
-                            logger.debug("collectStatisticExtended SohEstimator update error: " + e.getMessage());
-                        }
-                    }
-                } else if (methodMissing && featureMissing && sohEst != null) {
-                    // Both paths confirmed missing — stop polling on this firmware.
-                    sohEst.markOemSohUnavailable();
-                }
+            if (sohValue != null && sohValue >= 0 && sohValue <= 100) {
+                b.sohPercent(sohValue);
             }
         } catch (Exception e) {
             logger.debug("collectStatisticExtended SOH error: " + e.getMessage());
@@ -2880,8 +3001,16 @@ public class BydDataCollector {
         //     logger.info("  Gearbox listener registered");
         //     count++;
         // }
-        if (BydDeviceHelper.registerListener(chargingDevice, this::onChargingCallback)) {
-            logger.info("  Charging listener registered");
+        // Charging: prefer typed registration. The generic IBYDAutoListener
+        // proxy used to register here misses onBatteryManagementDeviceStateChanged
+        // on some PHEV firmwares, which is the root of the inconsistent
+        // charging-detection bug (BMS state would freeze at 15 IDLE while
+        // charging). Typed listener guarantees AC-charging start is seen.
+        if (BydDeviceHelper.registerChargingListener(chargingDevice, this::onChargingCallback)) {
+            logger.info("  Charging listener registered (typed)");
+            count++;
+        } else if (BydDeviceHelper.registerListener(chargingDevice, this::onChargingCallback)) {
+            logger.info("  Charging listener registered (generic fallback)");
             count++;
         }
         // Engine listener: typed for onEngineCoolantLevelChanged /
@@ -3184,6 +3313,23 @@ public class BydDataCollector {
                                  state == 3 ? "DISCHARGING" : state == 15 ? "IDLE" : "OTHER") + ")");
                         notifyChargingStateListeners(previous, state);
                     }
+                    // Push edge into fused detector regardless of whether the
+                    // snapshot value moved (it may already match from a poll).
+                    com.overdrive.app.monitor.ChargingDetector.getInstance().updateBmsState(state);
+                }
+            } catch (Exception e) { /* ignore */ }
+            return;
+        }
+        // Capacity event — purely diagnostic for charging session size, but the
+        // act of receiving it confirms the charging HAL is alive on this firmware.
+        if ("onChargingCapacityChanged".equals(method) && args != null && args.length > 0) {
+            try {
+                double cap = ((Number) args[0]).doubleValue();
+                if (cap > 0 && cap < 200) {
+                    BydVehicleData current = snapshot.get();
+                    if (current != null) {
+                        snapshot.set(current.toBuilder().chargingCapacityKwh(cap).build());
+                    }
                 }
             } catch (Exception e) { /* ignore */ }
             return;
@@ -3485,6 +3631,18 @@ public class BydDataCollector {
                         // After scaling, re-check the kW range so a hectowatt value
                         // like 3095 (→ 309.5) gets rejected instead of mis-stored.
                         if (kw >= -200.0 && kw <= 400.0) {
+                            // ACC OFF gating: when the key is removed, the only
+                            // physically plausible engine-power direction is
+                            // current INTO the pack (kw < 0, plug-in charging).
+                            // Positive readings while parked are stale ECU
+                            // residue or sensor noise — accepting them lets the
+                            // ChargingDetector's L3 inference falsely conclude
+                            // "engine is running" or wash out a real charging
+                            // signal. Reject them; preserve negative values so
+                            // charging-while-parked detection still works.
+                            if (!accIsOn && kw > -ENGINE_POWER_CHARGING_DEADBAND) {
+                                return;
+                            }
                             BydVehicleData current = snapshot.get();
                             if (current != null) {
                                 snapshot.set(current.toBuilder().enginePowerKw(kw).build());
@@ -4103,29 +4261,127 @@ public class BydDataCollector {
     }
 
     // --- Charging ---
+    // The smart-charging schedule lives in BYD cloud, not the HAL. The Seal HAL
+    // exposes setChargeStop*/getChargeStop* methods that look like they should
+    // work but: getChargeStopSupportConfig=0, getters return 0xFFFF, setters
+    // silently return success-but-no-op. See feedback_byd_hal_unreliable_signals.
+    // All schedule reads/writes go through BydCloudClient smart-charging
+    // endpoints in VehicleControlApiHandler / VehicleCommandRouter.
 
-    public boolean setChargeStopCapacity(int percent) {
+    // BEV charge-cap: BYDAutoChargingDevice.setChargeStopCapacityState (target %)
+    // + setChargeStopSwitchState (master on/off). On Seal trims the
+    // getChargeStopSupportConfig flag has historically returned 0, in which
+    // case the framework accepts the call but doesn't apply the cap. We probe
+    // by writing a target and reading it back via getChargeStopCapacityState;
+    // if the read-back doesn't match, mark unsupported and the UI hides.
+
+    private volatile boolean chargeCapProbed = false;
+    private volatile boolean chargeCapSupported = false;
+
+    /** Last known cap %. -1 if never probed/read. */
+    public int getChargeCapPercent() {
         try {
-            if (percent < 50 || percent > 100) return false;
-            // Try typed method first, no feature ID alternative for charge stop capacity
-            Object result = BydDeviceHelper.callGetter(chargingDevice, "setChargeStopCapacityState", percent);
-            if (result instanceof Integer && ((Integer) result).intValue() == 0) return true;
-            // Fallback: no known feature ID for charge stop capacity, typed method is the only path
-            return false;
+            Object v = BydDeviceHelper.callGetter(chargingDevice, "getChargeStopCapacityState");
+            return (v instanceof Number) ? ((Number) v).intValue() : -1;
         } catch (Exception e) {
-            logger.debug("setChargeStopCapacity failed: " + e.getMessage());
+            return -1;
+        }
+    }
+
+    /** Last known on/off state. -1 if unsupported/read failed. */
+    public int getChargeCapEnabled() {
+        try {
+            Object v = BydDeviceHelper.callGetter(chargingDevice, "getChargeStopSwitchState");
+            return (v instanceof Number) ? ((Number) v).intValue() : -1;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Has the BEV charge-cap been observed to actually take effect on this
+     * trim? null = not yet probed, true/false = result of the first write.
+     * UI uses this to hide the section on no-op trims.
+     */
+    public Boolean isChargeCapSupported() {
+        return chargeCapProbed ? Boolean.valueOf(chargeCapSupported) : null;
+    }
+
+    /**
+     * Set BEV charge cap (50..100%). On the first successful write we read
+     * the value back: if framework didn't honor it, flip supported=false so
+     * the UI can hide. Subsequent calls short-circuit if already known to no-op.
+     */
+    public boolean setChargeCapPercent(int percent) {
+        if (chargingDevice == null) {
+            logger.warn("setChargeStopCapacityState: chargingDevice null");
+            return false;
+        }
+        if (percent < 50 || percent > 100) {
+            logger.warn("setChargeStopCapacityState: out of range: " + percent);
+            return false;
+        }
+        if (chargeCapProbed && !chargeCapSupported) {
+            logger.debug("setChargeStopCapacityState: known unsupported on this trim");
+            return false;
+        }
+        try {
+            Method m;
+            try {
+                m = chargingDevice.getClass().getMethod("setChargeStopCapacityState", int.class);
+            } catch (NoSuchMethodException nsme) {
+                logger.warn("setChargeStopCapacityState not present on this firmware");
+                chargeCapProbed = true; chargeCapSupported = false;
+                return false;
+            }
+            Object result = m.invoke(chargingDevice, percent);
+            boolean accepted = result instanceof Integer && ((Integer) result).intValue() == 0;
+            if (!accepted) {
+                logger.debug("setChargeStopCapacityState(" + percent + ") returned " + result);
+                return false;
+            }
+            // Probe: if not yet probed, read back to confirm the value stuck.
+            if (!chargeCapProbed) {
+                try { Thread.sleep(150L); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                int readBack = getChargeCapPercent();
+                chargeCapProbed = true;
+                chargeCapSupported = (readBack == percent);
+                logger.info("setChargeStopCapacityState probe: wrote=" + percent
+                        + " readBack=" + readBack + " supported=" + chargeCapSupported);
+            }
+            return chargeCapSupported;
+        } catch (Exception e) {
+            logger.debug("setChargeStopCapacityState failed: " + e.getMessage());
             return false;
         }
     }
 
-    public boolean setChargeStopSwitch(boolean enabled) {
-        try {
-            // Try typed method first (matches SDK), fallback to sendSetCommand
-            Object result = BydDeviceHelper.callGetter(chargingDevice, "setChargeStopSwitchState", enabled ? 1 : 0);
-            if (result instanceof Integer && ((Integer) result).intValue() == 0) return true;
+    /** Set BEV charge-cap master switch (0=off, 1=on). */
+    public boolean setChargeCapEnabled(boolean enabled) {
+        if (chargingDevice == null) {
+            logger.warn("setChargeStopSwitchState: chargingDevice null");
             return false;
+        }
+        if (chargeCapProbed && !chargeCapSupported) {
+            return false;
+        }
+        try {
+            Method m;
+            try {
+                m = chargingDevice.getClass().getMethod("setChargeStopSwitchState", int.class);
+            } catch (NoSuchMethodException nsme) {
+                logger.warn("setChargeStopSwitchState not present on this firmware");
+                return false;
+            }
+            int v = enabled ? 1 : 0;
+            Object result = m.invoke(chargingDevice, v);
+            boolean accepted = result instanceof Integer && ((Integer) result).intValue() == 0;
+            if (!accepted) {
+                logger.debug("setChargeStopSwitchState(" + v + ") returned " + result);
+            }
+            return accepted;
         } catch (Exception e) {
-            logger.debug("setChargeStopSwitch failed: " + e.getMessage());
+            logger.debug("setChargeStopSwitchState failed: " + e.getMessage());
             return false;
         }
     }
@@ -4252,6 +4508,19 @@ public class BydDataCollector {
     /** Cached BYDAutoSettingDevice.hasFeature("SEAT_VENTILATING") result; probed once. */
     private volatile boolean seatVentFeatureProbed = false;
     private volatile boolean seatVentFeatureSupported = false;
+
+    /**
+     * Probe (and cache) whether the trim has ventilated seats. Used by the
+     * vehicle-control UI to grey out the cool buttons on cars without the
+     * hardware (e.g. base-trim Atto 3, Seal without comfort package).
+     */
+    public boolean isSeatVentilationSupported() {
+        if (!seatVentFeatureProbed) {
+            seatVentFeatureProbed = true;
+            seatVentFeatureSupported = probeHasFeature(settingDevice, "SEAT_VENTILATING");
+        }
+        return seatVentFeatureSupported;
+    }
 
     /**
      * Capability probe via BYDAutoSettingDevice.hasFeature(String).

@@ -23,8 +23,8 @@
 
   Preserved IDs (VideoPlayerFragment.kt findViewById targets):
     videoView, btnBack, tvTitle, tvMeta, topBar, bottomControls,
-    eventTimeline, seekBar, btnPlayPause, tvCurrentTime, tvDuration,
-    tvEventInfo
+    eventTimeline, seekBar, btnPlayPause, btnPrev, btnNext,
+    tvCurrentTime, tvDuration, tvEventInfo
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -81,6 +81,24 @@
             android:layout_marginStart="8dp"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="#B3FFFFFF" />
+
+        <!--
+          Fullscreen toggle. Hidden by default; VideoPlayerFragment shows it
+          only when the host registers an onFullscreenToggle callback (i.e.
+          inline mode in the Recordings two-pane). Icon flips between
+          ic_fullscreen and ic_fullscreen_exit to mirror current state.
+        -->
+        <ImageButton
+            android:id="@+id/btnFullscreen"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_player_maximize"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_fullscreen"
+            android:tint="#FFFFFF"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- ==================== BOTTOM CONTROLS ==================== -->
@@ -130,14 +148,38 @@
             android:paddingHorizontal="4dp">
 
             <ImageButton
+                android:id="@+id/btnPrev"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_player_prev"
+                android:scaleType="centerInside"
+                android:src="@android:drawable/ic_media_previous"
+                android:tint="#FFFFFF"
+                android:visibility="gone" />
+
+            <ImageButton
                 android:id="@+id/btnPlayPause"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_marginStart="2dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_play_pause"
                 android:scaleType="centerInside"
                 android:src="@android:drawable/ic_media_pause"
                 android:tint="#FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/btnNext"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_player_next"
+                android:scaleType="centerInside"
+                android:src="@android:drawable/ic_media_next"
+                android:tint="#FFFFFF"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvCurrentTime"

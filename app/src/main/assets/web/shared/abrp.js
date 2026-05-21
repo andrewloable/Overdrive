@@ -43,10 +43,13 @@ const ABRP = {
             if (data.success && data.status) {
                 const s = data.status;
 
-                // Connection status
+                // Connection status — render a status-dot + label so the
+                // disclosure is glanceable without leaning on emoji glyphs.
                 const statusEl = document.getElementById('connectionStatus');
                 if (statusEl) {
-                    statusEl.textContent = s.running ? '🟢 ' + BYD.i18n.t('abrp.connected') : '🔴 ' + BYD.i18n.t('abrp.disconnected');
+                    const cls = s.running ? 'connected' : 'off';
+                    const label = s.running ? BYD.i18n.t('abrp.connected') : BYD.i18n.t('abrp.disconnected');
+                    statusEl.innerHTML = '<span class="status-dot ' + cls + '"></span> <span>' + label + '</span>';
                 }
 
                 // Last upload

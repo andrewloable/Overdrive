@@ -102,12 +102,13 @@
     },
     {
       "id": "vehicle.charging.full",
-      "label": "Charging complete (SOC ≥ 99.5%)",
+      "label": "Charging complete",
       "group": "Charging",
-      "defaultEnabled": false,
-      "severity": "info",
+      "defaultEnabled": true,
+      "severity": "warn",
+      "bypassQuietHours": true,
       "defaultClickUrl": "/vehicle-control.html",
-      "note": "Fires once per session when the pack reaches near-full. Suppressed if you plug in an already-full car"
+      "note": "Fires once per session when the pack reaches near-full or the BMS marks the session FINISHED. Suppressed if you plug in an already-full car. Bypasses quiet hours so you wake up to an unplug reminder."
     },
     {
       "id": "vehicle.charging.fault",
