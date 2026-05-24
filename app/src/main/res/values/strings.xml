@@ -477,6 +477,8 @@
     <string name="camera_current_manual">Current: Camera %1$d (Manual)</string>
     <string name="camera_current_auto_label">Current: Auto</string>
     <string name="soh_estimation_active">Estimation active</string>
+    <string name="soh_oem_readout">Vehicle SOH readout — waiting for calculated estimate</string>
+    <string name="soh_nominal_baseline">Nominal baseline — waiting for trusted SOH data</string>
     <string name="soh_no_estimate_yet">No estimate yet — waiting for data</string>
 
     <!-- Recording tabs -->
@@ -688,11 +690,11 @@
     <string name="vehicle_dialog_title">Set battery capacity</string>
     <string name="vehicle_dialog_capacity_label">Capacity</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 to 120 kWh. Leave to use the model default.</string>
+    <string name="vehicle_dialog_capacity_helper">8 to 120 kWh. Leave to use the model default.</string>
     <string name="vehicle_dialog_model_label">Model</string>
     <string name="vehicle_dialog_save">Save</string>
     <string name="vehicle_dialog_reset">Reset to auto-detect</string>
-    <string name="vehicle_dialog_invalid_capacity">Capacity must be 15 - 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">Capacity must be 8 - 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">Capacity: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Effective: %1$.1f kWh</string>

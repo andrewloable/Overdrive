@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "default": "seal",
   "baseUrl": "https://github.com/yash-srivastava/Overdrive-release/releases/download/models-v1/",
   "paintPresets": [
@@ -113,6 +113,24 @@
     {
       "id": "destroyer",
       "name": "BYD Destroyer 05",
+      "file": "destroyer.glb",
+      "sizeBytes": 1708884,
+      "sha256": "f2728598afcaaafc09899a36bd3f06900644935b14ec373a825b03bc6b13799b",
+      "bundled": false,
+      "nominalKwh": 18.3
+    },
+    {
+      "id": "seal5-dmi-dynamic",
+      "name": "BYD Seal 5 DM-i Dynamic",
+      "file": "destroyer.glb",
+      "sizeBytes": 1708884,
+      "sha256": "f2728598afcaaafc09899a36bd3f06900644935b14ec373a825b03bc6b13799b",
+      "bundled": false,
+      "nominalKwh": 8.3
+    },
+    {
+      "id": "seal5-dmi-premium",
+      "name": "BYD Seal 5 DM-i Premium",
       "file": "destroyer.glb",
       "sizeBytes": 1708884,
       "sha256": "f2728598afcaaafc09899a36bd3f06900644935b14ec373a825b03bc6b13799b",

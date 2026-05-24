@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Capacidade de bateria definida</string>
     <string name="vehicle_dialog_capacity_label">Capacidade (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 a 120 kWh. Deixe para usar o padrão do modelo.</string>
+    <string name="vehicle_dialog_capacity_helper">8 a 120 kWh. Deixe para usar o padrão do modelo.</string>
     <string name="vehicle_dialog_model_label">Modelo</string>
     <string name="vehicle_dialog_save">Salvar</string>
     <string name="vehicle_dialog_reset">Reset para detecção automática</string>
-    <string name="vehicle_dialog_invalid_capacity">A capacidade deve ser de 15 a 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">A capacidade deve ser de 8 a 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">Capacidade: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Eficaz: %1$.1f kWh</string>

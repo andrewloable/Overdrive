@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Stel de batterijcapaciteit</string>
     <string name="vehicle_dialog_capacity_label">Capaciteit (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 tot 120 kWh. Laat het model standaard gebruiken.</string>
+    <string name="vehicle_dialog_capacity_helper">8 tot 120 kWh. Laat het model standaard gebruiken.</string>
     <string name="vehicle_dialog_model_label">Model</string>
     <string name="vehicle_dialog_save">Opslaan</string>
     <string name="vehicle_dialog_reset">Herstellen op automatische detectie</string>
-    <string name="vehicle_dialog_invalid_capacity">De capaciteit moet 15 - 120 kWh zijn.</string>
+    <string name="vehicle_dialog_invalid_capacity">De capaciteit moet 8 - 120 kWh zijn.</string>
     <string name="vehicle_dialog_summary_capacity">Capaciteit: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Effectief: %1$.1f kWh</string>

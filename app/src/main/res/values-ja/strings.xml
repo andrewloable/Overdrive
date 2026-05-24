@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">バッテリーの容量設定</string>
     <string name="vehicle_dialog_capacity_label">容量 (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 ～ 120 kWh.モデルのデフォルトを使用する場合はそのままにします。</string>
+    <string name="vehicle_dialog_capacity_helper">8 ～ 120 kWh.モデルのデフォルトを使用する場合はそのままにします。</string>
     <string name="vehicle_dialog_model_label">モデル</string>
     <string name="vehicle_dialog_save">保存</string>
     <string name="vehicle_dialog_reset">自動検出にリセット</string>
-    <string name="vehicle_dialog_invalid_capacity">容量は15~120ZkWh</string>
+    <string name="vehicle_dialog_invalid_capacity">容量は8~120ZkWh</string>
     <string name="vehicle_dialog_summary_capacity">容量: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">効力: %1$.1f kWh</string>

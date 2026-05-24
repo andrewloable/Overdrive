@@ -159,6 +159,65 @@ public class BydDataCollector {
         return initialized;
     }
 
+    /**
+     * Public drivetrain classifier for consumers that need PHEV-specific data
+     * handling. The actual detection stays centralized in computeIsPhev() so
+     * SOH, range, and charging code all agree on the same fuel-signal logic.
+     */
+    public boolean isPhevVehicle() {
+        try {
+            return computeIsPhev();
+        } catch (Throwable t) {
+            logger.debug("PHEV detection failed: " + t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Directly reads the recovered legacy OEM SOH value from the BYD Statistic
+     * device. Returns -1 when the firmware does not expose a sane 1..100 value.
+     *
+     * This remains a collector-level helper so every consumer uses the same
+     * getter/feature-id fallback and validation rules.
+     */
+    public double readOemSohPercent() {
+        if (statisticDevice == null) return -1;
+        try {
+            Integer sohValue = null;
+            try {
+                Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
+                if (result instanceof Number) {
+                    sohValue = ((Number) result).intValue();
+                }
+            } catch (NoSuchMethodError nsme) {
+                // Method missing — try feature ID below.
+            } catch (Exception e) {
+                if (!(e.getCause() instanceof NoSuchMethodError)) {
+                    logger.debug("SOH getter failed: " + e.getMessage());
+                }
+            }
+
+            if (sohValue == null || sohValue <= 0 || sohValue > 100) {
+                try {
+                    Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
+                    if (sohVal != null) {
+                        int raw = BydDeviceHelper.getIntValue(sohVal);
+                        if (raw > 0 && raw <= 100) {
+                            sohValue = raw;
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("SOH feature ID failed: " + e.getMessage());
+                }
+            }
+
+            return (sohValue != null && sohValue > 0 && sohValue <= 100) ? sohValue : -1;
+        } catch (Exception e) {
+            logger.debug("readOemSohPercent error: " + e.getMessage());
+            return -1;
+        }
+    }
+
     // ==================== INITIALIZATION ====================
 
     /**
@@ -2431,39 +2490,8 @@ public class BydDataCollector {
         // SohEstimator no longer consumes this signal — Shape B drives the
         // live SOH from the energy formula, calibration is a separate anchor.
         try {
-            Integer sohValue = null;
-            try {
-                Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
-                if (result instanceof Integer) {
-                    sohValue = (Integer) result;
-                } else if (result instanceof Double) {
-                    sohValue = (int) ((Double) result).doubleValue();
-                } else if (result instanceof Float) {
-                    sohValue = (int) ((Float) result).floatValue();
-                }
-            } catch (NoSuchMethodError nsme) {
-                // method missing — try feature ID below
-            } catch (Exception e) {
-                if (!(e.getCause() instanceof NoSuchMethodError)) {
-                    logger.debug("SOH getter failed: " + e.getMessage());
-                }
-            }
-
-            if (sohValue == null || sohValue < 0 || sohValue > 100) {
-                try {
-                    Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
-                    if (sohVal != null) {
-                        int raw = BydDeviceHelper.getIntValue(sohVal);
-                        if (raw >= 0 && raw <= 100) {
-                            sohValue = raw;
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.debug("SOH feature ID failed: " + e.getMessage());
-                }
-            }
-
-            if (sohValue != null && sohValue >= 0 && sohValue <= 100) {
+            double sohValue = readOemSohPercent();
+            if (sohValue > 0) {
                 b.sohPercent(sohValue);
             }
         } catch (Exception e) {

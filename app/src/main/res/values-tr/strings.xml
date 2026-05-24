@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Batarya kapasitesini ayarlayın</string>
     <string name="vehicle_dialog_capacity_label">Kapasite (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 ila 120 kWh. Model varsayılanını kullanmak için bırakın.</string>
+    <string name="vehicle_dialog_capacity_helper">8 ila 120 kWh. Model varsayılanını kullanmak için bırakın.</string>
     <string name="vehicle_dialog_model_label">Model</string>
     <string name="vehicle_dialog_save">Kaydet</string>
     <string name="vehicle_dialog_reset">Otomatik tespit için yeniden ayarlayın</string>
-    <string name="vehicle_dialog_invalid_capacity">Kapasite 15 - 120 kWh olmalıdır.</string>
+    <string name="vehicle_dialog_invalid_capacity">Kapasite 8 - 120 kWh olmalıdır.</string>
     <string name="vehicle_dialog_summary_capacity">Kapasite: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Etkili: %1$.1f kWh</string>

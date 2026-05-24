@@ -458,11 +458,10 @@ class DiagnosticsFragment : Fragment() {
     // ============== Battery tile ==============
 
     /**
-     * Reads the persisted SOH estimate from /data/local/tmp/abrp_soh_estimate.properties
-     * (same source MainActivity.showBatteryHealthDialog uses). Property keys:
-     *   - "soh_percent"  → float, 0..100
-     * If the file doesn't exist or can't be parsed, the tile shows
-     * "Pending data" + neutral dot — never a fake number.
+     * Reads the daemon SOH display status first, falling back to the legacy
+     * persisted SOH file when the daemon is unavailable. The daemon exposes
+     * displaySource so OEM and nominal fallbacks can be shown as data without
+     * marking them as Overdrive's measured capacity estimate.
      */
     private fun refreshBatteryTile() {
         val executor = batteryExecutor ?: Executors.newSingleThreadExecutor()
@@ -470,24 +469,47 @@ class DiagnosticsFragment : Fragment() {
 
         executor.execute {
             var sohPercent: Double? = null
+            var displaySource = "unavailable"
             try {
-                val sohFile = File("/data/local/tmp/abrp_soh_estimate.properties")
-                if (sohFile.exists() && sohFile.canRead()) {
-                    val props = java.util.Properties()
-                    java.io.FileInputStream(sohFile).use { props.load(it) }
-                    val v = props.getProperty("soh_percent")?.toDoubleOrNull()
-                    // Accept up to 110% — BYD packs are factory over-provisioned
-                    // 102-104% so a near-new pack legitimately reads >100%.
-                    // Matches SohEstimator.applyWeightedSoh's accept band.
-                    if (v != null && v >= 60.0 && v <= 110.0) {
-                        sohPercent = v
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    val displaySoh = json.optDouble("displaySoh", -1.0)
+                    if (displaySoh >= 60.0 && displaySoh <= 110.0) {
+                        sohPercent = displaySoh
+                        displaySource = json.optString("displaySource", displaySource)
                     }
                 }
+                conn.disconnect()
             } catch (_: Throwable) {
-                // Stay null — UI will show "Pending data".
+                // Fall through to file fallback below.
+            }
+
+            if (sohPercent == null) {
+                try {
+                    val sohFile = File("/data/local/tmp/abrp_soh_estimate.properties")
+                    if (sohFile.exists() && sohFile.canRead()) {
+                        val props = java.util.Properties()
+                        java.io.FileInputStream(sohFile).use { props.load(it) }
+                        val v = props.getProperty("soh_percent")?.toDoubleOrNull()
+                        // Accept up to 110% — BYD packs are factory over-provisioned
+                        // 102-104% so a near-new pack legitimately reads >100%.
+                        // Matches SohEstimator.applyWeightedSoh's accept band.
+                        if (v != null && v >= 60.0 && v <= 110.0) {
+                            sohPercent = v
+                            displaySource = "live"
+                        }
+                    }
+                } catch (_: Throwable) {
+                    // Stay null — UI will show "Pending data" unless the daemon
+                    // branch already supplied a display value.
+                }
             }
 
             val finalSoh = sohPercent
+            val finalDisplaySource = displaySource
             mainHandler.post {
                 if (!isAdded) return@post
                 val tv = tvBatteryValue ?: return@post
@@ -498,6 +520,7 @@ class DiagnosticsFragment : Fragment() {
                 } else {
                     tv.text = getString(R.string.diagnostics_battery_value_soh, finalSoh)
                     val dotRes = when {
+                        finalDisplaySource == "nominal" -> R.drawable.status_dot_neutral
                         finalSoh >= 80.0 -> R.drawable.status_dot_online
                         finalSoh >= 50.0 -> R.drawable.status_dot_starting
                         else -> R.drawable.status_dot_offline

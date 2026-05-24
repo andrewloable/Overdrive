@@ -509,7 +509,9 @@ public class SocHistoryDatabase {
                             }
                         }
                     } else {
-                        logger.info("SOH persisted file not found at /data/local/tmp/abrp_soh_estimate.properties");
+                        // New installs and reset diagnostics legitimately start without a
+                        // persisted SOH estimate; keep that out of warning-focused logs.
+                        logger.debug("SOH persisted file absent at /data/local/tmp/abrp_soh_estimate.properties");
                     }
                 }
             } catch (Exception e) {
@@ -1174,10 +1176,34 @@ public class SocHistoryDatabase {
             }
             
             com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+            double oemSoh = sohEst != null ? sohEst.getOemSohPercent() : -1;
             if (sohEst != null && sohEst.hasEstimate()) {
                 current.put("soh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
                 current.put("estimatedCapacityKwh", Math.round(sohEst.getEstimatedCapacityKwh() * 10) / 10.0);
                 current.put("nominalCapacityKwh", sohEst.getNominalCapacityKwh());
+                current.put("sohSource", "live");
+            } else if (sohEst != null && oemSoh > 0) {
+                // Use the recovered legacy app's OEM SOH signal for display
+                // only. It keeps Diagnostics useful on cars whose raw
+                // remain-kWh input is invalid, but sohSource="oem" makes clear
+                // that this is not the Shape B capacity estimate.
+                double nominal = sohEst.getNominalCapacityKwh();
+                current.put("soh", Math.round(oemSoh * 10) / 10.0);
+                if (nominal > 0) {
+                    current.put("estimatedCapacityKwh", Math.round((nominal * oemSoh / 100.0) * 10) / 10.0);
+                    current.put("nominalCapacityKwh", nominal);
+                }
+                current.put("sohSource", "oem");
+            } else if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
+                // Some PHEV BYD SDK builds report raw remaining energy using a
+                // BEV-sized value. The estimator rejects that for real SOH, but
+                // the health card can still show a clearly-marked nominal
+                // baseline instead of looking broken.
+                double nominal = sohEst.getNominalCapacityKwh();
+                current.put("soh", 100.0);
+                current.put("estimatedCapacityKwh", Math.round(nominal * 10) / 10.0);
+                current.put("nominalCapacityKwh", nominal);
+                current.put("sohSource", "nominal");
             } else {
                 // Fallback: read persisted SOH from file if estimator reference not wired yet
                 logger.info("SOH estimator " + (sohEst == null ? "is null" : "has no estimate") + " for health report, trying persisted file fallback");
@@ -1197,7 +1223,9 @@ public class SocHistoryDatabase {
                             }
                         }
                     } else {
-                        logger.info("SOH persisted file not found for health report");
+                        // A missing persisted estimate only means the health report should rely
+                        // on OEM SOH or calibration data when available.
+                        logger.debug("SOH persisted file absent for health report");
                     }
                 } catch (Exception e) {
                     logger.debug("Failed to read persisted SOH for health report: " + e.getMessage());

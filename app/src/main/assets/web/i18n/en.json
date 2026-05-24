@@ -1042,6 +1042,10 @@
   "soh": {
     "fallback_caption": "From last charge · {pct}% · {date}",
     "unavailable_caption": "SOH unavailable — drive or charge to calibrate",
+    "oem_caption": "Vehicle SOH readout — waiting for calculated estimate",
+    "oem_hint": "Using the vehicle-reported SOH until Overdrive has enough trusted capacity data.",
+    "nominal_caption": "Nominal baseline — waiting for trusted battery-health data",
+    "nominal_hint": "Using configured battery capacity until the car provides valid SOH inputs.",
     "last_verified": "Last verified: {pct}% · {date}",
     "tap_to_set": "Tap to set",
     "set_battery_capacity_prompt": "Set battery capacity",

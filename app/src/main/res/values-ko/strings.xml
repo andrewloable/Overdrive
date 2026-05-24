@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">배터리 용량을 설정</string>
     <string name="vehicle_dialog_capacity_label">용량 (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 ~ 120kWh. 모델 기본값을 사용하려면 그대로 둡니다.</string>
+    <string name="vehicle_dialog_capacity_helper">8 ~ 120kWh. 모델 기본값을 사용하려면 그대로 둡니다.</string>
     <string name="vehicle_dialog_model_label">모델</string>
     <string name="vehicle_dialog_save">저장</string>
     <string name="vehicle_dialog_reset">자동 탐지 설정</string>
-    <string name="vehicle_dialog_invalid_capacity">용량은 15 ~ 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">용량은 8 ~ 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">용량: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">유효성: %1$.1f kWh</string>
