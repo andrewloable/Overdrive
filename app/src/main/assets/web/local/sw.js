@@ -27,7 +27,7 @@
 // Bump CACHE_VERSION whenever any precached asset changes (vendor JS bump,
 // new GLB, ev-card-3d.js logic change). The activate handler deletes any
 // cache whose name doesn't match, so old assets are reclaimed.
-const CACHE_VERSION = 'overdrive-3d-v1';
+const CACHE_VERSION = 'overdrive-3d-v2';
 
 // Static, APK-bundled assets that the EV card needs on every page.
 // Same-origin only — the daemon serves these with public, max-age=86400,
@@ -45,6 +45,13 @@ const PRECACHE_URLS = [
   '/shared/vendor/draco/draco_decoder.wasm',
   '/shared/models/seal.glb'
 ];
+
+// Runtime-cache model GLBs selected in the Vehicle page. We intentionally do
+// not precache every GLB in the manifest, because that would spend data on
+// models the user never opens. The first load of each selected model still
+// downloads it once; later reloads, PWA launches, and zrok sessions hit Cache
+// Storage instead of the tunnel.
+const MODEL_PATH_RE = /^\/shared\/models\/[^/?#]+\.glb$/;
 
 self.addEventListener('install', (event) => {
   // Precache the 3D pipeline alongside skipWaiting. Use addAll on a
@@ -83,8 +90,8 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-// Cache-first for precached 3D assets; network passthrough for everything
-// else. Restricting to same-origin GETs is defensive — we must never
+// Cache-first for precached 3D assets and selected vehicle GLBs; network
+// passthrough for everything else. Restricting to same-origin GETs is defensive — we must never
 // short-circuit /api/* or push subscription endpoints, and Chrome's SW
 // fetch event also fires for cross-origin subresources (CDN tiles for
 // Leaflet etc.) which we explicitly want to leave alone.
@@ -94,11 +101,12 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;
-  // Only intercept the static asset paths we actually precached. Other
-  // same-origin requests (HTML pages, /api/*) flow straight through.
+  // Only intercept known static 3D assets. Other same-origin requests
+  // (HTML pages, /api/*) flow straight through.
   const pathname = url.pathname;
   const isPrecacheTarget = PRECACHE_URLS.indexOf(pathname) !== -1;
-  if (!isPrecacheTarget) return;
+  const isRuntimeModel = MODEL_PATH_RE.test(pathname);
+  if (!isPrecacheTarget && !isRuntimeModel) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_VERSION);
