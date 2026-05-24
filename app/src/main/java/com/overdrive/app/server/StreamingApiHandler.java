@@ -80,8 +80,9 @@ public class StreamingApiHandler {
         if (!pipeline.isRunning()) {
             try {
                 CameraDaemon.log("handleEnableStreaming: warming up AVC HAL before pipeline cold start");
-                com.overdrive.app.camera.AvcHalWarmup warmup = new com.overdrive.app.camera.AvcHalWarmup();
-                warmup.warmupAndWait();
+                if (!CameraDaemon.ensureAvcWarmupStarted("StreamingApiHandler.handleEnableStreaming")) {
+                    throw new IllegalStateException("AVC warmup failed");
+                }
                 CameraDaemon.log("handleEnableStreaming: auto-starting pipeline for streaming");
                 pipeline.start();
                 Thread.sleep(500);
@@ -238,8 +239,9 @@ public class StreamingApiHandler {
         if (!pipeline.isRunning()) {
             try {
                 CameraDaemon.log("handleStreamViewMode: warming up AVC HAL before pipeline cold start");
-                com.overdrive.app.camera.AvcHalWarmup warmup = new com.overdrive.app.camera.AvcHalWarmup();
-                warmup.warmupAndWait();   // Blocks ~4s; safe — runs on the HTTP worker thread
+                if (!CameraDaemon.ensureAvcWarmupStarted("StreamingApiHandler.handleStreamViewMode")) {
+                    throw new IllegalStateException("AVC warmup failed");
+                }   // Blocks ~4s; safe — runs on the HTTP worker thread
                 CameraDaemon.log("handleStreamViewMode: auto-starting pipeline");
                 pipeline.start();
                 Thread.sleep(500);

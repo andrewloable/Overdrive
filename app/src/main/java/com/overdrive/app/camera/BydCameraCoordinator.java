@@ -41,6 +41,8 @@ public class BydCameraCoordinator {
 
     // Native app activity tracking (for polling fallback)
     private volatile boolean nativeAppActive = false;
+    private volatile String lastCameraOwnerPackage = "";
+    private volatile String arbitrationMode = "eventCallbackOnly";
 
     // Yield state
     private volatile boolean yielded = false;
@@ -66,6 +68,10 @@ public class BydCameraCoordinator {
 
     public void setActiveCameraId(int cameraId) {
         this.activeCameraId = cameraId;
+    }
+
+    public void setArbitrationMode(String mode) {
+        this.arbitrationMode = (mode == null || mode.isEmpty()) ? "eventCallbackOnly" : mode;
     }
 
     // ==================== IBYDCameraService Connection ====================
@@ -143,6 +149,11 @@ public class BydCameraCoordinator {
             // We don't participate in IBYDCameraService arbitration.
             // discoverCameraServiceApi();
             // registerCameraUser();
+            // Explicit experiment gate: only this mode is allowed to touch the
+            // registerUser path. The default modes remain polling/event-callback only.
+            if ("registeredUserExperiment".equals(arbitrationMode)) {
+                registerCameraUser();
+            }
 
         } catch (ClassNotFoundException e) {
             logger.info("IBYDCameraService not found — camera arbitration unavailable");
@@ -327,14 +338,6 @@ public class BydCameraCoordinator {
         return yielded;
     }
 
-    /**
-     * Whether we're using event-driven registration (true) or polling fallback (false).
-     * Permanently false — registerCameraUser is DISABLED.
-     */
-    public boolean isRegisteredAsUser() {
-        return false;
-    }
-
     // ==================== Polling Fallback ====================
 
     /**
@@ -355,10 +358,12 @@ public class BydCameraCoordinator {
                 if (currentUser != null) {
                     Method getPkg = currentUser.getClass().getMethod("getPackageName");
                     String pkg = (String) getPkg.invoke(currentUser);
+                    lastCameraOwnerPackage = pkg != null ? pkg : "";
                     if (pkg != null && !"com.overdrive.app".equals(pkg)) return pkg;
                 }
             } catch (Exception e) { /* ignore */ }
         }
+        lastCameraOwnerPackage = "";
         return null;
     }
 
@@ -389,6 +394,7 @@ public class BydCameraCoordinator {
 
                 boolean isUs = "com.overdrive.app".equals(pkg);
                 boolean wasActive = nativeAppActive;
+                lastCameraOwnerPackage = pkg != null ? pkg : "";
                 nativeAppActive = !isUs && pkg != null;
 
                 if (nativeAppActive && !wasActive) {
@@ -403,6 +409,7 @@ public class BydCameraCoordinator {
                 if (nativeAppActive) {
                     logger.info("No current camera user (polling) — native app released");
                     nativeAppActive = false;
+                    lastCameraOwnerPackage = "";
                     handleNativeAppClosed();
                 }
                 return false;
@@ -615,6 +622,9 @@ public class BydCameraCoordinator {
     public void unregister() {
         // Camera user unregistration DISABLED — we never register, so nothing to unregister.
         // unregisterCameraUser();
+        if (registeredAsUser) {
+            unregisterCameraUser();
+        }
         serviceAvailable = false;
         typedServiceProxy = null;
         reflectionServiceProxy = null;
@@ -624,10 +634,13 @@ public class BydCameraCoordinator {
     // ==================== State Queries ====================
 
     public boolean isNativeAppActive() { return nativeAppActive; }
+    public String getCurrentCameraOwnerPackage() { return lastCameraOwnerPackage; }
     // cameraUser is permanently null (registerCameraUser DISABLED), so polling 'yielded' is canonical.
     public boolean isYielded() { return yielded; }
     public boolean isRegistered() { return serviceAvailable; }
+    public boolean isRegisteredAsUser() { return registeredAsUser; }
     public boolean isEventCallbackActive() { return eventCallbackSet; }
+    public String getArbitrationMode() { return arbitrationMode; }
     public void resetEventCallbackState() { eventCallbackSet = false; }
 
     // ==================== AIDL Discovery ====================

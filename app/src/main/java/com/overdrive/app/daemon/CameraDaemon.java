@@ -125,6 +125,9 @@ public class CameraDaemon {
     // Prevents BYD system from killing the camera app, which destabilizes
     // the HAL and causes "no video signal" on the native DVR.
     private static com.overdrive.app.camera.AvcHalWarmup avcHalWarmup;
+    private static final Object avcWarmupLock = new Object();
+    private static volatile boolean avcWarmupCompletedThisWindow = false;
+    private static volatile String avcWarmupLastSkipReason = "";
     
     // ==================== STREAM MODE ====================
     public static final String STREAM_MODE_PRIVATE = "private";  // Local H.264 only
@@ -681,12 +684,10 @@ public class CameraDaemon {
         
         // GPU pipeline handles all cameras together
         if (gpuPipeline != null && !gpuPipeline.isRunning()) {
-            // If ACC is ON, warm up the camera HAL first on a background thread
-            // to avoid blocking the HTTP/TCP handler thread for 4 seconds.
-            if (AccMonitor.isAccOn() && avcHalWarmup != null) {
+            if (AccMonitor.isAccOn()) {
                 final boolean fViewOnly = viewOnly;
                 new Thread(() -> {
-                    avcHalWarmup.warmupAndWait();
+                    ensureAvcWarmupStarted("CameraDaemon.startCamera");
                     startPipelineInternal(viewId, fViewOnly);
                 }, "CameraWarmup").start();
             } else {
@@ -800,7 +801,47 @@ public class CameraDaemon {
             }
         }
     }
-    
+
+    /**
+     * Ensures the AVC warmup ran for the current cold-start window.
+     * Returns true when warmup is already satisfied or completed successfully,
+     * false only when the actual warmup attempt failed.
+     */
+    public static boolean ensureAvcWarmupStarted(String reason) {
+        synchronized (avcWarmupLock) {
+            if (avcHalWarmup == null) {
+                avcHalWarmup = new com.overdrive.app.camera.AvcHalWarmup();
+            }
+
+            if (gpuPipeline != null && gpuPipeline.isRunning()) {
+                avcWarmupLastSkipReason = "pipeline already running";
+                log("AVC warmup skipped (" + reason + "): " + avcWarmupLastSkipReason);
+                return true;
+            }
+
+            if (avcWarmupCompletedThisWindow && avcHalWarmup.getLastResult()) {
+                avcWarmupLastSkipReason = "already completed this cold-start window";
+                log("AVC warmup skipped (" + reason + "): " + avcWarmupLastSkipReason);
+                return true;
+            }
+
+            boolean ok = avcHalWarmup.warmupAndWait(reason);
+            if (ok) {
+                avcWarmupCompletedThisWindow = true;
+                avcWarmupLastSkipReason = "";
+            }
+            return ok;
+        }
+    }
+
+    private static void resetAvcWarmupWindow(String reason) {
+        synchronized (avcWarmupLock) {
+            avcWarmupCompletedThisWindow = false;
+            avcWarmupLastSkipReason = "";
+            log("AVC warmup window reset (" + reason + ")");
+        }
+    }
+
     /**
      * Stops the AVC keep-alive watchdog.
      * Called when pipeline stops or daemon shuts down.
@@ -810,6 +851,31 @@ public class CameraDaemon {
             avcHalWarmup.stopKeepAlive();
             log("AVC keep-alive stopped");
         }
+        resetAvcWarmupWindow("keep-alive stopped");
+    }
+
+    public static boolean isAvcWarmupAvailable() {
+        return avcHalWarmup != null;
+    }
+
+    public static long getAvcWarmupLastStartedAtMs() {
+        return avcHalWarmup != null ? avcHalWarmup.getLastStartedAtMs() : 0L;
+    }
+
+    public static boolean getAvcWarmupLastResult() {
+        return avcHalWarmup != null && avcHalWarmup.getLastResult();
+    }
+
+    public static boolean isAvcWarmupKeepAliveActive() {
+        return avcHalWarmup != null && avcHalWarmup.isActive();
+    }
+
+    public static String getAvcWarmupLastReason() {
+        return avcHalWarmup != null ? avcHalWarmup.getLastReason() : "";
+    }
+
+    public static String getAvcWarmupLastSkippedReason() {
+        return avcWarmupLastSkipReason;
     }
     
     // ==================== GETTERS ====================
@@ -2480,24 +2546,114 @@ public class CameraDaemon {
         
         // SOTA: BYD camera coordinator status
         if (gpuPipeline != null && gpuPipeline.getCamera() != null) {
+            // Keep the flat legacy keys for existing UI consumers, then add the
+            // nested cameraDiagnostics payload so field testers can export one
+            // complete JSON object without reading logs.
+            java.util.Map<String, Object> cameraDiagnostics = new java.util.HashMap<>();
             com.overdrive.app.camera.BydCameraCoordinator coordinator = 
                 gpuPipeline.getCamera().getCameraCoordinator();
             if (coordinator != null) {
                 status.put("cameraServiceRegistered", coordinator.isRegistered());
+                status.put("cameraServiceUserRegistered", coordinator.isRegisteredAsUser());
                 // cameraUserRegistered intentionally omitted — registerCameraUser is
                 // permanently DISABLED, the value is always false. Polling fallback
                 // is the only live path. See BydCameraCoordinator.register().
                 status.put("cameraYielded", coordinator.isYielded());
                 status.put("nativeAppActive", coordinator.isNativeAppActive());
                 status.put("cameraEventCallback", coordinator.isEventCallbackActive());
+                status.put("cameraOwnerPackage", coordinator.getCurrentCameraOwnerPackage());
+                status.put("nativeCameraOwnerPackage", coordinator.getCurrentCameraOwnerPackage());
+                status.put("cameraArbitrationMode", coordinator.getArbitrationMode());
+                cameraDiagnostics.put("nativeCameraOwnerPackage", coordinator.getCurrentCameraOwnerPackage());
+                cameraDiagnostics.put("arbitrationMode", coordinator.getArbitrationMode());
+                cameraDiagnostics.put("cameraYielded", coordinator.isYielded());
+                cameraDiagnostics.put("nativeAppActive", coordinator.isNativeAppActive());
+                cameraDiagnostics.put("cameraEventCallback", coordinator.isEventCallbackActive());
             }
             
             // SOTA: Camera probe status
             com.overdrive.app.camera.PanoramicCameraGpu cam = gpuPipeline.getCamera();
+            status.put("cameraId", cam.getCameraId());
+            status.put("surfaceMode", cam.getCameraSurfaceMode());
             status.put("probeComplete", cam.isProbeComplete());
             status.put("activeCameraId", cam.getCameraId());
             status.put("activeSurfaceMode", cam.getCameraSurfaceMode());
+            status.put("cameraLayout", cam.getCameraLayout());
+            status.put("manualOverride", cam.isManualOverrideActive());
+            status.put("fallbackFromProbe", cam.isFallbackFromProbe());
+            status.put("sourceBmmTag", cam.getSourceBmmTag());
+            status.put("discoveryMethod", cam.getDiscoveryMethod());
+            status.put("vehicleCamSort", cam.getVehicleCamSort());
+            status.put("firmwareFingerprint", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().fingerprint : "");
+            status.put("buildDisplay", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().buildDisplay : "");
+            status.put("buildIncremental", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().buildIncremental : "");
+            status.put("productDevice", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().device : "");
+            status.put("nativeProbeReport", cam.getNativeProbeReport());
+            status.put("eglHardwareBufferProbe", cam.getNativeProbeReport());
+            status.put("nativeProbeReady", cam.isNativeProbeReady());
+            status.put("fpsSetCameraResult", cam.getFpsSetCameraResult());
+            status.put("fpsSetMediaCodecResult", cam.getFpsSetMediaCodecResult());
+            status.put("validatedAtMs", cam.getValidatedAtMs());
+            status.put("validatedFrameWidth", cam.getValidatedFrameWidth());
+            status.put("validatedFrameHeight", cam.getValidatedFrameHeight());
+            status.put("validationFrameCount", cam.getValidationFrameCount());
+            status.put("validationSignal", cam.getValidationSignal());
+            status.put("stripConfidence", cam.getStripConfidence());
+            status.put("layoutConfidence", cam.getLayoutConfidence());
+            status.put("quadrantVariance", cam.getQuadrantVariance());
+            status.put("lastValidationFailure", cam.getLastValidationFailure());
+            status.put("lastCameraEvent", cam.getLastCameraEvent());
+            status.put("lastFrameAgeMs", cam.getLastFrameAgeMs());
+            status.put("measuredFps", cam.getMeasuredFps());
+            status.put("irFireCount", cam.getIrFireCount());
+            status.put("irAcquireOkCount", cam.getIrAcquireOkCount());
+            status.put("irAcquireNullCount", cam.getIrAcquireNullCount());
+            status.put("irBindFailCount", cam.getIrBindFailCount());
+
+            cameraDiagnostics.put("cameraId", cam.getCameraId());
+            cameraDiagnostics.put("surfaceMode", cam.getCameraSurfaceMode());
+            cameraDiagnostics.put("cameraLayout", cam.getCameraLayout());
+            cameraDiagnostics.put("sourceBmmTag", cam.getSourceBmmTag());
+            cameraDiagnostics.put("discoveryMethod", cam.getDiscoveryMethod());
+            cameraDiagnostics.put("probeComplete", cam.isProbeComplete());
+            cameraDiagnostics.put("manualOverride", cam.isManualOverrideActive());
+            cameraDiagnostics.put("firmwareFingerprint", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().fingerprint : "");
+            cameraDiagnostics.put("buildDisplay", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().buildDisplay : "");
+            cameraDiagnostics.put("buildIncremental", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().buildIncremental : "");
+            cameraDiagnostics.put("productDevice", cam.getFirmwareInfo() != null ? cam.getFirmwareInfo().device : "");
+            cameraDiagnostics.put("vehicleCamSort", cam.getVehicleCamSort());
+            cameraDiagnostics.put("validatedAtMs", cam.getValidatedAtMs());
+            cameraDiagnostics.put("validationSignal", cam.getValidationSignal());
+            cameraDiagnostics.put("layoutConfidence", cam.getLayoutConfidence());
+            cameraDiagnostics.put("quadrantVariance", cam.getQuadrantVariance());
+            cameraDiagnostics.put("lastFrameAgeMs", cam.getLastFrameAgeMs());
+            cameraDiagnostics.put("measuredFps", cam.getMeasuredFps());
+            cameraDiagnostics.put("irFireCount", cam.getIrFireCount());
+            cameraDiagnostics.put("irAcquireOkCount", cam.getIrAcquireOkCount());
+            cameraDiagnostics.put("irAcquireNullCount", cam.getIrAcquireNullCount());
+            cameraDiagnostics.put("irBindFailCount", cam.getIrBindFailCount());
+            cameraDiagnostics.put("lastCameraEvent", cam.getLastCameraEvent());
+            cameraDiagnostics.put("eglHardwareBufferProbe", cam.getNativeProbeReport());
+            cameraDiagnostics.put("avcWarmupLastResult", getAvcWarmupLastResult());
+            cameraDiagnostics.put("fpsSetCameraResult", cam.getFpsSetCameraResult());
+            cameraDiagnostics.put("fpsSetMediaCodecResult", cam.getFpsSetMediaCodecResult());
+            status.put("cameraDiagnostics", cameraDiagnostics);
         }
+
+        try {
+            org.json.JSONObject camCfg = com.overdrive.app.config.UnifiedConfigManager
+                .loadConfig().optJSONObject("camera");
+            if (camCfg != null) {
+                status.put("cameraReprobeOnNextRestart", camCfg.optBoolean("reprobeOnNextRestart", false));
+            }
+        } catch (Exception ignored) {}
+
+        status.put("avcWarmupAvailable", isAvcWarmupAvailable());
+        status.put("avcWarmupLastStartedAtMs", getAvcWarmupLastStartedAtMs());
+        status.put("avcWarmupLastResult", getAvcWarmupLastResult());
+        status.put("avcWarmupKeepAliveActive", isAvcWarmupKeepAliveActive());
+        status.put("avcWarmupLastReason", getAvcWarmupLastReason());
+        status.put("avcWarmupLastSkippedReason", getAvcWarmupLastSkippedReason());
         
         return status;
     }

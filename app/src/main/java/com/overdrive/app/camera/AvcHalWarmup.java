@@ -47,6 +47,10 @@ public class AvcHalWarmup {
 
     private volatile Thread keepAliveThread;
     private volatile boolean active = false;
+    private volatile long lastStartedAtMs = 0L;
+    private volatile boolean lastResult = false;
+    private volatile String lastReason = "";
+    private volatile String lastError = "";
 
     public AvcHalWarmup() {
     }
@@ -62,18 +66,37 @@ public class AvcHalWarmup {
      * @return true if warmup completed, false if interrupted
      */
     public boolean warmupAndWait() {
+        return warmupAndWait("unspecified");
+    }
+
+    /**
+     * Launches com.byd.avc and blocks for HAL_WARMUP_DELAY_MS.
+     * Call this BEFORE opening the camera on ACC ON transitions.
+     *
+     * This is a blocking call — run it on a background thread.
+     *
+     * @param reason human-readable caller reason for logging/status
+     * @return true if warmup completed, false if interrupted
+     */
+    public synchronized boolean warmupAndWait(String reason) {
+        lastStartedAtMs = System.currentTimeMillis();
+        lastReason = reason == null ? "" : reason;
+        lastError = "";
         logger.info("Warming up camera HAL via com.byd.avc (waiting " +
-            HAL_WARMUP_DELAY_MS + "ms)...");
+            HAL_WARMUP_DELAY_MS + "ms, reason=" + lastReason + ")...");
 
         launchAvc();
 
         try {
             Thread.sleep(HAL_WARMUP_DELAY_MS);
             logger.info("HAL warmup complete — safe to open camera");
+            lastResult = true;
             return true;
         } catch (InterruptedException e) {
             logger.warn("HAL warmup interrupted");
             Thread.currentThread().interrupt();
+            lastResult = false;
+            lastError = e.getMessage();
             return false;
         }
     }
@@ -145,6 +168,22 @@ public class AvcHalWarmup {
      */
     public boolean isActive() {
         return active;
+    }
+
+    public long getLastStartedAtMs() {
+        return lastStartedAtMs;
+    }
+
+    public boolean getLastResult() {
+        return lastResult;
+    }
+
+    public String getLastReason() {
+        return lastReason;
+    }
+
+    public String getLastError() {
+        return lastError;
     }
 
     // ==================== Internal ====================

@@ -8,7 +8,7 @@ import com.overdrive.app.logging.DaemonLogger;
  * Camera lifecycle (open/close/startPreview/addPreviewSurface) is already handled
  * inline in PanoramicCameraGpu and BydCameraCoordinator via reflection.
  * This class only adds genuinely new capabilities:
- * - BmmCameraInfo discovery (instant camera ID lookup)
+ * - BmmCameraInfo discovery (instant camera tuple lookup)
  * - setCameraFps (frame rate control)
  */
 public final class AvmCameraHelper {
@@ -29,21 +29,19 @@ public final class AvmCameraHelper {
     // ── Camera Discovery (REQ-1) ────────────────────────────────────────
 
     /**
-     * Discovers the panoramic camera ID via BmmCameraInfo.getCameraId() reflection.
-     * BmmCameraInfo reads the system property vehicle.config.cam_sort which maps
-     * camera tags to IDs. Tries pano_h → pano_l → byd_apa → apa.
+     * Discovers the panoramic camera tuple via BmmCameraInfo.getCameraId()
+     * reflection. BmmCameraInfo reads the system property vehicle.config.cam_sort
+     * which maps camera tags to IDs. Tries pano_h → pano_l → byd_apa → apa.
      *
-     * @return camera ID (>= 0) or -1 if not found
+     * @return tuple or null if no panoramic camera is available
      */
-    public static int discoverPanoCameraId() {
+    public static PanoCameraDiscovery discoverPanoCamera() {
         try {
             Class<?> bmmClass = Class.forName(BMM_CAMERA_INFO_CLASS);
 
             // Dump raw system property for debugging
             try {
-                Class<?> sp = Class.forName("android.os.SystemProperties");
-                java.lang.reflect.Method get = sp.getMethod("get", String.class);
-                String camSort = (String) get.invoke(null, "vehicle.config.cam_sort");
+                String camSort = CameraFirmwareInfo.readSystemProperty("vehicle.config.cam_sort");
                 logger.info("vehicle.config.cam_sort = "
                     + (camSort != null && !camSort.isEmpty() ? "'" + camSort + "'" : "(empty/null)"));
             } catch (Exception e) {
@@ -72,19 +70,33 @@ public final class AvmCameraHelper {
                     int id = (Integer) result;
                     if (id >= 0) {
                         logger.info("Discovered panoramic camera: " + tag + " → ID " + id);
-                        return id;
+                        // APA-family tags are intentionally flagged as a
+                        // different layout class so downstream rendering and
+                        // diagnostics can distinguish them from the standard
+                        // pano strip.
+                        int layout = ("byd_apa".equals(tag) || "apa".equals(tag)) ? 1 : 0;
+                        String camSort = CameraFirmwareInfo.readSystemProperty("vehicle.config.cam_sort");
+                        return new PanoCameraDiscovery(id, 0, layout, tag, "bmm:" + tag, camSort);
                     }
                 }
             }
             logger.info("BmmCameraInfo: no panoramic camera found for any tag");
-            return -1;
+            return null;
         } catch (ClassNotFoundException e) {
             logger.warn("BmmCameraInfo class not available on this device");
-            return -1;
+            return null;
         } catch (Exception e) {
             logger.warn("BmmCameraInfo discovery failed: " + e.getMessage());
-            return -1;
+            return null;
         }
+    }
+
+    /**
+     * Compatibility wrapper that returns only the camera ID.
+     */
+    public static int discoverPanoCameraId() {
+        PanoCameraDiscovery discovery = discoverPanoCamera();
+        return discovery != null ? discovery.cameraId : -1;
     }
 
     // ── Frame Rate Control (REQ-2) ──────────────────────────────────────
