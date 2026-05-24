@@ -2,7 +2,10 @@ package com.overdrive.app.ui.fragment
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -251,8 +254,17 @@ class DiagnosticsFragment : Fragment() {
     private fun computeNetworkTopLine(ctx: Context): String {
         // Try Wi-Fi first — strip the framework's surrounding quotes.
         try {
-            val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            val info = wifi?.connectionInfo
+            val appContext = ctx.applicationContext
+            val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // API 31+ exposes Wi-Fi details through NetworkCapabilities. Older
+                // Android Auto builds still need WifiManager.connectionInfo below.
+                cm?.getNetworkCapabilities(cm.activeNetwork)?.transportInfo as? WifiInfo
+            } else {
+                @Suppress("DEPRECATION")
+                wifi?.connectionInfo
+            }
             // SSID is "<unknown ssid>" when not connected; networkId == -1 also means no association.
             val rawSsid = info?.ssid
             val networkId = info?.networkId ?: -1

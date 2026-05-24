@@ -1242,7 +1242,9 @@ public class CameraDaemon {
                 }
                 
                 if (apkPath != null) {
-                    android.content.res.AssetManager mgr = android.content.res.AssetManager.class.newInstance();
+                    android.content.res.AssetManager mgr = android.content.res.AssetManager.class
+                        .getDeclaredConstructor()
+                        .newInstance();
                     java.lang.reflect.Method addAssetPath = android.content.res.AssetManager.class
                         .getDeclaredMethod("addAssetPath", String.class);
                     int cookie = (Integer) addAssetPath.invoke(mgr, apkPath);
@@ -1284,24 +1286,16 @@ public class CameraDaemon {
                 log("Pre-init: Set codec to " + persistedCodec);
             }
             
-            String persistedBitrate = HttpServer.getRecordingBitrate();
-            if (persistedBitrate != null) {
-                com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset preset;
-                switch (persistedBitrate.toUpperCase()) {
-                    case "LOW":
-                        preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.LOW;
-                        break;
-                    case "HIGH":
-                        preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.HIGH;
-                        break;
-                    case "MEDIUM":
-                    default:
-                        preset = com.overdrive.app.surveillance.GpuPipelineConfig.BitratePreset.MEDIUM;
-                        break;
-                }
-                gpuPipeline.getConfig().setBitratePreset(preset);
+            String persistedQuality = HttpServer.getRecordingQuality();
+            if (persistedQuality != null) {
+                // RecordingQuality is the canonical quality knob. It replaces
+                // the old LOW/MEDIUM/HIGH BitratePreset alias and lets newer
+                // tiers share one path during pre-init and runtime changes.
+                com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality quality =
+                    com.overdrive.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(persistedQuality);
+                gpuPipeline.getConfig().setRecordingQuality(quality);
                 int effectiveBitrate = gpuPipeline.getConfig().getEffectiveBitrate();
-                log("Pre-init: Set bitrate to " + persistedBitrate + " (" + effectiveBitrate / 1_000_000 + " Mbps for " +
+                log("Pre-init: Set recording quality to " + quality + " (" + effectiveBitrate / 1_000_000 + " Mbps for " +
                     gpuPipeline.getConfig().getVideoCodec() + ")");
             }
             
@@ -2736,9 +2730,17 @@ public class CameraDaemon {
             log("WARN: Could not read device ID from file: " + e.getMessage());
         }
         
-        // Fallback: use serial number hash
+        // Fallback: use serial number hash. Android O+ moved this behind
+        // Build.getSerial(); older BYD builds still expose Build.SERIAL.
         try {
-            String serial = android.os.Build.SERIAL;
+            String serial;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                serial = android.os.Build.getSerial();
+            } else {
+                @SuppressWarnings("deprecation")
+                String legacySerial = android.os.Build.SERIAL;
+                serial = legacySerial;
+            }
             if (serial != null && !serial.equals("unknown")) {
                 deviceId = "byd-" + Integer.toHexString(serial.hashCode()).substring(0, 8);
                 saveDeviceId(deviceId);
@@ -2811,7 +2813,9 @@ public class CameraDaemon {
             System.loadLibrary("gui");
             System.loadLibrary("bmmcamera");
         } catch (Throwable e) {
-            log("WARN: System lib warning: " + e.getMessage());
+            // Some Android Auto builds do not expose every system library to shell-launched
+            // daemons. The BYD camera HAL still loads through the app APK libraries below.
+            log("Optional system library skipped for shell daemon");
         }
         
         // Load surveillance library - try default path first
@@ -3212,7 +3216,9 @@ public class CameraDaemon {
                         log("createAppContext: post-timeout currentActivityThread also failed");
                     }
                 } else if (error[0] != null) {
-                    log("createAppContext: systemMain failed: " + error[0].getMessage());
+                    // systemMain can be blocked for shell UIDs; later strategies create the
+                    // PermissionBypassContext used by the car daemon.
+                    log("createAppContext: systemMain unavailable (" + error[0].getMessage() + "), trying fallback");
                 } else {
                     activityThread = result[0];
                     log("createAppContext: systemMain = " + activityThread);
@@ -3224,7 +3230,7 @@ public class CameraDaemon {
                 log("createAppContext: Trying manual ActivityThread creation...");
                 try {
                     // Ensure main looper exists (idempotent if already prepared)
-                    try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+                    prepareMainLooperForShellDaemon();
                     
                     // Create ActivityThread via default constructor
                     java.lang.reflect.Constructor<?> ctor = activityThreadClass.getDeclaredConstructor();
@@ -3335,6 +3341,14 @@ public class CameraDaemon {
         }
     }
     
+    @SuppressWarnings("deprecation")
+    private static void prepareMainLooperForShellDaemon() {
+        // Shell-launched daemons do not get Android's normal ActivityThread
+        // bootstrap. prepareMainLooper() is deprecated for apps, but it is the
+        // compatible fallback for BYD SDK callbacks in this app_process path.
+        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+    }
+
     /**
      * Context wrapper that bypasses permission checks and handles null base context.
      * Required for accessing BYD hardware services without signature permissions.

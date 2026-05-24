@@ -412,7 +412,7 @@ public class BYDAutoBodyworkDevice extends AbsBYDAutoDevice {
     private int autoSystemState = 1;
     private final String autoVin = UUID.randomUUID().toString();
     private final Context context;
-    private final List<AbsBYDAutoBodyworkListener> listeners = new ArrayList();
+    private final List<AbsBYDAutoBodyworkListener> listeners = new ArrayList<>();
     private int powerLevel = 2;
 
     private BYDAutoBodyworkDevice(Context context2) {

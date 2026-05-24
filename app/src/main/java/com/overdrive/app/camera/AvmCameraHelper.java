@@ -107,11 +107,14 @@ public final class AvmCameraHelper {
             if (ok) {
                 logger.info("Camera FPS set to " + fps);
             } else {
-                logger.warn("setCameraFps(" + fps + ") returned false");
+                // Some BYD camera HAL builds reject explicit FPS control but
+                // continue streaming normally at their default rate. Treat that
+                // as capability info, not a warning.
+                logger.info("setCameraFps(" + fps + ") unsupported by HAL");
             }
             return ok;
         } catch (NoSuchMethodException e) {
-            logger.warn("setCameraFps not available on this AVMCamera version");
+            logger.info("setCameraFps not available on this AVMCamera version");
             return false;
         } catch (Exception e) {
             logger.warn("setCameraFps failed: " + e.getMessage());

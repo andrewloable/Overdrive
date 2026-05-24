@@ -22,6 +22,7 @@ import android.view.WindowManager;
  * 
  * Works with UID 1000/2000 privileges - system won't kill this activity.
  */
+@SuppressWarnings("deprecation") // TargetSdk 25 Android Auto builds still need the legacy immersive/lockscreen flags.
 public class BlockerActivity extends Activity {
     
     private static final String TAG = "BlockerActivity";

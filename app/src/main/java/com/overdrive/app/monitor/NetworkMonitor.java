@@ -8,6 +8,7 @@ import android.net.LinkProperties;
 import android.net.LinkAddress;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 
 import com.overdrive.app.daemon.CameraDaemon;
 
@@ -147,7 +148,23 @@ public class NetworkMonitor {
                 wifiSsid = "WiFi";
                 return;
             }
-            WifiInfo info = wm.getConnectionInfo();
+            WifiInfo info;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ConnectivityManager cm = (ConnectivityManager) appContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+                Network activeNetwork = cm != null ? cm.getActiveNetwork() : null;
+                NetworkCapabilities caps = cm != null && activeNetwork != null
+                    ? cm.getNetworkCapabilities(activeNetwork)
+                    : null;
+                // API 31+ moved Wi-Fi identity to NetworkCapabilities; older
+                // Android Auto head units still use WifiManager below.
+                info = caps != null ? (caps.getTransportInfo() instanceof WifiInfo
+                    ? (WifiInfo) caps.getTransportInfo()
+                    : null) : null;
+            } else {
+                @SuppressWarnings("deprecation")
+                WifiInfo legacyInfo = wm.getConnectionInfo();
+                info = legacyInfo;
+            }
             if (info == null) {
                 wifiSsid = "WiFi";
                 return;

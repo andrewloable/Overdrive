@@ -600,7 +600,7 @@ public class SentryDaemon {
         
         // Strategy 3: manual creation
         try {
-            try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+            prepareMainLooperForShellDaemon();
             java.lang.reflect.Constructor<?> ctor = activityThreadClass.getDeclaredConstructor();
             ctor.setAccessible(true);
             Object at = ctor.newInstance();
@@ -618,6 +618,13 @@ public class SentryDaemon {
         return null;
     }
     
+    @SuppressWarnings("deprecation")
+    private static void prepareMainLooperForShellDaemon() {
+        // app_process daemons do not get Android's standard main looper; BYD
+        // hardware callbacks need one even though app code should not call this.
+        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+    }
+
     private static class PermissionBypassContext extends android.content.ContextWrapper {
         public PermissionBypassContext(Context base) { super(base); }
         

@@ -71,11 +71,10 @@ class ServiceLauncher(
             "pm grant $PACKAGE_NAME android.permission.ACCESS_FINE_LOCATION",
             "pm grant $PACKAGE_NAME android.permission.ACCESS_COARSE_LOCATION",
             "pm grant $PACKAGE_NAME android.permission.ACCESS_BACKGROUND_LOCATION",
-            // Grant location permissions via appops
-            "appops set $PACKAGE_NAME ACCESS_FINE_LOCATION allow",
-            "appops set $PACKAGE_NAME ACCESS_COARSE_LOCATION allow",
-            "appops set $PACKAGE_NAME ACCESS_BACKGROUND_LOCATION allow",
-            // Additional permissions for background operation
+            // Keep only appops that exist on the BYD Android build. Location
+            // runtime permissions are handled by pm grant above; using
+            // ACCESS_* appops names here produces "Unknown operation string"
+            // noise on this head unit.
             "appops set $PACKAGE_NAME RUN_IN_BACKGROUND allow",
             "appops set $PACKAGE_NAME RUN_ANY_IN_BACKGROUND allow",
             "dumpsys deviceidle whitelist +$PACKAGE_NAME"
@@ -213,9 +212,7 @@ class ServiceLauncher(
             "settings put global ssc_whitelist '$packageName' 2>/dev/null",
             "settings put secure ssc_whitelist '$packageName' 2>/dev/null",
             // Method 6: BYD app startup manager
-            "content call --uri content://com.byd.appstartup/whitelist --method add --arg '$packageName' 2>/dev/null",
-            "cmd appops set $packageName AUTO_START allow 2>/dev/null",
-            "cmd appops set $packageName BOOT_COMPLETED allow 2>/dev/null"
+            "content call --uri content://com.byd.appstartup/whitelist --method add --arg '$packageName' 2>/dev/null"
         )
         
         executeCommandSequence(commands, 0, callback) {

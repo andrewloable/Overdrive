@@ -191,7 +191,10 @@ public class LocationSidecarService extends Service implements LocationListener 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(this, CHANNEL_ID);
         } else {
-            builder = new Notification.Builder(this);
+            // Pre-O Android Auto builds do not support notification channels.
+            @SuppressWarnings("deprecation")
+            Notification.Builder legacyBuilder = new Notification.Builder(this);
+            builder = legacyBuilder;
         }
         
         return builder
@@ -408,6 +411,15 @@ public class LocationSidecarService extends Service implements LocationListener 
                 
             } catch (java.net.ConnectException e) {
                 // Daemon not running yet - expected on startup
+            } catch (java.net.SocketTimeoutException e) {
+                // The daemon received GPS via a best-effort local socket but
+                // did not answer before our short timeout. Location keeps
+                // flowing on the next tick, so keep this out of error logs.
+                Log.w(TAG, "IPC response timeout - GPS update will retry");
+            } catch (java.net.SocketException e) {
+                // The daemon can close the local socket while restarting; the
+                // next GPS tick reconnects, so this is startup noise, not app failure.
+                Log.w(TAG, "IPC socket reset - GPS update will retry");
             } catch (Exception e) {
                 Log.e(TAG, "IPC error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             } finally {
@@ -418,6 +430,7 @@ public class LocationSidecarService extends Service implements LocationListener 
         }, "GPS-IPC").start();
     }
 
+    @SuppressWarnings("deprecation") // Kept for legacy providers on older Android Auto builds.
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
         Log.d(TAG, "Provider " + provider + " status: " + status);
