@@ -105,6 +105,20 @@ BYD.performance = {
             attributeFilter: ['data-theme']
         });
     },
+
+    _withAlpha(color, alpha) {
+        const hex = /^#?([0-9a-f]{6})$/i.exec(color || '');
+        if (!hex) return color;
+
+        const raw = hex[1];
+        const r = parseInt(raw.slice(0, 2), 16);
+        const g = parseInt(raw.slice(2, 4), 16);
+        const b = parseInt(raw.slice(4, 6), 16);
+
+        // Android 7 / Chrome 58 cannot parse 8-digit hex colors in canvas
+        // gradients, so keep chart fills on the older rgba() syntax.
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    },
     
     async init() {
         console.log('[Performance] Initializing...');
@@ -1114,8 +1128,8 @@ BYD.performance = {
         
         // Gradient fill
         const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-        gradient.addColorStop(0, color + '40');
-        gradient.addColorStop(1, color + '05');
+        gradient.addColorStop(0, this._withAlpha(color, 0.25));
+        gradient.addColorStop(1, this._withAlpha(color, 0.02));
         ctx.fillStyle = gradient;
         ctx.fill();
         
@@ -1450,8 +1464,8 @@ BYD.performance = {
         
         // Gradient fill
         const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-        gradient.addColorStop(0, this.colors.soc + '40');
-        gradient.addColorStop(1, this.colors.soc + '05');
+        gradient.addColorStop(0, this._withAlpha(this.colors.soc, 0.25));
+        gradient.addColorStop(1, this._withAlpha(this.colors.soc, 0.02));
         ctx.fillStyle = gradient;
         ctx.fill();
         

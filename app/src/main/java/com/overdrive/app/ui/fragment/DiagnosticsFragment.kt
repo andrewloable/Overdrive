@@ -97,6 +97,14 @@ class DiagnosticsFragment : Fragment() {
         view.findViewById<View>(R.id.cardBattery).setOnClickListener {
             (activity as? MainActivity)?.invokeBatteryHealthAction()
         }
+        view.findViewById<View>(R.id.cardPerformance)?.setOnClickListener {
+            // Reuse the daemon-hosted performance dashboard so the native car
+            // diagnostics menu reaches the same view exposed by the mobile web UI.
+            findNavController().navigateDrillDown(
+                R.id.performanceFragment,
+                Bundle().apply { putString(WebViewFragment.ARG_PAGE_PATH, "/performance") }
+            )
+        }
         view.findViewById<View>(R.id.cardSettingsShortcut)?.setOnClickListener {
             // Settings is a peer rail destination — match rail fade-through
             // motion so the cardSettings shortcut feels like rail navigation.

@@ -603,6 +603,7 @@
     <string name="diagnostics_section_traffic">Traffic monitor</string>
     <string name="diagnostics_section_camera_probe">Camera probe</string>
     <string name="diagnostics_section_battery">Battery health</string>
+    <string name="diagnostics_section_performance">Performance</string>
     <!-- Sub-label used on diagnostics utility cards in landscape (hint to tap). -->
 
     <!-- SOTA Diagnostics dashboard -->
