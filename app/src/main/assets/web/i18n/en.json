@@ -1326,6 +1326,7 @@
     "cloud_connected": "Cloud Connected",
     "cloud_not_configured": "Cloud Not Configured",
     "locked": "Locked",
+    "lock_status_unavailable": "Lock unavailable",
     "checking": "Checking...",
     "cloud_required": "Cloud Account Required",
     "cloud_required_text": "This action requires a connected BYD Cloud account. Go to Surveillance Settings to link your credentials.",

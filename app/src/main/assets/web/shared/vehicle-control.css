@@ -102,30 +102,19 @@
 .vc-nav-btn:hover { background: var(--vc-pill-bg-hover); }
 .vc-nav-btn:active { -webkit-transform: scale(0.92); transform: scale(0.92); }
 
-/* Status bar floating on 3D — two rows.
-   Row 1 (.vc-status-bar) holds connection state pills (lock, cloud).
-   Row 2 (.vc-status-bar-secondary) holds appearance controls (color, model picker).
-   Splitting the rows guarantees the model dropdown never overlaps the cloud pill on
-   narrow screens, no matter how long the model name or how cramped the device. */
+/* Status bar floating on 3D — single scan line for state + appearance controls. */
 .vc-status-bar {
     position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px;
     display: -webkit-flex; display: flex;
-    -webkit-justify-content: space-between; justify-content: space-between;
+    -webkit-justify-content: flex-start; justify-content: flex-start;
     -webkit-align-items: center; align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
     z-index: 10; pointer-events: none;
 }
 .vc-status-bar > * { pointer-events: auto; margin: 0 3px; }
-
-.vc-status-bar-secondary {
-    position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-flex-wrap: wrap; flex-wrap: wrap;
-    -webkit-justify-content: flex-start; justify-content: flex-start;
-    gap: 6px;
-    z-index: 10; pointer-events: none;
-}
-.vc-status-bar-secondary > * { pointer-events: auto; }
+#cloudStatus { margin-left: auto; }
 .vc-pill {
     display: -webkit-inline-flex; display: inline-flex;
     -webkit-align-items: center; align-items: center;
@@ -210,17 +199,17 @@
 .vc-toast.error { border-color: #EF4444; color: #EF4444; }
 .vc-toast.info { border-color: #0EA5E9; color: #0EA5E9; }
 
-/* 3D Surround View button — laid out as a flex item inside .vc-status-bar-secondary
-   so vertical alignment is automatic, no manual top:50px to keep in sync with the row. */
+/* Legacy browser-only 3D button. The Android car WebView no longer renders it,
+   and this hard-hide protects browsers that still have older HTML cached. */
 .vc-3d-btn {
-    display: -webkit-inline-flex; display: inline-flex;
+    display: none !important;
     -webkit-flex-direction: column; flex-direction: column;
     -webkit-align-items: center; align-items: center;
     -webkit-justify-content: center; justify-content: center;
     width: 44px; height: 44px;
     -webkit-flex-shrink: 0; flex-shrink: 0;
     -webkit-flex-grow: 0; flex-grow: 0;
-    margin-left: auto;  /* push to far right within the secondary row */
+    margin-left: auto;
     border-radius: 22px;
     border: 1px solid var(--vc-border);
     background: var(--vc-pill-bg);
@@ -858,10 +847,6 @@ button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
     .vc-swatch { width: 20px; height: 20px; margin: 0 2px; }
     .vc-swatch-custom { width: 20px; height: 20px; margin: 0 2px; }
     .vc-model-select { padding: 4px 22px 4px 10px; font-size: 11px; max-width: 140px; }
-    /* Clear the hamburger button (left:10 width:40 = right edge at 50) so the
-       secondary row can't slide under it. Drop the row a touch since the smaller
-       pills make the primary row shorter. */
-    .vc-status-bar-secondary { top: calc(56px + env(safe-area-inset-top, 0px)); left: 56px; right: 10px; }
     .vc-3d-btn { width: 40px; height: 40px; border-radius: 20px; }
     .vc-3d-btn svg { width: 16px; height: 16px; }
 
@@ -878,15 +863,27 @@ button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
 }
 
 @media (max-width: 480px) {
-    .vc-status-bar { left: 54px; right: 8px; }
+    /* Phone viewports cannot fit lock + swatches + model + cloud beside the
+       hamburger. Wrap into two stable rows instead of relying on horizontal
+       overflow, which causes iOS Safari to paint pills on top of each other. */
+    .vc-status-bar {
+        left: 54px; right: 8px;
+        -webkit-flex-wrap: wrap; flex-wrap: wrap;
+        -webkit-align-content: flex-start; align-content: flex-start;
+        overflow: visible;
+        white-space: normal;
+    }
     .vc-status-bar > * { margin: 0 2px; }
+    .vc-status-bar .vc-pill:first-child { -webkit-order: 1; order: 1; }
+    #cloudStatus { -webkit-order: 2; order: 2; margin-left: auto; }
+    .vc-colors { -webkit-order: 3; order: 3; margin-top: 6px; }
+    .vc-model-select { -webkit-order: 4; order: 4; margin-top: 6px; }
     .vc-pill { padding: 3px 7px; font-size: 9px; }
     .vc-pill .dot { width: 5px; height: 5px; margin-right: 4px; }
     .vc-colors { padding: 2px 4px; }
     .vc-swatch { width: 18px; height: 18px; margin: 0 1px; }
     .vc-swatch-custom { width: 18px; height: 18px; margin: 0 1px; }
     .vc-model-select { padding: 3px 20px 3px 8px; font-size: 10px; max-width: 110px; border-radius: 14px; }
-    .vc-status-bar-secondary { top: 50px; left: 54px; right: 8px; gap: 4px; }
     .vc-3d-btn { width: 36px; height: 36px; border-radius: 18px; }
     .vc-3d-btn svg { width: 14px; height: 14px; }
     .vc-3d-btn span { font-size: 6px; }
@@ -911,6 +908,16 @@ button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
     .vc-seg { padding: 0 7px; height: 24px; font-size: 9px; }
     .vc-day { height: 26px; min-width: 28px; font-size: 8px; padding: 0 4px; }
     .vc-soc-slider { width: 120px; }
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+    /* Portrait phones have the least horizontal space and the hamburger sits
+       in the same visual band. Put appearance controls first, then state
+       pills underneath, so no pill paints behind another. */
+    .vc-colors { -webkit-order: 1; order: 1; }
+    .vc-model-select { -webkit-order: 2; order: 2; }
+    .vc-status-bar .vc-pill:first-child { -webkit-order: 3; order: 3; margin-top: 6px; }
+    #cloudStatus { -webkit-order: 4; order: 4; margin-top: 6px; margin-left: auto; }
 }
 
 /* Ultra-short viewports (landscape phone) — keep labels but compact heights. */
@@ -1008,4 +1015,3 @@ button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
 .vc-modal-btn:active {
     -webkit-transform: scale(0.95); transform: scale(0.95);
 }
-
