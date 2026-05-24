@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">设置电池容量</string>
     <string name="vehicle_dialog_capacity_label">产能 (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15至120 kWh。保留以使用模型默认值。</string>
+    <string name="vehicle_dialog_capacity_helper">8至120 kWh。保留以使用模型默认值。</string>
     <string name="vehicle_dialog_model_label">模型</string>
     <string name="vehicle_dialog_save">保存</string>
     <string name="vehicle_dialog_reset">重新设置为自动检测</string>
-    <string name="vehicle_dialog_invalid_capacity">容量必须为15-120kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">容量必须为8-120kWh</string>
     <string name="vehicle_dialog_summary_capacity">容量:%1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">有效:%1$.1f kWh</string>

@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Capacity pin được thiết lập</string>
     <string name="vehicle_dialog_capacity_label">Công suất (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 đến 120 kWh. Thoát để sử dụng mô hình mặc định.</string>
+    <string name="vehicle_dialog_capacity_helper">8 đến 120 kWh. Thoát để sử dụng mô hình mặc định.</string>
     <string name="vehicle_dialog_model_label">Mô hình</string>
     <string name="vehicle_dialog_save">Lưu</string>
     <string name="vehicle_dialog_reset">Đặt lại để tự phát hiện</string>
-    <string name="vehicle_dialog_invalid_capacity">Công suất phải là 15 - 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">Công suất phải là 8 - 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">Công suất: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Tính hiệu quả: %1$.1f kWh</string>

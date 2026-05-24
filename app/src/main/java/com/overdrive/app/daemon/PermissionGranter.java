@@ -250,8 +250,9 @@ public final class PermissionGranter {
             }
 
             long elapsed = System.currentTimeMillis() - start;
-            log("Done in " + elapsed + "ms: " + granted + " granted, " 
-                + skipped + " skipped, " + failed + " failed");
+            String failureSummary = failed == 0 ? "none denied" : failed + " denied";
+            log("Done in " + elapsed + "ms: " + granted + " granted, "
+                + skipped + " skipped, " + failureSummary);
             if (!failures.isEmpty() && failures.size() <= 15) {
                 log("Failed: " + String.join(", ", failures));
             } else if (!failures.isEmpty()) {

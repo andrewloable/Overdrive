@@ -1138,6 +1138,7 @@ class MainActivity : AppCompatActivity() {
             var samples = "--"
             var lastUpdated = "--"
             var hasEstimate = false
+            var displaySource = "unavailable"
 
             // Vehicle section state. Populated from /api/performance/soh status JSON
             // when available; falls back to legacy properties-file values otherwise.
@@ -1191,11 +1192,27 @@ class MainActivity : AppCompatActivity() {
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
                     val json = org.json.JSONObject(body)
+                    hasEstimate = json.optBoolean("hasEstimate", hasEstimate)
+                    val apiDisplaySoh = json.optDouble("displaySoh", -1.0)
+                    val apiDisplaySource = json.optString("displaySource", displaySource)
+                    // Prefer the daemon's display fields. They separate real
+                    // estimates from nominal fallbacks, so the dialog can show
+                    // useful battery data without pretending the fallback is a
+                    // measured SOH value.
+                    if (apiDisplaySoh > 0) {
+                        sohPercent = String.format("%.1f%%", apiDisplaySoh)
+                        method = apiDisplaySource.ifEmpty { method }
+                        displaySource = apiDisplaySource.ifEmpty { displaySource }
+                    }
                     if (!json.isNull("modelId")) {
                         modelId = json.optString("modelId", "").ifEmpty { null }
                     }
                     nominalKwhValue = json.optDouble("nominalCapacityKwh", nominalKwhValue)
                     nominalSourceVal = json.optString("nominalSource", nominalSourceVal)
+                    source = nominalSourceVal
+                    if (nominalKwhValue > 0) {
+                        nominalKwh = String.format("%.1f kWh", nominalKwhValue)
+                    }
                     val est = json.optDouble("estimatedCapacityKwh", -1.0)
                     if (est > 0) estimatedKwhValue = est
                     val calObj = json.optJSONObject("calibration")
@@ -1214,6 +1231,7 @@ class MainActivity : AppCompatActivity() {
             val finalSamples = samples
             val finalLastUpdated = lastUpdated
             val finalHasEstimate = hasEstimate
+            val finalDisplaySource = displaySource
             val finalModelId = modelId
             val finalNominalKwh = nominalKwhValue
             val finalNominalSource = nominalSourceVal
@@ -1282,6 +1300,12 @@ class MainActivity : AppCompatActivity() {
                 if (finalHasEstimate) {
                     statusView.text = getString(R.string.soh_estimation_active)
                     statusView.setTextColor(resources.getColor(R.color.brand_primary, null))
+                } else if (finalDisplaySource == "oem") {
+                    statusView.text = getString(R.string.soh_oem_readout)
+                    statusView.setTextColor(resources.getColor(R.color.text_muted, null))
+                } else if (finalDisplaySource == "nominal") {
+                    statusView.text = getString(R.string.soh_nominal_baseline)
+                    statusView.setTextColor(resources.getColor(R.color.text_muted, null))
                 } else {
                     statusView.text = getString(R.string.soh_no_estimate_yet)
                     statusView.setTextColor(resources.getColor(R.color.text_muted, null))
@@ -1289,7 +1313,9 @@ class MainActivity : AppCompatActivity() {
 
                 // SOH percent color based on health
                 val sohView = dialogView.findViewById<TextView>(R.id.tvSohPercent)
-                if (finalHasEstimate) {
+                // OEM and nominal fallbacks are still visible percentages, but
+                // only finalHasEstimate means Overdrive calculated capacity SOH.
+                if (finalHasEstimate || finalDisplaySource == "oem" || finalDisplaySource == "nominal") {
                     val sohVal = finalSoh.replace("%", "").toDoubleOrNull() ?: 0.0
                     val colorRes = when {
                         sohVal >= 85 -> R.color.brand_primary   // Good
@@ -1331,6 +1357,8 @@ class MainActivity : AppCompatActivity() {
             "sealion6" -> "BYD Sealion 6"
             "sealion7" -> "BYD Sealion 7"
             "sealu", "seal-u" -> "BYD Seal U"
+            "seal5-dmi-dynamic" -> "BYD Seal 5 DM-i Dynamic"
+            "seal5-dmi-premium" -> "BYD Seal 5 DM-i Premium"
             else -> modelId.replaceFirstChar { it.uppercase() }
         }
     }

@@ -257,7 +257,18 @@ public class VehicleDataMonitor {
                 com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
             if (soh != null && soh.getNominalCapacityKwh() > 0 && soc > 0) {
                 double nominal = soh.getNominalCapacityKwh();
+                boolean isPhev = isPhevVehicle(nominal);
                 double sohPercent = soh.hasEstimate() ? soh.getCurrentSoh() : 100.0;
+                if (isPhev && !soh.hasEstimate()) {
+                    double oemSoh = soh.getOemSohPercent();
+                    if (oemSoh > 0) {
+                        // PHEV firmwares can report an impossible raw remain-kWh
+                        // value. When the recovered OEM SOH is available, use it
+                        // to compute an actual PHEV remaining-energy readout from
+                        // SOC × nominal capacity × vehicle SOH.
+                        sohPercent = oemSoh;
+                    }
+                }
                 double computedKwh = (soc / 100.0) * nominal * (sohPercent / 100.0);
                 
                 // Validate raw BMS value: if implied capacity is wildly off from nominal,
@@ -272,7 +283,6 @@ public class VehicleDataMonitor {
                     }
                 }
                 
-                boolean isPhev = nominal < 30.0;
                 if (isPhev) {
                     return computedKwh;
                 }
@@ -287,6 +297,19 @@ public class VehicleDataMonitor {
         if (rawKwh > 0) return rawKwh;
 
         return 0.0;
+    }
+
+    private boolean isPhevVehicle(double nominalCapacityKwh) {
+        try {
+            BydDataCollector collector = BydDataCollector.getInstance();
+            if (collector.isInitialized()) {
+                return collector.isPhevVehicle();
+            }
+        } catch (Throwable ignored) {
+            // Fall through to pack-size heuristic below.
+        }
+        // Fallback for early daemon startup before fuel HAL probes complete.
+        return nominalCapacityKwh > 0 && nominalCapacityKwh < 30.0;
     }
     
     public JSONObject getAllData() {

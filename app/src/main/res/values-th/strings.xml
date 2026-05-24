@@ -470,11 +470,11 @@
     <string name="vehicle_dialog_title">ตั้งค่าความจุแบตเตอรี่</string>
     <string name="vehicle_dialog_capacity_label">ความจุ</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">ตั้งแต่ 15 ถึง 120 kWh ปล่อยว่างไว้เพื่อใช้ค่ามาตรฐานของรุ่นรถ</string>
+    <string name="vehicle_dialog_capacity_helper">ตั้งแต่ 8 ถึง 120 kWh ปล่อยว่างไว้เพื่อใช้ค่ามาตรฐานของรุ่นรถ</string>
     <string name="vehicle_dialog_model_label">รุ่น</string>
     <string name="vehicle_dialog_save">บันทึก</string>
     <string name="vehicle_dialog_reset">รีเซ็ตเพื่อตรวจจับอัตโนมัติ</string>
-    <string name="vehicle_dialog_invalid_capacity">ความจุต้องอยู่ระหว่าง 15 - 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">ความจุต้องอยู่ระหว่าง 8 - 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">ความจุ: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">ใช้งานได้จริง: %1$.1f kWh</string>

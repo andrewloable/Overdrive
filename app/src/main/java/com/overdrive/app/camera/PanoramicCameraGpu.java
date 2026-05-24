@@ -190,6 +190,11 @@ public class PanoramicCameraGpu {
     // When native app is active, use a longer threshold to avoid false yields
     // from transient CPU/IO load. The HAL needs time to settle into sharing mode.
     private static final long FRAME_STALL_CONTENTION_THRESHOLD_MS = 3000;
+    // Auto-probe normally advances at frame 15. If a camera/mode opens but
+    // produces no frames at all, frameCounter never reaches 15, so use this
+    // wall-clock guard to move to the next candidate instead of staying in
+    // probeComplete=false forever.
+    private static final long PROBE_NO_FRAME_TIMEOUT_MS = 6000;
     // Require consecutive stalls before yielding — a single stall could be transient
     private static final int CONTENTION_STALL_COUNT_TO_YIELD = 2;
     private volatile int consecutiveContentionStalls = 0;
@@ -1003,6 +1008,13 @@ public class PanoramicCameraGpu {
             lastGlThreadHeartbeat = System.currentTimeMillis();
             maybeLogImageReaderDiag();
 
+            // Auto-probe must advance even when a candidate camera/mode opens
+            // successfully but never produces enough frames to reach the
+            // frame-15 validation branch.
+            if (maybeAdvanceProbeAfterNoFrames()) {
+                return;
+            }
+
             // SOTA: Skip frame processing if camera is yielded to native app,
             // not yet open, or being torn down/reopened by the daemon thread
             // (reopenCamera/restartCameraAfterError). The restartInProgress
@@ -1411,6 +1423,37 @@ public class PanoramicCameraGpu {
         }
     }
 
+    private boolean maybeAdvanceProbeAfterNoFrames() {
+        if (!autoProbeCameras || probeComplete || skipFrameValidation || frameCounter >= 15) {
+            return false;
+        }
+        long startedAt = lastCameraStartTime;
+        if (startedAt <= 0) {
+            return false;
+        }
+        long elapsedMs = System.currentTimeMillis() - startedAt;
+        if (elapsedMs < PROBE_NO_FRAME_TIMEOUT_MS) {
+            return false;
+        }
+
+        int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+        logger.warn("Auto-probe: camera ID " + currentId
+            + " surfaceMode=" + cameraSurfaceMode
+            + " produced only " + frameCounter + " frames in " + elapsedMs
+            + "ms; advancing probe");
+        recordValidationSnapshot(
+            false,
+            "probe_timeout_no_frames",
+            "low",
+            cameraLayout == 1 ? "unknown" : "low",
+            "probe_timeout_no_frames",
+            width,
+            height,
+            frameCounter);
+        advanceProbeToNext(currentId);
+        return true;
+    }
+
     private String summarizeQuadrantVariance(byte[] probe8x8) {
         // This is diagnostics only. It turns the 8x8 probe into a compact
         // summary so logs and persisted config can explain *why* a frame was
@@ -1512,10 +1555,8 @@ public class PanoramicCameraGpu {
     }
 
     /**
-     * SOTA: Advance to the next camera ID during probe.
-     * Surface mode 0 is confirmed working on all tested models — only probe camera IDs 0-5.
-     * 
-     * @param skipId Camera ID to skip (the one we just tested). -1 to start fresh.
+     * Builds the camera ID order for the surface-mode matrix fallback.
+     * The list starts with the best evidence we have, then fills in 0-5.
      */
     private int[] buildSurfaceModeProbeCameraIds() {
         java.util.LinkedHashSet<Integer> ids = new java.util.LinkedHashSet<>();

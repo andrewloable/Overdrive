@@ -166,7 +166,9 @@ class CameraDaemonController(
         Thread {
             val response = sendTcpCommandWithResponse("""{"cmd":"getStreamMode"}""")
             val mode = try {
-                JSONObject(response ?: "{}").optString("mode", null)
+                // optString(name, fallback) is annotated as non-null from Java, so use the
+                // single-arg form and convert blank/missing values back to a nullable result.
+                JSONObject(response ?: "{}").optString("mode").takeIf { it.isNotBlank() }
             } catch (e: Exception) {
                 null
             }

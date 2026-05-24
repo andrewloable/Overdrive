@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Установка емкости батареи</string>
     <string name="vehicle_dialog_capacity_label">Пропускная способность (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">от 15 до 120 kWh. Оставьте, чтобы использовать модель по умолчанию.</string>
+    <string name="vehicle_dialog_capacity_helper">от 8 до 120 kWh. Оставьте, чтобы использовать модель по умолчанию.</string>
     <string name="vehicle_dialog_model_label">Модель</string>
     <string name="vehicle_dialog_save">Сохранить</string>
     <string name="vehicle_dialog_reset">Перезагрузка на автоматическое обнаружение</string>
-    <string name="vehicle_dialog_invalid_capacity">Пропускная способность должна быть 15 - 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">Пропускная способность должна быть 8 - 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">Пропускная способность: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Эффективность: %1$.1f kWh</string>

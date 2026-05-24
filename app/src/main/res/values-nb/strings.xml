@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">Sette batterikapacitet</string>
     <string name="vehicle_dialog_capacity_label">Kapasitet (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 til 120 kWh. La stå for å bruke standardmodellen.</string>
+    <string name="vehicle_dialog_capacity_helper">8 til 120 kWh. La stå for å bruke standardmodellen.</string>
     <string name="vehicle_dialog_model_label">Modell</string>
     <string name="vehicle_dialog_save">Lagre</string>
     <string name="vehicle_dialog_reset">Omsett til automatisk oppdagelse</string>
-    <string name="vehicle_dialog_invalid_capacity">Kapasitet må være 15 - 120 kWh</string>
+    <string name="vehicle_dialog_invalid_capacity">Kapasitet må være 8 - 120 kWh</string>
     <string name="vehicle_dialog_summary_capacity">Kapasitet: %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">Effektivitet: %1$.1f kWh</string>
