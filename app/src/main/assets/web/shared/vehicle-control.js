@@ -2014,7 +2014,12 @@ var VC = {
         if (lockBtn) { if (locked === true) lockBtn.classList.add('on'); else lockBtn.classList.remove('on'); }
         if (unlockBtn) { if (locked === false) unlockBtn.classList.add('on'); else unlockBtn.classList.remove('on'); }
         if (lockStatus) {
-            lockStatus.textContent = locked === true ? BYD.i18n.t('vehicle.locked') : (locked === false ? BYD.i18n.t('vehicle.unlocked') : BYD.i18n.t('common.unknown'));
+            // The head unit often reports -1 for lock state while the car is
+            // asleep or cloud fallback is unavailable. Use a vehicle-specific
+            // message instead of the generic "Unknown" pill.
+            lockStatus.textContent = locked === true
+                ? BYD.i18n.t('vehicle.locked')
+                : (locked === false ? BYD.i18n.t('vehicle.unlocked') : BYD.i18n.t('vehicle.lock_status_unavailable'));
             var dot = lockStatus.previousElementSibling;
             if (dot) {
                 dot.className = 'dot ' + (locked === true ? 'green' : (locked === false ? 'amber' : 'grey'));

@@ -177,10 +177,11 @@ public class VehicleControlApiHandler {
         // Door lock status: 1=locked, 2=unlocked, -1=unknown
         // Index: 0=LF, 1=RF, 2=LR, 3=RR, 4=trunk, 5=unused, 6=overall(derived)
         //
-        // The BYDAutoDoorLockDevice service does not expose lock state to user-UID
-        // processes on most BYD firmwares (returns INVALID(0) for every area).
-        // So we overlay the BYD cloud snapshot's per-door lock fields here. If
-        // both the SDK and cloud are unavailable, values stay at -1.
+        // BydDataCollector first reads BYDAutoDoorLockDevice locally using the
+        // recovered legacy app's getDoorLockStatus(area)/getDoorLockState path.
+        // BYD cloud values are still overlaid when available because some
+        // firmwares return INVALID(0) for every local area. If both sources are
+        // unavailable, values stay at -1.
         // BYD bodywork SDK area numbering swaps L↔R on the FRONT axis vs the
         // physical doors: array index 0 (SDK "LEFT_FRONT") is physically
         // right-front, index 1 is left-front. The REAR axis on this car

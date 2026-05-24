@@ -620,8 +620,8 @@ public final class BydDeviceHelper {
 
     /**
      * Register a typed door-lock listener. Captures the canonical
-     * onDoorLockStatusChanged(area, state) event the BMS emits when the gun is
-     * connected and the lock state transitions.
+     * onDoorLockStatusChanged(area, state) event emitted by the BYD door-lock
+     * HAL when a lock state transitions.
      */
     public static boolean registerDoorLockListener(Object device, ListenerCallback callback) {
         if (device == null) return false;
