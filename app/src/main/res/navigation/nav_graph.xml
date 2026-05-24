@@ -142,6 +142,20 @@
         android:label="@string/rail_diagnostics"
         tools:layout="@layout/fragment_diagnostics" />
 
+    <!-- Diagnostics → Performance: same daemon-hosted dashboard as mobile
+         web, exposed as a diagnostics child so the car rail stays on
+         Diagnostics instead of highlighting Live. -->
+    <fragment
+        android:id="@+id/performanceFragment"
+        android:name="com.overdrive.app.ui.fragment.WebViewFragment"
+        android:label="@string/diagnostics_section_performance"
+        tools:layout="@layout/fragment_webview">
+        <argument
+            android:name="page_path"
+            app:argType="string"
+            android:defaultValue="/performance" />
+    </fragment>
+
     <fragment
         android:id="@+id/adbConsoleFragment"
         android:name="com.overdrive.app.ui.fragment.AdbConsoleFragment"
