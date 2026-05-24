@@ -190,13 +190,17 @@ public class GpuSurveillancePipeline {
 
         camera.setCameraId(discovery.cameraId);
         camera.setCameraSurfaceMode(discovery.surfaceMode);
-        camera.setAutoProbeCameras(false);
         camera.setManualOverrideActive(false);
         camera.setFallbackFromProbe(false);
         camera.setCameraSelectionMetadata(discovery);
         camera.setFirmwareInfo(currentFirmware);
         camera.setSkipFrameValidation(false);
         camera.setArbitrationMode("eventCallbackOnly");
+        // BMM tells us which AVM tuple the firmware advertises, but it does
+        // not prove that addPreviewSurface/startPreview will deliver frames
+        // in this process. Keep auto-probe armed so the frame-15 validator, or
+        // the no-frame timeout, can promote or reject the tuple at runtime.
+        camera.setAutoProbeCameras(true);
         applyCameraLayoutToConsumers(discovery.cameraLayout);
         camera.persistCameraConfig(false, null);
         logger.info("Using BMM discovered camera tuple: " + discovery);
@@ -209,16 +213,20 @@ public class GpuSurveillancePipeline {
 
         camera.setCameraId(1);
         camera.setCameraSurfaceMode(0);
-        camera.setAutoProbeCameras(false);
         camera.setManualOverrideActive(false);
         camera.setFallbackFromProbe(false);
         camera.setCameraSelectionMetadata(0, "default", "default", currentFirmware != null ? currentFirmware.vehicleCamSort : "");
         camera.setFirmwareInfo(currentFirmware);
         camera.setSkipFrameValidation(false);
         camera.setArbitrationMode("eventCallbackOnly");
+        // ID 1/mode 0 is a good first guess on Seal, not a validated fact.
+        // If the HAL opens this tuple but produces zero ImageReader callbacks,
+        // auto-probe must stay enabled so PanoramicCameraGpu can advance to
+        // the next camera/surface tuple instead of streaming a blank view.
+        camera.setAutoProbeCameras(true);
         applyCameraLayoutToConsumers(0);
         camera.persistCameraConfig(false, null);
-        logger.info("Using default camera tuple: id=1, surfaceMode=0, layout=0");
+        logger.info("Using default camera tuple as first auto-probe candidate: id=1, surfaceMode=0, layout=0");
     }
 
     private void configureAutoProbeFallback(CameraFirmwareInfo currentFirmware) {
