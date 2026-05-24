@@ -3,6 +3,8 @@ import com.overdrive.app.logging.DaemonLogger;
 import com.overdrive.app.storage.StorageManager;
 import com.overdrive.app.telemetry.TelemetryDataCollector;
 
+import com.overdrive.app.camera.CameraFirmwareInfo;
+import com.overdrive.app.camera.PanoCameraDiscovery;
 import com.overdrive.app.camera.PanoramicCameraGpu;
 
 import java.io.File;
@@ -101,6 +103,186 @@ public class GpuSurveillancePipeline {
         this.encoderHeight = Math.max(1, cameraHeight * 2);
         this.eventOutputDir = eventOutputDir;
         this.config = new GpuPipelineConfig();
+    }
+
+    private static org.json.JSONObject loadCameraConfigSection() {
+        try {
+            return com.overdrive.app.config.UnifiedConfigManager.loadConfig().optJSONObject("camera");
+        } catch (Exception e) {
+            logger.warn("Unable to load camera config: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void applyCameraLayoutToConsumers(int layout) {
+        if (recorder != null) {
+            recorder.setCameraLayout(layout);
+        }
+        if (streamScaler != null) {
+            streamScaler.setCameraLayout(layout);
+        }
+    }
+
+    private boolean configureCameraFromSavedConfig(
+            org.json.JSONObject cameraConfig,
+            CameraFirmwareInfo currentFirmware) {
+        if (camera == null || cameraConfig == null) {
+            return false;
+        }
+
+        int savedId = cameraConfig.optInt("probedCameraId", -1);
+        int savedMode = cameraConfig.optInt("probedSurfaceMode", -1);
+        boolean validated = cameraConfig.optBoolean("probedAndValidated", false);
+        boolean manual = cameraConfig.optBoolean("manualOverride", false);
+        boolean fallback = cameraConfig.optBoolean("fallbackFromProbe", false);
+        if (savedId < 0 || savedMode < 0 || (!validated && !manual)) {
+            return false;
+        }
+
+        int layout = cameraConfig.has("cameraLayout")
+            ? cameraConfig.optInt("cameraLayout", 0) : 0;
+        boolean reprobeOnNextRestart = cameraConfig.optBoolean("reprobeOnNextRestart", false);
+        String sourceTag = cameraConfig.optString(
+            "sourceBmmTag", manual ? "manual" : (fallback ? "probe-fallback" : ""));
+        String method = cameraConfig.optString(
+            "discoveryMethod", manual ? "manual" : (fallback ? "probe" : "saved"));
+        String camSort = cameraConfig.optString(
+            "vehicleCamSort", currentFirmware != null ? currentFirmware.vehicleCamSort : "");
+
+        camera.setCameraId(savedId);
+        camera.setCameraSurfaceMode(savedMode);
+        camera.setAutoProbeCameras(false);
+        camera.setManualOverrideActive(manual);
+        camera.setFallbackFromProbe(fallback);
+        camera.setCameraSelectionMetadata(layout, sourceTag, method, camSort);
+        camera.setFirmwareInfo(currentFirmware);
+        camera.setArbitrationMode(cameraConfig.optString("arbitrationMode", "eventCallbackOnly"));
+
+        boolean firmwareMatches = currentFirmware != null
+            && currentFirmware.hasAnySignal()
+            && currentFirmware.matches(cameraConfig);
+        if (reprobeOnNextRestart) {
+            logger.info("Saved camera tuple marked for reprobe on next restart; ignoring tuple trust (" +
+                "id=" + savedId + ", surfaceMode=" + savedMode + ", layout=" + layout + ")");
+            return false;
+        }
+        if (manual) {
+            logger.info("Using MANUAL camera config: id=" + savedId + ", surfaceMode=" + savedMode
+                + ", layout=" + layout);
+            if (!firmwareMatches) {
+                logger.info("Manual override firmware mismatch is expected when the tuple was selected on a different build");
+            }
+            camera.setSkipFrameValidation(false);
+        } else if (validated && firmwareMatches) {
+            logger.info("Using validated saved camera config: id=" + savedId + ", surfaceMode=" + savedMode
+                + ", layout=" + layout);
+            camera.setSkipFrameValidation(true);
+        } else {
+            logger.info("Using saved camera config but keeping validation enabled because firmware metadata is missing or changed: id="
+                + savedId + ", surfaceMode=" + savedMode + ", layout=" + layout);
+            if (!firmwareMatches) {
+                logger.info("Camera firmware mismatch detected, current build will revalidate before trusting the tuple");
+            }
+            camera.setSkipFrameValidation(false);
+        }
+
+        applyCameraLayoutToConsumers(layout);
+        camera.persistCameraConfig(validated && firmwareMatches && !manual, null);
+        return true;
+    }
+
+    private void configureCameraFromDiscovery(
+            PanoCameraDiscovery discovery,
+            CameraFirmwareInfo currentFirmware) {
+        if (camera == null || discovery == null) {
+            return;
+        }
+
+        camera.setCameraId(discovery.cameraId);
+        camera.setCameraSurfaceMode(discovery.surfaceMode);
+        camera.setAutoProbeCameras(false);
+        camera.setManualOverrideActive(false);
+        camera.setFallbackFromProbe(false);
+        camera.setCameraSelectionMetadata(discovery);
+        camera.setFirmwareInfo(currentFirmware);
+        camera.setSkipFrameValidation(false);
+        camera.setArbitrationMode("eventCallbackOnly");
+        applyCameraLayoutToConsumers(discovery.cameraLayout);
+        camera.persistCameraConfig(false, null);
+        logger.info("Using BMM discovered camera tuple: " + discovery);
+    }
+
+    private void configureDefaultCamera(CameraFirmwareInfo currentFirmware) {
+        if (camera == null) {
+            return;
+        }
+
+        camera.setCameraId(1);
+        camera.setCameraSurfaceMode(0);
+        camera.setAutoProbeCameras(false);
+        camera.setManualOverrideActive(false);
+        camera.setFallbackFromProbe(false);
+        camera.setCameraSelectionMetadata(0, "default", "default", currentFirmware != null ? currentFirmware.vehicleCamSort : "");
+        camera.setFirmwareInfo(currentFirmware);
+        camera.setSkipFrameValidation(false);
+        camera.setArbitrationMode("eventCallbackOnly");
+        applyCameraLayoutToConsumers(0);
+        camera.persistCameraConfig(false, null);
+        logger.info("Using default camera tuple: id=1, surfaceMode=0, layout=0");
+    }
+
+    private void configureAutoProbeFallback(CameraFirmwareInfo currentFirmware) {
+        if (camera == null) {
+            return;
+        }
+
+        camera.setCameraSelectionMetadata(0, "probe", "auto-probe", currentFirmware != null ? currentFirmware.vehicleCamSort : "");
+        camera.setFirmwareInfo(currentFirmware);
+        camera.setManualOverrideActive(false);
+        camera.setFallbackFromProbe(true);
+        camera.setSkipFrameValidation(false);
+        camera.setArbitrationMode("eventCallbackOnly");
+        camera.setAutoProbeCameras(true);
+        applyCameraLayoutToConsumers(0);
+        logger.warn("All camera config strategies failed — enabling auto-probe");
+    }
+
+    private void configureCameraSelection(
+            CameraFirmwareInfo currentFirmware,
+            boolean allowDiscovery,
+            boolean allowDefault,
+            String phase) {
+        // Selection order is intentional:
+        // 1) trust a saved tuple only if firmware metadata still matches or the
+        //    user explicitly forced a manual override,
+        // 2) fall back to BMM discovery when available,
+        // 3) use the known-good default tuple,
+        // 4) finally enable auto-probe so the HAL can self-discover.
+        org.json.JSONObject cameraConfig = loadCameraConfigSection();
+        if (cameraConfig != null) {
+            boolean reprobeRequested = cameraConfig.optBoolean("reprobeOnNextRestart", false);
+            if (reprobeRequested) {
+                logger.info("Camera reprobe requested for " + phase + " — skipping saved tuple trust");
+            } else if (configureCameraFromSavedConfig(cameraConfig, currentFirmware)) {
+                return;
+            }
+        }
+
+        if (allowDiscovery) {
+            PanoCameraDiscovery discovery = com.overdrive.app.camera.AvmCameraHelper.discoverPanoCamera();
+            if (discovery != null) {
+                logger.info("Using BMM discovered camera tuple during " + phase + ": " + discovery);
+                configureCameraFromDiscovery(discovery, currentFirmware);
+                return;
+            }
+        }
+
+        if (allowDefault) {
+            configureDefaultCamera(currentFirmware);
+            return;
+        }
+
+        configureAutoProbeFallback(currentFirmware);
     }
     
     /**
@@ -744,46 +926,22 @@ public class GpuSurveillancePipeline {
             + ", size=" + resolvedCamera.getPanoWidth() + "x" + resolvedCamera.getPanoHeight()
             + ", surfaceMode=" + resolvedCamera.getPanoSurfaceMode() + ")");
 
-        // Camera selection priority:
-        //   1. Validated/manual override saved in UnifiedConfigManager → use as-is.
-        //   2. BmmCameraInfo system hint → preferred over profile default if available.
-        //   3. Profile default (Seal=1, Tang=2).
-        if (resolvedCamera.isValidated() || resolvedCamera.isManualPanoOverride()) {
-            logger.info("Using saved panoramic config: id=" + resolvedCamera.getPanoCameraId()
-                + ", surfaceMode=" + resolvedCamera.getPanoSurfaceMode()
-                + (resolvedCamera.isManualPanoOverride() ? " (manual)" : " (validated)"));
-            camera.setCameraId(resolvedCamera.getPanoCameraId());
-            camera.setCameraSurfaceMode(resolvedCamera.getPanoSurfaceMode());
-            camera.setAutoProbeCameras(false);
-            // Skip frame validation for saved configs. Luma heuristic produces
-            // false negatives in low-light/uniform scenes.
-            camera.setSkipFrameValidation(true);
-        } else {
-            int discoveredId = com.overdrive.app.camera.AvmCameraHelper.discoverPanoCameraId();
-            if (discoveredId >= 0) {
-                logger.info("Using BmmCameraInfo panoramic hint: camera ID " + discoveredId);
-                camera.setCameraId(discoveredId);
-            } else {
-                logger.info("Using profile default panoramic camera ID "
-                    + resolvedCamera.getPanoCameraId());
-                camera.setCameraId(resolvedCamera.getPanoCameraId());
-            }
-            camera.setCameraSurfaceMode(resolvedCamera.getPanoSurfaceMode());
-            camera.setAutoProbeCameras(false);
-            camera.setSkipFrameValidation(false);
+        CameraFirmwareInfo currentFirmware = CameraFirmwareInfo.current();
+
+        try {
+            configureCameraSelection(currentFirmware, true, true, "init");
+        } catch (Exception e) {
+            logger.warn("Failed to resolve camera selection during init: " + e.getMessage());
         }
 
         // Register probe callback — only used when manual probe is triggered via API
         camera.setCameraProbeCallback((cameraId, surfaceMode) -> {
             logger.info("Probe found working camera: id=" + cameraId + ", surfaceMode=" + surfaceMode);
             try {
-                com.overdrive.app.camera.CameraConfigResolver.persistPanoramicProbe(
-                    cameraId,
-                    surfaceMode,
-                    cameraWidth,
-                    cameraHeight,
-                    true,
-                    false);
+                if (camera != null) {
+                    boolean validated = camera.getValidatedAtMs() > 0;
+                    camera.persistCameraConfig(validated, validated ? null : "probe_callback_unvalidated");
+                }
                 logger.info("Saved camera config for next launch");
             } catch (Exception ex) {
                 logger.warn("Failed to save camera config: " + ex.getMessage());
@@ -796,7 +954,7 @@ public class GpuSurveillancePipeline {
         
         // Always 4-camera mosaic — both devices output the same strip format
         if (recorder != null) {
-            recorder.setCameraLayout(0);
+            recorder.setCameraLayout(camera != null ? camera.getCameraLayout() : 0);
         }
         
         // 6. Create adaptive bitrate controller
@@ -852,19 +1010,7 @@ public class GpuSurveillancePipeline {
             // Resolver picks profile-default if no probed/manual config exists,
             // so this also covers "user cleared manual override → revert".
             try {
-                com.overdrive.app.camera.ResolvedCameraConfig refreshedCamera =
-                    com.overdrive.app.camera.CameraConfigResolver.resolve(getVehicleModel());
-                int targetCameraId = refreshedCamera.getPanoCameraId();
-                int targetSurfaceMode = refreshedCamera.getPanoSurfaceMode();
-                int currentId = camera.getCameraId();
-                if (currentId != targetCameraId) {
-                    logger.info("Camera config changed since init: " + currentId + " → " + targetCameraId);
-                    camera.setCameraId(targetCameraId);
-                    camera.setCameraSurfaceMode(targetSurfaceMode);
-                    camera.setAutoProbeCameras(false);
-                    camera.setSkipFrameValidation(
-                        refreshedCamera.isValidated() || refreshedCamera.isManualPanoOverride());
-                }
+                configureCameraSelection(CameraFirmwareInfo.current(), true, true, "start");
             } catch (Exception e) {
                 logger.debug("Camera config re-read failed: " + e.getMessage());
             }
@@ -1365,7 +1511,7 @@ public class GpuSurveillancePipeline {
             streamWidth, streamHeight, streamQuadrantStripOffsetX);
         
         // Always 4-camera mosaic for streaming
-        streamScaler.setCameraLayout(0);
+        streamScaler.setCameraLayout(camera != null ? camera.getCameraLayout() : 0);
         
         // Initialize on GL thread and WAIT for completion
         // This ensures the scaler is ready before we set streaming components

@@ -2,7 +2,6 @@ package com.overdrive.app.recording;
 
 import android.content.Context;
 
-import com.overdrive.app.camera.AvcHalWarmup;
 import com.overdrive.app.config.UnifiedConfigManager;
 import com.overdrive.app.daemon.CameraDaemon;
 import com.overdrive.app.logging.DaemonLogger;
@@ -53,7 +52,6 @@ public class RecordingModeManager {
     private final Context context;
     private final GpuSurveillancePipeline pipeline;
     private final ProximityGuardController proximityController;
-    private final AvcHalWarmup avcWarmup;
     
     private volatile Mode currentMode = Mode.NONE;  // Default: no recording
     private volatile boolean accIsOn = false;  // Default: ACC OFF — wait for AccSentryDaemon to confirm
@@ -76,7 +74,6 @@ public class RecordingModeManager {
         this.context = context;
         this.pipeline = pipeline;
         this.proximityController = new ProximityGuardController(context, pipeline);
-        this.avcWarmup = new AvcHalWarmup();
         
         // Load persisted mode from config
         loadPersistedMode();
@@ -229,7 +226,7 @@ public class RecordingModeManager {
         new Thread(() -> {
             // Only warmup if pipeline isn't already running.
             if (!pipeline.isRunning()) {
-                if (!avcWarmup.warmupAndWait()) {
+                if (!CameraDaemon.ensureAvcWarmupStarted("RecordingModeManager.activateModeWithWarmup:" + reason)) {
                     logger.warn("AVC warmup interrupted (" + reason + ") — skipping mode activation");
                     return;
                 }
@@ -416,7 +413,7 @@ public class RecordingModeManager {
                 // Only warmup if pipeline isn't already running
                 // (if it's running, camera is already open — no need to poke com.byd.avc)
                 if (!pipeline.isRunning()) {
-                    if (!avcWarmup.warmupAndWait()) {
+                    if (!CameraDaemon.ensureAvcWarmupStarted("RecordingModeManager.onAccStateChanged")) {
                         logger.warn("AVC warmup interrupted — skipping mode activation");
                         return;
                     }
