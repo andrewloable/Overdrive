@@ -3,8 +3,13 @@
 /.kotlin
 /local.properties
 /build
+/.gstack
 
 /app/build
 /app/.cxx
 /app/src/main/cpp/opencv
 /app/src/main/cpp/openh264
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
