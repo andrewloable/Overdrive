@@ -407,19 +407,6 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Store JWT in cookie AND localStorage (localStorage is more reliable through tunnels)
-                    const maxAge = data.expiresIn || (365 * 24 * 60 * 60);
-                    const isSecure = window.location.protocol === 'https:';
-                    const sameSite = isSecure ? 'Lax; Secure' : 'Lax';
-                    document.cookie = `byd_session=${data.jwt}; path=/; max-age=${maxAge}; SameSite=${sameSite}`;
-                    
-                    // Also store in localStorage as backup (tunnels can drop cookies)
-                    try {
-                        localStorage.setItem('byd_jwt', data.jwt);
-                    } catch (e) {
-                        console.warn('Could not save to localStorage:', e);
-                    }
-                    
                     showStatus('Login successful! Redirecting...', 'success');
                     
                     // Redirect after short delay

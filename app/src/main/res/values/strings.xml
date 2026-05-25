@@ -545,6 +545,8 @@
     <string name="settings_about_title">About OverDrive</string>
     <string name="settings_about_version_label">Version</string>
     <string name="settings_about_package_label">Build</string>
+    <string name="settings_about_auto_update_title">Auto-update from server</string>
+    <string name="settings_about_auto_update_value">Disable this while testing a local build. Turn it back on to resume checking GitHub for updates.</string>
     <string name="settings_about_check_update_value">Check the latest GitHub release and install if newer.</string>
     <!-- Support-development section: tiered options, low-cost first.
          star → spread → coffee, in that visual order. Copy aims for

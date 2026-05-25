@@ -1245,7 +1245,6 @@ public class SurveillanceApiHandler {
                         "Content-Type: image/jpeg\r\n" +
                         "Content-Length: " + jpegBytes.length + "\r\n" +
                         "Cache-Control: no-cache\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
                         "\r\n";
                 out.write(header.getBytes());
                 out.write(jpegBytes);
@@ -1293,7 +1292,6 @@ public class SurveillanceApiHandler {
                 "Content-Type: image/jpeg\r\n" +
                 "Content-Length: " + jpegBytes.length + "\r\n" +
                 "Cache-Control: no-cache\r\n" +
-                "Access-Control-Allow-Origin: *\r\n" +
                 "\r\n";
         out.write(header.getBytes());
         out.write(jpegBytes);

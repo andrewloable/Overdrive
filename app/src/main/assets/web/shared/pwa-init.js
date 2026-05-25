@@ -53,11 +53,7 @@
 
     function authedFetch(url, opts) {
         opts = opts || {};
-        opts.headers = opts.headers || {};
-        if (typeof BYDAuth !== 'undefined' && BYDAuth.getToken) {
-            var t = BYDAuth.getToken();
-            if (t) opts.headers['Authorization'] = 'Bearer ' + t;
-        }
+        opts.credentials = opts.credentials || 'same-origin';
         return fetch(url, opts);
     }
 

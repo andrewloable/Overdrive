@@ -331,7 +331,6 @@ public class ExternalStorageApiHandler {
         String response = "HTTP/1.1 " + status + " " + statusText + "\r\n" +
             "Content-Type: application/json\r\n" +
             "Content-Length: " + bodyBytes.length + "\r\n" +
-            "Access-Control-Allow-Origin: *\r\n" +
             "\r\n";
         
         out.write(response.getBytes(StandardCharsets.UTF_8));

@@ -147,7 +147,6 @@ public class MqttConnectionConfig {
             json.put("topic", topic);
             json.put("clientId", clientId);
             json.put("username", username);
-            json.put("password", password);
             json.put("qos", qos);
             json.put("enabled", enabled);
             json.put("publishIntervalSeconds", publishIntervalSeconds);
@@ -182,7 +181,6 @@ public class MqttConnectionConfig {
         config.topic = json.optString("topic", "overdrive/vehicle/telemetry");
         config.clientId = json.optString("clientId", "");
         config.username = json.optString("username", "");
-        config.password = json.optString("password", "");
         config.qos = json.optInt("qos", DEFAULT_QOS);
         config.enabled = json.optBoolean("enabled", false);
         config.publishIntervalSeconds = json.optInt("publishIntervalSeconds", DEFAULT_PUBLISH_INTERVAL);

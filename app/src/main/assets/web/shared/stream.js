@@ -189,14 +189,9 @@ BYD.stream = {
             
             // SOTA FIX: Connect to optimized /ws endpoint on same port as HTTP server
             // NOT the raw stream port 8887 which bypasses SOTA optimizations.
-            // Append JWT as ?token= so tunnels work (cookies stripped by SameSite;
-            // browser WebSocket API can't set Authorization header).
+            // Cookies carry the HttpOnly session.
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             let wsUrl = `${protocol}//${location.host}/ws`;
-            if (typeof BYDAuth !== 'undefined') {
-                const wsToken = BYDAuth.getToken();
-                if (wsToken) wsUrl += `?token=${encodeURIComponent(wsToken)}`;
-            }
 
             console.log('[Stream] WebCodecs connecting to optimized endpoint:', wsUrl);
 
@@ -403,13 +398,9 @@ BYD.stream = {
         }
         
         // SOTA FIX: Always use optimized /ws endpoint on same port as HTTP server.
-        // Append JWT as ?token= for tunnel compatibility (see WebCodecs path above).
+        // Cookies carry the HttpOnly session.
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         let wsUrl = `${protocol}//${location.host}/ws`;
-        if (typeof BYDAuth !== 'undefined') {
-            const wsToken = BYDAuth.getToken();
-            if (wsToken) wsUrl += `?token=${encodeURIComponent(wsToken)}`;
-        }
 
         console.log('[Stream] Connecting:', wsUrl);
 

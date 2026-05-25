@@ -1,9 +1,72 @@
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 }
 
+fun sha256Hex(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().use { input ->
+        val buffer = ByteArray(8192)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+}
+
+fun hasExpectedSha256(file: File, expectedSha256: String): Boolean =
+    file.exists() && sha256Hex(file).equals(expectedSha256, ignoreCase = true)
+
+fun verifySha256(file: File, expectedSha256: String, label: String) {
+    val actual = sha256Hex(file)
+    if (!actual.equals(expectedSha256, ignoreCase = true)) {
+        throw org.gradle.api.GradleException(
+            "$label checksum mismatch. Expected $expectedSha256, got $actual"
+        )
+    }
+}
+
+fun org.gradle.api.Project.downloadVerified(
+    url: String,
+    dest: File,
+    expectedSha256: String,
+    label: String
+) {
+    dest.parentFile.mkdirs()
+    ant.invokeMethod("get", mapOf("src" to url, "dest" to dest.absolutePath))
+    if (!dest.exists() || dest.length() == 0L) {
+        throw org.gradle.api.GradleException("$label download failed: $url")
+    }
+    verifySha256(dest, expectedSha256, label)
+}
+
+fun org.gradle.api.Project.ensureDownloadedVerified(
+    url: String,
+    dest: File,
+    expectedSha256: String,
+    label: String
+) {
+    if (dest.exists()) {
+        if (hasExpectedSha256(dest, expectedSha256)) return
+        println("$label exists but checksum changed; redownloading")
+        dest.delete()
+    }
+    downloadVerified(url, dest, expectedSha256, label)
+}
+
 val openh264Version = "2.6.0"
+val openh264ArchiveSha256 = "c702d68c9c8db492a43c1d73a497cea5f31ae5d23e330dcb13bd28cab1dbbf2a"
+val openh264LibrarySha256 = "4d9bc54d2d38e53eb7bd551ec61acb8ad8320d8b957bda751cfdbdcbfabc3b07"
+val openh264HeaderSha256 = mapOf(
+    "codec_api.h" to "21f29b20c24f7c7946f2e243d0bc2532fb3542f6c28af338209477e70d9036c9",
+    "codec_app_def.h" to "a40581a24263866dca19911928f7bc4eb354ff78d9dd56dbf0f55fc4fd923726",
+    "codec_def.h" to "f974d269b5935e8dc7265b8bfc02f60e5185b4d6165d30541d2758a4506f1979",
+    "codec_ver.h" to "9a241e20b7c9221a5786cccd9eae3afed91afba3525b5b9b16c2101976516f94",
+)
 
 // Auto-download OpenH264 from Cisco's official binary releases
 tasks.register("downloadOpenH264") {
@@ -12,7 +75,7 @@ tasks.register("downloadOpenH264") {
     doLast {
         // Cisco's official binary URLs - only arm64-v8a for BYD cars
         val abiMap = mapOf(
-            "arm64-v8a" to "http://ciscobinary.openh264.org/libopenh264-${openh264Version}-android-arm64.8.so.bz2"
+            "arm64-v8a" to "https://ciscobinary.openh264.org/libopenh264-${openh264Version}-android-arm64.8.so.bz2"
             // Removed armeabi-v7a to reduce APK size
         )
         
@@ -21,20 +84,25 @@ tasks.register("downloadOpenH264") {
             libDir.mkdirs()
             
             val soFile = file("${libDir}/libopenh264.so")
-            if (!soFile.exists()) {
+            if (soFile.exists() && hasExpectedSha256(soFile, openh264LibrarySha256)) {
+                println("✓ OpenH264 verified for ${abi}")
+            } else {
+                if (soFile.exists()) {
+                    println("OpenH264 ${abi} exists but checksum changed; redownloading")
+                    soFile.delete()
+                }
                 println("Downloading OpenH264 ${openh264Version} for ${abi}...")
                 val bzFile = file("${libDir}/temp.bz2")
-                
-                try {
-                    ant.invokeMethod("get", mapOf("src" to url, "dest" to bzFile.absolutePath))
-                    if (bzFile.exists() && bzFile.length() > 1000) {
-                        ant.invokeMethod("bunzip2", mapOf("src" to bzFile.absolutePath))
-                        file("${libDir}/temp").renameTo(soFile)
-                        println("✓ OpenH264 downloaded for ${abi}")
-                    }
-                } catch (e: Exception) {
-                    println("⚠ Download failed: ${e.message}")
+                val extractedFile = file("${libDir}/temp")
+                if (extractedFile.exists()) extractedFile.delete()
+
+                project.downloadVerified(url, bzFile, openh264ArchiveSha256, "OpenH264 ${abi} archive")
+                ant.invokeMethod("bunzip2", mapOf("src" to bzFile.absolutePath))
+                if (!extractedFile.renameTo(soFile)) {
+                    throw org.gradle.api.GradleException("Failed to install OpenH264 for ${abi}")
                 }
+                verifySha256(soFile, openh264LibrarySha256, "OpenH264 ${abi} library")
+                println("✓ OpenH264 downloaded and verified for ${abi}")
             }
         }
         
@@ -43,14 +111,12 @@ tasks.register("downloadOpenH264") {
         includeDir.mkdirs()
         listOf("codec_api.h", "codec_app_def.h", "codec_def.h", "codec_ver.h").forEach { h ->
             val f = file("${includeDir}/${h}")
-            if (!f.exists()) {
-                try {
-                    ant.invokeMethod("get", mapOf(
-                        "src" to "https://raw.githubusercontent.com/cisco/openh264/v${openh264Version}/codec/api/wels/${h}",
-                        "dest" to f.absolutePath
-                    ))
-                } catch (e: Exception) { }
-            }
+            project.ensureDownloadedVerified(
+                "https://raw.githubusercontent.com/cisco/openh264/v${openh264Version}/codec/api/wels/${h}",
+                f,
+                openh264HeaderSha256.getValue(h),
+                "OpenH264 header ${h}"
+            )
         }
     }
 }
@@ -63,6 +129,12 @@ tasks.matching { it.name.contains("CMake") || it.name.contains("ExternalNative")
 // https://github.com/nihui/opencv-mobile
 val opencvMobileTag = "v31"
 val opencvMobileVersion = "4.10.0"
+val opencvMobileArchiveSha256 = "1fd97600f3ed7a0ea17fbd6d009bb9902eec9d968e7b74d5141285b6d7ce3412"
+val opencvMobileStaticLibSha256 = mapOf(
+    "libopencv_core.a" to "a9ceca2c36c3a44fe245870cd75a32bd0f33bbb0ef8513e021fe79cfe1f8704d",
+    "libopencv_imgproc.a" to "13b2237e250f5399162d5b1a3ce141f8307c4d484d83c8e14325f87bee32339f",
+    "libopencv_video.a" to "0c438e88067b5b24c477e1e23d7be5afb91fa6cf10a5061530aa9c3fcb62350c",
+)
 tasks.register("downloadOpenCV") {
     val opencvDir = file("src/main/cpp/opencv")
     
@@ -71,10 +143,11 @@ tasks.register("downloadOpenCV") {
         libDir.mkdirs()
         val includeDir = file("${opencvDir}/include")
         
-        // opencv-mobile uses static library (.a)
-        val staticLib = file("${libDir}/libopencv_core.a")
+        val staticLibsVerified = opencvMobileStaticLibSha256.all { (name, sha256) ->
+            hasExpectedSha256(file("${libDir}/${name}"), sha256)
+        }
         
-        if (!staticLib.exists()) {
+        if (!staticLibsVerified) {
             println("Downloading opencv-mobile ${opencvMobileVersion} for Android...")
             
             // Correct URL format: /releases/download/vVERSION/
@@ -84,10 +157,7 @@ tasks.register("downloadOpenCV") {
             try {
                 // Download opencv-mobile
                 println("Downloading from: $zipUrl")
-                ant.invokeMethod("get", mapOf(
-                    "src" to zipUrl,
-                    "dest" to zipFile.absolutePath
-                ))
+                project.downloadVerified(zipUrl, zipFile, opencvMobileArchiveSha256, "opencv-mobile archive")
                 
                 if (zipFile.exists() && zipFile.length() > 100000) {
                     println("Extracting opencv-mobile (${zipFile.length() / 1024 / 1024}MB)...")
@@ -111,9 +181,12 @@ tasks.register("downloadOpenCV") {
                                 println("  Copying lib: ${f.name}")
                                 f.copyTo(file("${libDir}/${f.name}"), overwrite = true)
                             }
+                            opencvMobileStaticLibSha256.forEach { (name, sha256) ->
+                                verifySha256(file("${libDir}/${name}"), sha256, "opencv-mobile ${name}")
+                            }
                             println("✓ opencv-mobile libraries copied")
                         } else {
-                            println("⚠ Lib dir not found: ${extractedLibDir}")
+                            throw org.gradle.api.GradleException("Lib dir not found: ${extractedLibDir}")
                         }
                         
                         // Copy headers
@@ -123,7 +196,7 @@ tasks.register("downloadOpenCV") {
                             extractedInclude.copyRecursively(includeDir, overwrite = true)
                             println("✓ opencv-mobile headers copied")
                         } else {
-                            println("⚠ Include dir not found: ${extractedInclude}")
+                            throw org.gradle.api.GradleException("Include dir not found: ${extractedInclude}")
                         }
                         
                         // Cleanup
@@ -132,18 +205,18 @@ tasks.register("downloadOpenCV") {
                         
                         println("✓ opencv-mobile ${opencvMobileVersion} installed (~3MB vs ~20MB)")
                     } else {
-                        println("⚠ Extracted dir not found: ${extractedDir}")
-                        println("  Available: ${opencvDir.listFiles()?.map { it.name }}")
+                        throw org.gradle.api.GradleException(
+                            "Extracted dir not found: ${extractedDir}. Available: ${opencvDir.listFiles()?.map { it.name }}"
+                        )
                     }
                 } else {
-                    println("⚠ Download failed or file too small: ${zipFile.length()} bytes")
+                    throw org.gradle.api.GradleException("opencv-mobile download failed or file too small: ${zipFile.length()} bytes")
                 }
             } catch (e: Exception) {
-                println("⚠ opencv-mobile download failed: ${e.message}")
-                e.printStackTrace()
+                throw org.gradle.api.GradleException("opencv-mobile setup failed: ${e.message}", e)
             }
         } else {
-            println("✓ opencv-mobile found at ${libDir}")
+            println("✓ opencv-mobile verified at ${libDir}")
         }
     }
 }
@@ -269,13 +342,13 @@ android {
             
             signingConfig = signingConfigs.getByName("release")
             
-            // Update channel: "alpha" for release builds (checks alpha tag on GitHub)
+            // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
         }
         debug {
             isMinifyEnabled = false
             
-            // Debug builds also check alpha channel for updates
+            // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
         }
     }

@@ -1,6 +1,6 @@
 package com.overdrive.app.telegram.config;
 
-import com.overdrive.app.byd.cloud.crypto.CredentialCipher;
+import com.overdrive.app.config.SecretConfigBridge;
 import com.overdrive.app.config.UnifiedConfigManager;
 
 import org.json.JSONObject;
@@ -12,17 +12,14 @@ import java.util.Properties;
 /**
  * Single source of truth for Telegram bot configuration.
  *
- * Backed by {@link UnifiedConfigManager}'s {@code telegram} section, which lives
- * at {@code /data/local/tmp/overdrive_config.json} with 0666 permissions so both
- * the app process (UID 10xxx) and the shell-UID daemons (UID 2000) read and
- * write the same store. The {@code botToken} field is wrapped with
- * {@link CredentialCipher} (AES-GCM, device-bound key) — same posture used for
- * the BYD Cloud raw password.
+ * Public Telegram config lives in the unified JSON store. The bot token lives
+ * in the daemon-owned secret store so it never has to be mirrored into the
+ * public config file.
  *
  * Schema (all fields optional unless noted):
  * <pre>
  *   "telegram": {
- *     "botToken":        "ENC:…",          // encrypted at rest
+ *     "botToken":        "secret-store",   // stored separately
  *     "botId":           0,
  *     "botUsername":     "",
  *     "botFirstName":    "",
@@ -102,7 +99,8 @@ public final class UnifiedTelegramConfig {
 
     /** Plain-text bot token (decrypted). Empty string when unset. */
     public static String getBotToken() {
-        return CredentialCipher.decrypt(load().optString(K_BOT_TOKEN, ""));
+        String token = SecretConfigBridge.getString(SECTION, K_BOT_TOKEN);
+        return token == null ? "" : token;
     }
 
     public static boolean hasBotToken() {
@@ -190,17 +188,21 @@ public final class UnifiedTelegramConfig {
         JSONObject delta = new JSONObject();
         try {
             if (token == null || token.isEmpty()) {
-                delta.put(K_BOT_TOKEN, "");
                 delta.put(K_BOT_ID, -1);
                 delta.put(K_BOT_USERNAME, "");
                 delta.put(K_BOT_FIRST_NAME, "");
             } else {
-                delta.put(K_BOT_TOKEN, CredentialCipher.encrypt(token));
                 delta.put(K_BOT_ID, botId);
                 delta.put(K_BOT_USERNAME, botUsername == null ? "" : botUsername);
                 delta.put(K_BOT_FIRST_NAME, botFirstName == null ? "" : botFirstName);
             }
         } catch (Exception e) {
+            return false;
+        }
+        boolean secretOk = (token == null || token.isEmpty())
+                ? SecretConfigBridge.delete(SECTION, K_BOT_TOKEN)
+                : SecretConfigBridge.putString(SECTION, K_BOT_TOKEN, token);
+        if (!secretOk) {
             return false;
         }
         return UnifiedConfigManager.updateSection(SECTION, delta);
@@ -264,12 +266,13 @@ public final class UnifiedTelegramConfig {
      */
     public static boolean clearOrphanIdentityIfTokenMissing() {
         JSONObject section = load();
-        // hasBotToken would re-derive via decrypt — cheaper to check the
-        // raw ciphertext field directly here.
-        String tokenCipher = section.optString(K_BOT_TOKEN, "");
-        if (!tokenCipher.isEmpty()) return false;
+        // hasBotToken would re-derive via the secret bridge — cheaper to check
+        // the resolved token value directly here.
+        String tokenPlain = getBotToken();
+        if (tokenPlain != null && !tokenPlain.isEmpty()) return false;
         // Anything to clean?
         boolean dirty = section.optLong(K_BOT_ID, -1) > 0
+                || !section.optString(K_BOT_TOKEN, "").isEmpty()
                 || !section.optString(K_BOT_USERNAME, "").isEmpty()
                 || !section.optString(K_BOT_FIRST_NAME, "").isEmpty()
                 || section.optLong(K_OWNER_CHAT_ID, -1) > 0
@@ -302,7 +305,6 @@ public final class UnifiedTelegramConfig {
     public static boolean clearAll() {
         JSONObject delta = new JSONObject();
         try {
-            delta.put(K_BOT_TOKEN, "");
             delta.put(K_BOT_ID, -1);
             delta.put(K_BOT_USERNAME, "");
             delta.put(K_BOT_FIRST_NAME, "");
@@ -313,6 +315,10 @@ public final class UnifiedTelegramConfig {
             delta.put(K_PAIR_PIN, "");
             delta.put(K_PAIR_PIN_EXPIRY, 0);
         } catch (Exception e) {
+            return false;
+        }
+        boolean secretOk = SecretConfigBridge.delete(SECTION, K_BOT_TOKEN);
+        if (!secretOk) {
             return false;
         }
         return UnifiedConfigManager.updateSection(SECTION, delta);
@@ -397,8 +403,8 @@ public final class UnifiedTelegramConfig {
         try {
             String tok = props.getProperty("bot_token", "");
             if (!tok.isEmpty()) {
-                // The legacy file holds plaintext; encrypt on import.
-                delta.put(K_BOT_TOKEN, CredentialCipher.encrypt(tok));
+                // The legacy file holds plaintext; move it into the secret store.
+                SecretConfigBridge.putString(SECTION, K_BOT_TOKEN, tok);
                 // Bot identity is only meaningful when paired with a token.
                 // Importing username/first_name without a token leaves the
                 // status endpoint emitting orphan bot info ("Configured as

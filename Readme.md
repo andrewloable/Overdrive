@@ -45,12 +45,12 @@ Download the latest APK from [GitHub Releases](https://github.com/yash-srivastav
 
 **Option A: Dedicated Wi-Fi Hotspot (Recommended)**
 - Keep the Sing-box Proxy disabled.
-- Directly enable your preferred tunnel (Zrok, Cloudflared or Tailscale).
+- Directly enable one of the secure tunnels below (Zrok, Cloudflared or Tailscale).
 
 **Option B: Public / BYD SIM**
 - Toggle the **"Public"** switch at the top right of the dashboard.
 - Go to Daemon View and verify the Sing-box Proxy Daemon is running.
-- Once verified, enable your preferred tunnel (Zrok, Cloudflared or Tailscale).
+- Once verified, enable one of the secure tunnels below (Zrok, Cloudflared or Tailscale).
 
 ### Telegram Notifications Setup
 1. Message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot` → follow prompts → get your bot token
@@ -67,7 +67,7 @@ Download the latest APK from [GitHub Releases](https://github.com/yash-srivastav
 | Proximity Recording | ✅ Market First | ❌ |
 | Real-time Performance Monitor | ✅ Built-in | ❌ |
 | ISP Blocklist Bypass | ✅ Via BYD SIM | ❌ Requires WiFi Hotspot |
-| Remote Access | 4 methods (LAN, Cloudflared, Zrok, Tailscale) | Usually 1 (if any) |
+| Remote Access | HTTPS tunnels (recommended) + LAN unsafe mode | Usually 1 (if any) |
 | ADB Shell Runner | ✅ | ❌ |
 | Telegram Notifications | ✅ Free | Paid or None |
 | Data Privacy | 100% On-Device | Often Cloud-Required |
@@ -86,16 +86,17 @@ Download the latest APK from [GitHub Releases](https://github.com/yash-srivastav
 
 ## Remote Access
 
-Three options for viewing your car's cameras remotely:
+Prefer HTTPS tunnels for remote viewing. Camera feeds, vehicle controls, and location data are sensitive, so raw LAN HTTP should only be used in a trusted local lab or recovery session.
 
 ### Local Network (LAN)
-Access at `http://<car-ip>:8080` when on the same WiFi. Zero setup, fastest streaming.
+LAN HTTP is disabled by default. If you explicitly enable the unsafe LAN mode in settings/config, access is at `http://<car-ip>:8080` when on the same WiFi.
+For most setups, prefer a tunnel because it keeps the server bound to `127.0.0.1` by default and avoids exposing the head unit on the local network.
 
 ### Cloudflare Tunnel
 Access from anywhere via `https://<random>.trycloudflare.com`. No port forwarding, HTTPS by default. Video streaming can be slow due to Cloudflare limitations.
 
 ### Zrok Tunnel (Recommended)
-Free, open-source tunneling with no bandwidth limits at `https://<your-share>.share.zrok.io`. Best for video streaming.
+Free, open-source tunneling with no bandwidth limits at `https://<your-share>.share.zrok.io`. Best for video streaming. Do not share the invite token or public share link unless you intend to expose the car UI.
 
 **Quick Zrok setup:**
 1. Sign up at [zrok.io](https://zrok.io)
@@ -116,6 +117,14 @@ Free, with no bandwidth limits. Connect from any device connected to tailscale.
 With tailscale enabled, the tailscale proxy can be enabled from the tailscale settings.
 This allows accessing an MQTT server through tailscale without port forwarding.
 This can be accessed via the tailscale IP or a subnet that has been advertised on tailscale.
+
+## Security Model
+
+- The device token protects web access and daemon API access. Treat it like a password.
+- Do not share device tokens, Telegram bot tokens, Zrok invite tokens, or MQTT credentials.
+- If a token may have been exposed in logs, clipboard history, screenshots, or LAN traffic, open the Dashboard token card and use **Regenerate Token**, then sign in again on every client.
+- MQTT `tcp://` brokers and the `Allow Insecure TLS` toggle are only appropriate for trusted local networks. Prefer TLS with a broker certificate you trust.
+- OTA installs verify release metadata before applying an update, and downgrade installs are blocked unless you explicitly override them for recovery.
 
 ## Tech Specs
 
@@ -190,9 +199,9 @@ If you don't need the proxy feature, you can skip this — the app works fine wi
 
 If you want to use Zrok tunneling for remote access, you need your own Zrok invite token:
 
-1. Sign up at [zrok.io](https://zrok.io) and get your invite token from email
-2. Enter the token in the app: Daemons → Zrok settings
-3. If building from source, also replace `YOUR_ZROK_TOKEN` in `app/src/main/java/com/overdrive/app/daemon/telegram/DaemonCommandHandler.java` with your token (this is only used for the Telegram bot's `/tunnel zrok` command)
+1. Sign up at [zrok.io](https://zrok.io) and get your invite token from email.
+2. Enter the token in the app: Daemons → Zrok settings.
+3. If you are building from source, prefer the on-device settings flow instead of hardcoding the token into source. The legacy placeholder in `app/src/main/java/com/overdrive/app/daemon/telegram/DaemonCommandHandler.java` only exists for the Telegram bot's `/tunnel zrok` command.
 
 ## Privacy
 

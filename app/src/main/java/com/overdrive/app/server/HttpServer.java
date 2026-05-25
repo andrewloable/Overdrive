@@ -4,6 +4,7 @@ import android.content.res.AssetManager;
 import android.util.Base64;
 
 import com.overdrive.app.auth.AuthManager;
+import com.overdrive.app.config.UnifiedConfigManager;
 import com.overdrive.app.daemon.CameraDaemon;
 import com.overdrive.app.monitor.AccMonitor;
 import com.overdrive.app.monitor.BatteryMonitor;
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * HTTP Server - serves web UI and WebSocket H.264 streaming.
- * Listens on 0.0.0.0:8080 for tunnel access.
+ * Listens on 127.0.0.1:8080 by default; LAN binding is an explicit unsafe mode.
  * 
  * Single-port WebSocket: /ws endpoint upgrades to WebSocket for H.264 streaming
  * This allows Cloudflare tunnel to work (only one port needed).
@@ -180,9 +181,10 @@ public class HttpServer {
                     try { serverSocket.close(); } catch (Exception e) {}
                 }
                 
-                serverSocket = new ServerSocket(port, 10, InetAddress.getByName("0.0.0.0"));
+                String bindHost = UnifiedConfigManager.isLanHttpEnabled() ? "0.0.0.0" : "127.0.0.1";
+                serverSocket = new ServerSocket(port, 10, InetAddress.getByName(bindHost));
                 serverSocket.setReuseAddress(true);
-                CameraDaemon.log("HTTP server listening on 0.0.0.0:" + port);
+                CameraDaemon.log("HTTP server listening on " + bindHost + ":" + port);
 
                 while (running && CameraDaemon.isRunning() && !serverSocket.isClosed()) {
                     try {
@@ -381,7 +383,7 @@ public class HttpServer {
                 } else {
                     identity = String.valueOf(client.getRemoteSocketAddress());
                 }
-                AuthApiHandler.handle(method, path, body, out, identity);
+                AuthApiHandler.handle(method, path, body, out, identity, hasTunnelHeaders);
                 client.close();
                 return;
             }
@@ -931,7 +933,16 @@ public class HttpServer {
         status.put("gps", gps.getLocationJson());
         
         // Network info (WiFi SSID + IP or Mobile Data)
-        status.put("network", com.overdrive.app.monitor.NetworkMonitor.getNetworkInfo());
+        JSONObject network = com.overdrive.app.monitor.NetworkMonitor.getNetworkInfo();
+        if (UnifiedConfigManager.isLanHttpEnabled()) {
+            network.put("lanHttpEnabled", true);
+            network.put("httpBind", "0.0.0.0");
+            network.put("httpModeWarning", "LAN HTTP is unsafe on shared networks");
+        } else {
+            network.put("lanHttpEnabled", false);
+            network.put("httpBind", "127.0.0.1");
+        }
+        status.put("network", network);
         
         HttpResponse.sendJson(out, status.toString());
     }

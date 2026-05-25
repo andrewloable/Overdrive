@@ -293,15 +293,9 @@ BYD.pip = {
         canvas.style.display = 'block';
         document.getElementById('pipPlaceholder').style.display = 'none';
         
-        // Build WebSocket URL. Append JWT as ?token= so tunnels work — the
-        // browser WebSocket API can't set headers, and SameSite policies
-        // through reverse proxies routinely strip the byd_session cookie.
+        // Build WebSocket URL. Cookies carry the HttpOnly session.
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let url = `${protocol}//${window.location.host}/ws`;
-        if (typeof BYDAuth !== 'undefined') {
-            const wsToken = BYDAuth.getToken();
-            if (wsToken) url += `?token=${encodeURIComponent(wsToken)}`;
-        }
 
         // Create and start SotaPlayer
         if (this.sotaPlayer) {
@@ -456,10 +450,6 @@ BYD.pip = {
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let wsUrl = `${protocol}//${window.location.host}/ws`;
-        if (typeof BYDAuth !== 'undefined') {
-            const wsToken = BYDAuth.getToken();
-            if (wsToken) wsUrl += `?token=${encodeURIComponent(wsToken)}`;
-        }
 
         try {
             this.ws = new WebSocket(wsUrl);

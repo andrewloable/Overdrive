@@ -1,6 +1,7 @@
 package com.overdrive.app.byd.cloud;
 
 import com.overdrive.app.byd.cloud.crypto.CredentialCipher;
+import com.overdrive.app.config.SecretConfigBridge;
 import com.overdrive.app.config.UnifiedConfigManager;
 
 import org.json.JSONObject;
@@ -66,22 +67,66 @@ public final class BydCloudConfig {
         if (bydCloud == null) {
             return new BydCloudConfig(false, "", "", "", "", "", "", "NL", "en", DEFAULT_REGION, false, "");
         }
+        String loginKey = SecretConfigBridge.getString("bydCloud", "loginKey");
+        String signPassword = SecretConfigBridge.getString("bydCloud", "signPassword");
+        String commandPwd = SecretConfigBridge.getString("bydCloud", "commandPwd");
+        String rawPassword = SecretConfigBridge.getString("bydCloud", "rawPassword");
 
-        String storedRawPassword = bydCloud.optString("rawPassword", "");
-        String rawPassword = CredentialCipher.decrypt(storedRawPassword);
-
-        // Migrate legacy plaintext to protected form on first read
-        if (!storedRawPassword.isEmpty() && !CredentialCipher.isEncrypted(storedRawPassword)) {
-            migrateRawPassword(bydCloud, rawPassword);
+        boolean needsMigration = false;
+        if ((loginKey == null || loginKey.isEmpty()) && bydCloud.has("loginKey")) {
+            loginKey = bydCloud.optString("loginKey", "");
+            if (!loginKey.isEmpty()) {
+                SecretConfigBridge.putString("bydCloud", "loginKey", loginKey);
+                needsMigration = true;
+            }
+        }
+        if ((signPassword == null || signPassword.isEmpty()) && bydCloud.has("signPassword")) {
+            signPassword = bydCloud.optString("signPassword", "");
+            if (!signPassword.isEmpty()) {
+                SecretConfigBridge.putString("bydCloud", "signPassword", signPassword);
+                needsMigration = true;
+            }
+        }
+        if ((commandPwd == null || commandPwd.isEmpty()) && bydCloud.has("commandPwd")) {
+            commandPwd = bydCloud.optString("commandPwd", "");
+            if (!commandPwd.isEmpty()) {
+                SecretConfigBridge.putString("bydCloud", "commandPwd", commandPwd);
+                needsMigration = true;
+            }
+        }
+        if ((rawPassword == null || rawPassword.isEmpty()) && bydCloud.has("rawPassword")) {
+            String storedRawPassword = bydCloud.optString("rawPassword", "");
+            if (!storedRawPassword.isEmpty()) {
+                String migratedRaw = CredentialCipher.isEncrypted(storedRawPassword)
+                        ? CredentialCipher.decrypt(storedRawPassword)
+                        : storedRawPassword;
+                rawPassword = migratedRaw;
+                SecretConfigBridge.putString("bydCloud", "rawPassword", migratedRaw);
+                needsMigration = true;
+            }
+        }
+        if (needsMigration) {
+            JSONObject publicOnly = new JSONObject();
+            try {
+                publicOnly.put("enabled", bydCloud.optBoolean("enabled", false));
+                publicOnly.put("username", bydCloud.optString("username", ""));
+                publicOnly.put("vin", bydCloud.optString("vin", ""));
+                publicOnly.put("countryCode", bydCloud.optString("countryCode", "NL"));
+                publicOnly.put("language", bydCloud.optString("language", "en"));
+                publicOnly.put("region", bydCloud.optString("region", DEFAULT_REGION));
+                publicOnly.put("cloudDataMerge", bydCloud.optBoolean("cloudDataMerge", false));
+                publicOnly.put("energyType", bydCloud.optString("energyType", ""));
+            } catch (Exception ignored) {}
+            UnifiedConfigManager.updateSection("bydCloud", publicOnly);
         }
 
         return new BydCloudConfig(
                 bydCloud.optBoolean("enabled", false),
                 bydCloud.optString("username", ""),
-                bydCloud.optString("loginKey", ""),
-                bydCloud.optString("signPassword", ""),
-                bydCloud.optString("commandPwd", ""),
-                rawPassword,
+                loginKey == null ? "" : loginKey,
+                signPassword == null ? "" : signPassword,
+                commandPwd == null ? "" : commandPwd,
+                rawPassword == null ? "" : rawPassword,
                 bydCloud.optString("vin", ""),
                 bydCloud.optString("countryCode", "NL"),
                 bydCloud.optString("language", "en"),
@@ -152,10 +197,6 @@ public final class BydCloudConfig {
         try {
             bydCloud.put("enabled", true);
             bydCloud.put("username", username);
-            bydCloud.put("loginKey", loginKey);
-            bydCloud.put("signPassword", signPassword);
-            bydCloud.put("commandPwd", commandPwd);
-            bydCloud.put("rawPassword", CredentialCipher.encrypt(rawPassword));
             bydCloud.put("vin", vin);
             bydCloud.put("countryCode", countryCode);
             bydCloud.put("language", language);
@@ -168,6 +209,10 @@ public final class BydCloudConfig {
             throw new RuntimeException("Failed to build config JSON", e);
         }
         UnifiedConfigManager.updateSection("bydCloud", bydCloud);
+        SecretConfigBridge.putString("bydCloud", "loginKey", loginKey);
+        SecretConfigBridge.putString("bydCloud", "signPassword", signPassword);
+        SecretConfigBridge.putString("bydCloud", "commandPwd", commandPwd);
+        SecretConfigBridge.putString("bydCloud", "rawPassword", rawPassword);
     }
 
     /**
@@ -178,12 +223,12 @@ public final class BydCloudConfig {
         try {
             bydCloud.put("enabled", false);
             bydCloud.put("username", "");
-            bydCloud.put("loginKey", "");
-            bydCloud.put("signPassword", "");
-            bydCloud.put("commandPwd", "");
-            bydCloud.put("rawPassword", "");
             bydCloud.put("vin", "");
         } catch (Exception ignored) {}
         UnifiedConfigManager.updateSection("bydCloud", bydCloud);
+        SecretConfigBridge.delete("bydCloud", "loginKey");
+        SecretConfigBridge.delete("bydCloud", "signPassword");
+        SecretConfigBridge.delete("bydCloud", "commandPwd");
+        SecretConfigBridge.delete("bydCloud", "rawPassword");
     }
 }

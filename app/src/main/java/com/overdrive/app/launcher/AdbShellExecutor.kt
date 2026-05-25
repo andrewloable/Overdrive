@@ -71,8 +71,9 @@ class AdbShellExecutor(private val context: Context) {
     
     fun execute(command: String, callback: ShellCallback) {
         executor.execute {
+            val redactedCommand = redactCommand(command)
             try {
-                logger.debug(TAG, "Executing async: $command")
+                logger.debug(TAG, "Executing async: $redactedCommand")
                 val dadb = getOrCreateConnection()
                 val result = dadb.shell(command)
                 
@@ -82,17 +83,23 @@ class AdbShellExecutor(private val context: Context) {
                     callback.onError("Exit code ${result.exitCode}: ${result.allOutput}")
                 }
             } catch (e: Exception) {
-                logger.error(TAG, "Command execution failed: $command", e)
+                logger.error(TAG, "Command execution failed: $redactedCommand", e)
                 callback.onError("Execution failed: ${e.message}")
             }
         }
     }
     
     fun executeSync(command: String): ShellResult {
-        logger.debug(TAG, "Executing sync: $command")
+        logger.debug(TAG, "Executing sync: ${redactCommand(command)}")
         val dadb = getOrCreateConnection()
         val result = dadb.shell(command)
         return ShellResult(result.exitCode, result.allOutput)
+    }
+
+    private fun redactCommand(command: String): String {
+        return command
+            .replace(Regex("""(?i)(\bzrok\s+enable\s+)(\S+)"""), "$1<redacted>")
+            .replace(Regex("""(?i)("cmd"\s*:\s*"secret_put"[^}]*"value"\s*:\s*")[^"]*"""), "$1<redacted>")
     }
     
     fun checkProcessRunning(processName: String): Int? {

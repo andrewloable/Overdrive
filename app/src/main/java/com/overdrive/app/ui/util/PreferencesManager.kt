@@ -6,6 +6,8 @@ import android.os.Build
 import android.os.UserManager
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
+import com.overdrive.app.BuildConfig
+import com.overdrive.app.config.SecretConfigBridge
 import com.overdrive.app.ui.model.DaemonType
 
 /**
@@ -24,6 +26,7 @@ object PreferencesManager {
     private const val KEY_ZROK_UNIQUE_NAME = "zrok_unique_name"
     private const val KEY_ZROK_ENABLE_TOKEN = "zrok_enable_token"
     private const val KEY_LOGS_EXPANDED = "logs_expanded"
+    private const val KEY_AUTO_UPDATE_ENABLED = "auto_update_enabled"
 
     private var prefs: SharedPreferences? = null
     // Held so theme-mode changes can poke the floating overlay service —
@@ -186,19 +189,18 @@ object PreferencesManager {
         requirePrefs().edit().putString(KEY_ZROK_UNIQUE_NAME, name).commit()
     }
     
-    // Zrok Enable Token - stored in preferences for app-side access
-    // Also synced to /data/local/tmp/.zrok/enable_token for cross-UID access
+    // Zrok Enable Token - stored in the daemon secret store for app-side access
     @Deprecated("Use unified storage via ZrokController instead")
     fun getZrokEnableToken(): String? {
-        return requirePrefs().getString(KEY_ZROK_ENABLE_TOKEN, null)
+        return SecretConfigBridge.getString("zrok", "enableToken")
     }
     
     @Deprecated("Use unified storage via ZrokController instead")
     fun setZrokEnableToken(token: String?) {
         if (token.isNullOrBlank()) {
-            requirePrefs().edit().remove(KEY_ZROK_ENABLE_TOKEN).commit()
+            SecretConfigBridge.delete("zrok", "enableToken")
         } else {
-            requirePrefs().edit().putString(KEY_ZROK_ENABLE_TOKEN, token.trim()).commit()
+            SecretConfigBridge.putString("zrok", "enableToken", token.trim())
         }
     }
     
@@ -206,12 +208,12 @@ object PreferencesManager {
     fun hasZrokEnableToken(): Boolean {
         // Keep deprecated helpers independent so legacy callers do not emit
         // warnings from one deprecated wrapper calling another.
-        return !requirePrefs().getString(KEY_ZROK_ENABLE_TOKEN, null).isNullOrBlank()
+        return !SecretConfigBridge.getString("zrok", "enableToken").isNullOrBlank()
     }
     
     @Deprecated("Use unified storage via ZrokController instead")
     fun clearZrokEnableToken() {
-        requirePrefs().edit().remove(KEY_ZROK_ENABLE_TOKEN).commit()
+        SecretConfigBridge.delete("zrok", "enableToken")
     }
     
     // Logs Panel State
@@ -221,6 +223,19 @@ object PreferencesManager {
     
     fun setLogsExpanded(expanded: Boolean) {
         requirePrefs().edit().putBoolean(KEY_LOGS_EXPANDED, expanded).apply()
+    }
+
+    @JvmStatic
+    fun isAutoUpdateEnabled(): Boolean {
+        val currentPrefs = prefs ?: return true
+        // Debug builds default to local-only mode so developers don't get
+        // bounced back to server releases while testing a staged version.
+        return currentPrefs.getBoolean(KEY_AUTO_UPDATE_ENABLED, !BuildConfig.DEBUG)
+    }
+
+    @JvmStatic
+    fun setAutoUpdateEnabled(enabled: Boolean) {
+        requirePrefs().edit().putBoolean(KEY_AUTO_UPDATE_ENABLED, enabled).apply()
     }
 
     /** Current access URL — always the last tunnel URL we saw. */

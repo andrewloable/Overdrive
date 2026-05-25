@@ -42,14 +42,14 @@ public class AuthApiHandler {
      * Handle auth API requests.
      */
     public static boolean handle(String method, String path, String body, OutputStream out) throws Exception {
-        return handle(method, path, body, out, null);
+        return handle(method, path, body, out, null, false);
     }
 
     /**
      * Handle auth API requests with rate-limit identity (X-Forwarded-For or socket).
      */
     public static boolean handle(String method, String path, String body, OutputStream out,
-                                  String rateLimitIdentity) throws Exception {
+                                  String rateLimitIdentity, boolean secureCookie) throws Exception {
 
         if (path.equals("/auth/status") && method.equals("GET")) {
             return handleStatus(out);
@@ -69,11 +69,11 @@ public class AuthApiHandler {
                 HttpResponse.sendJson(out, resp.toString());
                 return true;
             }
-            return handleTokenValidation(body, out, idForLimit);
+            return handleTokenValidation(body, out, idForLimit, secureCookie);
         }
 
         if (path.equals("/auth/logout") && method.equals("POST")) {
-            return handleLogout(out);
+            return handleLogout(out, secureCookie);
         }
 
         return false;
@@ -138,7 +138,7 @@ public class AuthApiHandler {
      * POST /auth/token
      * Validates device token and returns JWT session.
      */
-    private static boolean handleTokenValidation(String body, OutputStream out, String rateLimitIdentity) throws Exception {
+    private static boolean handleTokenValidation(String body, OutputStream out, String rateLimitIdentity, boolean secureCookie) throws Exception {
         JSONObject response = new JSONObject();
 
         try {
@@ -163,11 +163,14 @@ public class AuthApiHandler {
                     log("Auth state vanished mid-login — asking client to retry");
                 } else {
                     response.put("success", true);
-                    response.put("jwt", jwt);
                     response.put("deviceId", state.deviceId);
-                    response.put("expiresIn", 365 * 24 * 60 * 60); // 1 year — matches JWT expiry
+                    response.put("expiresIn", AuthManager.getJwtExpirySeconds());
 
                     log("Token validated for device: " + state.deviceId);
+                    String sessionCookie = buildCookie("byd_session", jwt, AuthManager.getJwtExpirySeconds(), true, secureCookie);
+                    String hintCookie = buildCookie("byd_auth", "1", AuthManager.getJwtExpirySeconds(), false, secureCookie);
+                    HttpResponse.sendJsonWithCookies(out, response.toString(), new String[] { sessionCookie, hintCookie });
+                    return true;
                 }
             } else {
                 response.put("success", false);
@@ -188,13 +191,29 @@ public class AuthApiHandler {
      * POST /auth/logout
      * Logs out the user. Client should clear stored JWT.
      */
-    private static boolean handleLogout(OutputStream out) throws Exception {
+    private static boolean handleLogout(OutputStream out, boolean secureCookie) throws Exception {
         JSONObject response = new JSONObject();
         response.put("success", true);
         response.put("message", Messages.get("messages.logged_out"));
-        
-        HttpResponse.sendJson(out, response.toString());
+
+        String expiredSession = buildCookie("byd_session", "", 0, true, secureCookie);
+        String expiredHint = buildCookie("byd_auth", "", 0, false, secureCookie);
+        HttpResponse.sendJsonWithCookies(out, response.toString(), new String[] { expiredSession, expiredHint });
         return true;
+    }
+
+    private static String buildCookie(String name, String value, long maxAgeSeconds, boolean httpOnly, boolean secure) {
+        StringBuilder cookie = new StringBuilder();
+        cookie.append(name).append("=").append(value)
+                .append("; Path=/; Max-Age=").append(maxAgeSeconds)
+                .append("; SameSite=Lax");
+        if (httpOnly) {
+            cookie.append("; HttpOnly");
+        }
+        if (secure) {
+            cookie.append("; Secure");
+        }
+        return cookie.toString();
     }
     
     private static void log(String message) {
