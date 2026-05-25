@@ -14,6 +14,7 @@ Overdrive is an Android application for BYD DiLink vehicles. The app coordinates
 - [HTTP API Reference](http-api-reference.md) lists the embedded web API route families and known endpoints.
 - [BYD Integrations](byd-integrations.md) explains local BYD hardware APIs, compile-time stubs, telemetry collection, cloud APIs, MQTT cloud updates, and remote vehicle controls.
 - [Surveillance Implementation](surveillance-implementation.md) documents sentry-mode activation, the GPU/native motion pipeline, AI confirmation, recording lifecycle, safe locations, schedules, APIs, and guardrails.
+- [360 Camera Recording](360-camera-recording.md) explains how the shared 360 camera GPU/encoder stack records surveillance events and ACC-on driving clips.
 - [Build and Operations](build-and-operations.md) covers build inputs, native dependencies, assets, tests, updates, issue tracking, and release/session procedures.
 
 ## Source Areas
