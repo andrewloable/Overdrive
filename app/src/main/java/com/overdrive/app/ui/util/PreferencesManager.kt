@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.UserManager
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
+import com.overdrive.app.BuildConfig
 import com.overdrive.app.config.SecretConfigBridge
 import com.overdrive.app.ui.model.DaemonType
 
@@ -25,6 +26,7 @@ object PreferencesManager {
     private const val KEY_ZROK_UNIQUE_NAME = "zrok_unique_name"
     private const val KEY_ZROK_ENABLE_TOKEN = "zrok_enable_token"
     private const val KEY_LOGS_EXPANDED = "logs_expanded"
+    private const val KEY_AUTO_UPDATE_ENABLED = "auto_update_enabled"
 
     private var prefs: SharedPreferences? = null
     // Held so theme-mode changes can poke the floating overlay service —
@@ -221,6 +223,19 @@ object PreferencesManager {
     
     fun setLogsExpanded(expanded: Boolean) {
         requirePrefs().edit().putBoolean(KEY_LOGS_EXPANDED, expanded).apply()
+    }
+
+    @JvmStatic
+    fun isAutoUpdateEnabled(): Boolean {
+        val currentPrefs = prefs ?: return true
+        // Debug builds default to local-only mode so developers don't get
+        // bounced back to server releases while testing a staged version.
+        return currentPrefs.getBoolean(KEY_AUTO_UPDATE_ENABLED, !BuildConfig.DEBUG)
+    }
+
+    @JvmStatic
+    fun setAutoUpdateEnabled(enabled: Boolean) {
+        requirePrefs().edit().putBoolean(KEY_AUTO_UPDATE_ENABLED, enabled).apply()
     }
 
     /** Current access URL — always the last tunnel URL we saw. */

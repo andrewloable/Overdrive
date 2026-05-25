@@ -342,13 +342,13 @@ android {
             
             signingConfig = signingConfigs.getByName("release")
             
-            // Update channel: "alpha" for release builds (checks alpha tag on GitHub)
+            // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
         }
         debug {
             isMinifyEnabled = false
             
-            // Debug builds also check alpha channel for updates
+            // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
         }
     }

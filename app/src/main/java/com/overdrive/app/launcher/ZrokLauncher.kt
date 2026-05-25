@@ -995,7 +995,7 @@ class ZrokLauncher(
             append("$ZROK_TMP_PATH enable $zrokToken --headless 2>&1")
         }
         
-        logManager.debug(TAG, "Executing enable: $cmd")
+        logManager.debug(TAG, "Executing enable: ${cmd.replace(zrokToken, "<redacted>")}")
         
         adbShellExecutor.execute(
             command = cmd,

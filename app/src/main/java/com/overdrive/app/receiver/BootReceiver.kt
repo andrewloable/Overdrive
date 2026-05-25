@@ -106,13 +106,6 @@ class BootReceiver : BroadcastReceiver() {
             // overdrive_update_in_progress sentinel).
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 lastStartTime = System.currentTimeMillis()
-                // Skip auto-relaunch in debug builds: Android Studio drives its own
-                // launch after install, and racing it makes "Run" abort with the
-                // app already in the foreground.
-                if (com.overdrive.app.BuildConfig.DEBUG) {
-                    Log.d(TAG, "MY_PACKAGE_REPLACED — debug build, skipping auto-relaunch (let IDE drive launch)")
-                    return
-                }
                 try {
                     val launchIntent = Intent(context, com.overdrive.app.ui.MainActivity::class.java)
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

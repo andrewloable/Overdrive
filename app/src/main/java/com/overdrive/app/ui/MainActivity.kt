@@ -23,6 +23,7 @@ import com.overdrive.app.storage.StorageSetup
 import com.overdrive.app.ui.daemon.DaemonStartupManager
 import com.overdrive.app.ui.model.DaemonStatus
 import com.overdrive.app.ui.model.DaemonType
+import com.overdrive.app.ui.util.PreferencesManager
 import com.overdrive.app.ui.viewmodel.DaemonsViewModel
 import com.overdrive.app.ui.viewmodel.LogsViewModel
 import com.overdrive.app.ui.viewmodel.MainViewModel
@@ -30,7 +31,6 @@ import com.overdrive.app.launcher.AdbDaemonLauncher
 import com.google.android.material.appbar.MaterialToolbar
 import android.widget.ImageView
 import android.widget.LinearLayout
-import com.overdrive.app.BuildConfig
 import com.overdrive.app.R
 import com.overdrive.app.util.BydDataCacheWhitelist
 
@@ -353,7 +353,11 @@ class MainActivity : AppCompatActivity() {
      * Check GitHub for app updates and show dialog if available.
      */
     private fun checkForAppUpdate() {
-        logsViewModel.info("Update", "Checking for updates (channel: ${BuildConfig.UPDATE_CHANNEL})...")
+        if (!PreferencesManager.isAutoUpdateEnabled()) {
+            logsViewModel.debug("Update", "Auto-update disabled")
+            return
+        }
+        logsViewModel.info("Update", "Checking for updates...")
         val updater = com.overdrive.app.updater.AppUpdater(this)
         appUpdater = updater
         updater.checkForUpdate(object : com.overdrive.app.updater.AppUpdater.UpdateCallback {
@@ -379,6 +383,10 @@ class MainActivity : AppCompatActivity() {
      * Manual update check — shows toast if already up to date.
      */
     fun checkForAppUpdateManual() {
+        if (!PreferencesManager.isAutoUpdateEnabled()) {
+            logsViewModel.debug("Update", "Manual update check disabled")
+            return
+        }
         Toast.makeText(this, getString(R.string.toast_checking_for_updates), Toast.LENGTH_SHORT).show()
         val updater = com.overdrive.app.updater.AppUpdater(this)
         appUpdater = updater

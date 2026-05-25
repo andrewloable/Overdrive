@@ -33,6 +33,8 @@ import java.util.concurrent.Executors
 import com.overdrive.app.BuildConfig
 import com.overdrive.app.R
 import com.overdrive.app.ui.MainActivity
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.overdrive.app.ui.util.PreferencesManager
 import com.overdrive.app.updater.AppUpdater
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -64,29 +66,17 @@ class SettingsAboutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Show the locally-tracked installed version immediately so the row
-        // never sits blank, then refresh in the background with the published
-        // version on the configured channel from GitHub Releases — that's the
-        // value the user actually wants to see ("am I current?"). Both calls
-        // are routed through the AppUpdater so behavior matches the rest of
-        // the update surface (proxy detection, channel, label format).
         val versionView = view.findViewById<TextView>(R.id.tvAboutVersion)
-        versionView.text = AppUpdater.getDisplayVersion(requireContext())
         view.findViewById<TextView>(R.id.tvAboutBuild).text = BuildConfig.APPLICATION_ID
+        val autoUpdateSwitch = view.findViewById<SwitchMaterial>(R.id.swAutoUpdate)
 
-        AppUpdater(requireContext()).fetchLatestReleaseVersion(
-            object : AppUpdater.RemoteVersionCallback {
-                override fun onResult(version: String) {
-                    if (!isAdded) return
-                    if (version.isNotBlank()) {
-                        versionView.text = version
-                    }
-                }
-                override fun onError(error: String?) {
-                    // Silent — the local fallback is already visible.
-                }
-            }
-        )
+        autoUpdateSwitch.isChecked = PreferencesManager.isAutoUpdateEnabled()
+        updateVersionDisplay(versionView, fetchRemote = autoUpdateSwitch.isChecked)
+
+        autoUpdateSwitch.setOnCheckedChangeListener { _, isChecked ->
+            PreferencesManager.setAutoUpdateEnabled(isChecked)
+            updateVersionDisplay(versionView, fetchRemote = isChecked)
+        }
 
         view.findViewById<View>(R.id.cardCheckUpdate).setOnClickListener {
             (activity as? MainActivity)?.invokeCheckForUpdates()
@@ -114,6 +104,27 @@ class SettingsAboutFragment : Fragment() {
         }
 
         populateThanks(view)
+    }
+
+    private fun updateVersionDisplay(versionView: TextView, fetchRemote: Boolean) {
+        val context = context ?: return
+        versionView.text = AppUpdater.getDisplayVersion(context)
+        if (!fetchRemote) return
+
+        AppUpdater(context).fetchLatestReleaseVersion(
+            object : AppUpdater.RemoteVersionCallback {
+                override fun onResult(version: String) {
+                    if (!isAdded || context != this@SettingsAboutFragment.context) return
+                    if (PreferencesManager.isAutoUpdateEnabled() && version.isNotBlank()) {
+                        versionView.text = version
+                    }
+                }
+
+                override fun onError(error: String?) {
+                    // Keep the local fallback/version label visible.
+                }
+            }
+        )
     }
 
     override fun onDestroyView() {

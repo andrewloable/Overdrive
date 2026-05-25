@@ -1,7 +1,11 @@
 package com.overdrive.app.config
 
 import com.overdrive.app.client.CameraDaemonClient
+import android.os.Looper
+import android.util.Log
 import org.json.JSONObject
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Accessor that prefers direct file access when the current process owns the
@@ -11,6 +15,9 @@ object SecretConfigBridge {
 
     private val directStore = SecretConfigStore()
     private val lock = Any()
+    private val ipcExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "secret-config-ipc").apply { isDaemon = true }
+    }
 
     @JvmStatic
     fun getString(section: String, key: String): String? = synchronized(lock) {
@@ -109,6 +116,12 @@ object SecretConfigBridge {
     }
 
     private fun readViaIpc(section: String, key: String): String? {
+        return runIpcBlocking(null) {
+            readViaIpcOnCurrentThread(section, key)
+        }
+    }
+
+    private fun readViaIpcOnCurrentThread(section: String, key: String): String? {
         val client = CameraDaemonClient()
         return try {
             if (!client.connect()) return null
@@ -142,6 +155,12 @@ object SecretConfigBridge {
     }
 
     private fun readSectionViaIpc(section: String): JSONObject {
+        return runIpcBlocking(JSONObject()) {
+            readSectionViaIpcOnCurrentThread(section)
+        }
+    }
+
+    private fun readSectionViaIpcOnCurrentThread(section: String): JSONObject {
         val client = CameraDaemonClient()
         return try {
             if (!client.connect()) return JSONObject()
@@ -159,25 +178,64 @@ object SecretConfigBridge {
     }
 
     private fun writeViaIpc(section: String, key: String, value: Any?, action: String): Boolean {
-        val client = CameraDaemonClient()
-        return try {
-            if (!client.connect()) return false
-            val cmd = JSONObject()
-                .put("cmd", when (action) {
-                    "delete" -> "secret_delete"
-                    else -> "secret_put"
-                })
-                .put("section", section)
-                .put("key", key)
-            if (action != "delete" && value != null) {
-                cmd.put("value", value)
+        return runIpcBlocking(false) {
+            writeViaIpcOnCurrentThread(section, key, value, action)
+        }
+    }
+
+    private fun writeViaIpcOnCurrentThread(section: String, key: String, value: Any?, action: String): Boolean {
+        val command = JSONObject()
+            .put("cmd", when (action) {
+                "delete" -> "secret_delete"
+                else -> "secret_put"
+            })
+            .put("section", section)
+            .put("key", key)
+        if (action != "delete" && value != null) {
+            command.put("value", value)
+        }
+
+        var lastError: String? = null
+        for (attempt in 0 until 3) {
+            val client = CameraDaemonClient()
+            try {
+                if (!client.connect()) {
+                    lastError = "connect failed"
+                } else {
+                    val response = client.sendCommand(command)
+                    if ("ok".equals(response.optString("status"), ignoreCase = true)) {
+                        return true
+                    }
+                    lastError = response.optString("message", "daemon returned error")
+                }
+            } catch (e: Exception) {
+                lastError = e.message ?: e.javaClass.simpleName
+            } finally {
+                client.disconnect()
             }
-            val response = client.sendCommand(cmd)
-            "ok".equals(response.optString("status"), ignoreCase = true)
-        } catch (_: Exception) {
-            false
-        } finally {
-            client.disconnect()
+            if (attempt < 2) {
+                try {
+                    Thread.sleep(150L * (attempt + 1))
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
+        }
+        Log.w("SecretConfigBridge", "IPC secret $action failed for $section.$key: ${lastError ?: "unknown"}")
+        return false
+    }
+
+    private fun <T> runIpcBlocking(defaultValue: T, block: () -> T): T {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            return block()
+        }
+
+        return try {
+            ipcExecutor.submit<T> { block() }.get(6, TimeUnit.SECONDS)
+        } catch (e: Exception) {
+            Log.w("SecretConfigBridge", "IPC secret operation failed on worker: ${e.message ?: e.javaClass.simpleName}")
+            defaultValue
         }
     }
 }

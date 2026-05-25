@@ -24,6 +24,8 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
     
     private val _daemonStates = MutableLiveData<Map<DaemonType, DaemonState>>()
     val daemonStates: LiveData<Map<DaemonType, DaemonState>> = _daemonStates
+    private val daemonStatesLock = Any()
+    private var daemonStatesSnapshot: Map<DaemonType, DaemonState> = emptyMap()
     
     // Expose cloudflared controller for tunnel URL access
     val cloudflaredController: CloudflaredController
@@ -71,6 +73,7 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
         
         // Initialize all states as stopped
         val initialStates = DaemonType.values().associateWith { DaemonState.stopped(it) }
+        daemonStatesSnapshot = initialStates
         _daemonStates.value = initialStates
         
         // Refresh all statuses after a short delay to ensure ADB connection is ready
@@ -336,10 +339,8 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
         uptime: String?,
         subprocesses: List<SubprocessInfo>
     ) {
-        val currentStates = _daemonStates.value?.toMutableMap() ?: mutableMapOf()
         val startTime = uptime?.let { System.currentTimeMillis() - parseUptimeToMillis(it) }
-        currentStates[type] = DaemonState(type, status, message, uptime, startTime, subprocesses)
-        _daemonStates.postValue(currentStates)
+        updateDaemonState(type, DaemonState(type, status, message, uptime, startTime, subprocesses))
     }
     
     fun refreshAllStatuses(logResults: Boolean = false) {
@@ -356,33 +357,42 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
         
         // Reset all states to stopped
         val stoppedStates = DaemonType.values().associateWith { DaemonState.stopped(it) }
+        synchronized(daemonStatesLock) {
+            daemonStatesSnapshot = stoppedStates
+        }
         _daemonStates.postValue(stoppedStates)
     }
     
     private fun updateState(type: DaemonType, status: DaemonStatus, message: String) {
-        val currentStates = _daemonStates.value?.toMutableMap() ?: mutableMapOf()
-        currentStates[type] = DaemonState(type, status, message)
-        _daemonStates.postValue(currentStates)
+        updateDaemonState(type, DaemonState(type, status, message))
     }
     
-    fun getState(type: DaemonType): DaemonState? = _daemonStates.value?.get(type)
+    fun getState(type: DaemonType): DaemonState? = synchronized(daemonStatesLock) {
+        daemonStatesSnapshot[type]
+    }
     
     /**
      * Update Zrok state to indicate configuration is needed.
      */
     fun updateZrokNeedsConfig(message: String) {
-        val currentStates = _daemonStates.value?.toMutableMap() ?: mutableMapOf()
-        currentStates[DaemonType.ZROK_TUNNEL] = DaemonState.needsConfig(DaemonType.ZROK_TUNNEL, message)
-        _daemonStates.postValue(currentStates)
+        updateDaemonState(DaemonType.ZROK_TUNNEL, DaemonState.needsConfig(DaemonType.ZROK_TUNNEL, message))
     }
 
     /**
      * Update Tailscale state to indicate needs login.
      */
     fun updateTailscaleNeedsLogin(message: String) {
-        val currentStates = _daemonStates.value?.toMutableMap() ?: mutableMapOf()
-        currentStates[DaemonType.TAILSCALE_TUNNEL] = DaemonState.needsConfig(DaemonType.TAILSCALE_TUNNEL, message)
-        _daemonStates.postValue(currentStates)
+        updateDaemonState(DaemonType.TAILSCALE_TUNNEL, DaemonState.needsConfig(DaemonType.TAILSCALE_TUNNEL, message))
+    }
+
+    private fun updateDaemonState(type: DaemonType, state: DaemonState) {
+        val updatedStates = synchronized(daemonStatesLock) {
+            val currentStates = daemonStatesSnapshot.toMutableMap()
+            currentStates[type] = state
+            daemonStatesSnapshot = currentStates.toMap()
+            daemonStatesSnapshot
+        }
+        _daemonStates.postValue(updatedStates)
     }
     
     /**

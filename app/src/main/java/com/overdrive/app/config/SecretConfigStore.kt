@@ -32,7 +32,15 @@ class SecretConfigStore @JvmOverloads constructor(
 
     fun canReadDirectly(): Boolean = !file.exists() || file.canRead()
 
-    fun canWriteDirectly(): Boolean = !file.exists() || file.canWrite() || file.parentFile?.canWrite() == true
+    fun canWriteDirectly(): Boolean {
+        // Only the shell-owned daemon process should ever write the secret
+        // file directly. The app process must go through IPC so we don't
+        // depend on /data/local/tmp permissions from an app UID.
+        if (android.os.Process.myUid() != 2000) {
+            return false
+        }
+        return !file.exists() || file.canWrite() || file.parentFile?.canWrite() == true
+    }
 
     fun getString(section: String, key: String): String? = synchronized(lock) {
         val sectionMap = loadSectionMap(section)

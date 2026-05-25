@@ -12,6 +12,7 @@ import android.util.Log;
 
 import com.overdrive.app.BuildConfig;
 import com.overdrive.app.launcher.AdbShellExecutor;
+import com.overdrive.app.ui.util.PreferencesManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -269,6 +270,10 @@ public class AppUpdater {
      * Skips check if channel is empty (debug builds).
      */
     public void checkForUpdate(UpdateCallback callback) {
+        if (!isAutoUpdateEnabled()) {
+            runCallback(() -> callback.onNoUpdate(getDisplayVersion(context)));
+            return;
+        }
         String channel = BuildConfig.UPDATE_CHANNEL;
         if (channel == null || channel.isEmpty()) {
             runCallback(() -> callback.onNoUpdate(getDisplayVersion(context)));
@@ -1365,6 +1370,10 @@ public class AppUpdater {
     }
 
     public void fetchLatestReleaseVersion(RemoteVersionCallback callback) {
+        if (!isAutoUpdateEnabled()) {
+            runCallback(() -> callback.onError("Auto-update disabled"));
+            return;
+        }
         String channel = BuildConfig.UPDATE_CHANNEL;
         if (channel == null || channel.isEmpty()) {
             runCallback(() -> callback.onError("No channel configured"));
@@ -1431,7 +1440,7 @@ public class AppUpdater {
      * explicit; once the user runs check-for-updates the real channel-
      * versioned string takes over.
      */
-    public static final String DISPLAY_VERSION_FALLBACK = "Manually Installed";
+    public static final String DISPLAY_VERSION_FALLBACK = "v17-seal5-0001";
 
     /**
      * Get the display version string (channel + version from APK name).
@@ -1439,6 +1448,9 @@ public class AppUpdater {
      * version exists yet (fresh sideload before first update check).
      */
     public static String getDisplayVersion(Context context) {
+        if (!isAutoUpdateEnabled()) {
+            return DISPLAY_VERSION_FALLBACK;
+        }
         String stored = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(PREF_UPDATED_VERSION, null);
         if (stored != null && !stored.isEmpty()) {
@@ -1457,6 +1469,9 @@ public class AppUpdater {
      * SharedPreferences may not be accessible.
      */
     public static String getDisplayVersionFromFile() {
+        if (!isAutoUpdateEnabled()) {
+            return DISPLAY_VERSION_FALLBACK;
+        }
         try {
             java.io.File f = new java.io.File(VERSION_FILE);
             if (f.exists()) {
@@ -1469,6 +1484,14 @@ public class AppUpdater {
             }
         } catch (Exception ignored) {}
         return DISPLAY_VERSION_FALLBACK;
+    }
+
+    private static boolean isAutoUpdateEnabled() {
+        try {
+            return PreferencesManager.isAutoUpdateEnabled();
+        } catch (Exception ignored) {
+            return true;
+        }
     }
 
     private long getInstalledVersionCode() {
