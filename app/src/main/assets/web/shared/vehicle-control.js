@@ -2716,12 +2716,6 @@ var VC = {
 
                 var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 var wsUrl = protocol + '//' + window.location.host + '/ws';
-                // Append JWT as ?token= so tunnels work (cookies stripped by
-                // SameSite; browser WS API can't set Authorization header).
-                if (typeof BYDAuth !== 'undefined') {
-                    var wsToken = BYDAuth.getToken();
-                    if (wsToken) wsUrl += '?token=' + encodeURIComponent(wsToken);
-                }
 
                 this._sotaPlayer = new SotaPlayer(this._3dCanvas, wsUrl);
                 this._sotaPlayer.onConnected = function() {

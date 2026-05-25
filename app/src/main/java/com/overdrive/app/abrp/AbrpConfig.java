@@ -1,5 +1,6 @@
 package com.overdrive.app.abrp;
 
+import com.overdrive.app.config.SecretConfigBridge;
 import com.overdrive.app.logging.DaemonLogger;
 import org.json.JSONObject;
 
@@ -71,9 +72,25 @@ public class AbrpConfig {
 
             carModel = props.getProperty(PROP_CAR_MODEL);
 
-            apiKey = props.getProperty(PROP_API_KEY);
-            if (apiKey != null && apiKey.isEmpty()) {
-                apiKey = null;
+            boolean migratedSecrets = false;
+            userToken = SecretConfigBridge.getString("abrp", PROP_USER_TOKEN);
+            if ((userToken == null || userToken.isEmpty()) && props.containsKey(PROP_USER_TOKEN)) {
+                String legacyToken = props.getProperty(PROP_USER_TOKEN);
+                if (legacyToken != null && !legacyToken.isEmpty()) {
+                    userToken = legacyToken;
+                    SecretConfigBridge.putString("abrp", PROP_USER_TOKEN, legacyToken);
+                    migratedSecrets = true;
+                }
+            }
+
+            apiKey = SecretConfigBridge.getString("abrp", PROP_API_KEY);
+            if ((apiKey == null || apiKey.isEmpty()) && props.containsKey(PROP_API_KEY)) {
+                String legacyApiKey = props.getProperty(PROP_API_KEY);
+                if (legacyApiKey != null && !legacyApiKey.isEmpty()) {
+                    apiKey = legacyApiKey;
+                    SecretConfigBridge.putString("abrp", PROP_API_KEY, legacyApiKey);
+                    migratedSecrets = true;
+                }
             }
 
             String intervalStr = props.getProperty(PROP_UPLOAD_INTERVAL);
@@ -86,6 +103,10 @@ public class AbrpConfig {
                 }
             } else {
                 uploadIntervalSeconds = DEFAULT_UPLOAD_INTERVAL_SECONDS;
+            }
+
+            if (migratedSecrets) {
+                save();
             }
 
             logger.info("Config loaded: token=" + (isConfigured() ? "***" + getMaskedToken() : "not set")
@@ -107,21 +128,26 @@ public class AbrpConfig {
     public boolean save() {
         try {
             Properties props = new Properties();
-            if (userToken != null) {
-                props.setProperty(PROP_USER_TOKEN, userToken);
-            }
             props.setProperty(PROP_ENABLED, String.valueOf(enabled));
             if (carModel != null) {
                 props.setProperty(PROP_CAR_MODEL, carModel);
-            }
-            if (apiKey != null) {
-                props.setProperty(PROP_API_KEY, apiKey);
             }
             props.setProperty(PROP_UPLOAD_INTERVAL, String.valueOf(uploadIntervalSeconds));
 
             File configFile = new File(CONFIG_PATH);
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
                 props.store(fos, "ABRP Configuration");
+            }
+
+            if (userToken == null || userToken.isEmpty()) {
+                SecretConfigBridge.delete("abrp", PROP_USER_TOKEN);
+            } else {
+                SecretConfigBridge.putString("abrp", PROP_USER_TOKEN, userToken);
+            }
+            if (apiKey == null || apiKey.isEmpty()) {
+                SecretConfigBridge.delete("abrp", PROP_API_KEY);
+            } else {
+                SecretConfigBridge.putString("abrp", PROP_API_KEY, apiKey);
             }
 
             logger.info("Config saved to " + CONFIG_PATH);

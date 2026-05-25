@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.UserManager
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
+import com.overdrive.app.config.SecretConfigBridge
 import com.overdrive.app.ui.model.DaemonType
 
 /**
@@ -186,19 +187,18 @@ object PreferencesManager {
         requirePrefs().edit().putString(KEY_ZROK_UNIQUE_NAME, name).commit()
     }
     
-    // Zrok Enable Token - stored in preferences for app-side access
-    // Also synced to /data/local/tmp/.zrok/enable_token for cross-UID access
+    // Zrok Enable Token - stored in the daemon secret store for app-side access
     @Deprecated("Use unified storage via ZrokController instead")
     fun getZrokEnableToken(): String? {
-        return requirePrefs().getString(KEY_ZROK_ENABLE_TOKEN, null)
+        return SecretConfigBridge.getString("zrok", "enableToken")
     }
     
     @Deprecated("Use unified storage via ZrokController instead")
     fun setZrokEnableToken(token: String?) {
         if (token.isNullOrBlank()) {
-            requirePrefs().edit().remove(KEY_ZROK_ENABLE_TOKEN).commit()
+            SecretConfigBridge.delete("zrok", "enableToken")
         } else {
-            requirePrefs().edit().putString(KEY_ZROK_ENABLE_TOKEN, token.trim()).commit()
+            SecretConfigBridge.putString("zrok", "enableToken", token.trim())
         }
     }
     
@@ -206,12 +206,12 @@ object PreferencesManager {
     fun hasZrokEnableToken(): Boolean {
         // Keep deprecated helpers independent so legacy callers do not emit
         // warnings from one deprecated wrapper calling another.
-        return !requirePrefs().getString(KEY_ZROK_ENABLE_TOKEN, null).isNullOrBlank()
+        return !SecretConfigBridge.getString("zrok", "enableToken").isNullOrBlank()
     }
     
     @Deprecated("Use unified storage via ZrokController instead")
     fun clearZrokEnableToken() {
-        requirePrefs().edit().remove(KEY_ZROK_ENABLE_TOKEN).commit()
+        SecretConfigBridge.delete("zrok", "enableToken")
     }
     
     // Logs Panel State

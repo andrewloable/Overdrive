@@ -1,5 +1,6 @@
 package com.overdrive.app.mqtt;
 
+import com.overdrive.app.config.SecretConfigBridge;
 import com.overdrive.app.logging.DaemonLogger;
 
 import org.json.JSONArray;
@@ -57,6 +58,16 @@ public class MqttConnectionStore {
                 for (int i = 0; i < array.length() && i < MAX_CONNECTIONS; i++) {
                     JSONObject obj = array.getJSONObject(i);
                     MqttConnectionConfig config = MqttConnectionConfig.fromJson(obj);
+                    String legacyPassword = obj.optString("password", "");
+                    if (!legacyPassword.isEmpty()) {
+                        config.password = legacyPassword;
+                        SecretConfigBridge.putString("mqtt", config.id, legacyPassword);
+                    } else {
+                        String storedPassword = SecretConfigBridge.getString("mqtt", config.id);
+                        if (storedPassword != null) {
+                            config.password = storedPassword;
+                        }
+                    }
                     connections.add(config);
                 }
 
@@ -84,6 +95,14 @@ public class MqttConnectionStore {
                 String content = array.toString(2);
                 try (FileOutputStream fos = new FileOutputStream(CONFIG_PATH)) {
                     fos.write(content.getBytes(StandardCharsets.UTF_8));
+                }
+
+                for (MqttConnectionConfig config : connections) {
+                    if (config.password == null || config.password.isEmpty()) {
+                        SecretConfigBridge.delete("mqtt", config.id);
+                    } else {
+                        SecretConfigBridge.putString("mqtt", config.id, config.password);
+                    }
                 }
 
                 logger.info("Saved " + connections.size() + " MQTT connections to " + CONFIG_PATH);
@@ -185,6 +204,11 @@ public class MqttConnectionStore {
             if (updates.has("trustAllCerts")) existing.trustAllCerts = updates.optBoolean("trustAllCerts");
 
             save();
+            if (existing.password == null || existing.password.isEmpty()) {
+                SecretConfigBridge.delete("mqtt", existing.id);
+            } else {
+                SecretConfigBridge.putString("mqtt", existing.id, existing.password);
+            }
             logger.info("Updated MQTT connection: " + existing);
             return true;
         }
@@ -200,6 +224,7 @@ public class MqttConnectionStore {
                 if (connections.get(i).id.equals(id)) {
                     MqttConnectionConfig removed = connections.remove(i);
                     save();
+                    SecretConfigBridge.delete("mqtt", removed.id);
                     logger.info("Deleted MQTT connection: " + removed.name + " (" + id + ")");
                     return true;
                 }

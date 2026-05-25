@@ -32,9 +32,6 @@ public class HttpResponse {
         byte[] body = json.getBytes("UTF-8");
         String headers = "HTTP/1.1 200 OK\r\n" +
                         "Content-Type: application/json\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
-                        "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n" +
-                        "Access-Control-Allow-Headers: Content-Type, Authorization\r\n" +
                         "Cache-Control: no-cache, no-store\r\n" +
                         "Content-Length: " + body.length + "\r\n" +
                         "Connection: close\r\n\r\n";
@@ -53,14 +50,7 @@ public class HttpResponse {
      * Without this, the webapp (accessed via external URL/tunnel) cannot save settings.
      */
     public static void sendCorsPreflightResponse(OutputStream out) throws Exception {
-        String headers = "HTTP/1.1 204 No Content\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
-                        "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n" +
-                        "Access-Control-Allow-Headers: Content-Type, Authorization\r\n" +
-                        "Access-Control-Max-Age: 86400\r\n" +
-                        "Content-Length: 0\r\n" +
-                        "Connection: close\r\n\r\n";
-        out.write(headers.getBytes());
+        sendError(out, 403, "CORS preflight denied");
         out.flush();
     }
     
@@ -79,7 +69,6 @@ public class HttpResponse {
         String headers = "HTTP/1.1 401 Unauthorized\r\n" +
                         "Content-Type: application/json\r\n" +
                         "WWW-Authenticate: Bearer realm=\"BYD Champ\"\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
                         "Content-Length: " + body.length + "\r\n" +
                         "Connection: close\r\n\r\n";
         out.write(headers.getBytes());
@@ -99,20 +88,54 @@ public class HttpResponse {
     }
     
     /**
-     * Send JSON response with Set-Cookie header for JWT.
+     * Send JSON response with a single Set-Cookie header for JWT.
      */
     public static void sendJsonWithCookie(OutputStream out, String json, String cookieName, String cookieValue, int maxAgeSeconds) throws Exception {
+        sendJsonWithCookie(out, json, cookieName, cookieValue, maxAgeSeconds, false);
+    }
+
+    public static void sendJsonWithCookie(OutputStream out, String json, String cookieName, String cookieValue, int maxAgeSeconds, boolean secure) throws Exception {
+        sendJsonWithCookies(out, json, new String[] {
+                buildCookie(cookieName, cookieValue, maxAgeSeconds, true, secure)
+        });
+    }
+
+    public static void sendJsonWithCookies(OutputStream out, String json, String[] cookies) throws Exception {
         byte[] body = json.getBytes("UTF-8");
-        String cookie = cookieName + "=" + cookieValue + "; Path=/; Max-Age=" + maxAgeSeconds + "; HttpOnly; SameSite=Strict";
         String headers = "HTTP/1.1 200 OK\r\n" +
                         "Content-Type: application/json\r\n" +
-                        "Set-Cookie: " + cookie + "\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
+                        buildSetCookieHeaders(cookies) +
                         "Content-Length: " + body.length + "\r\n" +
                         "Connection: close\r\n\r\n";
         out.write(headers.getBytes());
         out.write(body);
         out.flush();
+    }
+
+    private static String buildCookie(String cookieName, String cookieValue, int maxAgeSeconds, boolean httpOnly, boolean secure) {
+        StringBuilder cookie = new StringBuilder();
+        cookie.append(cookieName).append("=").append(cookieValue)
+              .append("; Path=/; Max-Age=").append(maxAgeSeconds)
+              .append("; SameSite=Lax");
+        if (httpOnly) {
+            cookie.append("; HttpOnly");
+        }
+        if (secure) {
+            cookie.append("; Secure");
+        }
+        return cookie.toString();
+    }
+
+    private static String buildSetCookieHeaders(String[] cookies) {
+        if (cookies == null || cookies.length == 0) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        for (String cookie : cookies) {
+            if (cookie == null || cookie.isEmpty()) continue;
+            out.append("Set-Cookie: ").append(cookie).append("\r\n");
+        }
+        return out.toString();
     }
     
     /**

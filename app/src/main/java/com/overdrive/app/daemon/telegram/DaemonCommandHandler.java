@@ -1,5 +1,8 @@
 package com.overdrive.app.daemon.telegram;
 
+import com.overdrive.app.config.SecretConfigStore;
+import com.overdrive.app.logging.SecretRedactor;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -17,6 +20,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
     
     private static final String TAG = "DaemonCmd";
     private static final String STATE_FILE = "/data/local/tmp/daemon_telegram_state.properties";
+    private static final SecretConfigStore SECRET_STORE = new SecretConfigStore();
     
     // Debounce duplicate commands
     private long lastCommandTime = 0;
@@ -500,9 +504,9 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
                 // Falls back to public mode only if no reserved token exists
                 String identityCheck = ctx.execShell("test -f /data/local/tmp/.zrok/environment.json && echo yes || echo no");
                 if (identityCheck == null || !identityCheck.trim().equals("yes")) {
-                    // Need to enable — read token from saved file (set via app UI)
-                    String enableToken = ctx.execShell("cat /data/local/tmp/.zrok/enable_token 2>/dev/null");
-                    if (enableToken == null || enableToken.trim().isEmpty() || enableToken.contains("No such file")) {
+                    // Need to enable — read token from secret store (set via app UI)
+                    String enableToken = SECRET_STORE.getString("zrok", "enableToken");
+                    if (enableToken == null || enableToken.trim().isEmpty()) {
                         ctx.log("❌ No zrok enable token found. Set it from the app UI first.");
                         return false;
                     }
@@ -522,11 +526,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
                 }
                 
                 // Check for saved reserved token (from app UI's zrok reserve)
-                String reservedToken = null;
-                String tokenRead = ctx.execShell("cat /data/local/tmp/.zrok/reserved_token 2>/dev/null");
-                if (tokenRead != null && !tokenRead.trim().isEmpty() && !tokenRead.contains("No such file")) {
-                    reservedToken = tokenRead.trim();
-                }
+                String reservedToken = SECRET_STORE.getString("zrok", "reservedToken");
                 
                 // Also read saved unique name for logging
                 String savedName = null;
@@ -537,7 +537,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
                 
                 if (reservedToken != null) {
                     // RESERVED mode — permanent URL, same as app UI
-                    ctx.log("Using reserved token: " + reservedToken);
+                    ctx.log(SecretRedactor.redactToken("Using reserved token", reservedToken));
                     if (savedName != null) {
                         ctx.log("Permanent URL: https://" + savedName + ".share.zrok.io");
                     }

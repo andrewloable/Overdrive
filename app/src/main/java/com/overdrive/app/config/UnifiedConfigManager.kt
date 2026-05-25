@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong
  * - recording: Recording settings (bitrate, codec, pre/post buffer)
  * - streaming: Streaming quality settings
  * - telegram: Telegram bot settings
+ * - network: Network exposure settings
  */
 object UnifiedConfigManager {
     private const val TAG = "UnifiedConfig"
@@ -76,6 +77,7 @@ object UnifiedConfigManager {
         unified.put("recording", JSONObject())
         unified.put("streaming", JSONObject())
         unified.put("telegram", JSONObject())
+        unified.put("network", JSONObject())
         unified.put("proximityGuard", JSONObject())
         unified.put("telemetryOverlay", JSONObject())
         unified.put("tripAnalytics", JSONObject())
@@ -178,6 +180,9 @@ object UnifiedConfigManager {
         val surveillance = config.getJSONObject("surveillance")
         val recording = config.getJSONObject("recording")
         val streaming = config.getJSONObject("streaming")
+        val network = config.optJSONObject("network") ?: JSONObject().also {
+            config.put("network", it)
+        }
         val proximityGuard = config.optJSONObject("proximityGuard") ?: JSONObject().also { 
             config.put("proximityGuard", it) 
         }
@@ -209,6 +214,9 @@ object UnifiedConfigManager {
         
         // Streaming defaults
         if (!streaming.has("quality")) streaming.put("quality", "MEDIUM")
+
+        // Network defaults
+        if (!network.has("lanHttpEnabled")) network.put("lanHttpEnabled", false)
         
         // Proximity Guard defaults
         if (!proximityGuard.has("enabled")) proximityGuard.put("enabled", false)
@@ -544,6 +552,23 @@ object UnifiedConfigManager {
     }
 
     /**
+     * Check whether LAN HTTP binding is explicitly enabled.
+     * Default is false so fresh installs only listen on loopback.
+     */
+    @JvmStatic
+    fun isLanHttpEnabled(): Boolean {
+        return loadConfig().optJSONObject("network")?.optBoolean("lanHttpEnabled", false) ?: false
+    }
+
+    /**
+     * Update LAN HTTP binding mode.
+     */
+    @JvmStatic
+    fun setLanHttpEnabled(enabled: Boolean): Boolean {
+        return updateValues("network", mapOf("lanHttpEnabled" to enabled))
+    }
+
+    /**
      * Get vehicle appearance config section (selected 3D model + body color).
      */
     @JvmStatic
@@ -601,12 +626,21 @@ object UnifiedConfigManager {
             // Merge into existing section to preserve keys not present in data
             // (e.g. surveillanceEnabled is set separately from detection params)
             val existing = config.optJSONObject(section) ?: JSONObject()
+            var changed = stripSensitiveKeys(section, existing)
             val keys = data.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
+                if (isSensitiveKey(section, key)) {
+                    Log.w(TAG, "Ignoring sensitive key write to public config: $section.$key")
+                    continue
+                }
+                changed = true
                 existing.put(key, data.get(key))
             }
             config.put(section, existing)
+            if (!changed) {
+                return false
+            }
             val success = saveConfig(config)
             if (success) {
                 notifyListeners(section, existing)
@@ -623,12 +657,21 @@ object UnifiedConfigManager {
         synchronized(this) {
             val config = loadConfig()
             val sectionObj = config.optJSONObject(section) ?: JSONObject()
+            var changed = stripSensitiveKeys(section, sectionObj)
             
             values.forEach { (key, value) ->
+                if (isSensitiveKey(section, key)) {
+                    Log.w(TAG, "Ignoring sensitive key write to public config: $section.$key")
+                    return@forEach
+                }
+                changed = true
                 sectionObj.put(key, value)
             }
             
             config.put(section, sectionObj)
+            if (!changed) {
+                return false
+            }
             val success = saveConfig(config)
             if (success) {
                 notifyListeners(section, sectionObj)
@@ -717,6 +760,46 @@ object UnifiedConfigManager {
         config.put("lastModified", System.currentTimeMillis())
         applyDefaults(config)
         return config
+    }
+
+    private fun sanitizeLoadedConfig(config: JSONObject): Boolean {
+        var changed = false
+        val keys = config.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val section = config.optJSONObject(key) ?: continue
+            if (stripSensitiveKeys(key, section)) {
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    private fun stripSensitiveKeys(section: String, data: JSONObject): Boolean {
+        var changed = false
+        sensitiveKeysFor(section).forEach { sensitiveKey ->
+            if (data.has(sensitiveKey)) {
+                data.remove(sensitiveKey)
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    private fun isSensitiveKey(section: String, key: String): Boolean {
+        return sensitiveKeysFor(section).contains(key)
+    }
+
+    private fun sensitiveKeysFor(section: String): Set<String> {
+        return when (section) {
+            "auth" -> setOf("deviceSecret")
+            "telegram" -> setOf("botToken")
+            "bydCloud" -> setOf("rawPassword", "loginKey", "signPassword", "commandPwd")
+            "mqtt" -> setOf("password")
+            "abrp" -> setOf("user_token", "api_key")
+            "zrok" -> setOf("enableToken", "reservedToken", "enable_token", "reserved_token")
+            else -> emptySet()
+        }
     }
     
     /**

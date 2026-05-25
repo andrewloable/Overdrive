@@ -490,4 +490,82 @@ public class CameraDaemonClient {
             return false;
         }
     }
+
+    /**
+     * Read a secret value from the daemon-owned secret store.
+     */
+    public String getSecret(String section, String key) {
+        try {
+            JSONObject cmd = new JSONObject();
+            cmd.put("cmd", "secret_get");
+            cmd.put("section", section);
+            cmd.put("key", key);
+            JSONObject response = sendCommand(cmd);
+            if (!"ok".equals(response.optString("status"))) {
+                return null;
+            }
+            String value = response.optString("value", "");
+            return value.isEmpty() ? null : value;
+        } catch (Exception e) {
+            Log.e(TAG, "getSecret error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Read an entire secret section from the daemon-owned secret store.
+     */
+    public JSONObject getSecretSection(String section) {
+        try {
+            JSONObject cmd = new JSONObject();
+            cmd.put("cmd", "secret_get_section");
+            cmd.put("section", section);
+            JSONObject response = sendCommand(cmd);
+            if (!"ok".equals(response.optString("status"))) {
+                return new JSONObject();
+            }
+            JSONObject value = response.optJSONObject("section");
+            return value != null ? value : new JSONObject();
+        } catch (Exception e) {
+            Log.e(TAG, "getSecretSection error: " + e.getMessage());
+            return new JSONObject();
+        }
+    }
+
+    /**
+     * Store a secret value in the daemon-owned secret store.
+     */
+    public boolean putSecret(String section, String key, Object value) {
+        try {
+            JSONObject cmd = new JSONObject();
+            cmd.put("cmd", "secret_put");
+            cmd.put("section", section);
+            cmd.put("key", key);
+            if (value != null) {
+                cmd.put("value", value);
+            }
+            JSONObject response = sendCommand(cmd);
+            return "ok".equals(response.optString("status"));
+        } catch (Exception e) {
+            Log.e(TAG, "putSecret error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete a secret value from the daemon-owned secret store.
+     */
+    public boolean deleteSecret(String section, String key) {
+        try {
+            JSONObject cmd = new JSONObject();
+            cmd.put("cmd", "secret_delete");
+            cmd.put("section", section);
+            cmd.put("key", key);
+            JSONObject response = sendCommand(cmd);
+            return "ok".equals(response.optString("status"));
+        } catch (Exception e) {
+            Log.e(TAG, "deleteSecret error: " + e.getMessage());
+            return false;
+        }
+    }
 }

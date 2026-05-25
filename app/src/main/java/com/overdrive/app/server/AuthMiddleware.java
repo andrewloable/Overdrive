@@ -2,6 +2,7 @@ package com.overdrive.app.server;
 
 import com.overdrive.app.auth.AuthManager;
 import com.overdrive.app.daemon.CameraDaemon;
+import com.overdrive.app.BuildConfig;
 
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -16,11 +17,10 @@ import java.util.Set;
  *   Tier 1 — JWT (cookie or Authorization: Bearer): primary, all callers should use this.
  *
  *   Tier 2 — loopback safety net: requests originating from 127.0.0.1 are
- *            trusted ONLY when the request carries no tunnel-fingerprint
- *            headers (X-Forwarded-*, Cf-*, X-Real-Ip, Forwarded). This
- *            keeps developer-tools and ADB shell access working while
- *            blocking traffic relayed via cloudflared / zrok / ngrok which
- *            all forward to localhost but inject these proxy headers.
+ *            trusted only in debug builds, and only when the request carries
+ *            no tunnel-fingerprint headers (X-Forwarded-*, Cf-*, X-Real-Ip,
+ *            Forwarded). Release builds require a JWT for every protected
+ *            route because Android loopback is shared by all apps.
  *
  * Public paths (no auth required at all):
  * - /auth/token       - Login endpoint (must be reachable)
@@ -32,7 +32,7 @@ import java.util.Set;
  *
  * Notably NOT public anymore:
  * - /status           - leaks ACC/charging/recording state, requires auth
- * - /auth/status      - leaks deviceId, requires auth
+ * - /auth/status      - public login helper for the login page
  */
 public class AuthMiddleware {
 
@@ -59,6 +59,7 @@ public class AuthMiddleware {
 
     // Cookie name for JWT
     private static final String JWT_COOKIE_NAME = "byd_session";
+    private static volatile Boolean loopbackBypassOverride = null;
 
     /**
      * Check if request is authenticated.
@@ -139,11 +140,10 @@ public class AuthMiddleware {
         }
 
         // Tier 2 — loopback safety net. Trust 127.0.0.1 / ::1 ONLY when no
-        // tunnel-fingerprint headers are present. Reverse proxies (cloudflared,
-        // zrok, ngrok) all forward to localhost but inject these headers — so
-        // their absence is a strong signal we're talking to a same-device
-        // caller. Defense in depth alongside Tier 1.
-        if (!hasTunnelHeaders && clientAddress != null) {
+        // tunnel-fingerprint headers are present. In release builds this
+        // bypass is disabled entirely because Android loopback is shared by
+        // every app on the device.
+        if (isLoopbackBypassAllowed() && !hasTunnelHeaders && clientAddress != null) {
             String addrStr = clientAddress.toString();
             boolean isLoopback = addrStr.contains("127.0.0.1") || addrStr.contains("/0:0:0:0:0:0:0:1");
             if (isLoopback) {
@@ -153,6 +153,15 @@ public class AuthMiddleware {
 
         return handleUnauthorized(path, out,
             jwt == null || jwt.isEmpty() ? "No session token" : "Invalid session token");
+    }
+
+    static void setLoopbackBypassOverride(Boolean override) {
+        loopbackBypassOverride = override;
+    }
+
+    private static boolean isLoopbackBypassAllowed() {
+        Boolean override = loopbackBypassOverride;
+        return override != null ? override : BuildConfig.DEBUG;
     }
     
     /**

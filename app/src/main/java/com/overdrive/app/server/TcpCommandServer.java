@@ -1,6 +1,7 @@
 package com.overdrive.app.server;
 
 import com.overdrive.app.daemon.CameraDaemon;
+import com.overdrive.app.config.SecretConfigStore;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,6 +24,7 @@ public class TcpCommandServer {
     private final int port;
     private ServerSocket serverSocket;
     private volatile boolean running = true;
+    private static final SecretConfigStore SECRET_STORE = new SecretConfigStore();
 
     public TcpCommandServer(int port) {
         this.port = port;
@@ -87,10 +89,9 @@ public class TcpCommandServer {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                CameraDaemon.log("TCP received: " + line);
-                
                 try {
                     JSONObject cmd = new JSONObject(line);
+                    CameraDaemon.log("TCP received command: " + cmd.optString("cmd", ""));
                     JSONObject response = processCommand(cmd);
                     writer.println(response.toString());
                 } catch (Exception e) {
@@ -446,6 +447,55 @@ public class TcpCommandServer {
                 response.put("status", "ok");
                 response.put("message", "Auth cache invalidated");
                 break;
+
+            case "secret_get": {
+                String section = cmd.optString("section", "");
+                String key = cmd.optString("key", "");
+                String value = SECRET_STORE.getString(section, key);
+                response.put("status", "ok");
+                response.put("value", value == null ? "" : value);
+                break;
+            }
+
+            case "secret_get_section": {
+                String section = cmd.optString("section", "");
+                JSONObject data = SECRET_STORE.loadSection(section);
+                response.put("status", "ok");
+                response.put("section", data);
+                break;
+            }
+
+            case "secret_put": {
+                String section = cmd.optString("section", "");
+                String key = cmd.optString("key", "");
+                Object value = cmd.has("value") ? cmd.get("value") : null;
+                boolean ok;
+                if (value == null || value == JSONObject.NULL) {
+                    ok = SECRET_STORE.delete(section, key);
+                } else if (value instanceof Boolean) {
+                    ok = SECRET_STORE.putBoolean(section, key, (Boolean) value);
+                } else if (value instanceof Number) {
+                    ok = SECRET_STORE.putLong(section, key, ((Number) value).longValue());
+                } else {
+                    ok = SECRET_STORE.putString(section, key, String.valueOf(value));
+                }
+                response.put("status", ok ? "ok" : "error");
+                if (!ok) {
+                    response.put("message", "Failed to write secret");
+                }
+                break;
+            }
+
+            case "secret_delete": {
+                String section = cmd.optString("section", "");
+                String key = cmd.optString("key", "");
+                boolean ok = SECRET_STORE.delete(section, key);
+                response.put("status", ok ? "ok" : "error");
+                if (!ok) {
+                    response.put("message", "Failed to delete secret");
+                }
+                break;
+            }
 
             case "shell":
                 // Execute shell command (used by SentryDaemon to run commands as UID 2000)

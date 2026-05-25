@@ -18,6 +18,8 @@ const MQTT = {
         this.loadConnections();
         this.loadTelemetry();
         this.startAutoRefresh();
+        this.bindSecurityWarningEvents();
+        this.updateSecurityWarning();
     },
 
     // ==================== DATA LOADING ====================
@@ -191,6 +193,7 @@ const MQTT = {
         document.getElementById('formTopic').value = 'overdrive/vehicle/telemetry';
         document.getElementById('formUsername').value = '';
         document.getElementById('formPassword').value = '';
+        document.getElementById('formTrustAll').checked = false;
         document.getElementById('formClientId').value = '';
         document.getElementById('formQos').value = '0';
         document.getElementById('formInterval').value = '5';
@@ -198,6 +201,7 @@ const MQTT = {
         document.getElementById('formRetain').checked = false;
         document.getElementById('formEnabled').checked = true;
         this._switchTab('add');
+        this.updateSecurityWarning();
         var nameEl = document.getElementById('formName');
         if (nameEl) nameEl.focus();
     },
@@ -216,6 +220,7 @@ const MQTT = {
         document.getElementById('formTopic').value = conn.topic || '';
         document.getElementById('formUsername').value = conn.username || '';
         document.getElementById('formPassword').value = '';  // Don't prefill password
+        document.getElementById('formTrustAll').checked = !!conn.trustAllCerts;
         document.getElementById('formClientId').value = conn.clientId || '';
         document.getElementById('formQos').value = conn.qos || 0;
         document.getElementById('formInterval').value = conn.publishIntervalSeconds || 5;
@@ -223,6 +228,7 @@ const MQTT = {
         document.getElementById('formRetain').checked = conn.retainMessages || false;
         document.getElementById('formEnabled').checked = conn.enabled || false;
         this._switchTab('add');
+        this.updateSecurityWarning();
         var nameEl = document.getElementById('formName');
         if (nameEl) nameEl.focus();
     },
@@ -242,6 +248,7 @@ const MQTT = {
             topic: document.getElementById('formTopic').value.trim(),
             username: document.getElementById('formUsername').value.trim(),
             password: document.getElementById('formPassword').value,
+            trustAllCerts: document.getElementById('formTrustAll').checked,
             clientId: document.getElementById('formClientId').value.trim(),
             qos: parseInt(document.getElementById('formQos').value) || 0,
             publishIntervalSeconds: parseInt(document.getElementById('formInterval').value) || 5,
@@ -278,6 +285,7 @@ const MQTT = {
                 // Return to the Connections tab so the user sees the new entry
                 // immediately. The list re-renders via loadConnections().
                 this._switchTab('connections');
+                this.updateSecurityWarning();
             } else {
                 this.toast(result.error || BYD.i18n.t('errors.save_failed'), 'error');
             }
@@ -353,6 +361,44 @@ const MQTT = {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    },
+
+    updateSecurityWarning() {
+        const warning = document.getElementById('mqttSecurityWarning');
+        const broker = document.getElementById('formBrokerUrl');
+        const trustAll = document.getElementById('formTrustAll');
+        if (!warning || !broker || !trustAll) return;
+
+        const parts = [];
+        const brokerUrl = (broker.value || '').trim().toLowerCase();
+        if (brokerUrl.startsWith('tcp://')) {
+            parts.push('Plain TCP does not encrypt the MQTT connection. Prefer `ssl://` or `wss://` for any broker that crosses a network boundary.');
+        }
+        if (trustAll.checked) {
+            parts.push('Certificate validation is disabled. Only use this for a broker you control on a trusted local network.');
+        }
+
+        if (parts.length === 0) {
+            warning.style.display = 'none';
+            warning.textContent = '';
+            return;
+        }
+
+        warning.style.display = 'block';
+        warning.textContent = parts.join(' ');
+    },
+
+    bindSecurityWarningEvents() {
+        const broker = document.getElementById('formBrokerUrl');
+        const trustAll = document.getElementById('formTrustAll');
+        if (broker && !broker.dataset.securityWarningBound) {
+            broker.addEventListener('input', () => this.updateSecurityWarning());
+            broker.dataset.securityWarningBound = '1';
+        }
+        if (trustAll && !trustAll.dataset.securityWarningBound) {
+            trustAll.addEventListener('change', () => this.updateSecurityWarning());
+            trustAll.dataset.securityWarningBound = '1';
+        }
     },
 
     toast(message, type) {

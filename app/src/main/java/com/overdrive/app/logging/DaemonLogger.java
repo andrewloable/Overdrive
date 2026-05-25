@@ -185,24 +185,30 @@ public class DaemonLogger {
      * Log a message with specified level.
      */
     public void log(Level level, String message) {
+        String redactedMessage = SecretRedactor.redactMessage(message);
         String timestamp = timestampFormat.format(new Date());
-        String logLine = "[" + timestamp + "] [" + level.name() + "] [" + tag + "] " + message;
+        String logLine = "[" + timestamp + "] [" + level.name() + "] [" + tag + "] " + redactedMessage;
         
         // Console log if enabled (standard Android Log for app context)
         if (globalConfig.enableConsoleLog) {
-            switch (level) {
-                case DEBUG:
-                    Log.d(tag, message);
-                    break;
-                case INFO:
-                    Log.i(tag, message);
-                    break;
-                case WARN:
-                    Log.w(tag, message);
-                    break;
-                case ERROR:
-                    Log.e(tag, message);
-                    break;
+            try {
+                switch (level) {
+                    case DEBUG:
+                        Log.d(tag, redactedMessage);
+                        break;
+                    case INFO:
+                        Log.i(tag, redactedMessage);
+                        break;
+                    case WARN:
+                        Log.w(tag, redactedMessage);
+                        break;
+                    case ERROR:
+                        Log.e(tag, redactedMessage);
+                        break;
+                }
+            } catch (RuntimeException ignored) {
+                // Local JVM unit tests do not provide a real android.util.Log
+                // implementation. Keep file/stdout logging working and move on.
             }
         }
         
@@ -210,7 +216,7 @@ public class DaemonLogger {
         // Include timestamp so the shell wrapper's log file has timestamps
         // on every line, not just the wrapper's own echo statements.
         if (globalConfig.enableStdoutLog) {
-            System.out.println(tag + ": [" + timestamp + "] " + message);
+            System.out.println(tag + ": [" + timestamp + "] " + redactedMessage);
         }
         
         // File log if enabled globally AND for this specific tag

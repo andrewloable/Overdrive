@@ -1,7 +1,11 @@
 package com.overdrive.app.updater;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -14,7 +18,9 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +81,34 @@ public class AppUpdater {
     private String releaseNotes;
     private String remoteVersion;
     private String remoteUpdatedAt;
+    private ReleaseManifest releaseManifest;
+
+    private static final String EXPECTED_PACKAGE_NAME = "com.overdrive.app";
+    private static final String RELEASE_MANIFEST_ASSET = "overdrive-update.json";
+
+    private static final class ReleaseManifest {
+        final String packageName;
+        final String versionName;
+        final long versionCode;
+        final String apkAssetName;
+        final String apkSha256;
+        final long apkSize;
+        final String signingCertSha256;
+        final long minSupportedVersionCode;
+
+        private ReleaseManifest(String packageName, String versionName, long versionCode,
+                                String apkAssetName, String apkSha256, long apkSize,
+                                String signingCertSha256, long minSupportedVersionCode) {
+            this.packageName = packageName;
+            this.versionName = versionName;
+            this.versionCode = versionCode;
+            this.apkAssetName = apkAssetName;
+            this.apkSha256 = apkSha256;
+            this.apkSize = apkSize;
+            this.signingCertSha256 = signingCertSha256;
+            this.minSupportedVersionCode = minSupportedVersionCode;
+        }
+    }
 
     /**
      * Build an OkHttpClient that auto-detects sing-box proxy on port 8119.
@@ -267,40 +301,66 @@ public class AppUpdater {
                     // Find the APK asset
                     JSONArray assets = release.optJSONArray("assets");
                     if (assets == null || assets.length() == 0) {
-                        postError(callback, "No assets in release");
+                        postError(callback, "No release assets found; cause: GitHub release has no downloadable files; fix: attach overdrive-update.json and the matching APK asset");
                         return;
                     }
 
-                    String apkUrl = null;
-                    String apkName = null;
-                    String updatedAt = null;
-
-                    for (int i = 0; i < assets.length(); i++) {
-                        JSONObject asset = assets.getJSONObject(i);
-                        String name = asset.optString("name", "");
-                        if (name.endsWith(".apk")) {
-                            apkUrl = asset.optString("browser_download_url", "");
-                            apkName = name;
-                            updatedAt = asset.optString("updated_at", "");
-                            break;
-                        }
-                    }
-
-                    if (apkUrl == null || apkUrl.isEmpty()) {
-                        postError(callback, "No APK found in release");
+                    JSONObject manifestAsset = findAssetByName(assets, RELEASE_MANIFEST_ASSET);
+                    if (manifestAsset == null) {
+                        postError(callback, "Release manifest missing; cause: no " + RELEASE_MANIFEST_ASSET + " asset was attached; fix: publish a manifest that names the APK, checksum, size, package, and signing cert");
                         return;
                     }
 
+                    String manifestUrl = manifestAsset.optString("browser_download_url", "");
+                    if (!isHttpsUrl(manifestUrl)) {
+                        postError(callback, "Invalid release manifest URL; cause: manifest URL is not HTTPS; fix: republish the manifest over HTTPS only");
+                        return;
+                    }
+
+                    String manifestBody = downloadText(client, manifestUrl);
+                    releaseManifest = parseReleaseManifest(manifestBody);
+                    if (releaseManifest == null) {
+                        postError(callback, "Release manifest malformed; cause: required fields were missing or invalid; fix: ensure overdrive-update.json includes packageName, versionName, versionCode, apkAssetName, apkSha256, apkSize, signingCertSha256");
+                        return;
+                    }
+                    if (!EXPECTED_PACKAGE_NAME.equals(releaseManifest.packageName)) {
+                        postError(callback, "Release manifest package mismatch; cause: expected " + EXPECTED_PACKAGE_NAME + " but found " + releaseManifest.packageName + "; fix: publish a manifest for the OverDrive package");
+                        return;
+                    }
+
+                    JSONObject apkAsset = findAssetByName(assets, releaseManifest.apkAssetName);
+                    if (apkAsset == null) {
+                        postError(callback, "Release APK missing; cause: manifest names " + releaseManifest.apkAssetName + " but that asset is not attached; fix: upload the APK under the manifest's apkAssetName");
+                        return;
+                    }
+
+                    String apkUrl = apkAsset.optString("browser_download_url", "");
+                    if (!isHttpsUrl(apkUrl)) {
+                        postError(callback, "Invalid APK URL; cause: release asset is not HTTPS; fix: republish the APK over HTTPS only");
+                        return;
+                    }
+
+                    String updatedAt = apkAsset.optString("updated_at", "");
                     latestDownloadUrl = apkUrl;
                     remoteUpdatedAt = updatedAt;
 
-                    // Extract version from APK filename
-                    remoteVersion = extractVersion(apkName);
+                    // Prefer the manifest version so the updater no longer
+                    // guesses from the file name.
+                    remoteVersion = releaseManifest.versionName != null && !releaseManifest.versionName.isEmpty()
+                            ? releaseManifest.versionName
+                            : extractVersion(releaseManifest.apkAssetName);
                     // Report what AppUpdater previously persisted so the
                     // user-facing "you're on version X" matches what
                     // SettingsAboutFragment shows. BuildConfig.VERSION_NAME
                     // is the gradle stub and unrelated to GitHub releases.
                     String currentVersion = getDisplayVersion(context);
+                    long currentVersionCode = getInstalledVersionCode();
+                    if (currentVersionCode >= 0 && releaseManifest.versionCode <= currentVersionCode) {
+                        Log.i(TAG, "Skipping release versionCode=" + releaseManifest.versionCode +
+                                " because installed versionCode=" + currentVersionCode);
+                        runCallback(() -> callback.onNoUpdate(currentVersion));
+                        return;
+                    }
 
                     // Update detection: compare asset updated_at timestamp only.
                     // Version comparison is unreliable since versionName may not be bumped
@@ -435,6 +495,16 @@ public class AppUpdater {
 
                 // Step 2: Verify APK size via shell
                 postProgress(callback, "Verifying download...");
+                if (releaseManifest == null) {
+                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        @Override public void onLog(String m) {}
+                        @Override public void onLaunched() {}
+                        @Override public void onError(String e) {}
+                    });
+                    postInstallError(callback, "Release manifest unavailable; cause: update check did not fetch overdrive-update.json; fix: rerun the update check so the manifest can be validated before install");
+                    return;
+                }
+
                 final boolean[] szDone = {false};
                 final String[] szResult = {null};
                 runShell("stat -c%s " + APK_PATH + " 2>/dev/null || echo 0",
@@ -456,13 +526,44 @@ public class AppUpdater {
 
                 long fileSize = 0;
                 try { fileSize = Long.parseLong(szResult[0].trim()); } catch (Exception ignored) {}
-                if (fileSize < 1_000_000) {
+                if (fileSize <= 0) {
                     runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
                     });
-                    postInstallError(callback, "Invalid APK (size: " + fileSize + ")");
+                    postInstallError(callback, "Invalid APK (size: " + fileSize + "); cause: download is missing or empty; fix: republish the release asset and try again");
+                    return;
+                }
+
+                if (releaseManifest.apkSize > 0 && fileSize != releaseManifest.apkSize) {
+                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        @Override public void onLog(String m) {}
+                        @Override public void onLaunched() {}
+                        @Override public void onError(String e) {}
+                    });
+                    postInstallError(callback, "APK size mismatch; cause: expected " + releaseManifest.apkSize + " bytes but downloaded " + fileSize + " bytes; fix: republish the exact APK named in the manifest");
+                    return;
+                }
+
+                String downloadedSha256 = sha256Hex(new File(APK_PATH));
+                if (downloadedSha256 == null || !downloadedSha256.equalsIgnoreCase(releaseManifest.apkSha256)) {
+                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        @Override public void onLog(String m) {}
+                        @Override public void onLaunched() {}
+                        @Override public void onError(String e) {}
+                    });
+                    postInstallError(callback, "APK checksum mismatch; cause: downloaded SHA-256 did not match manifest; fix: republish the APK and manifest together");
+                    return;
+                }
+
+                if (!verifyArchiveMetadata(new File(APK_PATH), releaseManifest)) {
+                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        @Override public void onLog(String m) {}
+                        @Override public void onLaunched() {}
+                        @Override public void onError(String e) {}
+                    });
+                    postInstallError(callback, "APK metadata mismatch; cause: package name, versionCode, or signing cert did not match the manifest; fix: republish the APK with matching release metadata");
                     return;
                 }
 
@@ -506,7 +607,7 @@ public class AppUpdater {
                 final boolean[] done = {false};
                 final String[] result = {null};
 
-                String installCmd = "pm install -r -d " + APK_PATH +
+                String installCmd = "pm install -r " + APK_PATH +
                     "; rm -f " + APK_PATH +
                     "; sleep 2; am start -n com.overdrive.app/.ui.MainActivity" +
                     " --ez " + UpdateLifecycle.EXTRA_POST_UPDATE + " true";
@@ -580,6 +681,138 @@ public class AppUpdater {
                "fi'";
     }
 
+    private String downloadText(OkHttpClient client, String url) throws Exception {
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Accept", "application/octet-stream")
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new IllegalStateException("HTTP " + response.code());
+            }
+            return response.body().string();
+        }
+    }
+
+    private JSONObject findAssetByName(JSONArray assets, String name) {
+        if (assets == null || name == null) return null;
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.optJSONObject(i);
+            if (asset != null && name.equals(asset.optString("name", ""))) {
+                return asset;
+            }
+        }
+        return null;
+    }
+
+    private boolean isHttpsUrl(String url) {
+        return url != null && url.startsWith("https://");
+    }
+
+    private ReleaseManifest parseReleaseManifest(String body) {
+        try {
+            JSONObject json = new JSONObject(body);
+            String packageName = json.optString("packageName", "");
+            String versionName = json.optString("versionName", "");
+            long versionCode = json.optLong("versionCode", -1);
+            String apkAssetName = json.optString("apkAssetName", "");
+            String apkSha256 = json.optString("apkSha256", "");
+            long apkSize = json.optLong("apkSize", -1);
+            String signingCertSha256 = json.optString("signingCertSha256", "");
+            long minSupportedVersionCode = json.optLong("minSupportedVersionCode", 0);
+
+            if (packageName.isEmpty() || versionName.isEmpty() || versionCode < 0 ||
+                    apkAssetName.isEmpty() || apkSha256.isEmpty() || apkSize <= 0 ||
+                    signingCertSha256.isEmpty()) {
+                return null;
+            }
+
+            return new ReleaseManifest(
+                    packageName,
+                    versionName,
+                    versionCode,
+                    apkAssetName,
+                    apkSha256,
+                    apkSize,
+                    signingCertSha256,
+                    minSupportedVersionCode);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String sha256Hex(File file) {
+        if (file == null || !file.exists() || !file.canRead()) {
+            return null;
+        }
+        try (FileInputStream in = new FileInputStream(file)) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+            return bytesToHex(digest.digest());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean verifyArchiveMetadata(File apkFile, ReleaseManifest manifest) {
+        if (apkFile == null || manifest == null) {
+            return false;
+        }
+        try {
+            PackageManager pm = context.getPackageManager();
+            int flags = PackageManager.GET_SIGNING_CERTIFICATES;
+            PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), flags);
+            if (info == null || info.packageName == null) {
+                return false;
+            }
+            if (!manifest.packageName.equals(info.packageName)) {
+                return false;
+            }
+            long versionCode = info.getLongVersionCode();
+            if (manifest.versionCode >= 0 && versionCode != manifest.versionCode) {
+                return false;
+            }
+            Signature[] signatures = extractArchiveSignatures(info);
+            if (signatures == null || signatures.length == 0) {
+                return false;
+            }
+            String certSha256 = bytesToHex(MessageDigest.getInstance("SHA-256")
+                    .digest(signatures[0].toByteArray()));
+            return manifest.signingCertSha256.equalsIgnoreCase(certSha256);
+        } catch (Exception e) {
+            Log.w(TAG, "Archive metadata verification failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private Signature[] extractArchiveSignatures(PackageInfo info) {
+        if (info == null) {
+            return null;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && info.signingInfo != null) {
+            if (info.signingInfo.hasMultipleSigners()) {
+                return info.signingInfo.getApkContentsSigners();
+            }
+            return info.signingInfo.getSigningCertificateHistory();
+        }
+        return info.signatures;
+    }
+
+    private String bytesToHex(byte[] data) {
+        if (data == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(data.length * 2);
+        for (byte b : data) {
+            sb.append(String.format(java.util.Locale.US, "%02x", b));
+        }
+        return sb.toString();
+    }
+
     /**
      * Daemon-process install path: write a self-contained install script and
      * fire it off detached (setsid + null fds) so it survives our death.
@@ -592,7 +825,7 @@ public class AppUpdater {
      *
      * The script: kills watchdogs first (so they can't respawn the daemons
      * we're about to kill), kills daemons (including us), runs `pm install
-     * -r -d`, then `am start` to relaunch the app. Same sequence the
+     * -r`, then `am start` to relaunch the app. Same sequence the
      * synchronous app-process flow uses, just packaged so the caller can
      * exit before it runs.
      *
@@ -674,12 +907,11 @@ public class AppUpdater {
         // process consumes them via UpdateLifecycle.
         script.append("rm -f /data/local/tmp/camera_daemon.disabled 2>/dev/null\n");
         script.append("sleep 2\n");
-        // Step 4: install. `pm install -r -d` allows downgrades (-d) so a
-        // bad release doesn't strand the user, and replaces the existing app
-        // (-r). Stdout is captured into PM_OUT so step 4b can include the
-        // failure reason in the progress JSON if `pm install` exits non-zero.
+        // Step 4: install. `pm install -r` replaces the existing app (-r).
+        // Stdout is captured into PM_OUT so step 4b can include the failure
+        // reason in the progress JSON if `pm install` exits non-zero.
         script.append("echo \"[install] running pm install\"\n");
-        script.append("PM_OUT=$(pm install -r -d ").append(APK_PATH).append(" 2>&1)\n");
+        script.append("PM_OUT=$(pm install -r ").append(APK_PATH).append(" 2>&1)\n");
         script.append("INSTALL_RC=$?\n");
         script.append("echo \"$PM_OUT\"\n");
         script.append("rm -f ").append(APK_PATH).append("\n");
@@ -1237,5 +1469,15 @@ public class AppUpdater {
             }
         } catch (Exception ignored) {}
         return DISPLAY_VERSION_FALLBACK;
+    }
+
+    private long getInstalledVersionCode() {
+        try {
+            PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            return info != null ? info.getLongVersionCode() : -1;
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to read installed versionCode: " + e.getMessage());
+            return -1;
+        }
     }
 }

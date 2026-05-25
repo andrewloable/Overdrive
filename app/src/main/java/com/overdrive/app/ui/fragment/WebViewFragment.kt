@@ -525,7 +525,7 @@ class WebViewFragment : Fragment() {
                         // Inject Auth
                         val jwt = getAuthJwt()
                         if (jwt != null) {
-                            connection.setRequestProperty("Cookie", "byd_session=$jwt")
+                            connection.setRequestProperty("Cookie", "byd_session=$jwt; byd_auth=1")
                         }
 
                         connection.connect()
@@ -893,7 +893,8 @@ class WebViewFragment : Fragment() {
                 if (jwt != null) {
                     val existing = conn.getRequestProperty("Cookie") ?: ""
                     if (!existing.contains("byd_session")) {
-                        val cookie = if (existing.isNotEmpty()) "$existing; byd_session=$jwt" else "byd_session=$jwt"
+                        val baseCookie = "byd_session=$jwt; byd_auth=1"
+                        val cookie = if (existing.isNotEmpty()) "$existing; $baseCookie" else baseCookie
                         conn.setRequestProperty("Cookie", cookie)
                     }
                 }
@@ -984,7 +985,14 @@ class WebViewFragment : Fragment() {
             if (jwt != null) {
                 val cm = CookieManager.getInstance()
                 cm.setAcceptCookie(true)
-                cm.setCookie("http://127.0.0.1:${CameraDaemon.HTTP_PORT}", "byd_session=$jwt; Path=/; Max-Age=31536000")
+                cm.setCookie(
+                    "http://127.0.0.1:${CameraDaemon.HTTP_PORT}",
+                    "byd_session=$jwt; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax"
+                )
+                cm.setCookie(
+                    "http://127.0.0.1:${CameraDaemon.HTTP_PORT}",
+                    "byd_auth=1; Path=/; Max-Age=31536000; SameSite=Lax"
+                )
                 cm.flush()
                 android.util.Log.d("WebView", "Auth cookie set${if (attempt > 0) " (attempt ${attempt + 1})" else ""}")
                 if (attempt > 0 && !authReloadFired) {

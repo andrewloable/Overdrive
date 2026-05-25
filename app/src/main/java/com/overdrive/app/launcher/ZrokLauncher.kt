@@ -1,6 +1,7 @@
 package com.overdrive.app.launcher
 
 import android.content.Context
+import com.overdrive.app.config.SecretConfigBridge
 import com.overdrive.app.logging.LogManager
 
 /**
@@ -38,12 +39,6 @@ class ZrokLauncher(
         
         // Identity file - THIS IS THE KEY FILE that proves device is enabled
         private const val ZROK_IDENTITY_FILE = "/data/local/tmp/.zrok/environment.json"
-        
-        // Reserved token file - stores the reserved share token
-        private const val ZROK_RESERVED_TOKEN_FILE = "/data/local/tmp/.zrok/reserved_token"
-        
-        // Enable token file - stores the enable token for cross-UID access
-        private const val ZROK_ENABLE_TOKEN_FILE = "/data/local/tmp/.zrok/enable_token"
         
         // Unique name file - stores the generated unique name
         private const val ZROK_UNIQUE_NAME_FILE = "/data/local/tmp/.zrok/unique_name"
@@ -306,41 +301,25 @@ class ZrokLauncher(
         )
     }
     
-    private fun saveReservedToken(token: String) {
-        adbShellExecutor.execute(
-            command = "echo '$token' > $ZROK_RESERVED_TOKEN_FILE",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    logManager.info(TAG, "Reserved token saved to file")
-                }
-                override fun onError(error: String) {
-                    logManager.warn(TAG, "Failed to save token: $error")
-                }
-            }
-        )
+    fun saveReservedToken(token: String) {
+        if (SecretConfigBridge.putString("zrok", "reservedToken", token)) {
+            logManager.info(TAG, "Reserved token saved to secret store")
+        } else {
+            logManager.warn(TAG, "Failed to save reserved token to secret store")
+        }
     }
     
     /**
      * Load saved reserved token from file.
      */
     fun loadReservedToken(callback: (String?) -> Unit) {
-        adbShellExecutor.execute(
-            command = "cat $ZROK_RESERVED_TOKEN_FILE 2>/dev/null",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val token = output.trim()
-                    if (token.isNotEmpty() && !token.contains("No such file")) {
-                        reservedShareToken = token
-                        callback(token)
-                    } else {
-                        callback(null)
-                    }
-                }
-                override fun onError(error: String) {
-                    callback(null)
-                }
-            }
-        )
+        val token = SecretConfigBridge.getString("zrok", "reservedToken")
+        if (!token.isNullOrEmpty()) {
+            reservedShareToken = token
+            callback(token)
+        } else {
+            callback(null)
+        }
     }
     
     private fun checkAndInstallZrokForReserved(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
@@ -834,35 +813,20 @@ class ZrokLauncher(
     private fun checkReserveAndLaunch(callback: ZrokCallback) {
         callback.onLog("Checking for reserved URL...")
         
-        // Check if reserved token file exists
-        adbShellExecutor.execute(
-            command = "cat $ZROK_RESERVED_TOKEN_FILE 2>/dev/null",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val token = output.trim()
-                    if (token.isNotEmpty() && !token.contains("No such file")) {
-                        // Have reserved token - use reserved mode
-                        logManager.info(TAG, "✅ Found reserved token, using permanent URL")
-                        callback.onLog("✅ Using permanent URL")
-                        reservedShareToken = token
-                        val permanentUrl = "https://$uniqueName.share.zrok.io"
-                        launchZrokShareReserved(token, permanentUrl, callback)
-                    } else {
-                        // No reserved token - need to reserve first (ONE TIME)
-                        logManager.info(TAG, "⚠️ No reserved token. Reserving permanent URL...")
-                        callback.onLog("⚠️ Reserving permanent URL (one-time setup)...")
-                        autoReserveAndLaunch(callback)
-                    }
-                }
-                
-                override fun onError(error: String) {
-                    // No reserved token - need to reserve first
-                    logManager.info(TAG, "⚠️ No reserved token. Reserving permanent URL...")
-                    callback.onLog("⚠️ Reserving permanent URL (one-time setup)...")
-                    autoReserveAndLaunch(callback)
-                }
+        loadReservedToken { token ->
+            if (!token.isNullOrEmpty()) {
+                logManager.info(TAG, "✅ Found reserved token, using permanent URL")
+                callback.onLog("✅ Using permanent URL")
+                reservedShareToken = token
+                val permanentUrl = "https://$uniqueName.share.zrok.io"
+                launchZrokShareReserved(token, permanentUrl, callback)
+            } else {
+                // No reserved token - need to reserve first (ONE TIME)
+                logManager.info(TAG, "⚠️ No reserved token. Reserving permanent URL...")
+                callback.onLog("⚠️ Reserving permanent URL (one-time setup)...")
+                autoReserveAndLaunch(callback)
             }
-        )
+        }
     }
     
     /**
@@ -1357,8 +1321,7 @@ class ZrokLauncher(
     // ==================== Enable Token Management ====================
     
     /**
-     * Save enable token to unified storage (cross-UID accessible).
-     * Stores in /data/local/tmp/.zrok/enable_token for daemon access.
+     * Save enable token to the daemon-owned secret store.
      */
     fun saveEnableToken(token: String, callback: ((Boolean) -> Unit)? = null) {
         val trimmedToken = token.trim()
@@ -1366,50 +1329,31 @@ class ZrokLauncher(
             callback?.invoke(false)
             return
         }
-        
-        // Update in-memory token
-        zrokToken = trimmedToken
-        tokenLoaded = true
-        
-        adbShellExecutor.execute(
-            command = "mkdir -p /data/local/tmp/.zrok && echo '$trimmedToken' > $ZROK_ENABLE_TOKEN_FILE && chmod 666 $ZROK_ENABLE_TOKEN_FILE",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    logManager.info(TAG, "Enable token saved to unified storage")
-                    callback?.invoke(true)
-                }
-                override fun onError(error: String) {
-                    logManager.error(TAG, "Failed to save enable token: $error")
-                    callback?.invoke(false)
-                }
-            }
-        )
+        val ok = SecretConfigBridge.putString("zrok", "enableToken", trimmedToken)
+        if (ok) {
+            zrokToken = trimmedToken
+            tokenLoaded = true
+            logManager.info(TAG, "Enable token saved to secret store")
+        } else {
+            logManager.error(TAG, "Failed to save enable token to secret store")
+        }
+        callback?.invoke(ok)
     }
     
     /**
-     * Load enable token from unified storage.
+     * Load enable token from the daemon-owned secret store.
      * Returns the token via callback, or null if not found.
      */
     fun loadEnableToken(callback: (String?) -> Unit) {
-        adbShellExecutor.execute(
-            command = "cat $ZROK_ENABLE_TOKEN_FILE 2>/dev/null",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val token = output.trim()
-                    if (token.isNotEmpty() && !token.contains("No such file")) {
-                        zrokToken = token
-                        tokenLoaded = true
-                        logManager.info(TAG, "Enable token loaded from unified storage")
-                        callback(token)
-                    } else {
-                        callback(null)
-                    }
-                }
-                override fun onError(error: String) {
-                    callback(null)
-                }
-            }
-        )
+        val token = SecretConfigBridge.getString("zrok", "enableToken")
+        if (!token.isNullOrEmpty()) {
+            zrokToken = token
+            tokenLoaded = true
+            logManager.info(TAG, "Enable token loaded from secret store")
+            callback(token)
+        } else {
+            callback(null)
+        }
     }
     
     /**
@@ -1426,17 +1370,21 @@ class ZrokLauncher(
      * different account is incoherent. Kill the entire ~/.zrok directory.
      */
     fun deleteEnableToken(callback: ((Boolean) -> Unit)? = null) {
-        zrokToken = ""
-        tokenLoaded = false
-        reservedShareToken = null
-        uniqueName = UNIQUE_NAME_PREFIX
+        val secretOk = SecretConfigBridge.delete("zrok", "enableToken")
+        val reservedOk = SecretConfigBridge.delete("zrok", "reservedToken")
+        if (secretOk && reservedOk) {
+            zrokToken = ""
+            tokenLoaded = false
+            reservedShareToken = null
+            uniqueName = UNIQUE_NAME_PREFIX
+        }
 
         adbShellExecutor.execute(
             command = "rm -rf $ZROK_HOME/.zrok 2>/dev/null; echo done",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
                     logManager.info(TAG, "Zrok state wiped (token, identity, reserved share, unique name)")
-                    callback?.invoke(true)
+                    callback?.invoke(secretOk && reservedOk)
                 }
                 override fun onError(error: String) {
                     logManager.warn(TAG, "Failed to wipe zrok state: $error")
@@ -1447,20 +1395,10 @@ class ZrokLauncher(
     }
     
     /**
-     * Check if enable token exists in unified storage.
+     * Check if enable token exists in the secret store.
      */
     fun hasEnableToken(callback: (Boolean) -> Unit) {
-        adbShellExecutor.execute(
-            command = "test -f $ZROK_ENABLE_TOKEN_FILE && test -s $ZROK_ENABLE_TOKEN_FILE && echo yes || echo no",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    callback(output.trim() == "yes")
-                }
-                override fun onError(error: String) {
-                    callback(false)
-                }
-            }
-        )
+        callback(!SecretConfigBridge.getString("zrok", "enableToken").isNullOrEmpty())
     }
     
     /**

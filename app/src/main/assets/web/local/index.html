@@ -831,14 +831,8 @@
                 
                 // CRITICAL FIX: Use the /ws endpoint on the current port (e.g. 8080)
                 // Do NOT use port 8887 - that's the dead legacy port
-                // Append JWT as ?token= so tunnels work (cookies get dropped by SameSite
-                // policies through reverse proxies; browser WS API can't set headers).
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 let url = `${protocol}//${window.location.host}/ws`;
-                if (typeof BYDAuth !== 'undefined') {
-                    const wsToken = BYDAuth.getToken();
-                    if (wsToken) url += `?token=${encodeURIComponent(wsToken)}`;
-                }
                 console.log("[Stream] Connecting to optimized endpoint:", url);
                 
                 // Initialize and Start Player

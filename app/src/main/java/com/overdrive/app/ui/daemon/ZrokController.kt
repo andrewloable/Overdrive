@@ -49,6 +49,7 @@ class ZrokController(
      */
     fun setReservedToken(token: String, customUniqueName: String? = null) {
         ZrokLauncher.reservedShareToken = token
+        zrokLauncher.saveReservedToken(token)
         
         // Priority:
         // 1. Custom name passed in
@@ -260,7 +261,7 @@ class ZrokController(
     fun getTunnelUrl(): String? = _tunnelUrl.value
     
     // ==================== Enable Token Management ====================
-    // Single source of truth: /data/local/tmp/.zrok/enable_token
+    // Single source of truth: daemon secret store entry zrok.enableToken
     // Accessed via ADB shell for cross-UID compatibility (app UID + UID 2000)
     
     /**
@@ -278,7 +279,7 @@ class ZrokController(
     }
     
     /**
-     * Save enable token to unified storage (/data/local/tmp/.zrok/enable_token).
+     * Save enable token to the daemon secret store.
      * Single source of truth - no sync needed.
      */
     fun saveEnableToken(token: String, callback: ((Boolean) -> Unit)? = null) {
@@ -286,7 +287,7 @@ class ZrokController(
     }
     
     /**
-     * Delete enable token from unified storage.
+     * Delete enable token from the daemon secret store.
      */
     fun deleteEnableToken(callback: ((Boolean) -> Unit)? = null) {
         zrokLauncher.deleteEnableToken(callback)

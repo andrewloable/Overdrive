@@ -1,8 +1,7 @@
 package com.overdrive.app.auth;
 
-import android.util.Base64;
-
 import com.overdrive.app.config.UnifiedConfigManager;
+import com.overdrive.app.config.SecretConfigBridge;
 import com.overdrive.app.daemon.CameraDaemon;
 
 import org.json.JSONObject;
@@ -12,6 +11,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Base64;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -25,20 +25,17 @@ import javax.crypto.spec.SecretKeySpec;
  * Auth Flow:
  * 1. User enters device token (displayed in app)
  * 2. Token validated → JWT session created
- * 3. JWT used for subsequent requests (1 year expiry)
+ * 3. JWT used for subsequent requests (24 hour expiry)
  *
  * Security:
  * - Device token = deviceId + secret (e.g., byd-a1b2c3d4-x7k9m2p5)
  * - JWT signed with HMAC-SHA256 using device secret
  *
  * Persistence:
- * The auth section ({@code "auth"}) lives inside the unified config at
- * {@code /data/local/tmp/overdrive_config.json}. UnifiedConfigManager
- * sets the file world-rw (chmod 666), so the daemon (UID 2000) and the
- * app process (UID 10xxx) read/write the same secret. Without this, the
- * two processes used to mint independent in-memory secrets and JWT
- * signatures diverged on fresh installs (because {@code /data/local/tmp/}
- * is not writable by app UID).
+ * Public auth state (device ID, last access, token epoch) stays in the
+ * unified config, while the device secret moves to the daemon-owned secret
+ * store. App-side callers fall back to localhost IPC when the secret file
+ * is not directly readable in-process.
  *
  * Existing devices: on first run after this change, if the unified
  * config has no auth section but the legacy {@code /data/local/tmp/.byd_auth.json}
@@ -69,8 +66,9 @@ public class AuthManager {
     private static final String DEVICE_ID_FILE = "/data/local/tmp/.overdrive_device_id";
 
     // JWT settings
-    private static final long JWT_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000L; // 1 year (effectively indefinite)
+    private static final long JWT_EXPIRY_MS = 24 * 60 * 60 * 1000L; // 24 hours
     private static final String JWT_ALGORITHM = "HS256";
+    private static final String KEY_TOKEN_EPOCH = "tokenEpoch";
 
     // In-memory cache. UnifiedConfigManager already mtime-invalidates its
     // own cache, but a tiny per-instance cache lets us hand out the same
@@ -78,6 +76,7 @@ public class AuthManager {
     // skips a JSON parse on the JWT validation hot path.
     private static volatile AuthState cachedState = null;
     private static volatile long cachedConfigMtime = 0;
+    private static volatile AuthState testStateOverride = null;
 
     // Monotonic counter incremented every time cachedState is replaced.
     // Lets downstream JWT consumers (DaemonHttpClient, WebViewFragment cookie)
@@ -92,6 +91,7 @@ public class AuthManager {
         public String deviceId;
         public String deviceSecret;      // Random secret for token generation
         public long lastAccess;          // Last successful auth timestamp
+        public long tokenEpoch;          // Session rotation counter
 
         public String getDeviceToken() {
             return deviceId + "-" + deviceSecret;
@@ -109,8 +109,8 @@ public class AuthManager {
             try {
                 JSONObject json = new JSONObject();
                 json.put(KEY_DEVICE_ID, deviceId);
-                json.put(KEY_DEVICE_SECRET, deviceSecret);
                 json.put(KEY_LAST_ACCESS, lastAccess);
+                json.put(KEY_TOKEN_EPOCH, tokenEpoch);
                 return json;
             } catch (Exception e) {
                 return new JSONObject();
@@ -120,8 +120,9 @@ public class AuthManager {
         public static AuthState fromJson(JSONObject json) {
             AuthState state = new AuthState();
             state.deviceId = json.optString(KEY_DEVICE_ID, "");
-            state.deviceSecret = json.optString(KEY_DEVICE_SECRET, "");
+            state.deviceSecret = "";
             state.lastAccess = json.optLong(KEY_LAST_ACCESS, 0);
+            state.tokenEpoch = json.optLong(KEY_TOKEN_EPOCH, 0);
             return state;
         }
     }
@@ -156,6 +157,12 @@ public class AuthManager {
      * Call this on app/daemon startup.
      */
     public static synchronized AuthState initialize() {
+        if (testStateOverride != null) {
+            cachedState = testStateOverride;
+            cachedConfigMtime = 0;
+            stateVersion++;
+            return cachedState;
+        }
         AuthState state = loadFromConfig();
 
         // Migration: if unified config has no auth yet but the legacy
@@ -198,10 +205,9 @@ public class AuthManager {
             }
             String candidateSecret = generateSecret(8);
             state.deviceSecret = candidateSecret;
-            boolean persisted = writeToConfig(state)
-                    && unifiedConfigContainsSecret(candidateSecret);
+            boolean persisted = writeToConfig(state);
             if (!persisted) {
-                log("WARN: cannot persist auth secret to unified config (likely app UID before daemon boot) — will defer to daemon");
+                log("WARN: cannot persist auth secret (likely app UID before daemon boot) — will defer to daemon");
                 // Do NOT cache. Returning null keeps callers in a
                 // "retry later" loop instead of locking in a secret
                 // that won't agree with whatever the daemon writes.
@@ -228,6 +234,9 @@ public class AuthManager {
      * cheap to call on every JWT validation.
      */
     public static AuthState getState() {
+        if (testStateOverride != null) {
+            return testStateOverride;
+        }
         AuthState cur = cachedState;
         long fileMtime = UnifiedConfigManager.getLastModified();
         if (cur != null && fileMtime != 0 && fileMtime == cachedConfigMtime) {
@@ -302,14 +311,23 @@ public class AuthManager {
             AuthState fresh = new AuthState();
             fresh.deviceId = state.deviceId;
             fresh.lastAccess = state.lastAccess;
+            fresh.tokenEpoch = state.tokenEpoch;
             state = fresh;
         }
 
         String candidate = generateSecret(8);
         state.deviceSecret = candidate;
+        state.tokenEpoch = state.tokenEpoch + 1;
 
-        boolean persisted = writeToConfig(state)
-                && unifiedConfigContainsSecret(candidate);
+        if (testStateOverride != null) {
+            testStateOverride = state;
+            cachedState = state;
+            stateVersion++;
+            log("Token regenerated (test override)");
+            return state.getDeviceToken();
+        }
+
+        boolean persisted = writeToConfig(state);
         if (!persisted) {
             log("ERROR: regenerateToken failed to persist new secret — keeping previous state");
             return null;
@@ -319,7 +337,7 @@ public class AuthManager {
         cachedConfigMtime = UnifiedConfigManager.getLastModified();
         stateVersion++;
 
-        log("Token regenerated. New token: " + state.getDeviceToken());
+        log("Token regenerated");
         return state.getDeviceToken();
     }
 
@@ -337,18 +355,14 @@ public class AuthManager {
         try {
             long now = System.currentTimeMillis() / 1000;
             long exp = now + (JWT_EXPIRY_MS / 1000);
+            String headerJson = "{\"alg\":\"" + JWT_ALGORITHM + "\",\"typ\":\"JWT\"}";
+            String payloadJson = "{\"sub\":\"" + escapeJson(state.deviceId) + "\","
+                    + "\"iat\":" + now + ","
+                    + "\"exp\":" + exp + ","
+                    + "\"ver\":" + state.tokenEpoch + "}";
 
-            JSONObject header = new JSONObject();
-            header.put("alg", JWT_ALGORITHM);
-            header.put("typ", "JWT");
-
-            JSONObject payload = new JSONObject();
-            payload.put("sub", state.deviceId);
-            payload.put("iat", now);
-            payload.put("exp", exp);
-
-            String headerB64 = base64UrlEncode(header.toString().getBytes(StandardCharsets.UTF_8));
-            String payloadB64 = base64UrlEncode(payload.toString().getBytes(StandardCharsets.UTF_8));
+            String headerB64 = base64UrlEncode(headerJson.getBytes(StandardCharsets.UTF_8));
+            String payloadB64 = base64UrlEncode(payloadJson.getBytes(StandardCharsets.UTF_8));
             String content = headerB64 + "." + payloadB64;
 
             String signature = hmacSha256(content, state.deviceSecret);
@@ -380,15 +394,12 @@ public class AuthManager {
         if (state == null || filename == null) return null;
         try {
             long now = System.currentTimeMillis() / 1000;
-            JSONObject header = new JSONObject();
-            header.put("alg", JWT_ALGORITHM);
-            header.put("typ", "THM");
-            JSONObject payload = new JSONObject();
-            payload.put("sub", filename);
-            payload.put("iat", now);
-            payload.put("exp", now + ttlSec);
-            String headerB64 = base64UrlEncode(header.toString().getBytes(StandardCharsets.UTF_8));
-            String payloadB64 = base64UrlEncode(payload.toString().getBytes(StandardCharsets.UTF_8));
+            String headerJson = "{\"alg\":\"" + JWT_ALGORITHM + "\",\"typ\":\"THM\"}";
+            String payloadJson = "{\"sub\":\"" + escapeJson(filename) + "\","
+                    + "\"iat\":" + now + ","
+                    + "\"exp\":" + (now + ttlSec) + "}";
+            String headerB64 = base64UrlEncode(headerJson.getBytes(StandardCharsets.UTF_8));
+            String payloadB64 = base64UrlEncode(payloadJson.getBytes(StandardCharsets.UTF_8));
             String content = headerB64 + "." + payloadB64;
             String signature = hmacSha256(content, state.deviceSecret);
             return content + "." + signature;
@@ -414,12 +425,10 @@ public class AuthManager {
             String expectedSig = hmacSha256(content, state.deviceSecret);
             if (!expectedSig.equals(parts[2])) return false;
             String headerJson = new String(base64UrlDecode(parts[0]), StandardCharsets.UTF_8);
-            JSONObject header = new JSONObject(headerJson);
-            if (!"THM".equals(header.optString("typ"))) return false;
+            if (!"THM".equals(extractJsonString(headerJson, "typ"))) return false;
             String payloadJson = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
-            JSONObject payload = new JSONObject(payloadJson);
-            if (!filename.equals(payload.optString("sub"))) return false;
-            long exp = payload.optLong("exp", 0);
+            if (!filename.equals(extractJsonString(payloadJson, "sub"))) return false;
+            long exp = extractJsonLong(payloadJson, "exp", 0);
             return System.currentTimeMillis() / 1000 <= exp;
         } catch (Exception e) {
             return false;
@@ -480,14 +489,23 @@ public class AuthManager {
             }
 
             String payloadJson = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
-            JSONObject payload = new JSONObject(payloadJson);
-
-            long exp = payload.getLong("exp");
+            long exp = extractJsonLong(payloadJson, "exp", Long.MIN_VALUE);
+            if (exp == Long.MIN_VALUE) {
+                return JwtValidation.failure("Token validation error: missing exp");
+            }
             if (System.currentTimeMillis() / 1000 > exp) {
                 return JwtValidation.failure("Token expired");
             }
 
-            String tokenDeviceId = payload.getString("sub");
+            long tokenEpoch = extractJsonLong(payloadJson, "ver", 0);
+            if (tokenEpoch != state.tokenEpoch) {
+                return JwtValidation.failure("Session rotated");
+            }
+
+            String tokenDeviceId = extractJsonString(payloadJson, "sub");
+            if (tokenDeviceId == null || tokenDeviceId.isEmpty()) {
+                return JwtValidation.failure("Token validation error: missing sub");
+            }
             if (!tokenDeviceId.equals(state.deviceId)) {
                 return JwtValidation.failure("Device mismatch");
             }
@@ -509,10 +527,18 @@ public class AuthManager {
         try {
             JSONObject all = UnifiedConfigManager.loadConfig();
             JSONObject section = all.optJSONObject(CONFIG_SECTION);
-            if (section == null) return null;
-            String secret = section.optString(KEY_DEVICE_SECRET, "");
-            if (secret.isEmpty()) return null;
+            String secret = SecretConfigBridge.getString(CONFIG_SECTION, KEY_DEVICE_SECRET);
+            if (section == null) {
+                if (secret == null || secret.isEmpty()) return null;
+                AuthState state = new AuthState();
+                state.deviceId = loadDeviceId();
+                state.deviceSecret = secret;
+                return state;
+            }
+            if (secret == null || secret.isEmpty()) return null;
             AuthState state = AuthState.fromJson(section);
+            state.deviceSecret = secret;
+            if (state.tokenEpoch < 0) state.tokenEpoch = 0;
             return state;
         } catch (Exception e) {
             log("Failed to load auth from unified config: " + e.getMessage());
@@ -529,53 +555,36 @@ public class AuthManager {
      * Important caveat: UnifiedConfigManager.updateSection mutates its
      * in-memory cache in-place BEFORE the disk write, so when the disk
      * write fails (cross-UID, before the daemon has created the file)
-     * the in-memory cache silently retains the new auth section. We
-     * detect that with unifiedConfigContainsSecret() and force a reload
-     * from disk to roll the mutation back — otherwise the next reader
-     * in this process would see a phantom secret that no other process
-     * agrees on.
+     * the in-memory cache can retain a stale auth section. We force a
+     * reload on failure so the next reader does not keep a phantom state.
      */
     private static boolean writeToConfig(AuthState state) {
         try {
+            if (state.deviceSecret == null || state.deviceSecret.isEmpty()) {
+                if (!SecretConfigBridge.delete(CONFIG_SECTION, KEY_DEVICE_SECRET)) {
+                    return false;
+                }
+            } else if (!SecretConfigBridge.putString(CONFIG_SECTION, KEY_DEVICE_SECRET, state.deviceSecret)) {
+                return false;
+            }
+
             boolean ok = UnifiedConfigManager.updateSection(CONFIG_SECTION, state.toJson());
-            if (ok && unifiedConfigContainsSecret(state.deviceSecret)) {
+            if (ok) {
                 cachedConfigMtime = UnifiedConfigManager.getLastModified();
                 return true;
             }
-            log("UnifiedConfigManager.updateSection failed to persist auth (likely cross-UID before daemon created the file); rolling back in-memory mutation");
-            // Force reload from disk so the in-memory cache no longer
-            // claims auth.deviceSecret = our locally-generated value.
+
+            log("Failed to persist public auth state; rolling back secret write");
+            if (state.deviceSecret == null || state.deviceSecret.isEmpty()) {
+                SecretConfigBridge.putString(CONFIG_SECTION, KEY_DEVICE_SECRET, "");
+            } else {
+                SecretConfigBridge.delete(CONFIG_SECTION, KEY_DEVICE_SECRET);
+            }
             UnifiedConfigManager.forceReload();
             return false;
         } catch (Exception e) {
             log("Failed to write auth to unified config: " + e.getMessage());
             try { UnifiedConfigManager.forceReload(); } catch (Exception ignored) {}
-            return false;
-        }
-    }
-
-    /**
-     * Verify against on-disk state, bypassing UnifiedConfigManager's
-     * in-memory cache. Necessary because {@code updateSection} mutates
-     * its in-memory config in-place before the disk write — so a save
-     * that silently failed (cross-UID permission) still leaves the
-     * cache holding the new secret. This routine confirms the secret
-     * actually landed on disk where the daemon will see it.
-     */
-    private static boolean unifiedConfigContainsSecret(String expectedSecret) {
-        try {
-            File file = new File("/data/local/tmp/overdrive_config.json");
-            if (!file.exists() || !file.canRead()) return false;
-            StringBuilder sb = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
-            }
-            JSONObject all = new JSONObject(sb.toString());
-            JSONObject section = all.optJSONObject(CONFIG_SECTION);
-            if (section == null) return false;
-            return expectedSecret.equals(section.optString(KEY_DEVICE_SECRET, ""));
-        } catch (Exception e) {
             return false;
         }
     }
@@ -649,14 +658,88 @@ public class AuthManager {
     }
 
     private static String base64UrlEncode(byte[] data) {
-        return Base64.encodeToString(data, Base64.NO_WRAP | Base64.URL_SAFE | Base64.NO_PADDING);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(data);
     }
 
     private static byte[] base64UrlDecode(String data) {
-        return Base64.decode(data, Base64.URL_SAFE | Base64.NO_PADDING);
+        return Base64.getUrlDecoder().decode(data);
+    }
+
+    private static String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String extractJsonString(String json, String key) {
+        if (json == null || key == null) return null;
+        String needle = "\"" + key + "\"";
+        int keyIndex = json.indexOf(needle);
+        if (keyIndex < 0) return null;
+        int colon = json.indexOf(':', keyIndex + needle.length());
+        if (colon < 0) return null;
+        int start = colon + 1;
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
+        if (start >= json.length() || json.charAt(start) != '"') return null;
+        StringBuilder out = new StringBuilder();
+        boolean escape = false;
+        for (int i = start + 1; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (escape) {
+                out.append(c);
+                escape = false;
+                continue;
+            }
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+            if (c == '"') {
+                return out.toString();
+            }
+            out.append(c);
+        }
+        return null;
+    }
+
+    private static long extractJsonLong(String json, String key, long defaultValue) {
+        if (json == null || key == null) return defaultValue;
+        String needle = "\"" + key + "\"";
+        int keyIndex = json.indexOf(needle);
+        if (keyIndex < 0) return defaultValue;
+        int colon = json.indexOf(':', keyIndex + needle.length());
+        if (colon < 0) return defaultValue;
+        int start = colon + 1;
+        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
+        int end = start;
+        while (end < json.length()) {
+            char c = json.charAt(end);
+            if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
+                end++;
+                continue;
+            }
+            break;
+        }
+        if (end == start) return defaultValue;
+        try {
+            return Long.parseLong(json.substring(start, end));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private static void log(String message) {
         CameraDaemon.log("AUTH: " + message);
+    }
+
+    static void setTestState(AuthState state) {
+        testStateOverride = state;
+    }
+
+    static void clearTestState() {
+        testStateOverride = null;
+    }
+
+    public static long getJwtExpirySeconds() {
+        return JWT_EXPIRY_MS / 1000L;
     }
 }
