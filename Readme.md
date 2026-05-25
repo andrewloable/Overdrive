@@ -146,6 +146,10 @@ This can be accessed via the tailscale IP or a subnet that has been advertised o
 
 > Should work on all BYD vehicles with DiLink v3 and panoramic camera system.
 
+## Documentation
+
+The full codebase scan is documented in [docs/README.md](docs/README.md), with dedicated references for architecture, features, data flow, daemons, networking and tunnels, HTTP APIs, BYD integrations, and build operations.
+
 ## Building from Source
 
 ```bash
