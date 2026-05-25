@@ -10,7 +10,7 @@ public class BYDAutoInstrumentDevice extends AbsBYDAutoDevice {
     public static final int KW = 1;
     public static final int POWER_UNIT = 0;
     private static BYDAutoInstrumentDevice sInstance;
-    private final List<AbsBYDAutoInstrumentListener> listeners = new ArrayList();
+    private final List<AbsBYDAutoInstrumentListener> listeners = new ArrayList<>();
 
     protected BYDAutoInstrumentDevice(Context context) {
         super(context);

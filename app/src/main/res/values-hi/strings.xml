@@ -468,11 +468,11 @@
     <string name="vehicle_dialog_title">बैटरी क्षमता सेट करें</string>
     <string name="vehicle_dialog_capacity_label">क्षमता (kWh)</string>
     <string name="vehicle_dialog_capacity_suffix">kWh</string>
-    <string name="vehicle_dialog_capacity_helper">15 से 120 kWh। मॉडल डिफ़ॉल्ट का उपयोग करने के लिए छोड़ दें।</string>
+    <string name="vehicle_dialog_capacity_helper">8 से 120 kWh। मॉडल डिफ़ॉल्ट का उपयोग करने के लिए छोड़ दें।</string>
     <string name="vehicle_dialog_model_label">मॉडल</string>
     <string name="vehicle_dialog_save">सहेजें</string>
     <string name="vehicle_dialog_reset">ऑटो-डिटेक्ट करने के लिए रीसेट करें</string>
-    <string name="vehicle_dialog_invalid_capacity">क्षमता 15 से 120 kWh होनी चाहिए</string>
+    <string name="vehicle_dialog_invalid_capacity">क्षमता 8 से 120 kWh होनी चाहिए</string>
     <string name="vehicle_dialog_summary_capacity">क्षमताः %1$s</string>
     <string name="vehicle_dialog_summary_soh">SOH: %1$s</string>
     <string name="vehicle_dialog_summary_effective">प्रभावी: %1$.1f kWh</string>

@@ -2,7 +2,10 @@ package com.overdrive.app.ui.fragment
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -96,6 +99,14 @@ class DiagnosticsFragment : Fragment() {
         }
         view.findViewById<View>(R.id.cardBattery).setOnClickListener {
             (activity as? MainActivity)?.invokeBatteryHealthAction()
+        }
+        view.findViewById<View>(R.id.cardPerformance)?.setOnClickListener {
+            // Reuse the daemon-hosted performance dashboard so the native car
+            // diagnostics menu reaches the same view exposed by the mobile web UI.
+            findNavController().navigateDrillDown(
+                R.id.performanceFragment,
+                Bundle().apply { putString(WebViewFragment.ARG_PAGE_PATH, "/performance") }
+            )
         }
         view.findViewById<View>(R.id.cardSettingsShortcut)?.setOnClickListener {
             // Settings is a peer rail destination — match rail fade-through
@@ -251,8 +262,17 @@ class DiagnosticsFragment : Fragment() {
     private fun computeNetworkTopLine(ctx: Context): String {
         // Try Wi-Fi first — strip the framework's surrounding quotes.
         try {
-            val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            val info = wifi?.connectionInfo
+            val appContext = ctx.applicationContext
+            val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // API 31+ exposes Wi-Fi details through NetworkCapabilities. Older
+                // Android Auto builds still need WifiManager.connectionInfo below.
+                cm?.getNetworkCapabilities(cm.activeNetwork)?.transportInfo as? WifiInfo
+            } else {
+                @Suppress("DEPRECATION")
+                wifi?.connectionInfo
+            }
             // SSID is "<unknown ssid>" when not connected; networkId == -1 also means no association.
             val rawSsid = info?.ssid
             val networkId = info?.networkId ?: -1
@@ -458,11 +478,10 @@ class DiagnosticsFragment : Fragment() {
     // ============== Battery tile ==============
 
     /**
-     * Reads the persisted SOH estimate from /data/local/tmp/abrp_soh_estimate.properties
-     * (same source MainActivity.showBatteryHealthDialog uses). Property keys:
-     *   - "soh_percent"  → float, 0..100
-     * If the file doesn't exist or can't be parsed, the tile shows
-     * "Pending data" + neutral dot — never a fake number.
+     * Reads the daemon SOH display status first, falling back to the legacy
+     * persisted SOH file when the daemon is unavailable. The daemon exposes
+     * displaySource so OEM and nominal fallbacks can be shown as data without
+     * marking them as Overdrive's measured capacity estimate.
      */
     private fun refreshBatteryTile() {
         val executor = batteryExecutor ?: Executors.newSingleThreadExecutor()
@@ -470,24 +489,47 @@ class DiagnosticsFragment : Fragment() {
 
         executor.execute {
             var sohPercent: Double? = null
+            var displaySource = "unavailable"
             try {
-                val sohFile = File("/data/local/tmp/abrp_soh_estimate.properties")
-                if (sohFile.exists() && sohFile.canRead()) {
-                    val props = java.util.Properties()
-                    java.io.FileInputStream(sohFile).use { props.load(it) }
-                    val v = props.getProperty("soh_percent")?.toDoubleOrNull()
-                    // Accept up to 110% — BYD packs are factory over-provisioned
-                    // 102-104% so a near-new pack legitimately reads >100%.
-                    // Matches SohEstimator.applyWeightedSoh's accept band.
-                    if (v != null && v >= 60.0 && v <= 110.0) {
-                        sohPercent = v
+                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    "/api/performance/soh", "GET", 2000, 3000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(body)
+                    val displaySoh = json.optDouble("displaySoh", -1.0)
+                    if (displaySoh >= 60.0 && displaySoh <= 110.0) {
+                        sohPercent = displaySoh
+                        displaySource = json.optString("displaySource", displaySource)
                     }
                 }
+                conn.disconnect()
             } catch (_: Throwable) {
-                // Stay null — UI will show "Pending data".
+                // Fall through to file fallback below.
+            }
+
+            if (sohPercent == null) {
+                try {
+                    val sohFile = File("/data/local/tmp/abrp_soh_estimate.properties")
+                    if (sohFile.exists() && sohFile.canRead()) {
+                        val props = java.util.Properties()
+                        java.io.FileInputStream(sohFile).use { props.load(it) }
+                        val v = props.getProperty("soh_percent")?.toDoubleOrNull()
+                        // Accept up to 110% — BYD packs are factory over-provisioned
+                        // 102-104% so a near-new pack legitimately reads >100%.
+                        // Matches SohEstimator.applyWeightedSoh's accept band.
+                        if (v != null && v >= 60.0 && v <= 110.0) {
+                            sohPercent = v
+                            displaySource = "live"
+                        }
+                    }
+                } catch (_: Throwable) {
+                    // Stay null — UI will show "Pending data" unless the daemon
+                    // branch already supplied a display value.
+                }
             }
 
             val finalSoh = sohPercent
+            val finalDisplaySource = displaySource
             mainHandler.post {
                 if (!isAdded) return@post
                 val tv = tvBatteryValue ?: return@post
@@ -498,6 +540,7 @@ class DiagnosticsFragment : Fragment() {
                 } else {
                     tv.text = getString(R.string.diagnostics_battery_value_soh, finalSoh)
                     val dotRes = when {
+                        finalDisplaySource == "nominal" -> R.drawable.status_dot_neutral
                         finalSoh >= 80.0 -> R.drawable.status_dot_online
                         finalSoh >= 50.0 -> R.drawable.status_dot_starting
                         else -> R.drawable.status_dot_offline

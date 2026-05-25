@@ -28,6 +28,11 @@ class OverdriveApplication : Application() {
         // Initialize LogConfig with app's cache directory for file logging
         LogConfig.init(this)
 
+        // Some BYD WebView builds try to initialize Crashpad before creating
+        // its parent cache directory and then emit noisy Chromium errors. Create
+        // the path up front; WebView will still own the files inside it.
+        runCatching { java.io.File(cacheDir, "WebView/Crashpad").mkdirs() }
+
         // Initialize LogManager with file logging enabled
         LogManager.getInstance(LogConfig.default())
 

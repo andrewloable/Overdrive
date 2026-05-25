@@ -312,11 +312,22 @@ public class TcpCommandServer {
                 // Set recording bitrate: LOW (2Mbps), MEDIUM (3Mbps), HIGH (6Mbps)
                 String bitrateValue = cmd.optString("value", "").toUpperCase();
                 if (bitrateValue.equals("LOW") || bitrateValue.equals("MEDIUM") || bitrateValue.equals("HIGH")) {
-                    CameraDaemon.setRecordingBitrate(bitrateValue);
-                    HttpServer.setRecordingBitrate(bitrateValue);
+                    // TCP clients still send the legacy bitrate labels; convert
+                    // them at the IPC boundary so the daemon uses the canonical
+                    // ECONOMY/STANDARD/HIGH recording-quality path.
+                    String qualityValue;
+                    switch (bitrateValue) {
+                        case "LOW": qualityValue = "ECONOMY"; break;
+                        case "HIGH": qualityValue = "HIGH"; break;
+                        case "MEDIUM":
+                        default: qualityValue = "STANDARD"; break;
+                    }
+                    CameraDaemon.setRecordingQuality(qualityValue);
+                    HttpServer.setRecordingQuality(qualityValue);
                     response.put("status", "ok");
                     response.put("bitrate", bitrateValue);
-                    response.put("message", "Bitrate set to " + bitrateValue + " - applied immediately");
+                    response.put("quality", qualityValue);
+                    response.put("message", "Bitrate set to " + bitrateValue + " (" + qualityValue + ") - applied immediately");
                 } else {
                     response.put("status", "error");
                     response.put("message", "Invalid bitrate. Use LOW, MEDIUM, or HIGH");

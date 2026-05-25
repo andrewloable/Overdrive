@@ -792,7 +792,7 @@ public class PerformanceApiHandler {
      * POST /api/performance/soh/nominal — set or clear the user-set nominal kWh.
      * Body: {"nominalKwh": 82.5}  → sets user override
      *       {"nominalKwh": null}  → clears override, re-runs auto-detect
-     * Validates 15-120 kWh range.
+     * Validates 8-120 kWh range.
      */
     private static boolean handleSohSetNominal(String body, OutputStream out) throws Exception {
         try {
@@ -817,10 +817,10 @@ public class PerformanceApiHandler {
                 sohEst.clearUserNominal();
             } else {
                 double kwh = req.getDouble("nominalKwh");
-                if (kwh < 15.0 || kwh > 120.0) {
+                if (kwh < 8.0 || kwh > 120.0) {
                     JSONObject err = new JSONObject();
                     err.put("success", false);
-                    err.put("error", "nominalKwh must be between 15 and 120");
+                    err.put("error", "nominalKwh must be between 8 and 120");
                     HttpResponse.sendJson(out, err.toString());
                     return true;
                 }

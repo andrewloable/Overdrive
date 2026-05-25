@@ -280,6 +280,7 @@ public class AudioTestApiHandler {
             tts.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
                 @Override public void onStart(String utteranceId) {}
                 @Override public void onDone(String utteranceId) { doneLatch.countDown(); }
+                @SuppressWarnings("deprecation") // Required abstract callback on older TTS engines.
                 @Override public void onError(String utteranceId) { doneLatch.countDown(); }
             });
 

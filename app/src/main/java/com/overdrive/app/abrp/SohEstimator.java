@@ -1,6 +1,7 @@
 package com.overdrive.app.abrp;
 
 import com.overdrive.app.byd.BydVehicleData;
+import com.overdrive.app.byd.BydDataCollector;
 import com.overdrive.app.config.UnifiedConfigManager;
 import com.overdrive.app.logging.DaemonLogger;
 import com.overdrive.app.monitor.BatterySocData;
@@ -58,9 +59,9 @@ public class SohEstimator {
     // remainKwh happens to be numerically close to SOC% by coincidence.
     private boolean fuelSignalsLookBev = false;
 
-    // Plausible BYD pack range. Smallest is Sealion 6 DM-i PHEV at 18.3 kWh;
-    // largest is Tang at 108.8 kWh.
-    private static final double MIN_PLAUSIBLE_KWH = 15.0;
+    // Plausible BYD pack range. Seal 5 DM-i Dynamic uses an 8.3 kWh PHEV
+    // pack; Tang EV is the upper production bound we currently support.
+    private static final double MIN_PLAUSIBLE_KWH = 8.0;
     private static final double MAX_PLAUSIBLE_KWH = 120.0;
 
     // BYD Blade LFP reference cell voltage. 3.22 V derived from BYD's
@@ -960,6 +961,47 @@ public class SohEstimator {
     public long getCalibrationTimestampMs() { return calibrationTimestampMs; }
     public boolean hasEstimate() { return currentSoh > 0; }
 
+    private boolean isPhevVehicle() {
+        try {
+            return BydDataCollector.getInstance().isPhevVehicle();
+        } catch (Throwable t) {
+            // If the collector is not ready yet, fall back to pack size. All
+            // supported BYD PHEV packs are below 30 kWh; BEVs are larger.
+            return nominalCapacityKwh > 0 && nominalCapacityKwh < 30.0;
+        }
+    }
+
+    /**
+     * Returns the OEM battery-health index published by BYD's Statistic device,
+     * or -1 when the current firmware/car does not expose a valid value.
+     *
+     * This is intentionally separate from currentSoh: the Shape B estimator is
+     * capacity math from remain-kWh/SOC/nominal-kWh, while the OEM index is an
+     * opaque dashboard readout that is useful for Diagnostics only.
+     */
+    public double getOemSohPercent() {
+        try {
+            // The recovered legacy signal is only trusted for the PHEV bug path.
+            // BEVs continue to use the calculated Shape B estimate or calibration.
+            if (!isPhevVehicle()) {
+                return -1;
+            }
+            // Prefer a fresh direct Statistic-device read for the PHEV path.
+            // The snapshot is still used as a fallback if a poll captured SOH
+            // but the direct getter is temporarily unavailable.
+            double directSoh = BydDataCollector.getInstance().readOemSohPercent();
+            if (directSoh > 0) {
+                return directSoh;
+            }
+            BydVehicleData vd = VehicleDataMonitor.getInstance().getVd();
+            if (vd == null || Double.isNaN(vd.sohPercent)) return -1;
+            double soh = vd.sohPercent;
+            return (soh > 0 && soh <= 100.0) ? soh : -1;
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
     public double getEstimatedCapacityKwh() {
         if (!hasEstimate()) return -1;
         return (currentSoh / 100.0) * nominalCapacityKwh;
@@ -1015,6 +1057,7 @@ public class SohEstimator {
             status.put("estimatedCapacityKwh", estCap > 0 ? Math.round(estCap * 10) / 10.0 : -1);
             status.put("hasEstimate", hasEstimate());
             status.put("nominalSource", nominalSource);
+            status.put("isPhev", isPhevVehicle());
 
             org.json.JSONObject calibration = new org.json.JSONObject();
             calibration.put("soh", calibrationSoh > 0 ? Math.round(calibrationSoh * 10) / 10.0 : -1);
@@ -1023,11 +1066,27 @@ public class SohEstimator {
 
             double displaySoh;
             String displaySource;
+            double oemSoh = getOemSohPercent();
             if (currentSoh > 0) { displaySoh = currentSoh; displaySource = "live"; }
             else if (calibrationSoh > 0) { displaySoh = calibrationSoh; displaySource = "calibration"; }
+            // Recovered legacy app code used BYD's StatisticBatteryHealthyIndex
+            // for battery health. Keep it as a labeled diagnostics fallback
+            // instead of a real estimate because the OEM value's semantics vary
+            // by firmware and it is not derived from our capacity calculation.
+            else if (oemSoh > 0) { displaySoh = oemSoh; displaySource = "oem"; }
+            // PHEV-class models can expose a bogus raw remain-kWh signal that is
+            // rejected for real SOH estimation. Keep hasEstimate=false, but give
+            // Diagnostics a conservative nominal readout so the card is useful
+            // instead of blank while we wait for a trusted calibration source.
+            else if (nominalCapacityKwh > 0) { displaySoh = 100.0; displaySource = "nominal"; }
             else { displaySoh = -1; displaySource = "unavailable"; }
             status.put("displaySoh", displaySoh > 0 ? Math.round(displaySoh * 10) / 10.0 : -1);
             status.put("displaySource", displaySource);
+            // Always include OEM availability so PHEV debugging can tell the
+            // difference between "not a PHEV" and "PHEV but firmware did not
+            // return StatisticBatteryHealthyIndex".
+            status.put("oemSohAvailable", oemSoh > 0);
+            status.put("oemSoh", oemSoh > 0 ? Math.round(oemSoh * 10) / 10.0 : -1);
 
             // Read fresh — model can change without touching SOH state.
             try {
@@ -1208,7 +1267,7 @@ public class SohEstimator {
     // E6 (71.7 kWh) intentionally omitted: legacy taxi model, virtually
     // indistinguishable from Seal U (71.8 kWh).
     private static final double[] KNOWN_PACK_KWH = {
-        18.3, 26.6, 30.08, 38.0, 43.2, 44.9, 56.4,
+        8.3, 18.3, 26.6, 30.08, 38.0, 43.2, 44.9, 56.4,
         60.48, 61.44, 71.8, 82.56, 85.44, 87.0, 91.3, 108.8
     };
 

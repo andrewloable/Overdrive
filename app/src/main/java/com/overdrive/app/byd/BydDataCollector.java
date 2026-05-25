@@ -22,6 +22,16 @@ public class BydDataCollector {
     private static final String TAG = "BydDataCollector";
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
+    // Door-lock API contract used by /api/vehicle/state.
+    // BYD SDK reports 1=unlock and 2=lock; the web API historically exposes
+    // 1=locked and 2=unlocked, so collection converts at the boundary.
+    private static final int LOCK_API_UNKNOWN = -1;
+    private static final int LOCK_API_LOCKED = 1;
+    private static final int LOCK_API_UNLOCKED = 2;
+    private static final int LOCK_SDK_INVALID = 0;
+    private static final int LOCK_SDK_UNLOCKED = 1;
+    private static final int LOCK_SDK_LOCKED = 2;
+
     private static BydDataCollector instance;
     private static final Object lock = new Object();
 
@@ -60,6 +70,16 @@ public class BydDataCollector {
 
     private final List<String> availableDevices = new ArrayList<>();
     private final List<String> unavailableDevices = new ArrayList<>();
+
+    // Door-lock getters can return INVALID while the typed listener still
+    // emits real transitions. Cache listener values so the UI can stay accurate
+    // after a lock/unlock event even when the direct poll path is blank.
+    private final int[] doorLockEventCache = new int[] {
+        LOCK_API_UNKNOWN, LOCK_API_UNKNOWN, LOCK_API_UNKNOWN,
+        LOCK_API_UNKNOWN, LOCK_API_UNKNOWN, LOCK_API_UNKNOWN,
+        LOCK_API_UNKNOWN
+    };
+    private String lastDoorLockSnapshotLog = "";
 
     // ==================== EVENT LISTENERS ====================
     // Subscribers receive door/lock events from the typed BYD HAL listeners.
@@ -157,6 +177,65 @@ public class BydDataCollector {
     /** Check if the collector has been initialized. */
     public boolean isInitialized() {
         return initialized;
+    }
+
+    /**
+     * Public drivetrain classifier for consumers that need PHEV-specific data
+     * handling. The actual detection stays centralized in computeIsPhev() so
+     * SOH, range, and charging code all agree on the same fuel-signal logic.
+     */
+    public boolean isPhevVehicle() {
+        try {
+            return computeIsPhev();
+        } catch (Throwable t) {
+            logger.debug("PHEV detection failed: " + t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Directly reads the recovered legacy OEM SOH value from the BYD Statistic
+     * device. Returns -1 when the firmware does not expose a sane 1..100 value.
+     *
+     * This remains a collector-level helper so every consumer uses the same
+     * getter/feature-id fallback and validation rules.
+     */
+    public double readOemSohPercent() {
+        if (statisticDevice == null) return -1;
+        try {
+            Integer sohValue = null;
+            try {
+                Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
+                if (result instanceof Number) {
+                    sohValue = ((Number) result).intValue();
+                }
+            } catch (NoSuchMethodError nsme) {
+                // Method missing — try feature ID below.
+            } catch (Exception e) {
+                if (!(e.getCause() instanceof NoSuchMethodError)) {
+                    logger.debug("SOH getter failed: " + e.getMessage());
+                }
+            }
+
+            if (sohValue == null || sohValue <= 0 || sohValue > 100) {
+                try {
+                    Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
+                    if (sohVal != null) {
+                        int raw = BydDeviceHelper.getIntValue(sohVal);
+                        if (raw > 0 && raw <= 100) {
+                            sohValue = raw;
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("SOH feature ID failed: " + e.getMessage());
+                }
+            }
+
+            return (sohValue != null && sohValue > 0 && sohValue <= 100) ? sohValue : -1;
+        } catch (Exception e) {
+            logger.debug("readOemSohPercent error: " + e.getMessage());
+            return -1;
+        }
     }
 
     // ==================== INITIALIZATION ====================
@@ -379,6 +458,14 @@ public class BydDataCollector {
 
     private void registerPlugEdgeReceiver() {
         if (context == null) return;
+        if (android.os.Process.myUid() == android.os.Process.SHELL_UID) {
+            // The camera daemon runs under app_process as shell UID 2000. That
+            // synthetic process has no package identity, so Android rejects
+            // registerReceiver("Unable to find app for caller") on every boot.
+            // ChargingDetector still receives polled BYD charging signals in
+            // daemon mode; app-UID processes can register this receiver normally.
+            return;
+        }
         // Idempotent — re-init flow tears down and re-registers.
         unregisterPlugEdgeReceiver();
         plugEdgeReceiver = new android.content.BroadcastReceiver() {
@@ -2350,24 +2437,119 @@ public class BydDataCollector {
     }
 
     private void collectDoorLock(BydVehicleData.Builder b) {
-        // The BYDAutoDoorLockDevice service does not expose lock state to
-        // user-UID processes on most BYD firmwares — every getDoorLockStatus(area)
-        // call returns INVALID(0) and onDoorLockStatusChanged never fires.
-        // Field testing confirmed this on Sealion 6 / Atto 3 / others.
-        //
-        // Lock state is sourced exclusively from the BYD cloud REST/MQTT path
-        // via BydCloudDataProvider. The vehicle-control page calls the cloud
-        // API directly on load; the lock-gate uses CloudLockStateListener.
-        //
-        // We still publish a doorLockStatus[] array on the snapshot for
-        // compatibility with downstream consumers, but with all-UNAVAILABLE
-        // values — the cloud-lock fields on the JSON response carry the
-        // authoritative state.
-        if (b.doorLockStatus == null) {
-            int[] locks = new int[7];
-            for (int i = 0; i < 7; i++) locks[i] = -1;
-            b.doorLockStatus(locks);
+        int[] locks = new int[7];
+        for (int i = 0; i < locks.length; i++) locks[i] = LOCK_API_UNKNOWN;
+        int[] rawStates = new int[] {
+            LOCK_API_UNKNOWN, LOCK_API_UNKNOWN, LOCK_API_UNKNOWN,
+            LOCK_API_UNKNOWN, LOCK_API_UNKNOWN, LOCK_API_UNKNOWN,
+            LOCK_API_UNKNOWN
+        };
+
+        if (doorLockDevice != null) {
+            // The recovered legacy daemon uses getDoorLockStatus(1) first and
+            // falls back to getDoorLockState(). Here we poll all known lock
+            // areas so the vehicle page can derive an accurate local "all
+            // locked" state even when BYD cloud is disabled or unconfigured.
+            for (int area = 1; area <= 5; area++) {
+                Object raw = BydDeviceHelper.callGetter(doorLockDevice, "getDoorLockStatus", area);
+                rawStates[area - 1] = sdkLockInt(raw);
+                locks[area - 1] = apiLockFromSdk(raw);
+            }
+
+            mergeCachedDoorLocks(locks);
+            locks[6] = deriveOverallLock(locks);
+            if (locks[6] == LOCK_API_UNKNOWN && locks[0] != LOCK_API_UNKNOWN) {
+                // Legacy surveillance used SDK area 1 as the central lock
+                // indicator. Keep that fallback so one valid driver/central
+                // lock event can drive the top-level vehicle status.
+                locks[6] = locks[0];
+            }
+
+            if (locks[6] == LOCK_API_UNKNOWN) {
+                Object allArea = BydDeviceHelper.callGetter(doorLockDevice, "getDoorLockStatus", 0);
+                rawStates[5] = sdkLockInt(allArea);
+                int allAreaApi = apiLockFromSdk(allArea);
+                if (allAreaApi != LOCK_API_UNKNOWN) locks[6] = allAreaApi;
+            }
+
+            if (locks[6] == LOCK_API_UNKNOWN) {
+                Object aggregateRaw = BydDeviceHelper.callGetter(doorLockDevice, "getDoorLockState");
+                rawStates[6] = sdkLockInt(aggregateRaw);
+                int aggregate = apiLockFromSdk(aggregateRaw);
+                if (aggregate != LOCK_API_UNKNOWN) locks[6] = aggregate;
+            }
         }
+
+        logDoorLockSnapshot(locks, rawStates);
+        b.doorLockStatus(locks);
+    }
+
+    private int sdkLockInt(Object raw) {
+        if (!(raw instanceof Number)) return LOCK_API_UNKNOWN;
+        return ((Number) raw).intValue();
+    }
+
+    private int apiLockFromSdk(Object raw) {
+        if (!(raw instanceof Number)) return LOCK_API_UNKNOWN;
+        int sdkState = ((Number) raw).intValue();
+        if (sdkState == LOCK_SDK_LOCKED) return LOCK_API_LOCKED;
+        if (sdkState == LOCK_SDK_UNLOCKED) return LOCK_API_UNLOCKED;
+        if (sdkState == LOCK_SDK_INVALID) return LOCK_API_UNKNOWN;
+        return LOCK_API_UNKNOWN;
+    }
+
+    private int deriveOverallLock(int[] locks) {
+        boolean sawLockedDoor = false;
+        for (int i = 0; i < 4; i++) {
+            if (locks[i] == LOCK_API_UNLOCKED) return LOCK_API_UNLOCKED;
+            if (locks[i] != LOCK_API_LOCKED) return LOCK_API_UNKNOWN;
+            sawLockedDoor = true;
+        }
+        return sawLockedDoor ? LOCK_API_LOCKED : LOCK_API_UNKNOWN;
+    }
+
+    private void mergeCachedDoorLocks(int[] locks) {
+        synchronized (doorLockEventCache) {
+            for (int i = 0; i < locks.length && i < doorLockEventCache.length; i++) {
+                if (locks[i] == LOCK_API_UNKNOWN && doorLockEventCache[i] != LOCK_API_UNKNOWN) {
+                    locks[i] = doorLockEventCache[i];
+                }
+            }
+        }
+    }
+
+    private void updateDoorLockEventCache(int area, int sdkState) {
+        int apiState = apiLockFromSdk(Integer.valueOf(sdkState));
+        if (apiState == LOCK_API_UNKNOWN) return;
+        int index = area - 1;
+        if (index < 0 || index >= 5) return;
+        synchronized (doorLockEventCache) {
+            doorLockEventCache[index] = apiState;
+            doorLockEventCache[6] = deriveOverallLock(doorLockEventCache);
+            if (doorLockEventCache[6] == LOCK_API_UNKNOWN && index == 0) {
+                // The recovered daemon only watched area 1 for its lock gate,
+                // so preserve that central-lock fallback for listener events.
+                doorLockEventCache[6] = apiState;
+            }
+        }
+    }
+
+    private void logDoorLockSnapshot(int[] locks, int[] rawStates) {
+        String state = joinInts(locks) + " raw=" + joinInts(rawStates);
+        if (!state.equals(lastDoorLockSnapshotLog)) {
+            lastDoorLockSnapshotLog = state;
+            logger.info("DoorLock snapshot api=" + joinInts(locks)
+                + " raw=[area1,area2,area3,area4,area5,all,state]=" + joinInts(rawStates));
+        }
+    }
+
+    private String joinInts(int[] values) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(values[i]);
+        }
+        return sb.append(']').toString();
     }
 
     private void collectSensor(BydVehicleData.Builder b) {
@@ -2431,39 +2613,8 @@ public class BydDataCollector {
         // SohEstimator no longer consumes this signal — Shape B drives the
         // live SOH from the energy formula, calibration is a separate anchor.
         try {
-            Integer sohValue = null;
-            try {
-                Object result = BydDeviceHelper.callGetter(statisticDevice, "getStatisticBatteryHealthyIndex");
-                if (result instanceof Integer) {
-                    sohValue = (Integer) result;
-                } else if (result instanceof Double) {
-                    sohValue = (int) ((Double) result).doubleValue();
-                } else if (result instanceof Float) {
-                    sohValue = (int) ((Float) result).floatValue();
-                }
-            } catch (NoSuchMethodError nsme) {
-                // method missing — try feature ID below
-            } catch (Exception e) {
-                if (!(e.getCause() instanceof NoSuchMethodError)) {
-                    logger.debug("SOH getter failed: " + e.getMessage());
-                }
-            }
-
-            if (sohValue == null || sohValue < 0 || sohValue > 100) {
-                try {
-                    Object sohVal = BydDeviceHelper.callGet(statisticDevice, BydFeatureIds.STAT_BATTERY_HEALTHY_INDEX, Integer.class);
-                    if (sohVal != null) {
-                        int raw = BydDeviceHelper.getIntValue(sohVal);
-                        if (raw >= 0 && raw <= 100) {
-                            sohValue = raw;
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.debug("SOH feature ID failed: " + e.getMessage());
-                }
-            }
-
-            if (sohValue != null && sohValue >= 0 && sohValue <= 100) {
+            double sohValue = readOemSohPercent();
+            if (sohValue > 0) {
                 b.sohPercent(sohValue);
             }
         } catch (Exception e) {
@@ -2497,18 +2648,10 @@ public class BydDataCollector {
      * Called from collectAll() (ABRP/MQTT/trips consume these).
      */
     private void collectInstrumentExtended(BydVehicleData.Builder b) {
-        // Inside cabin temperature from AC device
-        try {
-            if (acDevice != null) {
-                Object insideTemp = BydDeviceHelper.callGet(acDevice, BydFeatureIds.AC_TEMP_INSIDE, Integer.class);
-                if (insideTemp != null) {
-                    int raw = BydDeviceHelper.getIntValue(insideTemp);
-                    if (raw >= -40 && raw <= 60) b.insideTempCelsius(raw);
-                }
-            }
-        } catch (Exception e) {
-            logger.debug("collectInstrumentExtended insideTemp error: " + e.getMessage());
-        }
+        // Cabin temperature is already read via acDevice.getTemprature(1) in
+        // collectAc(). Do not poll AC_TEMP_INSIDE here: BYD firmware denies
+        // feature 0x3d800030 for this UID every cycle, creating log noise while
+        // adding no data on the tested head unit.
 
         // Per-tyre temperature from InstrumentDevice via feature ID get() calls.
         // Slot mapping from BYDAutoFeatureIds.Instrument:
@@ -3131,14 +3274,21 @@ public class BydDataCollector {
     private void onDoorLockCallback(String method, Object[] args) {
         BydVehicleData current = snapshot.get();
         if (current == null) return;
+
+        int area = -1;
+        int sdkState = -1;
+        if ("onDoorLockStatusChanged".equals(method) && args != null && args.length >= 2) {
+            area = (args[0] instanceof Integer) ? (Integer) args[0] : -1;
+            sdkState = (args[1] instanceof Integer) ? (Integer) args[1] : -1;
+            updateDoorLockEventCache(area, sdkState);
+        }
+
         BydVehicleData.Builder b = current.toBuilder();
         collectDoorLock(b);
         BydVehicleData updated = b.build();
         snapshot.set(updated);
 
         if ("onDoorLockStatusChanged".equals(method) && args != null && args.length >= 2) {
-            int area = (args[0] instanceof Integer) ? (Integer) args[0] : -1;
-            int sdkState = (args[1] instanceof Integer) ? (Integer) args[1] : -1;
             notifyDoorLockListeners(area, sdkState);
         }
         notifyLockSnapshotListeners(updated);

@@ -65,11 +65,23 @@ var VC = {
     activeModelId: 'seal',
     manifest: null,
     _downloadPollTimer: null,
+    // Last unsaved model/color patch. Normal clicks still save async for a
+    // responsive UI, but BYD's old WebView can cancel fire-and-forget XHRs
+    // when the user immediately leaves the Vehicle page. Keep the patch here
+    // so pagehide/beforeunload can do one final blocking flush.
+    _pendingSelectionPatch: null,
+    _selectionSaveDirty: false,
     // Monotonic generation tag. Bumped on every loadModel() so async callbacks from
     // an earlier load (network fetch, GLTF parse, retry) can detect they're stale
     // and no-op. Without this, switching models rapidly can let an old model's
     // loader.load() callback overwrite the newer one.
     _loadGen: 0,
+    // Rendering on the BYD-era Chrome/WebView stack needs explicit budgeting.
+    // The performance profile caps pixel ratio, bowl complexity, decoder canvas
+    // size, and target frame rate so 3D surround doesn't assume desktop-class GPU.
+    perfProfile: null,
+    _lastRenderAtMs: 0,
+    _videoTextureDirty: false,
 
     // ==================== INITIALIZATION ====================
 
@@ -78,6 +90,7 @@ var VC = {
         // Default: Aurora White (converted to linear so it matches the rest
         // of the colour pipeline; see applyColor() for the rationale).
         this.baseColor = new THREE.Color(0xE8E8EC).convertSRGBToLinear();
+        this.perfProfile = this._detectPerformanceProfile();
         this.initThreeJS();
         this.initColorPicker();
         this.bindControls();
@@ -88,6 +101,7 @@ var VC = {
         this.animate();
         this.init3dButton();
         this.initCloudModal();
+        this.initSelectionPersistenceGuard();
 
         // Vehicle appearance (model + color) is stored unified server-side so AVN
         // and phone-over-tunnel access show the same car. Fetch manifest + persisted
@@ -176,12 +190,21 @@ var VC = {
     },
 
     _saveSelected: function(patch) {
-        // Fire-and-forget: a failed save just means next reload reverts. We don't
-        // block the UI on the round-trip so the user feels the click immediately.
+        // Save immediately, but track it until the daemon confirms. This
+        // protects against old Android WebView cancelling the request during
+        // quick page changes after a model/color tap.
+        this._markSelectionDirty(patch);
         try {
             var xhr = new XMLHttpRequest();
+            var self = this;
             xhr.open('POST', '/api/models/selected', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    self._selectionSaveDirty = false;
+                    self._pendingSelectionPatch = null;
+                }
+            };
             xhr.send(JSON.stringify(patch));
         } catch(e) {}
         // Sidebar EV card mirrors the same /api/models/selected. Tell it
@@ -192,6 +215,62 @@ var VC = {
                 window.OverdriveAppShell.refreshVehicle();
             }
         } catch(e) {}
+    },
+
+    _markSelectionDirty: function(patch) {
+        var merged = this._pendingSelectionPatch || {};
+        for (var key in patch) {
+            if (patch.hasOwnProperty(key)) merged[key] = patch[key];
+        }
+        this._pendingSelectionPatch = merged;
+        this._selectionSaveDirty = true;
+    },
+
+    initSelectionPersistenceGuard: function() {
+        var self = this;
+        var flush = function() { self.flushSelectionSave(); };
+        // pagehide fires for normal navigation; beforeunload covers older
+        // Chrome/WebView builds. Both are cheap no-ops when there is no dirty
+        // model/color change.
+        window.addEventListener('pagehide', flush);
+        window.addEventListener('beforeunload', flush);
+    },
+
+    flushSelectionSave: function() {
+        if (!this._selectionSaveDirty || !this._pendingSelectionPatch) return;
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/models/selected', false);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify(this._pendingSelectionPatch));
+            if (xhr.status >= 200 && xhr.status < 300) {
+                this._selectionSaveDirty = false;
+                this._pendingSelectionPatch = null;
+            }
+        } catch(e) {}
+    },
+
+    _detectPerformanceProfile: function() {
+        var ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
+        var hw = navigator && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 0;
+        var mem = navigator && navigator.deviceMemory ? navigator.deviceMemory : 0;
+        var legacyChrome = /Chrome\/([0-6][0-9]|7[0-9])\./.test(ua);
+        var legacyAndroid = /Android (6|7|8)\./.test(ua);
+        var inAppWebView = !!window.AndroidBridge;
+        var lowCoreCount = hw > 0 && hw <= 4;
+        var lowMemory = mem > 0 && mem <= 4;
+        var lowEnd = inAppWebView || legacyChrome || legacyAndroid || lowCoreCount || lowMemory;
+
+        return {
+            lowEnd: lowEnd,
+            rendererPixelRatioCap: lowEnd ? 1.0 : 2.0,
+            defaultRenderIntervalMs: lowEnd ? 24 : 16,
+            surroundRenderIntervalMs: lowEnd ? 33 : 24,
+            surroundCanvasWidth: lowEnd ? 960 : 1280,
+            surroundCanvasHeight: lowEnd ? 720 : 960,
+            surroundWallSegments: lowEnd ? 48 : 96,
+            textureAnisotropyCap: lowEnd ? 1 : 4
+        };
     },
 
     initThreeJS: function() {
@@ -222,11 +301,18 @@ var VC = {
 
         this.renderer = new THREE.WebGLRenderer({
             canvas: canvasEl,
-            antialias: true,
-            alpha: true
+            // MSAA is expensive on the BYD WebView GPU. Low-end devices run
+            // sharper-sampled at DPR 1 instead, which frees enough fragment
+            // budget to target a visibly smoother exterior 3D orbit.
+            antialias: !this.perfProfile.lowEnd,
+            alpha: true,
+            powerPreference: this.perfProfile.lowEnd ? 'high-performance' : 'default'
         });
         this.renderer.setSize(renderW, renderH, false);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+        // Head-unit WebViews stall quickly once the backing buffer grows past
+        // the visible CSS box. Cap DPR aggressively on low-end devices so the
+        // bowl shaders and the GLB stay inside a manageable fragment budget.
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.perfProfile.rendererPixelRatioCap));
         // Read the clear colour from the active theme so the 3D viewport
         // matches the surrounding chrome under both light and dark themes.
         // Was previously hardcoded #0F0F12 which left the car silhouette
@@ -437,6 +523,51 @@ var VC = {
         this.bodyPaintMeshes = [];
     },
 
+    _meshMaterialLabel: function(node, mat) {
+        var parts = [];
+        if (node && node.name) parts.push(String(node.name).toLowerCase());
+        if (mat && mat.name) parts.push(String(mat.name).toLowerCase());
+        return parts.join(' ');
+    },
+
+    _looksLikeBodyPaint: function(node, mat) {
+        if (!mat || mat.transparent || mat.opacity <= 0.9) return false;
+        if (!mat.color) return false;
+
+        var label = this._meshMaterialLabel(node, mat);
+        var bodyKeyword = /(body|paint|door|hood|bonnet|trunk|boot|fender|quarter|bumper|mirrorcap|mirror_cap|roof|panel|sideskirt|side_skirt|shell)/.test(label);
+        var excludeKeyword = /(glass|window|windscreen|windshield|screen|chrome|trim|tire|tyre|wheel|rim|brake|light|lamp|led|interior|seat|dash|grille|grill|logo|badge|plate|handle|exhaust)/.test(label);
+        if (excludeKeyword && !bodyKeyword) return false;
+
+        var col = mat.color;
+        var brightness = col.r * 0.299 + col.g * 0.587 + col.b * 0.114;
+        var metalness = mat.metalness !== undefined ? mat.metalness : 0;
+        var roughness = mat.roughness !== undefined ? mat.roughness : 0.5;
+        var emissiveLevel = 0;
+        if (mat.emissive) {
+            emissiveLevel = mat.emissive.r + mat.emissive.g + mat.emissive.b;
+        }
+
+        var isVeryDark = brightness < 0.05;
+        var isGlass = mat.transparent || mat.opacity < 0.95;
+        // Chrome and lamp covers are often bright too, but unlike paint they
+        // usually pair that brightness with mirror-like metalness or emissive glow.
+        var isLikelyChrome = brightness > 0.82 && metalness > 0.78 && roughness < 0.35;
+        var isLikelyLamp = brightness > 0.75 && emissiveLevel > 0.05;
+
+        if (isGlass || isLikelyChrome || isLikelyLamp) return false;
+        // Some downloaded GLBs ship black paint as a very dark material
+        // named like "mk_body_CarPaint_0". Trust explicit body/paint names
+        // before applying the generic "very dark == rubber" fallback.
+        if (bodyKeyword) return true;
+        if (isVeryDark) return false;
+
+        // Fallback for vendor GLBs with poor naming: keep bright white paint
+        // recolorable, but require "paint-like" PBR values so we don't scoop
+        // up tiny chrome trim, badges, or glossy lamps.
+        return metalness < 0.88 && roughness >= 0.08 && roughness <= 0.95;
+    },
+
     _loadModelFromPath: function(modelPath, gen) {
         var self = this;
         var loader = new THREE.GLTFLoader();
@@ -460,29 +591,13 @@ var VC = {
 
                 self.carModel.traverse(function(node) {
                     if (node.isMesh) {
-                        // Identify body paint panels vs glass/chrome/rubber/interior
-                        // Body paint: opaque, non-transparent, typically the largest colored surfaces
+                        // Identify body paint panels vs glass/chrome/rubber/interior.
+                        // The earlier "mid-brightness only" heuristic broke white
+                        // models like Destroyer 05 because the body panels were
+                        // bright enough to be mistaken for chrome. Use names first,
+                        // then a paint-vs-chrome PBR fallback for poorly named GLBs.
                         var mat = node.material;
-                        var isBodyPaint = false;
-
-                        if (mat && !mat.transparent && mat.opacity > 0.9) {
-                            // Check if it's NOT glass (glass is usually transparent or has low opacity)
-                            // Check if it's NOT black rubber/tyre (very dark, roughness ~1)
-                            // Check if it's NOT chrome (metalness ~1, very light color)
-                            var col = mat.color;
-                            if (col) {
-                                var brightness = col.r * 0.299 + col.g * 0.587 + col.b * 0.114;
-                                var isVeryDark = brightness < 0.08;  // black rubber, tyres
-                                var isVeryBright = brightness > 0.85; // chrome, lights
-                                var isGlass = mat.transparent || (mat.opacity < 0.95);
-                                var metalness = mat.metalness !== undefined ? mat.metalness : 0;
-
-                                // Body paint: mid-range brightness, not chrome-level metalness
-                                if (!isVeryDark && !isVeryBright && !isGlass && metalness < 0.95) {
-                                    isBodyPaint = true;
-                                }
-                            }
-                        }
+                        var isBodyPaint = self._looksLikeBodyPaint(node, mat);
 
                         if (isBodyPaint) {
                             // Store original color for reference
@@ -525,6 +640,10 @@ var VC = {
                 // Cache the bounding box once — the wheel-anchor positions are
                 // derived from it and the box is stable after model placement.
                 if (self._cacheCarBounds) self._cacheCarBounds();
+                // Async GLB parsing can complete between throttled frames.
+                // Reset the timer so the newly-added car is painted immediately
+                // instead of waiting behind the low-end render budget.
+                self._lastRenderAtMs = 0;
                 self.triggerIdlePulse();
             },
             function(progress) {
@@ -589,23 +708,39 @@ var VC = {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h, false);
+        this._lastRenderAtMs = 0;
         // Invalidate the cached tyre-layout dimensions so the next
         // _updateTyreCalloutPositions call re-flows the boxes for the
         // new viewport size.
         this._tyreLastW = 0; this._tyreLastH = 0;
     },
 
-    animate: function() {
+    animate: function(nowMs) {
         var self = this;
-        requestAnimationFrame(function() { self.animate(); });
+        requestAnimationFrame(function(ts) { self.animate(ts); });
+        // Do not pause on document.hidden here. Several head-unit WebViews
+        // report embedded pages as hidden while they are visibly active, which
+        // leaves the full-screen vehicle canvas blank. The render-interval cap
+        // below is the safe performance control for this page.
+        var intervalMs = this._3dViewActive
+            ? this.perfProfile.surroundRenderIntervalMs
+            : this.perfProfile.defaultRenderIntervalMs;
+        var renderNow = nowMs || Date.now();
+        if (this._lastRenderAtMs && (renderNow - this._lastRenderAtMs) < intervalMs) {
+            return;
+        }
         if (this.controls) this.controls.update();
-        // Update canvas texture each frame when 3D view is active
-        if (this._3dViewActive && this._videoTexture) {
+        // The surround canvas only changes when the decoder delivers a frame.
+        // Avoid flagging the texture dirty on every browser RAF when the video
+        // frame rate is lower than the display refresh rate.
+        if (this._3dViewActive && this._videoTexture && this._videoTextureDirty) {
             this._videoTexture.needsUpdate = true;
+            this._videoTextureDirty = false;
         }
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
         }
+        this._lastRenderAtMs = renderNow;
         // Reposition tyre callouts after the camera/controls have settled
         // for this frame. Cheap (4 vector projections + 4 line endpoints).
         // Skipped automatically while 3D surround is active or the user has
@@ -909,6 +1044,7 @@ var VC = {
                 mesh.material.needsUpdate = true;
             }
         }
+        this._lastRenderAtMs = 0;
         // Skip the rim light recolor while the surround bowl is up. The rim
         // light sits at y=-1.5 (under the car) inside the cylinder; tinting
         // it to the user's body-paint hex bleeds onto the bowl wall and makes
@@ -2014,7 +2150,12 @@ var VC = {
         if (lockBtn) { if (locked === true) lockBtn.classList.add('on'); else lockBtn.classList.remove('on'); }
         if (unlockBtn) { if (locked === false) unlockBtn.classList.add('on'); else unlockBtn.classList.remove('on'); }
         if (lockStatus) {
-            lockStatus.textContent = locked === true ? BYD.i18n.t('vehicle.locked') : (locked === false ? BYD.i18n.t('vehicle.unlocked') : BYD.i18n.t('common.unknown'));
+            // The head unit often reports -1 for lock state while the car is
+            // asleep or cloud fallback is unavailable. Use a vehicle-specific
+            // message instead of the generic "Unknown" pill.
+            lockStatus.textContent = locked === true
+                ? BYD.i18n.t('vehicle.locked')
+                : (locked === false ? BYD.i18n.t('vehicle.unlocked') : BYD.i18n.t('vehicle.lock_status_unavailable'));
             var dot = lockStatus.previousElementSibling;
             if (dot) {
                 dot.className = 'dot ' + (locked === true ? 'green' : (locked === false ? 'amber' : 'grey'));
@@ -2527,6 +2668,8 @@ var VC = {
         this._3dViewActive = true;
         this._3dDecoderMode = null;  // 'webcodecs' or 'jmuxer'
         this._3dStreamConnected = false;
+        this._videoTextureDirty = false;
+        this._lastRenderAtMs = 0;
         var btn = document.getElementById('btn3dView');
         if (btn) btn.classList.add('on');
         // Hide tyre callouts in 3D surround mode — the leader-line projection
@@ -2566,8 +2709,8 @@ var VC = {
                 // SotaPlayer path — renders to canvas, use CanvasTexture for Three.js
                 this._3dDecoderMode = 'webcodecs';
                 this._3dCanvas = document.createElement('canvas');
-                this._3dCanvas.width = 1280;
-                this._3dCanvas.height = 960;
+                this._3dCanvas.width = this.perfProfile.surroundCanvasWidth;
+                this._3dCanvas.height = this.perfProfile.surroundCanvasHeight;
                 this._3dCanvas.style.display = 'none';
                 document.body.appendChild(this._3dCanvas);
 
@@ -2588,8 +2731,10 @@ var VC = {
                     self.toast(BYD.i18n.t('vehicle.stream_3d_connected'), 'success');
                 };
                 this._sotaPlayer.onFrame = function() {
-                    // Mark texture as needing update on each decoded frame
-                    if (self._videoTexture) self._videoTexture.needsUpdate = true;
+                    // The decoder frame is the real pacing signal for the
+                    // surround bowl. Mark dirty here and let animate() upload
+                    // it at the capped render rate for the current device.
+                    self._videoTextureDirty = true;
                 };
                 this._sotaPlayer.onDisconnected = function() {
                     console.log('[VC] 3D WebCodecs stream disconnected');
@@ -2815,6 +2960,8 @@ var VC = {
             this._videoTexture.dispose();
             this._videoTexture = null;
         }
+        this._videoTextureDirty = false;
+        this._lastRenderAtMs = 0;
 
         this._3dDecoderMode = null;
 
@@ -2931,7 +3078,7 @@ var VC = {
             if (this.renderer && this.renderer.capabilities &&
                 typeof this.renderer.capabilities.getMaxAnisotropy === 'function') {
                 var maxAniso = this.renderer.capabilities.getMaxAnisotropy() || 1;
-                this._videoTexture.anisotropy = Math.min(8, maxAniso);
+                this._videoTexture.anisotropy = Math.min(this.perfProfile.textureAnisotropyCap, maxAniso);
             }
         } else {
             console.error('[VC] No canvas available for surround view');
@@ -3371,7 +3518,7 @@ var VC = {
 
         // ── Cylindrical wall ────────────────────────────────────────────
         var wallGeo = new THREE.CylinderGeometry(
-            WALL_RADIUS, WALL_RADIUS, WALL_HEIGHT, 96, 1, true);
+            WALL_RADIUS, WALL_RADIUS, WALL_HEIGHT, this.perfProfile.surroundWallSegments, 1, true);
         wallGeo.translate(0, WALL_BOTTOM + WALL_HEIGHT / 2, 0);
 
         var wallMat = new THREE.ShaderMaterial({

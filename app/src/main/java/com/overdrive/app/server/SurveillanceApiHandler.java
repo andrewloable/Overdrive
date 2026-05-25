@@ -302,6 +302,15 @@ public class SurveillanceApiHandler {
                 if (camCfg != null) {
                     config.put("cameraId", camCfg.optInt("probedCameraId", -1));
                     config.put("cameraManualOverride", camCfg.optBoolean("manualOverride", false));
+                    config.put("cameraLayout", camCfg.optInt("cameraLayout", -1));
+                    config.put("cameraArbitrationMode", camCfg.optString("arbitrationMode", "eventCallbackOnly"));
+                    config.put("cameraReprobeOnNextRestart", camCfg.optBoolean("reprobeOnNextRestart", false));
+                    config.put("cameraSourceBmmTag", camCfg.optString("sourceBmmTag", ""));
+                    config.put("cameraDiscoveryMethod", camCfg.optString("discoveryMethod", ""));
+                    config.put("cameraVehicleCamSort", camCfg.optString("vehicleCamSort", ""));
+                    config.put("cameraFirmwareFingerprint", camCfg.optString("firmwareFingerprint", ""));
+                    config.put("cameraValidationSignal", camCfg.optString("validationSignal", ""));
+                    config.put("cameraLayoutConfidence", camCfg.optString("layoutConfidence", ""));
                 }
             } catch (Exception ignored) {}
         } else {
@@ -358,6 +367,47 @@ public class SurveillanceApiHandler {
             }
             
             boolean configChanged = false;
+
+            if (configJson.has("reprobeCameraOnNextRestart")
+                    && configJson.optBoolean("reprobeCameraOnNextRestart", false)) {
+                try {
+                    // Reprobe clears the trust chain but preserves manualOverride
+                    // so a user can intentionally keep a hand-picked tuple.
+                    org.json.JSONObject camCfg = new org.json.JSONObject();
+                    camCfg.put("reprobeOnNextRestart", true);
+                    camCfg.put("probedCameraId", -1);
+                    camCfg.put("probedSurfaceMode", -1);
+                    camCfg.put("cameraLayout", -1);
+                    camCfg.put("probedAndValidated", false);
+                    camCfg.put("fallbackFromProbe", false);
+                    camCfg.put("sourceBmmTag", "");
+                    camCfg.put("discoveryMethod", "");
+                    camCfg.put("vehicleCamSort", "");
+                    camCfg.put("firmwareFingerprint", "");
+                    camCfg.put("buildDisplay", "");
+                    camCfg.put("buildIncremental", "");
+                    camCfg.put("roBuildIncremental", "");
+                    camCfg.put("productDevice", "");
+                    camCfg.put("validatedAtMs", 0);
+                    camCfg.put("validatedFrameWidth", 0);
+                    camCfg.put("validatedFrameHeight", 0);
+                    camCfg.put("validationFrameCount", 0);
+                    camCfg.put("validationSignal", "");
+                    camCfg.put("stripConfidence", "");
+                    camCfg.put("layoutConfidence", "");
+                    camCfg.put("lastValidationFailure", "reprobe_requested");
+                    camCfg.put("nativeProbeReport", "");
+                    camCfg.put("nativeProbeReady", false);
+                    camCfg.put("fpsSetCameraResult", "");
+                    camCfg.put("fpsSetMediaCodecResult", "");
+                    camCfg.put("lastCameraEvent", "");
+                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    CameraDaemon.log("Camera will reprobe on next restart (manual override preserved)");
+                } catch (Exception e) {
+                    CameraDaemon.log("Failed to mark camera for reprobe: " + e.getMessage());
+                }
+                configChanged = true;
+            }
             
             if (sentry != null && configJson.has("sadThreshold")) {
                 sentry.setSadThreshold((float) configJson.optDouble("sadThreshold", 0.05));
@@ -820,17 +870,78 @@ public class SurveillanceApiHandler {
                     CameraDaemon.log("Schedule parse error: " + e.getMessage());
                 }
             }
-            
+
+            if (configJson.has("cameraArbitrationMode")) {
+                String mode = configJson.optString("cameraArbitrationMode", "eventCallbackOnly");
+                // Accept only the three supported arbitration modes. Anything
+                // else is ignored so we do not accidentally flip the camera
+                // service into an unreviewed experiment state.
+                if (!"polling".equals(mode)
+                        && !"eventCallbackOnly".equals(mode)
+                        && !"registeredUserExperiment".equals(mode)) {
+                    CameraDaemon.log("Ignoring invalid cameraArbitrationMode: " + mode);
+                } else {
+                    try {
+                        // Update the live coordinator if it already exists, then
+                        // persist the same value so the next restart reuses it.
+                        GpuSurveillancePipeline cameraPipeline = CameraDaemon.getGpuPipeline();
+                        if (cameraPipeline != null && cameraPipeline.getCamera() != null) {
+                            cameraPipeline.getCamera().setArbitrationMode(mode);
+                        }
+                        org.json.JSONObject camCfg = new org.json.JSONObject();
+                        camCfg.put("arbitrationMode", mode);
+                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                        CameraDaemon.log("Camera arbitration mode set to: " + mode);
+                    } catch (Exception e) {
+                        CameraDaemon.log("Failed to save camera arbitration mode: " + e.getMessage());
+                    }
+                    configChanged = true;
+                }
+            }
+
             // Manual camera ID override
             if (configJson.has("manualCameraId")) {
                 int camId = configJson.optInt("manualCameraId", -1);
                 if (camId >= 0 && camId <= 5) {
                     try {
+                        // Manual override stores a full tuple immediately so the
+                        // next restart can reuse the selection without probing.
+                        int layout = configJson.has("cameraLayout")
+                            ? configJson.optInt("cameraLayout", 0) : 0;
+                        if (!configJson.has("cameraLayout")) {
+                            CameraDaemon.log("Manual camera ID set without cameraLayout; assuming layout 0");
+                        }
+                        com.overdrive.app.camera.CameraFirmwareInfo firmware =
+                            com.overdrive.app.camera.CameraFirmwareInfo.current();
                         org.json.JSONObject camCfg = new org.json.JSONObject();
                         camCfg.put("probedCameraId", camId);
                         camCfg.put("probedSurfaceMode", 0);
+                        camCfg.put("cameraLayout", layout);
                         camCfg.put("probedAndValidated", true);
                         camCfg.put("manualOverride", true);
+                        camCfg.put("fallbackFromProbe", false);
+                        camCfg.put("reprobeOnNextRestart", false);
+                        camCfg.put("sourceBmmTag", "manual");
+                        camCfg.put("discoveryMethod", "manual");
+                        camCfg.put("vehicleCamSort", firmware.vehicleCamSort);
+                        camCfg.put("firmwareFingerprint", firmware.fingerprint);
+                        camCfg.put("buildDisplay", firmware.buildDisplay);
+                        camCfg.put("buildIncremental", firmware.buildIncremental);
+                        camCfg.put("roBuildIncremental", firmware.roBuildIncremental);
+                        camCfg.put("productDevice", firmware.device);
+                        camCfg.put("validatedAtMs", 0);
+                        camCfg.put("validatedFrameWidth", 0);
+                        camCfg.put("validatedFrameHeight", 0);
+                        camCfg.put("validationFrameCount", 0);
+                        camCfg.put("validationSignal", "");
+                        camCfg.put("stripConfidence", "");
+                        camCfg.put("layoutConfidence", "");
+                        camCfg.put("lastValidationFailure", "");
+                        camCfg.put("nativeProbeReport", "");
+                        camCfg.put("nativeProbeReady", false);
+                        camCfg.put("fpsSetCameraResult", "");
+                        camCfg.put("fpsSetMediaCodecResult", "");
+                        camCfg.put("lastCameraEvent", "");
                         com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
                         CameraDaemon.log("Manual camera ID set: " + camId + " (will take effect on next restart)");
                     } catch (Exception e) {
@@ -841,11 +952,38 @@ public class SurveillanceApiHandler {
             }
             if (configJson.has("clearManualCameraId") && configJson.optBoolean("clearManualCameraId", false)) {
                 try {
+                    // Clear the whole selection tuple, not just the camera ID,
+                    // so the next boot path rediscover from scratch instead of
+                    // reusing stale camera metadata.
                     org.json.JSONObject camCfg = new org.json.JSONObject();
                     camCfg.put("probedCameraId", -1);
                     camCfg.put("probedSurfaceMode", -1);
+                    camCfg.put("cameraLayout", -1);
                     camCfg.put("probedAndValidated", false);
                     camCfg.put("manualOverride", false);
+                    camCfg.put("fallbackFromProbe", false);
+                    camCfg.put("reprobeOnNextRestart", false);
+                    camCfg.put("sourceBmmTag", "");
+                    camCfg.put("discoveryMethod", "");
+                    camCfg.put("vehicleCamSort", "");
+                    camCfg.put("firmwareFingerprint", "");
+                    camCfg.put("buildDisplay", "");
+                    camCfg.put("buildIncremental", "");
+                    camCfg.put("roBuildIncremental", "");
+                    camCfg.put("productDevice", "");
+                    camCfg.put("validationSignal", "");
+                    camCfg.put("stripConfidence", "");
+                    camCfg.put("layoutConfidence", "");
+                    camCfg.put("lastValidationFailure", "");
+                    camCfg.put("validatedAtMs", 0);
+                    camCfg.put("validatedFrameWidth", 0);
+                    camCfg.put("validatedFrameHeight", 0);
+                    camCfg.put("validationFrameCount", 0);
+                    camCfg.put("nativeProbeReport", "");
+                    camCfg.put("nativeProbeReady", false);
+                    camCfg.put("fpsSetCameraResult", "");
+                    camCfg.put("fpsSetMediaCodecResult", "");
+                    camCfg.put("lastCameraEvent", "");
                     com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
                     CameraDaemon.log("Manual camera ID cleared — will auto-detect on next restart");
                 } catch (Exception e) {

@@ -1398,11 +1398,25 @@ public class HttpServer {
     // Setters delegate to handlers
     public static void setRecordingQuality(String quality) { QualitySettingsApiHandler.setRecordingQuality(quality); }
     public static void setStreamingQuality(String quality) { StreamingApiHandler.setStreamingQuality(quality); }
-    public static void setRecordingBitrate(String bitrate) { QualitySettingsApiHandler.setRecordingBitrate(bitrate); }
+    public static void setRecordingBitrate(String bitrate) {
+        // Legacy API surface kept for old web/IPC clients. Convert here so
+        // callers land on the canonical recording-quality implementation.
+        QualitySettingsApiHandler.setRecordingQuality(legacyBitrateToQuality(bitrate));
+    }
     public static void setRecordingCodec(String codec) { QualitySettingsApiHandler.setRecordingCodec(codec); }
     
     // Static setters for IPC server
     public static void setRecordingBitrateStatic(String bitrate) { QualitySettingsApiHandler.setRecordingBitrateStatic(bitrate); }
     public static void setRecordingCodecStatic(String codec) { QualitySettingsApiHandler.setRecordingCodecStatic(codec); }
     public static void persistSettingsStatic() { QualitySettingsApiHandler.persistSettings(); }
+
+    private static String legacyBitrateToQuality(String bitrate) {
+        if (bitrate == null) return "STANDARD";
+        switch (bitrate.toUpperCase()) {
+            case "LOW": return "ECONOMY";
+            case "HIGH": return "HIGH";
+            case "MEDIUM":
+            default: return "STANDARD";
+        }
+    }
 }

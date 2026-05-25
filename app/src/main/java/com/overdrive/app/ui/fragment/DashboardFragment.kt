@@ -913,7 +913,7 @@ class DashboardFragment : Fragment() {
                 if (!isAdded || view == null) return@post
                 if (nominalKwh > 0) {
                     tile.text = if (modelId != null) {
-                        getString(R.string.dashboard_vehicle_summary, nominalKwh, modelId.replaceFirstChar { it.uppercase() })
+                        getString(R.string.dashboard_vehicle_summary, nominalKwh, modelDisplayName(modelId))
                     } else {
                         String.format("%.1f kWh", nominalKwh)
                     }
@@ -1120,6 +1120,13 @@ class DashboardFragment : Fragment() {
                         String.format("%.1f%% (live)", finalDisplaySoh)
                     finalDisplaySoh > 0 && finalDisplaySource == "calibration" ->
                         String.format("%.1f%% (from last charge)", finalDisplaySoh)
+                    // OEM is the BYD StatisticBatteryHealthyIndex recovered
+                    // from the legacy app. Surface it in the vehicle summary,
+                    // but label it so it is not mistaken for calculated SOH.
+                    finalDisplaySoh > 0 && finalDisplaySource == "oem" ->
+                        String.format("%.1f%% (vehicle)", finalDisplaySoh)
+                    finalDisplaySoh > 0 && finalDisplaySource == "nominal" ->
+                        String.format("%.1f%% (nominal)", finalDisplaySoh)
                     else -> getString(R.string.vehicle_dialog_soh_unavailable)
                 }
                 summarySoh.text = getString(R.string.vehicle_dialog_summary_soh, sohText)
@@ -1154,7 +1161,7 @@ class DashboardFragment : Fragment() {
             .setPositiveButton(getString(R.string.vehicle_dialog_save)) { _, _ ->
                 val raw = capInput.text?.toString()?.trim().orEmpty()
                 val kwh = raw.toDoubleOrNull()
-                if (kwh == null || kwh < 15.0 || kwh > 120.0) {
+                if (kwh == null || kwh < 8.0 || kwh > 120.0) {
                     Toast.makeText(ctx, getString(R.string.vehicle_dialog_invalid_capacity), Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
@@ -1231,6 +1238,8 @@ class DashboardFragment : Fragment() {
             "sealion6" -> "BYD Sealion 6"
             "sealion7" -> "BYD Sealion 7"
             "sealu", "seal-u" -> "BYD Seal U"
+            "seal5-dmi-dynamic" -> "BYD Seal 5 DM-i Dynamic"
+            "seal5-dmi-premium" -> "BYD Seal 5 DM-i Premium"
             else -> modelId.replaceFirstChar { it.uppercase() }
         }
     }

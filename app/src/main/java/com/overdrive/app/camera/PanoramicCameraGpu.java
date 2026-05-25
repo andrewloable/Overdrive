@@ -23,14 +23,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * PanoramicCameraGpu - GPU Edition with Zero-Copy Pipeline.
  * 
- * This is the GPU-native version of PanoramicCamera that replaces ImageReader
- * with SurfaceTexture. Camera frames flow directly to GPU texture, enabling:
+ * This is the GPU-native version of PanoramicCamera that uses an
+ * ImageReader-backed HardwareBuffer path. Camera frames flow directly to a
+ * GPU external OES texture, enabling:
  * - Zero-copy recording (camera → GPU → encoder)
  * - Minimal AI readback (GPU downscales to 320x240)
  * - <10% total CPU usage
  * 
  * Architecture:
- * - Camera writes to GL_TEXTURE_EXTERNAL_OES via SurfaceTexture
+ * - Camera writes to GL_TEXTURE_EXTERNAL_OES via ImageReader + HardwareBuffer
  * - Render loop on dedicated GL thread distributes frames to:
  *   - Recording Lane: GpuMosaicRecorder (zero-copy to encoder)
  *   - AI Lane: GpuDownscaler (2 FPS readback for motion detection)
@@ -47,6 +48,8 @@ public class PanoramicCameraGpu {
     
     // Camera ID override — set via setCameraId() before start()
     private int cameraIdOverride = -1;  // -1 = use default PHYSICAL_CAMERA_ID
+    private volatile boolean manualOverrideActive = false;
+    private volatile boolean fallbackFromProbe = false;
     
     // SOTA: Full-matrix auto-probe — sweeps camera IDs 0-5 × surface modes 0-5
     // to find the first combination that produces panoramic image data.
@@ -56,6 +59,9 @@ public class PanoramicCameraGpu {
     private int probeStartId = -1;  // Tracks where probe started for wrap-around detection
     private int probeNextCameraId = 0;    // Next camera ID to try
     private int probeNextSurfaceMode = 0; // Next surface mode to try
+    private boolean probeSurfaceModeMatrixActive = false;
+    private int[] probeMatrixCameraIds = new int[0];
+    private int probeMatrixCameraIndex = 0;
     
     // SOTA: Probe gate — blocks recording/streaming/AI until probe finds a working camera.
     // Without this, the encoder records BLACK frames and the stream shows garbage during probe.
@@ -66,6 +72,26 @@ public class PanoramicCameraGpu {
     // If the probe exhausts all IDs without finding a verified strip, fall back
     // to this camera — it's better to record from a real camera than nothing.
     private int lastDataCameraId = -1;
+    private volatile int cameraLayout = 0;
+    private volatile String sourceBmmTag = "";
+    private volatile String discoveryMethod = "";
+    private volatile String vehicleCamSort = "";
+    private volatile CameraFirmwareInfo firmwareInfo = CameraFirmwareInfo.current();
+    private volatile String nativeProbeReport = "";
+    private volatile boolean nativeProbeReady = false;
+    private volatile String fpsSetCameraResult = "unknown";
+    private volatile String fpsSetMediaCodecResult = "not_wired";
+    private volatile long validatedAtMs = 0L;
+    private volatile int validatedFrameWidth = 0;
+    private volatile int validatedFrameHeight = 0;
+    private volatile int validationFrameCount = 0;
+    private volatile String validationSignal = "";
+    private volatile String stripConfidence = "";
+    private volatile String layoutConfidence = "";
+    private volatile String quadrantVariance = "";
+    private volatile String lastValidationFailure = "";
+    private volatile String lastCameraEvent = "";
+    private volatile String arbitrationMode = "eventCallbackOnly";
     
     // Callback when auto-probe discovers a working camera config
     public interface CameraProbeCallback {
@@ -83,7 +109,7 @@ public class PanoramicCameraGpu {
     private int cameraTextureId;
     // Camera consumer: ImageReader → AHardwareBuffer → EGLImage →
     // cameraTextureId. Bypasses SurfaceFlinger throttling that clamps the
-    // SurfaceTexture path to ~8.5 fps on DiLink50 5.0UI builds (verified by
+    // Legacy SurfaceTexture consumer path drops to ~8.5 fps on DiLink50 5.0UI builds (verified by
     // AvmImageReaderFpsProbe → 26 fps panoramic). cameraSurface is what we
     // hand to AVMCamera.addPreviewSurface — sourced from ImageReader.getSurface().
     // minSdk=28 enforces Image.getHardwareBuffer availability.
@@ -164,6 +190,11 @@ public class PanoramicCameraGpu {
     // When native app is active, use a longer threshold to avoid false yields
     // from transient CPU/IO load. The HAL needs time to settle into sharing mode.
     private static final long FRAME_STALL_CONTENTION_THRESHOLD_MS = 3000;
+    // Auto-probe normally advances at frame 15. If a camera/mode opens but
+    // produces no frames at all, frameCounter never reaches 15, so use this
+    // wall-clock guard to move to the next candidate instead of staying in
+    // probeComplete=false forever.
+    private static final long PROBE_NO_FRAME_TIMEOUT_MS = 6000;
     // Require consecutive stalls before yielding — a single stall could be transient
     private static final int CONTENTION_STALL_COUNT_TO_YIELD = 2;
     private volatile int consecutiveContentionStalls = 0;
@@ -281,6 +312,7 @@ public class PanoramicCameraGpu {
         // SOTA: Initialize BYD camera coordinator for cooperative sharing
         if (cameraCoordinator == null) {
             cameraCoordinator = new BydCameraCoordinator();
+            cameraCoordinator.setArbitrationMode(arbitrationMode);
             cameraCoordinator.setYieldCallback(new BydCameraCoordinator.CameraYieldCallback() {
                 @Override
                 public void onYieldCamera() {
@@ -407,7 +439,9 @@ public class PanoramicCameraGpu {
         
         // Log GL info (now that context is current)
         GlUtil.logGlInfo();
-        
+
+        probeHardwareBufferBridge();
+
         // Create camera texture (OES type for external camera)
         cameraTextureId = GlUtil.createExternalTexture();
 
@@ -512,12 +546,12 @@ public class PanoramicCameraGpu {
     }
     
     /**
-     * Recreates the SurfaceTexture and Surface for camera switching.
+     * Recreates the ImageReader consumer for camera switching.
      * 
      * The BYD AVMCamera HAL doesn't properly deliver frames to a Surface
      * that was previously connected to a different camera ID. After the first
      * frame, subsequent frames are never delivered, causing a frozen image.
-     * Recreating the SurfaceTexture forces a clean connection to the new camera.
+     * Recreating the ImageReader consumer forces a clean connection to the new camera.
      */
     private void recreateCameraSurface() {
         logger.info("Recreating ImageReader consumer for camera switch...");
@@ -572,6 +606,100 @@ public class PanoramicCameraGpu {
         cameraImageReader.setOnImageAvailableListener(
             this::onHalImageAvailable, imageReaderHandler);
         cameraSurface = cameraImageReader.getSurface();
+    }
+
+    private void probeHardwareBufferBridge() {
+        if (!com.overdrive.app.surveillance.NativeMotion.isLibraryLoaded()) {
+            throw new IllegalStateException("libsurveillance not loaded before camera startup");
+        }
+
+        String report = HardwareBufferTextureBinder.probeExtensionsNative();
+        nativeProbeReport = report != null ? report : "";
+        nativeProbeReady = isHardwareBufferBridgeReady(nativeProbeReport);
+        logger.info("HardwareBuffer bridge probe: " + nativeProbeReport);
+
+        if (!nativeProbeReady) {
+            throw new IllegalStateException("HardwareBuffer bridge missing required extensions: " + nativeProbeReport);
+        }
+    }
+
+    private static boolean isHardwareBufferBridgeReady(String report) {
+        if (report == null || report.isEmpty()) {
+            return false;
+        }
+        String[] requiredTokens = new String[] {
+            "fnsResolved=true",
+            "ahbFromHwb=y",
+            "EGL_KHR_image_base=y",
+            "EGL_ANDROID_get_native_client_buffer=y",
+            "EGL_ANDROID_image_native_buffer=y",
+            "GL_OES_EGL_image_external=y",
+            "currentDisplay=yes"
+        };
+        for (String token : requiredTokens) {
+            if (!report.contains(token)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void persistCameraConfigSnapshot(boolean validated, String failureReason) {
+        try {
+            org.json.JSONObject existingCam = com.overdrive.app.config.UnifiedConfigManager
+                .loadConfig().optJSONObject("camera");
+            int currentId = getCameraId();
+            boolean existingManual = existingCam != null && existingCam.optBoolean("manualOverride", false);
+            int existingId = existingCam != null ? existingCam.optInt("probedCameraId", -1) : -1;
+
+            if (existingManual && existingId >= 0 && existingId != currentId && !manualOverrideActive) {
+                logger.info("Skipping config write — manual override exists (saved=" + existingId +
+                    ", running=" + currentId + ")");
+                return;
+            }
+
+            org.json.JSONObject camCfg = new org.json.JSONObject();
+            camCfg.put("probedCameraId", currentId);
+            camCfg.put("probedSurfaceMode", cameraSurfaceMode);
+            camCfg.put("cameraLayout", cameraLayout);
+            camCfg.put("probedAndValidated", validated);
+            camCfg.put("manualOverride", manualOverrideActive || existingManual);
+            camCfg.put("fallbackFromProbe", fallbackFromProbe);
+            camCfg.put("reprobeOnNextRestart", false);
+            camCfg.put("sourceBmmTag", sourceBmmTag);
+            camCfg.put("discoveryMethod", discoveryMethod);
+            camCfg.put("vehicleCamSort", vehicleCamSort);
+            camCfg.put("validatedAtMs", validatedAtMs);
+            camCfg.put("validatedFrameWidth", validatedFrameWidth);
+            camCfg.put("validatedFrameHeight", validatedFrameHeight);
+            camCfg.put("validationSignal", validationSignal);
+            camCfg.put("validationFrameCount", validationFrameCount);
+            camCfg.put("stripConfidence", stripConfidence);
+            camCfg.put("layoutConfidence", layoutConfidence);
+            camCfg.put("quadrantVariance", quadrantVariance);
+            camCfg.put("lastValidationFailure", failureReason == null ? lastValidationFailure : failureReason);
+            camCfg.put("nativeProbeReport", nativeProbeReport);
+            camCfg.put("nativeProbeReady", nativeProbeReady);
+            camCfg.put("arbitrationMode", arbitrationMode);
+            camCfg.put("fpsSetCameraResult", fpsSetCameraResult);
+            camCfg.put("fpsSetMediaCodecResult", fpsSetMediaCodecResult);
+            camCfg.put("lastCameraEvent", lastCameraEvent);
+            if (firmwareInfo != null) {
+                camCfg.put("firmwareFingerprint", firmwareInfo.fingerprint);
+                camCfg.put("buildDisplay", firmwareInfo.buildDisplay);
+                camCfg.put("buildIncremental", firmwareInfo.buildIncremental);
+                camCfg.put("roBuildIncremental", firmwareInfo.roBuildIncremental);
+                camCfg.put("productDevice", firmwareInfo.device);
+                camCfg.put("vehicleCamSort", firmwareInfo.vehicleCamSort);
+            }
+            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+        } catch (Exception ex) {
+            logger.warn("Failed to save camera config: " + ex.getMessage());
+        }
+    }
+
+    public void persistCameraConfig(boolean validated, String failureReason) {
+        persistCameraConfigSnapshot(validated, failureReason);
     }
 
     /** Idempotent teardown of whichever consumer is active. */
@@ -695,7 +823,13 @@ public class PanoramicCameraGpu {
         // rejects setCameraFps once a preview surface is attached — even before
         // startPreview. Order must be open → setCameraFps → addPreviewSurface →
         // startPreview to match the BYD HAL state machine.
-        AvmCameraHelper.setCameraFps(cameraObj, targetFps);
+        boolean fpsOk = AvmCameraHelper.setCameraFps(cameraObj, targetFps);
+        fpsSetCameraResult = fpsOk
+            ? "startup:setCameraFps(" + targetFps + ")=ok"
+            : "startup:setCameraFps(" + targetFps + ")=failed";
+        // We intentionally stop at setCameraFps here. The encoder-owned
+        // MediaCodec path is surfaced only as diagnostics until a real owner
+        // passes the codec across the boundary.
 
         // Connect surface — mode 0 works on Seal, other models may need different mode
         Method mAddSurface = avmClass.getDeclaredMethod("addPreviewSurface", Surface.class, int.class);
@@ -874,6 +1008,13 @@ public class PanoramicCameraGpu {
             lastGlThreadHeartbeat = System.currentTimeMillis();
             maybeLogImageReaderDiag();
 
+            // Auto-probe must advance even when a candidate camera/mode opens
+            // successfully but never produces enough frames to reach the
+            // frame-15 validation branch.
+            if (maybeAdvanceProbeAfterNoFrames()) {
+                return;
+            }
+
             // SOTA: Skip frame processing if camera is yielded to native app,
             // not yet open, or being torn down/reopened by the daemon thread
             // (reopenCamera/restartCameraAfterError). The restartInProgress
@@ -922,6 +1063,13 @@ public class PanoramicCameraGpu {
                     }
                     int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
                     boolean isPanoramic = width >= 5000;
+                    boolean stripVerified = verifyPanoramicStrip(probe);
+                    String stripConfidenceValue = stripVerified ? "high" : "low";
+                    String layoutConfidenceValue = stripVerified
+                        ? (cameraLayout == 1 ? "apa_candidate" : "high")
+                        : (cameraLayout == 1 ? "unknown" : "low");
+                    String quadrantVarianceValue = summarizeQuadrantVariance(probe);
+                    setQuadrantVariance(quadrantVarianceValue);
                     logger.info("Camera ID " + currentId + " probe: " + 
                         (hasData ? "HAS DATA" : "BLACK") +
                         " | resolution=" + width + "x" + height +
@@ -931,6 +1079,15 @@ public class PanoramicCameraGpu {
                     if (hasData && isPanoramic) {
                         // Track this camera as having real data (for fallback if strip check fails)
                         lastDataCameraId = currentId;
+                        recordValidationSnapshot(
+                            stripVerified,
+                            stripVerified ? "frame15_non_black_5120x960" : "frame15_non_black_low_layout_confidence",
+                            stripConfidenceValue,
+                            layoutConfidenceValue,
+                            stripVerified ? "" : "frame15_low_layout_confidence",
+                            width,
+                            height,
+                            frameCounter);
                         
                         // During auto-probe: accept the first camera with non-black panoramic data.
                         // The 5120x960 resolution IS the panoramic strip identifier on BYD — no other
@@ -938,11 +1095,13 @@ public class PanoramicCameraGpu {
                         // strip check was producing false negatives in low-light/uniform scenes.
                         if (autoProbeCameras) {
                             logger.info("Auto-probe: SELECTED camera ID " + currentId + 
-                                " (panoramic data confirmed, surfaceMode=" + cameraSurfaceMode + ")");
+                                " (panoramic data confirmed, surfaceMode=" + cameraSurfaceMode +
+                                ", stripVerified=" + stripVerified + ")");
                             autoProbeCameras = false;
                             probeStartId = -1;
                             probeComplete = true;
                             lastDataCameraId = -1;
+                            persistCameraConfigSnapshot(stripVerified, stripVerified ? null : "frame15_low_layout_confidence");
                             logger.info("Probe complete — recording/streaming/AI lanes now active");
                             if (probeCallback != null) {
                                 probeCallback.onCameraFound(currentId, cameraSurfaceMode);
@@ -953,6 +1112,7 @@ public class PanoramicCameraGpu {
                             // No further validation needed (skipFrameValidation handles saved configs,
                             // but this path covers the default camera ID 1 on first boot).
                             probeComplete = true;
+                            persistCameraConfigSnapshot(stripVerified, stripVerified ? null : "frame15_low_layout_confidence");
                         }
                     } else if (autoProbeCameras) {
                         // Advance to next combination in the matrix
@@ -966,6 +1126,15 @@ public class PanoramicCameraGpu {
                         // Don't re-probe immediately (causes OEM dashcam "no signal").
                         // Instead, schedule a second check at frame 50 (~5s). If still black
                         // at that point, the saved config is genuinely wrong and we re-probe.
+                        recordValidationSnapshot(
+                            false,
+                            "frame15_black",
+                            "low",
+                            cameraLayout == 1 ? "unknown" : "low",
+                            "frame15_black",
+                            width,
+                            height,
+                            frameCounter);
                         logger.warn("Frame 15 readback BLACK for cam=" + currentId +
                             ", surfaceMode=" + cameraSurfaceMode +
                             " — will recheck at frame 50 before deciding");
@@ -990,12 +1159,24 @@ public class PanoramicCameraGpu {
                     }
                     if (!hasData) {
                         int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+                        boolean stripVerified = verifyPanoramicStrip(probe);
+                        String quadrantVarianceValue = summarizeQuadrantVariance(probe);
+                        setQuadrantVariance(quadrantVarianceValue);
+                        recordValidationSnapshot(
+                            stripVerified,
+                            stripVerified ? "frame50_non_black_5120x960" : "frame50_non_black_low_layout_confidence",
+                            stripVerified ? "high" : "low",
+                            stripVerified ? (cameraLayout == 1 ? "apa_candidate" : "high")
+                                : (cameraLayout == 1 ? "unknown" : "low"),
+                            stripVerified ? "" : "frame50_low_layout_confidence",
+                            width,
+                            height,
+                            frameCounter);
                         logger.warn("Frame 50 STILL BLACK for cam=" + currentId +
                             " — saved config is wrong, starting re-probe");
-                        autoProbeCameras = true;
+                        persistCameraConfigSnapshot(false, "frame50_black");
+                        setAutoProbeCameras(true);
                         probeComplete = false;
-                        probeNextCameraId = 0;
-                        probeNextSurfaceMode = 0;
                         lastDataCameraId = -1;
                         advanceProbeToNext(currentId);
                     } else {
@@ -1004,26 +1185,25 @@ public class PanoramicCameraGpu {
                         // BUT: don't overwrite if user has a manual override set — they may have
                         // changed the camera ID in the UI and it hasn't taken effect yet.
                         int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+                        boolean stripVerified = verifyPanoramicStrip(probe);
+                        String quadrantVarianceValue = summarizeQuadrantVariance(probe);
+                        setQuadrantVariance(quadrantVarianceValue);
+                        String stripConfidenceValue = stripVerified ? "high" : "low";
+                        String layoutConfidenceValue = stripVerified
+                            ? (cameraLayout == 1 ? "apa_candidate" : "high")
+                            : (cameraLayout == 1 ? "unknown" : "low");
                         logger.info("Frame 50 recheck: camera ID " + currentId + " confirmed working");
                         probeComplete = true;
-                        try {
-                            org.json.JSONObject existingCam = com.overdrive.app.config.UnifiedConfigManager
-                                .loadConfig().optJSONObject("camera");
-                            boolean hasManualOverride = existingCam != null && existingCam.optBoolean("manualOverride", false);
-                            int savedId = existingCam != null ? existingCam.optInt("probedCameraId", -1) : -1;
-                            
-                            // Only write back if there's no manual override, or if the manual override
-                            // matches what we're currently running (user's choice is already applied)
-                            if (!hasManualOverride || savedId == currentId) {
-                                org.json.JSONObject camCfg = new org.json.JSONObject();
-                                camCfg.put("probedCameraId", currentId);
-                                camCfg.put("probedSurfaceMode", cameraSurfaceMode);
-                                camCfg.put("probedAndValidated", true);
-                                com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
-                            } else {
-                                logger.info("Skipping config write — manual override exists (saved=" + savedId + ", running=" + currentId + ")");
-                            }
-                        } catch (Exception ignored) {}
+                        recordValidationSnapshot(
+                            stripVerified,
+                            stripVerified ? "frame50_non_black_5120x960" : "frame50_non_black_low_layout_confidence",
+                            stripConfidenceValue,
+                            layoutConfidenceValue,
+                            stripVerified ? "" : "frame50_low_layout_confidence",
+                            width,
+                            height,
+                            frameCounter);
+                        persistCameraConfigSnapshot(stripVerified, stripVerified ? null : "frame50_low_layout_confidence");
                     }
                 } catch (Exception e) {
                     logger.warn("Frame 50 recheck failed: " + e.getMessage());
@@ -1242,7 +1422,73 @@ public class PanoramicCameraGpu {
             }
         }
     }
-    
+
+    private boolean maybeAdvanceProbeAfterNoFrames() {
+        if (!autoProbeCameras || probeComplete || skipFrameValidation || frameCounter >= 15) {
+            return false;
+        }
+        long startedAt = lastCameraStartTime;
+        if (startedAt <= 0) {
+            return false;
+        }
+        long elapsedMs = System.currentTimeMillis() - startedAt;
+        if (elapsedMs < PROBE_NO_FRAME_TIMEOUT_MS) {
+            return false;
+        }
+
+        int currentId = cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID;
+        logger.warn("Auto-probe: camera ID " + currentId
+            + " surfaceMode=" + cameraSurfaceMode
+            + " produced only " + frameCounter + " frames in " + elapsedMs
+            + "ms; advancing probe");
+        recordValidationSnapshot(
+            false,
+            "probe_timeout_no_frames",
+            "low",
+            cameraLayout == 1 ? "unknown" : "low",
+            "probe_timeout_no_frames",
+            width,
+            height,
+            frameCounter);
+        advanceProbeToNext(currentId);
+        return true;
+    }
+
+    private String summarizeQuadrantVariance(byte[] probe8x8) {
+        // This is diagnostics only. It turns the 8x8 probe into a compact
+        // summary so logs and persisted config can explain *why* a frame was
+        // classified as low-confidence without storing the raw pixels.
+        if (probe8x8 == null || probe8x8.length < 192) {
+            return "";
+        }
+        int[] qLuma = new int[4];
+        int[] qCnt = new int[4];
+        int[] qMin = {255, 255, 255, 255};
+        int[] qMax = {0, 0, 0, 0};
+        int totalNonBlack = 0;
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                int idx = (y * 8 + x) * 3;
+                int r = probe8x8[idx] & 0xFF, g = probe8x8[idx+1] & 0xFF, b = probe8x8[idx+2] & 0xFF;
+                int luma = (r + g * 2 + b) / 4;
+                int q = x / 2;
+                qLuma[q] += luma;
+                qCnt[q]++;
+                if (luma < qMin[q]) qMin[q] = luma;
+                if (luma > qMax[q]) qMax[q] = luma;
+                if (luma > 10) totalNonBlack++;
+            }
+        }
+        for (int q = 0; q < 4; q++) {
+            if (qCnt[q] > 0) qLuma[q] /= qCnt[q];
+        }
+        return "Q0=" + qLuma[0] + "/" + (qMax[0] - qMin[0])
+            + " Q1=" + qLuma[1] + "/" + (qMax[1] - qMin[1])
+            + " Q2=" + qLuma[2] + "/" + (qMax[2] - qMin[2])
+            + " Q3=" + qLuma[3] + "/" + (qMax[3] - qMin[3])
+            + " nonBlack=" + totalNonBlack + "/64";
+    }
+
     /**
      * Verifies that the camera is producing a real panoramic strip (4 distinct views)
      * rather than a single camera stretched or AVM bird's-eye view.
@@ -1309,11 +1555,79 @@ public class PanoramicCameraGpu {
     }
 
     /**
-     * SOTA: Advance to the next camera ID during probe.
-     * Surface mode 0 is confirmed working on all tested models — only probe camera IDs 0-5.
-     * 
-     * @param skipId Camera ID to skip (the one we just tested). -1 to start fresh.
+     * Builds the camera ID order for the surface-mode matrix fallback.
+     * The list starts with the best evidence we have, then fills in 0-5.
      */
+    private int[] buildSurfaceModeProbeCameraIds() {
+        java.util.LinkedHashSet<Integer> ids = new java.util.LinkedHashSet<>();
+        if (lastDataCameraId >= 0) {
+            ids.add(lastDataCameraId);
+        }
+        if (probeStartId >= 0) {
+            ids.add(probeStartId);
+        }
+        ids.add(cameraIdOverride >= 0 ? cameraIdOverride : PHYSICAL_CAMERA_ID);
+        for (int i = 0; i <= MAX_CAMERA_ID; i++) {
+            ids.add(i);
+        }
+        int[] ordered = new int[ids.size()];
+        int idx = 0;
+        for (Integer id : ids) {
+            ordered[idx++] = id;
+        }
+        return ordered;
+    }
+
+    private boolean advanceProbeSurfaceModeMatrix(int skipId) {
+        if (probeMatrixCameraIds == null || probeMatrixCameraIds.length == 0) {
+            probeMatrixCameraIds = buildSurfaceModeProbeCameraIds();
+            probeMatrixCameraIndex = 0;
+        }
+
+        // Sweep one surface mode at a time so we can preserve the same
+        // cleanup/settle order across every candidate camera ID.
+        while (probeNextSurfaceMode <= 5) {
+            while (probeMatrixCameraIndex < probeMatrixCameraIds.length) {
+                int tryId = probeMatrixCameraIds[probeMatrixCameraIndex++];
+                if (tryId == skipId) {
+                    continue;
+                }
+
+                logger.info("Auto-probe: trying camera ID " + tryId +
+                    " [surfaceMode=" + probeNextSurfaceMode + "]");
+
+                cameraIdOverride = tryId;
+                cameraSurfaceMode = probeNextSurfaceMode;
+                frameCounter = 0;
+                lastStatsFrameCount = 0;
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+
+                recreateCameraSurface();
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+
+                try {
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    startCamera();
+                    if (cameraCoordinator != null && cameraObj != null) {
+                        cameraCoordinator.setupEventCallback(cameraObj);
+                    }
+                    return true;
+                } catch (Exception e) {
+                    logger.info("Auto-probe: camera ID " + tryId +
+                        " surfaceMode=" + probeNextSurfaceMode +
+                        " failed to open: " + e.getMessage());
+                    cameraObj = null;
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                }
+            }
+
+            probeMatrixCameraIndex = 0;
+            probeNextSurfaceMode++;
+        }
+
+        return false;
+    }
+
     private void advanceProbeToNext(int skipId) {
         // Close current camera cleanly
         if (cameraObj != null) {
@@ -1333,50 +1647,63 @@ public class PanoramicCameraGpu {
         // and triggers a system watchdog reboot.
         try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
         
-        // Probe camera IDs 0-5 with surface mode 0 (confirmed working on all models)
         boolean found = false;
-        while (probeNextCameraId <= MAX_CAMERA_ID) {
-            int tryId = probeNextCameraId;
-            probeNextCameraId++;
-            
-            // Skip the ID we just tested
-            if (tryId == skipId) {
-                continue;
-            }
-            
-            logger.info("Auto-probe: trying camera ID " + tryId + 
-                " [" + (tryId + 1) + "/" + (MAX_CAMERA_ID + 1) + "]");
-            
-            cameraIdOverride = tryId;
-            cameraSurfaceMode = 0;  // Surface mode 0 confirmed working
-            frameCounter = 0;
-            lastStatsFrameCount = 0;
-            lastGlThreadHeartbeat = System.currentTimeMillis();
-            
-            // Recreate SurfaceTexture — HAL won't deliver continuous frames
-            // to a Surface previously connected to a different camera/mode
-            recreateCameraSurface();
-            lastGlThreadHeartbeat = System.currentTimeMillis();
-            
-            try {
-                // Brief pause before opening next camera — HAL needs time to release resources
-                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-                
-                startCamera();
-                // Setup event callback (only for AVMCamera path — binder service handles its own events)
-                if (cameraCoordinator != null && cameraObj != null) {
-                    cameraCoordinator.setupEventCallback(cameraObj);
+        if (!probeSurfaceModeMatrixActive) {
+            // Probe camera IDs 0-5 with surface mode 0 first.
+            while (probeNextCameraId <= MAX_CAMERA_ID) {
+                int tryId = probeNextCameraId;
+                probeNextCameraId++;
+
+                // Skip the ID we just tested
+                if (tryId == skipId) {
+                    continue;
                 }
-                found = true;
-                break;
-            } catch (Exception e) {
-                // Camera ID doesn't exist or can't open — skip to next
-                logger.info("Auto-probe: camera ID " + tryId + " failed to open: " + e.getMessage());
-                cameraObj = null;
-                // Delay before trying next combo to avoid HAL overload
-                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-                continue;
+
+                logger.info("Auto-probe: trying camera ID " + tryId +
+                    " [" + (tryId + 1) + "/" + (MAX_CAMERA_ID + 1) + "]");
+
+                cameraIdOverride = tryId;
+                cameraSurfaceMode = 0;  // Surface mode 0 confirmed working
+                frameCounter = 0;
+                lastStatsFrameCount = 0;
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+
+                // Recreate the ImageReader consumer — HAL won't deliver continuous
+                // frames to a surface previously connected to a different camera/mode.
+                recreateCameraSurface();
+                lastGlThreadHeartbeat = System.currentTimeMillis();
+
+                try {
+                    // Brief pause before opening next camera — HAL needs time to release resources
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+
+                    startCamera();
+                    // Setup event callback (only for AVMCamera path — binder service handles its own events)
+                    if (cameraCoordinator != null && cameraObj != null) {
+                        cameraCoordinator.setupEventCallback(cameraObj);
+                    }
+                    found = true;
+                    break;
+                } catch (Exception e) {
+                    // Camera ID doesn't exist or can't open — skip to next
+                    logger.info("Auto-probe: camera ID " + tryId + " failed to open: " + e.getMessage());
+                    cameraObj = null;
+                    // Delay before trying next combo to avoid HAL overload
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    continue;
+                }
             }
+
+            if (!found) {
+                probeSurfaceModeMatrixActive = true;
+                probeMatrixCameraIds = buildSurfaceModeProbeCameraIds();
+                probeMatrixCameraIndex = 0;
+                probeNextSurfaceMode = 0;
+                logger.warn("Auto-probe: ID-only probing exhausted; switching to surface-mode matrix");
+                found = advanceProbeSurfaceModeMatrix(skipId);
+            }
+        } else {
+            found = advanceProbeSurfaceModeMatrix(skipId);
         }
         
         if (!found) {
@@ -1421,6 +1748,9 @@ public class PanoramicCameraGpu {
             autoProbeCameras = false;
             probeStartId = -1;
             lastDataCameraId = -1;
+            probeSurfaceModeMatrixActive = false;
+            probeMatrixCameraIds = new int[0];
+            probeMatrixCameraIndex = 0;
             // Ungate consumers even on failure — better to record whatever we have
             // than to stay permanently blocked
             probeComplete = true;
@@ -1580,7 +1910,7 @@ public class PanoramicCameraGpu {
         
         // FORTIFY FIX: Stop encoder drainer threads BEFORE closing camera.
         // The drainer thread calls MediaCodec.dequeueOutputBuffer() which internally
-        // accesses the camera's SurfaceTexture buffer queue via EGL. If we destroy
+        // accesses the camera's ImageReader / HardwareBuffer-backed EGL chain. If we destroy
         // the camera (and its native mutex) while the drainer is mid-dequeue,
         // we get: FORTIFY: pthread_mutex_lock called on a destroyed mutex
         if (encoder != null) {
@@ -1664,8 +1994,8 @@ public class PanoramicCameraGpu {
             // Update heartbeat so watchdog doesn't kill us during restart
             lastGlThreadHeartbeat = System.currentTimeMillis();
             
-            // CRITICAL: Recreate SurfaceTexture before reopening camera.
-            // The BYD HAL won't deliver continuous frames to a Surface that was
+            // CRITICAL: Recreate the ImageReader consumer before reopening camera.
+            // The BYD HAL won't deliver continuous frames to a surface that was
             // previously connected to a different camera instance — only the first
             // frame arrives, then the stream freezes. This matches the fix already
             // present in the auto-probe path in renderLoop().
@@ -1981,7 +2311,7 @@ public class PanoramicCameraGpu {
             foveatedCropper = null;
         }
 
-        // Releases whichever consumer (SurfaceTexture or ImageReader) is active.
+        // Releases whichever consumer is active.
         releaseCameraConsumer();
 
         // Tear down the ImageReader callback thread (full shutdown only —
@@ -2108,8 +2438,12 @@ public class PanoramicCameraGpu {
         Object cam = cameraObj;
         if (cam != null) {
             try {
-                AvmCameraHelper.setCameraFps(cam, fps);
+                boolean ok = AvmCameraHelper.setCameraFps(cam, fps);
+                fpsSetCameraResult = ok
+                    ? "live:setCameraFps(" + fps + ")=ok"
+                    : "live:setCameraFps(" + fps + ")=failed";
             } catch (Throwable t) {
+                fpsSetCameraResult = "live:setCameraFps(" + fps + ")=error:" + t.getClass().getSimpleName();
                 logger.warn("Live setCameraFps failed: " + t.getMessage());
             }
         }
@@ -2141,8 +2475,14 @@ public class PanoramicCameraGpu {
         this.autoProbeCameras = enabled;
         if (enabled) {
             probeComplete = false;
+            probeStartId = getCameraId();
             probeNextCameraId = 0;
             probeNextSurfaceMode = 0;
+            probeSurfaceModeMatrixActive = false;
+            probeMatrixCameraIds = new int[0];
+            probeMatrixCameraIndex = 0;
+        } else {
+            probeSurfaceModeMatrixActive = false;
         }
         logger.info("Camera auto-probe: " + (enabled ? "ENABLED" : "DISABLED"));
     }
@@ -2153,6 +2493,205 @@ public class PanoramicCameraGpu {
     public void setSkipFrameValidation(boolean skip) {
         this.skipFrameValidation = skip;
         if (skip) logger.info("Frame validation SKIPPED (manual camera override)");
+    }
+
+    public void setManualOverrideActive(boolean manualOverride) {
+        this.manualOverrideActive = manualOverride;
+    }
+
+    public void setFallbackFromProbe(boolean fallbackFromProbe) {
+        this.fallbackFromProbe = fallbackFromProbe;
+    }
+
+    public void setCameraLayout(int layout) {
+        this.cameraLayout = layout;
+    }
+
+    public void setCameraSelectionMetadata(PanoCameraDiscovery discovery) {
+        if (discovery == null) return;
+        setCameraLayout(discovery.cameraLayout);
+        this.sourceBmmTag = discovery.sourceTag;
+        this.discoveryMethod = discovery.method;
+        this.vehicleCamSort = discovery.vehicleCamSort;
+        logger.info("Camera discovery metadata set: " + discovery);
+    }
+
+    public void setCameraSelectionMetadata(int layout, String sourceTag, String method, String camSort) {
+        this.cameraLayout = layout;
+        this.sourceBmmTag = sourceTag == null ? "" : sourceTag;
+        this.discoveryMethod = method == null ? "" : method;
+        this.vehicleCamSort = camSort == null ? "" : camSort;
+    }
+
+    public void setFirmwareInfo(CameraFirmwareInfo info) {
+        this.firmwareInfo = info != null ? info : CameraFirmwareInfo.current();
+    }
+
+    public void setNativeProbeReport(String report, boolean ready) {
+        this.nativeProbeReport = report == null ? "" : report;
+        this.nativeProbeReady = ready;
+    }
+
+    public void setArbitrationMode(String arbitrationMode) {
+        this.arbitrationMode = arbitrationMode == null || arbitrationMode.isEmpty()
+            ? "eventCallbackOnly" : arbitrationMode;
+        if (cameraCoordinator != null) {
+            cameraCoordinator.setArbitrationMode(this.arbitrationMode);
+        }
+    }
+
+    public void setFpsSetMediaCodecResult(String result) {
+        // Honest boundary: the pipeline does not currently own the encoder
+        // MediaCodec, so the diagnostic default is "not_wired" unless a
+        // future owner explicitly threads a real codec reference through.
+        this.fpsSetMediaCodecResult = result == null || result.isEmpty()
+            ? "not_wired" : result;
+    }
+
+    public void setLastCameraEvent(String event) {
+        this.lastCameraEvent = event == null ? "" : event;
+    }
+
+    public void setQuadrantVariance(String variance) {
+        this.quadrantVariance = variance == null ? "" : variance;
+    }
+
+    public int getCameraLayout() {
+        return cameraLayout;
+    }
+
+    public boolean isManualOverrideActive() {
+        return manualOverrideActive;
+    }
+
+    public boolean isFallbackFromProbe() {
+        return fallbackFromProbe;
+    }
+
+    public String getSourceBmmTag() {
+        return sourceBmmTag;
+    }
+
+    public String getDiscoveryMethod() {
+        return discoveryMethod;
+    }
+
+    public String getVehicleCamSort() {
+        return vehicleCamSort;
+    }
+
+    public CameraFirmwareInfo getFirmwareInfo() {
+        return firmwareInfo;
+    }
+
+    public String getNativeProbeReport() {
+        return nativeProbeReport;
+    }
+
+    public boolean isNativeProbeReady() {
+        return nativeProbeReady;
+    }
+
+    public String getFpsSetCameraResult() {
+        return fpsSetCameraResult;
+    }
+
+    public String getFpsSetMediaCodecResult() {
+        return fpsSetMediaCodecResult;
+    }
+
+    public long getValidatedAtMs() {
+        return validatedAtMs;
+    }
+
+    public int getValidatedFrameWidth() {
+        return validatedFrameWidth;
+    }
+
+    public int getValidatedFrameHeight() {
+        return validatedFrameHeight;
+    }
+
+    public int getValidationFrameCount() {
+        return validationFrameCount;
+    }
+
+    public String getValidationSignal() {
+        return validationSignal;
+    }
+
+    public String getStripConfidence() {
+        return stripConfidence;
+    }
+
+    public String getLayoutConfidence() {
+        return layoutConfidence;
+    }
+
+    public String getQuadrantVariance() {
+        return quadrantVariance;
+    }
+
+    public String getLastValidationFailure() {
+        return lastValidationFailure;
+    }
+
+    public String getLastCameraEvent() {
+        return lastCameraEvent;
+    }
+
+    public String getArbitrationMode() {
+        return arbitrationMode;
+    }
+
+    public long getLastFrameAgeMs() {
+        long last = lastFrameTime;
+        if (last <= 0L) {
+            return 0L;
+        }
+        return Math.max(0L, System.currentTimeMillis() - last);
+    }
+
+    public long getIrFireCount() {
+        return irFireCount;
+    }
+
+    public long getIrAcquireOkCount() {
+        return irAcquireOkCount;
+    }
+
+    public long getIrAcquireNullCount() {
+        return irAcquireNullCount;
+    }
+
+    public long getIrBindFailCount() {
+        return irBindFailCount;
+    }
+
+    public void recordValidationSnapshot(
+            boolean validated,
+            String signal,
+            String stripConfidence,
+            String layoutConfidence,
+            String failureReason,
+            int frameWidth,
+            int frameHeight,
+            int frameCount) {
+        if (validated) {
+            this.validatedAtMs = System.currentTimeMillis();
+            this.validatedFrameWidth = frameWidth;
+            this.validatedFrameHeight = frameHeight;
+            this.validationFrameCount = frameCount;
+        } else {
+            this.validatedAtMs = 0L;
+            this.validatedFrameWidth = 0;
+            this.validatedFrameHeight = 0;
+            this.validationFrameCount = 0;
+        }
+        this.validationSignal = signal == null ? "" : signal;
+        this.stripConfidence = stripConfidence == null ? "" : stripConfidence;
+        this.layoutConfidence = layoutConfidence == null ? "" : layoutConfidence;
+        this.lastValidationFailure = failureReason == null ? "" : failureReason;
     }
     
     /**

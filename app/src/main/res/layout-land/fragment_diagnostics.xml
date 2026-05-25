@@ -9,7 +9,7 @@
         - HEALTH section (label-medium "Health")
         - 2×2 health-tile grid (Network, Storage, Camera, Battery)
         - TOOLS section (label-medium "Tools")
-        - 2×2 tool grid (ADB, Traffic, Camera probe, Battery health) — outlined cards
+        - 2×2 tool grid plus Performance + Settings shortcuts
       RIGHT COLUMN (~480dp / weight 0.54):
         - "Live event log" container card hosting LogsPanelFragment
 
@@ -19,7 +19,7 @@
     row so it always fills the right column.
 
   IDs preserved (DiagnosticsFragment.kt findViewById targets):
-    cardAdb, cardTraffic, cardCameraProbe, cardBattery, logsPanelContainer
+    cardAdb, cardTraffic, cardCameraProbe, cardBattery, cardPerformance, logsPanelContainer
 
   Health-tile IDs (DiagnosticsFragment.kt findViewById targets):
     Network : tvNetworkValue / viewNetworkTunnelDot / tvNetworkTunnelState
@@ -595,43 +595,92 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- TOOLS row 3: Settings shortcut. -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardSettingsShortcut"
+            <!-- TOOLS row 3: Performance + Settings shortcuts. Performance is
+                 daemon-hosted, but this native tile makes it available on the
+                 car diagnostics screen instead of only from the mobile web UI. -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/card_gap_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
+                android:orientation="horizontal"
+                android:baselineAligned="false">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardPerformance"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="@dimen/card_padding_standard">
+                    android:layout_weight="1"
+                    android:layout_marginEnd="@dimen/card_gap_horizontal_half"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
 
-                    <ImageView
-                        android:layout_width="@dimen/card_icon_standard"
-                        android:layout_height="@dimen/card_icon_standard"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_settings"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:text="@string/rail_settings"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                        android:textColor="?attr/colorOnSurface" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/card_padding_standard">
+
+                        <ImageView
+                            android:layout_width="@dimen/card_icon_standard"
+                            android:layout_height="@dimen/card_icon_standard"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_diagnostics"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:text="@string/diagnostics_section_performance"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSettingsShortcut"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/card_gap_horizontal_half"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/card_padding_standard">
+
+                        <ImageView
+                            android:layout_width="@dimen/card_icon_standard"
+                            android:layout_height="@dimen/card_icon_standard"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_settings"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:text="@string/rail_settings"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurface" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

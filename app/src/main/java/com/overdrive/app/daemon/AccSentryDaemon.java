@@ -174,7 +174,7 @@ public class AccSentryDaemon {
         try {
             // 1. Create the Value Object (BYDAutoEventValue)
             Class<?> valueClass = Class.forName("android.hardware.bydauto.BYDAutoEventValue");
-            Object valueObj = valueClass.newInstance();
+            Object valueObj = valueClass.getDeclaredConstructor().newInstance();
             
             // 2. Set the integer value
             java.lang.reflect.Field intValueField = valueClass.getField("intValue");
@@ -216,7 +216,7 @@ public class AccSentryDaemon {
         
         try {
             Class<?> valueClass = Class.forName("android.hardware.bydauto.BYDAutoEventValue");
-            Object valueObj = valueClass.newInstance();
+            Object valueObj = valueClass.getDeclaredConstructor().newInstance();
             
             java.lang.reflect.Field intValueField = valueClass.getField("intValue");
             intValueField.setInt(valueObj, value);
@@ -2317,7 +2317,7 @@ public class AccSentryDaemon {
         } catch (Exception ignored) {}
         
         try {
-            try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+            prepareMainLooperForShellDaemon();
             java.lang.reflect.Constructor<?> ctor = activityThreadClass.getDeclaredConstructor();
             ctor.setAccessible(true);
             Object at = ctor.newInstance();
@@ -2335,6 +2335,13 @@ public class AccSentryDaemon {
         return null;
     }
     
+    @SuppressWarnings("deprecation")
+    private static void prepareMainLooperForShellDaemon() {
+        // app_process daemons do not get Android's standard main looper; BYD
+        // hardware callbacks need one even though app code should not call this.
+        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+    }
+
     private static class PermissionBypassContext extends android.content.ContextWrapper {
         public PermissionBypassContext(Context base) { super(base); }
         

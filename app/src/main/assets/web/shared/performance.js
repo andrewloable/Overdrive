@@ -105,6 +105,20 @@ BYD.performance = {
             attributeFilter: ['data-theme']
         });
     },
+
+    _withAlpha(color, alpha) {
+        const hex = /^#?([0-9a-f]{6})$/i.exec(color || '');
+        if (!hex) return color;
+
+        const raw = hex[1];
+        const r = parseInt(raw.slice(0, 2), 16);
+        const g = parseInt(raw.slice(2, 4), 16);
+        const b = parseInt(raw.slice(4, 6), 16);
+
+        // Android 7 / Chrome 58 cannot parse 8-digit hex colors in canvas
+        // gradients, so keep chart fills on the older rgba() syntax.
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    },
     
     async init() {
         console.log('[Performance] Initializing...');
@@ -1114,8 +1128,8 @@ BYD.performance = {
         
         // Gradient fill
         const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-        gradient.addColorStop(0, color + '40');
-        gradient.addColorStop(1, color + '05');
+        gradient.addColorStop(0, this._withAlpha(color, 0.25));
+        gradient.addColorStop(1, this._withAlpha(color, 0.02));
         ctx.fillStyle = gradient;
         ctx.fill();
         
@@ -1450,8 +1464,8 @@ BYD.performance = {
         
         // Gradient fill
         const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-        gradient.addColorStop(0, this.colors.soc + '40');
-        gradient.addColorStop(1, this.colors.soc + '05');
+        gradient.addColorStop(0, this._withAlpha(this.colors.soc, 0.25));
+        gradient.addColorStop(1, this._withAlpha(this.colors.soc, 0.02));
         ctx.fillStyle = gradient;
         ctx.fill();
         
@@ -2243,6 +2257,30 @@ BYD.performance = {
                 fallbackEl.textContent = BYD.i18n.t('soh.fallback_caption', {pct: capPct, date: calDateStr});
                 fallbackEl.hidden = false;
             }
+        } else if (displaySource === 'oem' && displaySoh > 0) {
+            if (percentEl) {
+                percentEl.style.display = '';
+                percentEl.textContent = displaySoh.toFixed(1) + '%';
+            }
+            if (fallbackEl) {
+                // OEM SOH comes from BYD's StatisticBatteryHealthyIndex, a
+                // recovered legacy signal. Label it separately from calculated
+                // SOH so it remains a diagnostics readout, not a capacity proof.
+                fallbackEl.textContent = BYD.i18n.t('soh.oem_caption') || 'Vehicle SOH readout - waiting for calculated estimate';
+                fallbackEl.hidden = false;
+            }
+        } else if (displaySource === 'nominal' && displaySoh > 0) {
+            if (percentEl) {
+                percentEl.style.display = '';
+                percentEl.textContent = displaySoh.toFixed(1) + '%';
+            }
+            if (fallbackEl) {
+                // Nominal is a display-only fallback for cars whose raw BMS
+                // remain-kWh signal is rejected. Keep the caption explicit so
+                // developers and users do not confuse it with measured SOH.
+                fallbackEl.textContent = BYD.i18n.t('soh.nominal_caption') || 'Nominal baseline - waiting for trusted battery-health data';
+                fallbackEl.hidden = false;
+            }
         } else {
             if (percentEl) {
                 percentEl.style.display = 'none';
@@ -2299,6 +2337,12 @@ BYD.performance = {
             if (!nominalSet) {
                 hint.style.display = 'block';
                 hint.textContent = BYD.i18n.t('soh.set_battery_capacity_prompt');
+            } else if (displaySource === 'oem') {
+                hint.style.display = 'block';
+                hint.textContent = BYD.i18n.t('soh.oem_hint') || 'Using the vehicle-reported SOH until Overdrive has enough trusted capacity data.';
+            } else if (displaySource === 'nominal') {
+                hint.style.display = 'block';
+                hint.textContent = BYD.i18n.t('soh.nominal_hint') || 'Using configured battery capacity until the car provides valid SOH inputs.';
             } else if (!data.hasEstimate) {
                 hint.style.display = 'block';
                 hint.textContent = BYD.i18n.t('performance.soh_no_estimate');
@@ -2312,6 +2356,9 @@ BYD.performance = {
         // Best-effort: capitalize first letter. Manifest titles aren't cached
         // here; the modal has the full list when the user opens it.
         if (!id) return '';
+        if (id === 'seal5-dmi-dynamic') return 'BYD Seal 5 DM-i Dynamic';
+        if (id === 'seal5-dmi-premium') return 'BYD Seal 5 DM-i Premium';
+        if (id === 'destroyer') return 'BYD Destroyer 05';
         return id.charAt(0).toUpperCase() + id.slice(1);
     },
 
@@ -2427,8 +2474,8 @@ BYD.performance = {
         var input = document.getElementById('sohCapacityModalInput');
         var modelSel = document.getElementById('sohCapacityModalModel');
         var kwh = input ? parseFloat(input.value) : NaN;
-        if (isNaN(kwh) || kwh < 15 || kwh > 120) {
-            alert(BYD.i18n.t('soh.modal_capacity_label') + ': 15 - 120');
+        if (isNaN(kwh) || kwh < 8 || kwh > 120) {
+            alert(BYD.i18n.t('soh.modal_capacity_label') + ': 8 - 120');
             return;
         }
         var modelId = modelSel ? modelSel.value : '';

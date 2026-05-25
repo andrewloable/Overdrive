@@ -18,7 +18,7 @@ public class BYDAutoGearboxDevice extends AbsBYDAutoDevice {
 
     private static BYDAutoGearboxDevice sInstance;
     private int currentMode = 1;
-    private final List<AbsBYDAutoGearboxListener> listeners = new ArrayList();
+    private final List<AbsBYDAutoGearboxListener> listeners = new ArrayList<>();
 
     protected BYDAutoGearboxDevice(Context context) {
         super(context);

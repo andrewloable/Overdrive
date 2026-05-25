@@ -642,17 +642,30 @@
             self.carModel = gltf.scene;
             self.bodyPaintMeshes = [];
 
-            // Same body-paint detector as vehicle-control._loadModelFromPath.
+            // Same intent as vehicle-control._looksLikeBodyPaint: prefer
+            // explicit body/paint mesh names, because some downloadable GLBs
+            // author black paint as a very dark material that otherwise looks
+            // like rubber by color alone.
             self.carModel.traverse(function (node) {
                 if (!node.isMesh) return;
                 var mat = node.material;
                 if (!mat || !mat.color) return;
                 if (mat.transparent || mat.opacity < 0.95) return;
+                var label = ((node.name || '') + ' ' + (mat.name || '')).toLowerCase();
+                var bodyKeyword = /(body|paint|door|hood|bonnet|trunk|boot|fender|quarter|bumper|mirrorcap|mirror_cap|roof|panel|sideskirt|side_skirt|shell|carpaint|car_paint)/.test(label);
+                var excludeKeyword = /(glass|window|windscreen|windshield|screen|chrome|trim|tire|tyre|wheel|rim|brake|light|lamp|led|interior|seat|dash|grille|grill|logo|badge|plate|handle|exhaust)/.test(label);
+                if (excludeKeyword && !bodyKeyword) return;
                 var col = mat.color;
                 var brightness = col.r * 0.299 + col.g * 0.587 + col.b * 0.114;
-                if (brightness < 0.08) return;          // tyres / rubber
-                if (brightness > 0.85) return;          // chrome / lights
                 var metal = mat.metalness !== undefined ? mat.metalness : 0;
+                var rough = mat.roughness !== undefined ? mat.roughness : 0.5;
+                var isChrome = brightness > 0.82 && metal > 0.78 && rough < 0.35;
+                if (isChrome) return;
+                if (bodyKeyword) {
+                    self.bodyPaintMeshes.push(node);
+                    return;
+                }
+                if (brightness < 0.08) return;          // tyres / rubber
                 if (metal >= 0.95) return;              // chrome
                 self.bodyPaintMeshes.push(node);
             });

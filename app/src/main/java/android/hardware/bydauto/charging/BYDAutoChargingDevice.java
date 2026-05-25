@@ -33,7 +33,7 @@ public class BYDAutoChargingDevice extends AbsBYDAutoDevice {
     public static final int CHARGING_CAP_DC = 2;
 
     private static BYDAutoChargingDevice sInstance;
-    private final List<AbsBYDAutoChargingListener> listeners = new ArrayList();
+    private final List<AbsBYDAutoChargingListener> listeners = new ArrayList<>();
 
     private BYDAutoChargingDevice(Context context) {
         super(context);

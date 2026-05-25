@@ -31,9 +31,10 @@ public final class BydDeviceHelper {
             }
             return device;
         } catch (ClassNotFoundException e) {
-            logger.debug("Device class not found: " + className);
+            // Different BYD trims ship different SDK device classes, so absence is expected.
+            logger.debug("Optional device class absent: " + className);
         } catch (Exception e) {
-            logger.debug("Device init failed: " + className + " — " + e.getMessage());
+            logger.debug("Optional device unavailable: " + className + " — " + e.getMessage());
         }
         return null;
     }
@@ -169,7 +170,7 @@ public final class BydDeviceHelper {
             if (m != null) {
                 Class<?>[] params = m.getParameterTypes();
                 if (params.length == 2 && params[0] == int[].class) {
-                    return m.invoke(device, new int[]{featureId}, returnType);
+                    return m.invoke(device, new int[]{featureId}, normalizeFeatureReturnType(returnType));
                 } else if (params.length == 2 && params[0] == int.class) {
                     return m.invoke(device, featureId, 0);
                 }
@@ -178,6 +179,17 @@ public final class BydDeviceHelper {
             logger.debug("callGet failed for id=" + featureId + " — " + e.getMessage());
         }
         return null;
+    }
+
+    private static Class<?> normalizeFeatureReturnType(Class<?> returnType) {
+        // BYD's get(int[], Class) expects primitive class tokens
+        // (Integer.TYPE/Double.TYPE). Passing boxed classes works on some
+        // firmware but logs "Param type is invalid:Integer!" on this head unit.
+        if (returnType == Integer.class) return Integer.TYPE;
+        if (returnType == Double.class) return Double.TYPE;
+        if (returnType == Float.class) return Float.TYPE;
+        if (returnType == Boolean.class) return Boolean.TYPE;
+        return returnType;
     }
 
     /**
@@ -620,8 +632,8 @@ public final class BydDeviceHelper {
 
     /**
      * Register a typed door-lock listener. Captures the canonical
-     * onDoorLockStatusChanged(area, state) event the BMS emits when the gun is
-     * connected and the lock state transitions.
+     * onDoorLockStatusChanged(area, state) event emitted by the BYD door-lock
+     * HAL when a lock state transitions.
      */
     public static boolean registerDoorLockListener(Object device, ListenerCallback callback) {
         if (device == null) return false;

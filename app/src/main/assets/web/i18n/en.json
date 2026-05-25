@@ -1042,6 +1042,10 @@
   "soh": {
     "fallback_caption": "From last charge · {pct}% · {date}",
     "unavailable_caption": "SOH unavailable — drive or charge to calibrate",
+    "oem_caption": "Vehicle SOH readout — waiting for calculated estimate",
+    "oem_hint": "Using the vehicle-reported SOH until Overdrive has enough trusted capacity data.",
+    "nominal_caption": "Nominal baseline — waiting for trusted battery-health data",
+    "nominal_hint": "Using configured battery capacity until the car provides valid SOH inputs.",
     "last_verified": "Last verified: {pct}% · {date}",
     "tap_to_set": "Tap to set",
     "set_battery_capacity_prompt": "Set battery capacity",
@@ -1322,6 +1326,7 @@
     "cloud_connected": "Cloud Connected",
     "cloud_not_configured": "Cloud Not Configured",
     "locked": "Locked",
+    "lock_status_unavailable": "Lock unavailable",
     "checking": "Checking...",
     "cloud_required": "Cloud Account Required",
     "cloud_required_text": "This action requires a connected BYD Cloud account. Go to Surveillance Settings to link your credentials.",

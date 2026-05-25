@@ -679,7 +679,11 @@ public final class AvmByteCallbackProbe {
                     if (!handles) continue;
                     MediaCodecInfo.CodecCapabilities caps = info.getCapabilitiesForType(mime);
                     for (int cf : caps.colorFormats) {
-                        if (cf == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) return cf;
+                        // Many Android Auto encoders still advertise this legacy
+                        // semi-planar format as their fastest zero-copy path.
+                        @SuppressWarnings("deprecation")
+                        int legacySemiPlanar = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
+                        if (cf == legacySemiPlanar) return cf;
                     }
                     for (int cf : caps.colorFormats) {
                         if (cf == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible) return cf;

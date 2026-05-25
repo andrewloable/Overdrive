@@ -139,7 +139,7 @@ public final class DaemonBootstrap {
             // Strategy 3: manual creation
             if (activityThread == null) {
                 try {
-                    try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+                    prepareMainLooperForShellDaemon();
                     java.lang.reflect.Constructor<?> ctor = activityThreadClass.getDeclaredConstructor();
                     ctor.setAccessible(true);
                     activityThread = ctor.newInstance();
@@ -205,6 +205,13 @@ public final class DaemonBootstrap {
      * Context wrapper that bypasses permission checks.
      * Required for accessing BYD hardware services without signature permissions.
      */
+    @SuppressWarnings("deprecation")
+    private static void prepareMainLooperForShellDaemon() {
+        // This bootstrap runs outside a normal app ActivityThread, so BYD SDK
+        // listener registration needs a process main looper created manually.
+        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+    }
+
     public static class PermissionBypassContext extends android.content.ContextWrapper {
         public PermissionBypassContext(Context base) { 
             super(base); 
