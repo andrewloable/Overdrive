@@ -13,6 +13,7 @@ Overdrive is an Android application for BYD DiLink vehicles. The app coordinates
 - [Networking and Tunnels](networking-and-tunnels.md) covers HTTP, WebSocket streaming, auth, LAN mode, Cloudflared, Zrok, Tailscale, sing-box, MQTT, and proxy behavior.
 - [HTTP API Reference](http-api-reference.md) lists the embedded web API route families and known endpoints.
 - [BYD Integrations](byd-integrations.md) explains local BYD hardware APIs, compile-time stubs, telemetry collection, cloud APIs, MQTT cloud updates, and remote vehicle controls.
+- [Surveillance Implementation](surveillance-implementation.md) documents sentry-mode activation, the GPU/native motion pipeline, AI confirmation, recording lifecycle, safe locations, schedules, APIs, and guardrails.
 - [Build and Operations](build-and-operations.md) covers build inputs, native dependencies, assets, tests, updates, issue tracking, and release/session procedures.
 
 ## Source Areas
