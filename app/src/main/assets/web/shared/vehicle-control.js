@@ -26,6 +26,16 @@ var VC = {
         trunkOpen: false,
         doors: { lf: 1, rf: 1, lr: 1, rr: 1, trunk: -1, hood: -1 },
         windows: { lf: 0, rf: 0, lr: 0, rr: 0, sunroof: 0, sunshade: 0 },
+        capabilities: {
+            windows: { sunroof: null, sunshade: null },
+            seats: {
+                driverHeat: null,
+                passengerHeat: null,
+                driverCool: null,
+                passengerCool: null,
+                driverMemoryRecall: null
+            }
+        },
         lights: { dayTimeLight: false },
         adas: { speedLimitWarning: false },
         soc: 0,
@@ -34,6 +44,8 @@ var VC = {
         acOn: false,
         acTemp: 22,
         acFan: 3,
+        maxCooling: false,
+        maxCoolingPrevious: null,
         seatHeat: [0, 0],  // [driver, passenger]; 0=off, 1=low, 2=high
         seatCool: [0, 0]
     },
@@ -1491,6 +1503,8 @@ var VC = {
         // Per-window preset levels — backend runs closed-loop to drive the
         // window to the target % and auto-stops. UI just sends the target.
         var areas = ['lf', 'rf', 'lr', 'rr', 'sunroof', 'sunshade'];
+        var sideWindowAreas = ['lf', 'rf', 'lr', 'rr'];
+        var ventilationTarget = 12;
         var rows = document.querySelectorAll('#panelWindows .vc-window-row[data-area]');
         for (var ri = 0; ri < rows.length; ri++) {
             (function(row) {
@@ -1528,6 +1542,30 @@ var VC = {
             for (var j = 0; j < 4; j++) self.triggerWindowVFX(areas[j], true);
             self.apiPost('/api/vehicle/window', { area: 0, command: 1 });
             self.toast(BYD.i18n.t('vehicle.windows_all_opening'), 'info');
+        });
+        this.bindBtn('btnWinVent', function() {
+            var shouldClose = self.areSideWindowsVented();
+            var target = shouldClose ? 0 : ventilationTarget;
+            for (var j = 0; j < sideWindowAreas.length; j++) {
+                var area = sideWindowAreas[j];
+                self.triggerWindowVFX(area, target > 0);
+                self.markWindowPreset(area, target);
+            }
+            self.updateVentButton(target > 0);
+            self.apiPost('/api/vehicle/window', {
+                area: 0,
+                targetPercent: target
+            }).then(function(result) {
+                var ok = result && result.success !== false;
+                self.toast(
+                    ok
+                        ? (target > 0 ? 'Ventilation gap opening' : 'Ventilation gap closing')
+                        : 'Ventilation command failed',
+                    ok ? 'info' : 'error'
+                );
+            }).catch(function() {
+                self.toast('Ventilation command failed', 'error');
+            });
         });
         // Routed CLOUD_FIRST on the server (area=0+command=2 → CLOSEWINDOW),
         // so this works while the car is asleep with SDK fallback.
@@ -1741,18 +1779,84 @@ var VC = {
             self.triggerSonarVFX(0, 0.6, -0.2, new THREE.Color(0x38BDF8));
             self.flashBodyColor(new THREE.Color(0x38BDF8), 0.1, 2, null);
             self.apiPost('/api/vehicle/climate', { action: 'power_on', temp: self.vehicleState.acTemp }).then(function(r) {
-                if (r.success) { self.vehicleState.acOn = true; self.updateClimateUI(); }
+                if (r.success) {
+                    self.vehicleState.acOn = true;
+                    self.vehicleState.maxCooling = false;
+                    self.vehicleState.maxCoolingPrevious = null;
+                    self.updateClimateUI();
+                }
                 self.toastFromResult(r, BYD.i18n.t('vehicle.ac_on'), BYD.i18n.t('vehicle.ac_command_failed'));
             });
         });
         this.bindBtn('btnAcOff', function() {
             self.flashBodyColor(new THREE.Color(0x71717A), 0.15, 1, null);
             self.apiPost('/api/vehicle/climate', { action: 'power_off' }).then(function(r) {
-                if (r.success) { self.vehicleState.acOn = false; self.updateClimateUI(); }
+                if (r.success) {
+                    self.vehicleState.acOn = false;
+                    self.vehicleState.maxCooling = false;
+                    self.vehicleState.maxCoolingPrevious = null;
+                    self.updateClimateUI();
+                }
                 self.toastFromResult(r, BYD.i18n.t('vehicle.ac_off'), BYD.i18n.t('vehicle.ac_command_failed'));
             });
         });
+        this.bindBtn('btnMaxCooling', function() {
+            var btn = document.getElementById('btnMaxCooling');
+            var isCurrentlyOn = self.vehicleState.maxCooling === true || (btn && btn.classList.contains('on'));
+            var enabling = !isCurrentlyOn;
+            var hasRestore = self.vehicleState.maxCoolingPrevious !== null;
+            var previous = self.vehicleState.maxCoolingPrevious || {
+                acOn: !!self.vehicleState.acOn,
+                temp: self.vehicleState.acTemp || 22,
+                fan: self.vehicleState.acFan || 3
+            };
+            if (enabling) {
+                hasRestore = true;
+                self.vehicleState.maxCoolingPrevious = previous;
+                self.vehicleState.acOn = true;
+                self.vehicleState.acTemp = 17;
+                self.vehicleState.acFan = 7;
+                self.vehicleState.maxCooling = true;
+            } else {
+                self.vehicleState.acOn = previous.acOn;
+                self.vehicleState.acTemp = previous.temp;
+                self.vehicleState.acFan = previous.fan;
+                self.vehicleState.maxCooling = false;
+                self.vehicleState.maxCoolingPrevious = null;
+            }
+            self.updateClimateUI();
+            for (var ci = 0; ci < 3; ci++) {
+                (function(delay) {
+                    setTimeout(function() {
+                        self.triggerSonarVFX(0, 0.55, 0.35 - delay * 0.35, new THREE.Color(0x00BFFF));
+                    }, delay * 90);
+                })(ci);
+            }
+            self.apiPost('/api/vehicle/climate', {
+                action: 'max_cooling',
+                enabled: enabling,
+                hasRestore: hasRestore,
+                restorePowerOn: previous.acOn,
+                restoreTemp: previous.temp,
+                restoreFan: previous.fan
+            }).then(function(r) {
+                if (!r.success) {
+                    self.vehicleState.acOn = previous.acOn;
+                    self.vehicleState.acTemp = previous.temp;
+                    self.vehicleState.acFan = previous.fan;
+                    self.vehicleState.maxCooling = false;
+                    self.vehicleState.maxCoolingPrevious = null;
+                    self.updateClimateUI();
+                }
+                if (r.success) {
+                    setTimeout(function() { self.fetchState(); }, 1000);
+                }
+                self.toastFromResult(r, enabling ? 'Max cooling on' : 'Max cooling restored', BYD.i18n.t('vehicle.ac_command_failed'));
+            });
+        });
         this.bindBtn('btnTempUp', function() {
+            self.vehicleState.maxCooling = false;
+            self.vehicleState.maxCoolingPrevious = null;
             var t = Math.min(33, self.vehicleState.acTemp + 1);
             self.vehicleState.acTemp = t;
             self.updateClimateUI();
@@ -1761,6 +1865,8 @@ var VC = {
             self.apiPost('/api/vehicle/climate', { action: 'set_temp', zone: 1, temp: t });
         });
         this.bindBtn('btnTempDown', function() {
+            self.vehicleState.maxCooling = false;
+            self.vehicleState.maxCoolingPrevious = null;
             var t = Math.max(17, self.vehicleState.acTemp - 1);
             self.vehicleState.acTemp = t;
             self.updateClimateUI();
@@ -1769,6 +1875,8 @@ var VC = {
             self.apiPost('/api/vehicle/climate', { action: 'set_temp', zone: 1, temp: t });
         });
         this.bindBtn('btnFanUp', function() {
+            self.vehicleState.maxCooling = false;
+            self.vehicleState.maxCoolingPrevious = null;
             var f = Math.min(7, self.vehicleState.acFan + 1);
             self.vehicleState.acFan = f;
             self.updateClimateUI();
@@ -1781,6 +1889,8 @@ var VC = {
             self.apiPost('/api/vehicle/climate', { action: 'set_fan', fan: f });
         });
         this.bindBtn('btnFanDown', function() {
+            self.vehicleState.maxCooling = false;
+            self.vehicleState.maxCoolingPrevious = null;
             var f = Math.max(1, self.vehicleState.acFan - 1);
             self.vehicleState.acFan = f;
             self.updateClimateUI();
@@ -1796,6 +1906,7 @@ var VC = {
         for (var si = 1; si <= 2; si++) {
             (function(pos) {
                 self.bindBtn('btnSeatHeat' + pos, function() {
+                    if (!self.isSeatFeatureAvailable(pos, 'heat')) return;
                     var cur = self.vehicleState.seatHeat[pos - 1] || 0;
                     var next = (cur + 1) % 3;
                     self.vehicleState.seatHeat[pos - 1] = next;
@@ -1823,6 +1934,7 @@ var VC = {
                     });
                 });
                 self.bindBtn('btnSeatCool' + pos, function() {
+                    if (!self.isSeatFeatureAvailable(pos, 'cool')) return;
                     var cur = self.vehicleState.seatCool[pos - 1] || 0;
                     var next = (cur + 1) % 3;
                     self.vehicleState.seatCool[pos - 1] = next;
@@ -1856,6 +1968,7 @@ var VC = {
         for (var smi = 1; smi <= 2; smi++) {
             (function(pos) {
                 self.bindBtn('btnSeatMemory' + pos, function() {
+                    if (!self.isSeatFeatureAvailable(pos, 'memory')) return;
                     // Blue sonar at driver seat — recall is driver-only.
                     var sp = seatPositions[1];
                     self.triggerSonarVFX(sp.x, sp.y, sp.z, new THREE.Color(0x00BFFF));
@@ -1941,13 +2054,19 @@ var VC = {
             if (data.windows) {
                 var w = data.windows;
                 self.vehicleState.windows = {
-                    lf: w.lf >= 0 ? w.lf : 0,
-                    rf: w.rf >= 0 ? w.rf : 0,
-                    lr: w.lr >= 0 ? w.lr : 0,
-                    rr: w.rr >= 0 ? w.rr : 0,
-                    sunroof: w.sunroof >= 0 ? w.sunroof : 0,
-                    sunshade: w.sunshade >= 0 ? w.sunshade : 0
+                    lf: self.normalizeWindowPercent(w.lf),
+                    rf: self.normalizeWindowPercent(w.rf),
+                    lr: self.normalizeWindowPercent(w.lr),
+                    rr: self.normalizeWindowPercent(w.rr),
+                    sunroof: self.normalizeWindowPercent(w.sunroof),
+                    sunshade: self.normalizeWindowPercent(w.sunshade)
                 };
+            }
+            if (data.capabilities && data.capabilities.windows) {
+                var caps = data.capabilities.windows;
+                self.vehicleState.capabilities.windows.sunroof = caps.sunroof === true;
+                self.vehicleState.capabilities.windows.sunshade = caps.sunshade === true;
+                self.updateWindowCapabilityRows();
             }
 
             // Battery
@@ -1959,11 +2078,19 @@ var VC = {
             // Climate
             if (data.climate) {
                 if (data.climate.acOn !== undefined) self.vehicleState.acOn = data.climate.acOn;
+                if (data.climate.maxCooling !== undefined) {
+                    self.vehicleState.maxCooling = data.climate.maxCooling === true;
+                }
                 if (data.climate.fanLevel !== undefined && data.climate.fanLevel >= 1 && data.climate.fanLevel <= 7) {
                     self.vehicleState.acFan = data.climate.fanLevel;
                 }
+                var setpointC = data.climate.setpointC;
+                if (setpointC === undefined) setpointC = data.climate.tempC;
+                if (setpointC !== undefined && setpointC >= 16 && setpointC <= 35) {
+                    self.vehicleState.acTemp = setpointC;
+                }
                 if (data.climate.insideTempC !== undefined && data.climate.insideTempC > 0) {
-                    // Use inside temp as display reference (actual set temp not available from state)
+                    // Kept for compatibility with older daemon responses.
                 }
             }
 
@@ -1977,16 +2104,11 @@ var VC = {
 
             if (data.seats && data.seats.heat) self.vehicleState.seatHeat = data.seats.heat;
             if (data.seats && data.seats.cool) self.vehicleState.seatCool = data.seats.cool;
-            if (data.seats && data.seats.ventilatedSupported === false) {
-                // Trim lacks ventilated seats — disable the cool buttons.
-                // Cars without the hardware return hasFeature=0 from SDK and
-                // 1001 from the BYD cloud, so neither path can succeed.
-                var coolBtns = document.querySelectorAll('[id^="btnSeatCool"]');
-                for (var ci = 0; ci < coolBtns.length; ci++) {
-                    coolBtns[ci].setAttribute('disabled', 'true');
-                    coolBtns[ci].classList.add('disabled');
-                    coolBtns[ci].title = 'Ventilated seats not available on this trim';
-                }
+            if (data.capabilities && data.capabilities.seats) {
+                self.vehicleState.capabilities.seats = data.capabilities.seats;
+                self.applySeatCapabilities(data.capabilities.seats);
+            } else if (data.seats && data.seats.ventilatedSupported === false) {
+                self.applySeatCapabilities({ driverCool: false, passengerCool: false });
             }
 
             // Update UI
@@ -2128,6 +2250,31 @@ var VC = {
 
     // ==================== UI UPDATES ====================
 
+    normalizeWindowPercent: function(value) {
+        return (typeof value === 'number' && value >= 0 && value <= 100) ? value : -1;
+    },
+
+    updateWindowCapabilityRows: function() {
+        var caps = this.vehicleState.capabilities && this.vehicleState.capabilities.windows
+            ? this.vehicleState.capabilities.windows
+            : {};
+        var names = ['sunroof', 'sunshade'];
+        for (var i = 0; i < names.length; i++) {
+            var name = names[i];
+            var row = document.querySelector('#panelWindows .vc-window-row[data-capability="' + name + '"]');
+            if (!row) continue;
+            if (caps[name] === true) {
+                row.style.display = '';
+                row.classList.remove('unsupported');
+            } else {
+                row.style.display = 'none';
+                row.classList.add('unsupported');
+                this.markWindowPreset(name, -1);
+                this.removeStateGlow('win_' + name);
+            }
+        }
+    },
+
     updateHUD: function() {
         var socEl = document.getElementById('socValue');
         if (socEl) socEl.textContent = Math.round(this.vehicleState.soc) + '%';
@@ -2181,6 +2328,7 @@ var VC = {
             // uses to stop.
             if (hasReading) this.markWindowPresetFromActual(area, val);
         }
+        this.updateVentButton(this.areSideWindowsVented());
     },
 
     /** Visually mark one preset as the active target for a window. */
@@ -2208,6 +2356,28 @@ var VC = {
         // — avoids confusingly lighting up "50" when window is at 35%.
         if (bestDelta <= 10) this.markWindowPreset(area, closest);
         else this.markWindowPreset(area, -1);
+    },
+
+    areSideWindowsVented: function() {
+        var areas = ['lf', 'rf', 'lr', 'rr'];
+        var known = 0;
+        var vented = 0;
+        for (var i = 0; i < areas.length; i++) {
+            var val = this.vehicleState.windows[areas[i]];
+            if (typeof val !== 'number' || val < 0) continue;
+            known++;
+            if (val > 0 && val <= 20) vented++;
+        }
+        return known > 0 && vented === known;
+    },
+
+    updateVentButton: function(isVented) {
+        var btn = document.getElementById('btnWinVent');
+        if (!btn) return;
+        btn.textContent = isVented ? 'Close Vent' : 'Open Vent';
+        btn.title = isVented ? 'Close ventilation gap' : 'Open ventilation gap';
+        if (isVented) btn.classList.add('active');
+        else btn.classList.remove('active');
     },
 
     updateDoorIndicators: function() {
@@ -2351,8 +2521,13 @@ var VC = {
         // the opposite state regardless of where the live state currently is.
         var btnOn = document.getElementById('btnAcOn');
         var btnOff = document.getElementById('btnAcOff');
+        var btnMaxCooling = document.getElementById('btnMaxCooling');
         if (btnOn) { if (this.vehicleState.acOn) btnOn.classList.add('on'); else btnOn.classList.remove('on'); }
         if (btnOff) { if (!this.vehicleState.acOn) btnOff.classList.add('on'); else btnOff.classList.remove('on'); }
+        if (btnMaxCooling) {
+            if (this.vehicleState.maxCooling) btnMaxCooling.classList.add('on');
+            else btnMaxCooling.classList.remove('on');
+        }
 
         if (this.vehicleState.acOn) {
             this.setStateGlow('ac', { x: 0, y: 0.5, z: 0.3 }, 0x38BDF8);
@@ -2378,6 +2553,65 @@ var VC = {
                 coolBtn.classList.remove('on1', 'on2');
                 if (coolLvl > 0) coolBtn.classList.add('on' + coolLvl);
             }
+        }
+    },
+
+    isSeatFeatureAvailable: function(position, feature) {
+        var caps = this.vehicleState.capabilities && this.vehicleState.capabilities.seats;
+        if (!caps) return false;
+        if (feature === 'heat') return position === 1 ? caps.driverHeat === true : caps.passengerHeat === true;
+        if (feature === 'cool') return position === 1 ? caps.driverCool === true : caps.passengerCool === true;
+        if (feature === 'memory') return caps.driverMemoryRecall === true;
+        return false;
+    },
+
+    applySeatCapabilities: function(caps) {
+        var controls = [
+            ['btnSeatHeat1', caps.driverHeat, 'Driver seat heating not available on this trim'],
+            ['btnSeatHeat2', caps.passengerHeat, 'Passenger seat heating not available on this trim'],
+            ['btnSeatCool1', caps.driverCool, 'Driver ventilated seat not available on this trim'],
+            ['btnSeatCool2', caps.passengerCool, 'Passenger ventilated seat not available on this trim'],
+            ['btnSeatMemory1', caps.driverMemoryRecall, 'Seat memory recall not available on this trim'],
+            ['btnSeatMemory2', caps.driverMemoryRecall, 'Seat memory recall not available on this trim']
+        ];
+        var knownControls = 0;
+        var visibleControls = 0;
+        for (var i = 0; i < controls.length; i++) {
+            var id = controls[i][0];
+            var available = controls[i][1];
+            var unavailableTitle = controls[i][2];
+            var btn = document.getElementById(id);
+            if (!btn || available === undefined || available === null) continue;
+            knownControls++;
+            if (!btn.dataset.originalTitle) btn.dataset.originalTitle = btn.title || '';
+            if (available === false) {
+                btn.setAttribute('disabled', 'true');
+                btn.setAttribute('hidden', 'true');
+                btn.style.display = 'none';
+                btn.classList.add('disabled');
+                btn.title = unavailableTitle;
+            } else {
+                visibleControls++;
+                btn.removeAttribute('disabled');
+                btn.removeAttribute('hidden');
+                btn.style.display = '';
+                btn.classList.remove('disabled');
+                btn.title = btn.dataset.originalTitle;
+            }
+        }
+        var hideSeats = knownControls > 0 && visibleControls === 0;
+        var seatTab = document.querySelector('.vc-tab[data-panel="panelSeats"]');
+        var seatPanel = document.getElementById('panelSeats');
+        if (seatTab) seatTab.style.display = hideSeats ? 'none' : '';
+        if (seatPanel && hideSeats) seatPanel.style.display = 'none';
+        if (hideSeats && this._activePanel === 'panelSeats') {
+            var panel = document.getElementById('vcPanel');
+            if (panel) {
+                panel.classList.remove('open');
+                panel.classList.remove('vc-panel-tall');
+            }
+            if (seatTab) seatTab.classList.remove('active');
+            this._activePanel = null;
         }
     },
 
@@ -2473,9 +2707,10 @@ var VC = {
 
         var slider = document.getElementById('chargeCapSlider');
         var readout = document.getElementById('chargeCapReadout');
-        if (slider && typeof s.percent === 'number') slider.value = s.percent;
+        var hasValidPercent = (typeof s.percent === 'number' && s.percent >= 50 && s.percent <= 100);
+        if (slider && hasValidPercent) slider.value = s.percent;
         if (readout) {
-            readout.textContent = (typeof s.percent === 'number') ? (s.percent + '%') : '--';
+            readout.textContent = hasValidPercent ? (s.percent + '%') : '--';
         }
     },
 
@@ -2490,7 +2725,11 @@ var VC = {
             }
             if (!self.vehicleState.chargeCap) self.vehicleState.chargeCap = {};
             var s = self.vehicleState.chargeCap;
-            if (typeof data.percent === 'number') s.percent = data.percent;
+            if (typeof data.percent === 'number' && data.percent >= 50 && data.percent <= 100) {
+                s.percent = data.percent;
+            } else {
+                s.percent = null;
+            }
             if (typeof data.enabled === 'boolean') s.enabled = data.enabled;
             if (typeof data.supported === 'boolean') s.supported = data.supported;
             else s.supported = null;

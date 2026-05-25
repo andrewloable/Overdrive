@@ -1726,21 +1726,13 @@ public class BydDataCollector {
     private void collectSettings(BydVehicleData.Builder b) {
         if (settingDevice == null) return;
         try {
-            int[] seatHeat = new int[2];
-            int[] seatCool = new int[2];
+            int[] seatHeat = new int[] { -1, -1 };
+            int[] seatCool = new int[] { -1, -1 };
             // SDK returns 1=off, 2=low, 3=high — normalize to 0/1/2 for the wire format.
-            // On unsupported firmwares the getter returns null/throws → leave entry as 0.
+            // On unsupported firmwares the getter returns null/throws → leave entry unknown (-1).
             for (int i = 0; i < 2; i++) {
-                Object heat = BydDeviceHelper.callGetter(settingDevice, "getSeatHeatingState", i + 1);
-                if (heat instanceof Number) {
-                    int v = ((Number) heat).intValue() - 1;
-                    seatHeat[i] = (v >= 0 && v <= 2) ? v : 0;
-                }
-                Object cool = BydDeviceHelper.callGetter(settingDevice, "getSeatVentilatingState", i + 1);
-                if (cool instanceof Number) {
-                    int v = ((Number) cool).intValue() - 1;
-                    seatCool[i] = (v >= 0 && v <= 2) ? v : 0;
-                }
+                seatHeat[i] = normalizeSeatGetterLevel(readSeatGetterRaw("getSeatHeatingState", i + 1));
+                seatCool[i] = normalizeSeatGetterLevel(readSeatGetterRaw("getSeatVentilatingState", i + 1));
             }
             b.seatHeat(seatHeat).seatCool(seatCool);
         } catch (Exception e) {
@@ -3982,6 +3974,59 @@ public class BydDataCollector {
         }
     }
 
+    public boolean setMaxCooling(boolean enabled, boolean hasRestore, double restoreTempCelsius, int restoreFanLevel, boolean restorePowerOn) {
+        boolean ok = true;
+        if (enabled) {
+            ok &= setAcPower(true);
+            ok &= setAcMaxCoolingState(true);
+            return ok;
+        }
+
+        ok &= setAcMaxCoolingState(false);
+        // BYD's native max-cooling control should restore the previous HVAC
+        // profile. Keep explicit restore best-effort for firmware that only
+        // exits max-cool mode without restoring the remembered profile.
+        if (hasRestore && restorePowerOn) {
+            double temp = Math.max(17, Math.min(33, restoreTempCelsius));
+            int fan = Math.max(1, Math.min(7, restoreFanLevel));
+            ok &= setAcPower(true);
+            setAcTemperature(1, temp);
+            setAcTemperature(2, temp);
+            setAcFanLevel(fan);
+        }
+        if (hasRestore && !restorePowerOn) ok &= setAcPower(false);
+        return ok;
+    }
+
+    public boolean setAcMaxCoolingState(boolean enabled) {
+        try {
+            Object result = BydDeviceHelper.callMethod(acDevice, "setAcMaxCoolingState", enabled ? 1 : 0);
+            boolean success = result instanceof Integer && ((Integer) result).intValue() == 0;
+            if (!success) {
+                logger.warn("setAcMaxCoolingState(" + enabled + ") returned " + result);
+            }
+            return success;
+        } catch (Exception e) {
+            logger.debug("setAcMaxCoolingState failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public int getAcMaxCoolingState() {
+        Object result = BydDeviceHelper.callGetter(acDevice, "getAcMaxCoolingState");
+        return result instanceof Number ? ((Number) result).intValue() : -1;
+    }
+
+    public int getAcWindLevel() {
+        Object result = BydDeviceHelper.callGetter(acDevice, "getAcWindLevel");
+        return result instanceof Number ? ((Number) result).intValue() : -1;
+    }
+
+    public int getAcTemperature(int position) {
+        Object result = BydDeviceHelper.callGetter(acDevice, "getTemprature", position);
+        return result instanceof Number ? ((Number) result).intValue() : Integer.MIN_VALUE;
+    }
+
     public boolean setAcWindMode(int mode) {
         try {
             // SDK method: acDevice.setAcWindMode(0, mode)
@@ -4018,6 +4063,60 @@ public class BydDataCollector {
             logger.debug("setAcCycleMode failed: " + e.getMessage());
             return false;
         }
+    }
+
+    public org.json.JSONObject diagnoseAc() {
+        org.json.JSONObject out = new org.json.JSONObject();
+        try {
+            out.put("acDeviceClass", acDevice == null ? org.json.JSONObject.NULL : acDevice.getClass().getName());
+            org.json.JSONArray methodNames = new org.json.JSONArray();
+            if (acDevice != null) {
+                java.util.TreeSet<String> names = new java.util.TreeSet<>();
+                for (Method m : acDevice.getClass().getMethods()) {
+                    String name = m.getName();
+                    if (name.toLowerCase(java.util.Locale.US).contains("ac")
+                            || name.toLowerCase(java.util.Locale.US).contains("temp")
+                            || name.toLowerCase(java.util.Locale.US).contains("wind")
+                            || name.equals("start")
+                            || name.equals("stop")) {
+                        StringBuilder sig = new StringBuilder(name).append("(");
+                        Class<?>[] params = m.getParameterTypes();
+                        for (int i = 0; i < params.length; i++) {
+                            if (i > 0) sig.append(",");
+                            sig.append(params[i].getSimpleName());
+                        }
+                        sig.append("):").append(m.getReturnType().getSimpleName());
+                        names.add(sig.toString());
+                    }
+                }
+                for (String name : names) methodNames.put(name);
+            }
+            out.put("methods", methodNames);
+
+            org.json.JSONObject getters = new org.json.JSONObject();
+            putObjectOrNull(getters, "getAcStartState", BydDeviceHelper.callGetter(acDevice, "getAcStartState"));
+            putObjectOrNull(getters, "getAcCycleMode", BydDeviceHelper.callGetter(acDevice, "getAcCycleMode"));
+            putObjectOrNull(getters, "getAcWindMode", BydDeviceHelper.callGetter(acDevice, "getAcWindMode"));
+            putObjectOrNull(getters, "getAcWindLevel", BydDeviceHelper.callGetter(acDevice, "getAcWindLevel"));
+            putObjectOrNull(getters, "getTemperatureUnit", BydDeviceHelper.callGetter(acDevice, "getTemperatureUnit"));
+
+            org.json.JSONArray temperatures = new org.json.JSONArray();
+            for (int i = 0; i <= 6; i++) {
+                org.json.JSONObject item = new org.json.JSONObject();
+                item.put("position", i);
+                putObjectOrNull(item, "value", BydDeviceHelper.callGetter(acDevice, "getTemprature", i));
+                temperatures.put(item);
+            }
+            getters.put("getTemprature", temperatures);
+            out.put("getters", getters);
+        } catch (Exception e) {
+            try { out.put("error", e.getMessage()); } catch (Exception ignored) {}
+        }
+        return out;
+    }
+
+    private static void putObjectOrNull(org.json.JSONObject object, String key, Object value) throws org.json.JSONException {
+        object.put(key, value == null ? org.json.JSONObject.NULL : value);
     }
 
     // --- Windows ---
@@ -4082,6 +4181,13 @@ public class BydDataCollector {
             new java.util.concurrent.ExecutorService[6];
     private final java.util.concurrent.Future<?>[] windowMotionTasks =
             new java.util.concurrent.Future<?>[6];
+    private final java.util.concurrent.ExecutorService sideWindowExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "WinMove-AllSide");
+                t.setDaemon(true);
+                return t;
+            });
+    private java.util.concurrent.Future<?> sideWindowMotionTask;
 
     private synchronized java.util.concurrent.ExecutorService getWindowExecutor(int areaIdx) {
         java.util.concurrent.ExecutorService ex = windowExecutors[areaIdx];
@@ -4098,10 +4204,36 @@ public class BydDataCollector {
 
     private int readWindowPercent(int area) {
         try {
+            if (area == 5) {
+                Object sunroof = BydDeviceHelper.callGetter(bodyworkDevice, "getSunroofPosition");
+                if (sunroof instanceof Number) {
+                    int value = ((Number) sunroof).intValue();
+                    if (value >= 0 && value <= 100) return value;
+                }
+            } else if (area == 6) {
+                Object sunshade = BydDeviceHelper.callGet(bodyworkDevice, BydFeatureIds.BODY_SUNSHADE_PANEL_PERCENT, Integer.class);
+                if (sunshade != null) {
+                    int value = BydDeviceHelper.getIntValue(sunshade);
+                    if (value >= 0 && value <= 100) return value;
+                }
+            }
             Object wp = BydDeviceHelper.callGetter(bodyworkDevice, "getWindowOpenPercent", area);
-            if (wp instanceof Number) return ((Number) wp).intValue();
+            if (wp instanceof Number) {
+                int value = ((Number) wp).intValue();
+                if (value >= 0 && value <= 100) return value;
+            }
         } catch (Exception ignored) {}
         return -1;
+    }
+
+    private boolean setSideWindowsCommand(int lf, int rf, int lr, int rr) {
+        try {
+            Object result = BydDeviceHelper.callMethod(bodyworkDevice, "setAllWindowState", lf, rf, lr, rr);
+            return result instanceof Integer && ((Integer) result).intValue() == 0;
+        } catch (Exception e) {
+            logger.debug("setSideWindowsCommand failed: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -4134,6 +4266,9 @@ public class BydDataCollector {
         }
 
         // Cancel any in-flight motion for this window.
+        if (area <= 4 && sideWindowMotionTask != null && !sideWindowMotionTask.isDone()) {
+            sideWindowMotionTask.cancel(true);
+        }
         java.util.concurrent.Future<?> prev = windowMotionTasks[areaIdx];
         if (prev != null && !prev.isDone()) prev.cancel(true);
 
@@ -4206,6 +4341,134 @@ public class BydDataCollector {
         };
 
         windowMotionTasks[areaIdx] = getWindowExecutor(areaIdx).submit(task);
+        return true;
+    }
+
+    /**
+     * Closed-loop positioning for the four side windows as one SDK command
+     * stream. setAllWindowState(lf, rf, lr, rr) is a four-window command, so
+     * running four independent per-window loops in parallel causes each loop
+     * to send zeros for the other three windows and interrupts their motion.
+     */
+    public boolean moveSideWindowsToPercent(int targetPercent) {
+        if (targetPercent < 0 || targetPercent > 100) return false;
+
+        final int target = targetPercent;
+        final int tolerance = (targetPercent == 100 || targetPercent == 0) ? 0 : 5;
+        final long pollIntervalMs = 200;
+        final long maxRunMs = 12_000;
+        final long stallWindowMs = 1_200;
+
+        final int[] areas = {1, 2, 3, 4};
+        final int[] initial = new int[4];
+        boolean needsMotion = false;
+        for (int i = 0; i < areas.length; i++) {
+            initial[i] = readWindowPercent(areas[i]);
+            if (initial[i] < 0 || Math.abs(initial[i] - target) > tolerance) {
+                needsMotion = true;
+            }
+        }
+        if (!needsMotion) {
+            logger.debug("Side windows already near target=" + target + "%");
+            return true;
+        }
+
+        if (sideWindowMotionTask != null && !sideWindowMotionTask.isDone()) {
+            sideWindowMotionTask.cancel(true);
+        }
+        for (int i = 0; i < 4; i++) {
+            java.util.concurrent.Future<?> prev = windowMotionTasks[i];
+            if (prev != null && !prev.isDone()) prev.cancel(true);
+        }
+
+        Runnable task = () -> {
+            boolean[] active = new boolean[4];
+            boolean[] stopped = new boolean[4];
+            int[] direction = new int[4];
+            int[] lastSeen = new int[4];
+            long[] lastProgressMs = new long[4];
+
+            long startMs = System.currentTimeMillis();
+            for (int i = 0; i < areas.length; i++) {
+                int start = initial[i] >= 0 ? initial[i] : (target > 0 ? 0 : 50);
+                lastSeen[i] = start;
+                lastProgressMs[i] = startMs;
+                if (initial[i] >= 0 && Math.abs(initial[i] - target) <= tolerance) {
+                    active[i] = false;
+                    stopped[i] = true;
+                    direction[i] = 0;
+                } else {
+                    active[i] = true;
+                    direction[i] = target > start ? 1 : 2;
+                }
+            }
+
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    int[] command = {0, 0, 0, 0};
+                    boolean anyActive = false;
+                    for (int i = 0; i < active.length; i++) {
+                        if (active[i]) {
+                            command[i] = direction[i];
+                            anyActive = true;
+                        } else if (!stopped[i]) {
+                            command[i] = 3;
+                            stopped[i] = true;
+                        }
+                    }
+
+                    if (!anyActive) {
+                        setSideWindowsCommand(command[0], command[1], command[2], command[3]);
+                        logger.info("Side windows reached target=" + target + "%");
+                        break;
+                    }
+
+                    if (!setSideWindowsCommand(command[0], command[1], command[2], command[3])) {
+                        logger.warn("Side windows target=" + target + "% command failed");
+                        break;
+                    }
+
+                    try { Thread.sleep(pollIntervalMs); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+
+                    long nowMs = System.currentTimeMillis();
+                    for (int i = 0; i < areas.length; i++) {
+                        if (!active[i]) continue;
+                        int now = readWindowPercent(areas[i]);
+                        if (now < 0) continue;
+
+                        boolean reached = direction[i] == 1
+                                ? now >= target - tolerance
+                                : now <= target + tolerance;
+                        if (reached) {
+                            active[i] = false;
+                            logger.info("Window " + areas[i] + " reached group target="
+                                    + target + "% (final=" + now + "%)");
+                        } else if (Math.abs(now - lastSeen[i]) >= 1) {
+                            lastSeen[i] = now;
+                            lastProgressMs[i] = nowMs;
+                        } else if (nowMs - lastProgressMs[i] > stallWindowMs) {
+                            active[i] = false;
+                            logger.warn("Window " + areas[i] + " stalled in group move at "
+                                    + now + "% (target=" + target + "%)");
+                        }
+                    }
+
+                    if (nowMs - startMs > maxRunMs) {
+                        logger.warn("Side windows target=" + target + "% timed out");
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Side windows motion task error: " + e.getMessage());
+            } finally {
+                try { setSideWindowsCommand(3, 3, 3, 3); } catch (Exception ignored) {}
+            }
+        };
+
+        sideWindowMotionTask = sideWindowExecutor.submit(task);
         return true;
     }
 
@@ -4432,7 +4695,14 @@ public class BydDataCollector {
     public int getChargeCapPercent() {
         try {
             Object v = BydDeviceHelper.callGetter(chargingDevice, "getChargeStopCapacityState");
-            return (v instanceof Number) ? ((Number) v).intValue() : -1;
+            if (!(v instanceof Number)) return -1;
+            int percent = ((Number) v).intValue();
+            if (percent >= 50 && percent <= 100) return percent;
+            if (isChargeCapSentinel(percent)) {
+                chargeCapProbed = true;
+                chargeCapSupported = false;
+            }
+            return -1;
         } catch (Exception e) {
             return -1;
         }
@@ -4442,7 +4712,14 @@ public class BydDataCollector {
     public int getChargeCapEnabled() {
         try {
             Object v = BydDeviceHelper.callGetter(chargingDevice, "getChargeStopSwitchState");
-            return (v instanceof Number) ? ((Number) v).intValue() : -1;
+            if (!(v instanceof Number)) return -1;
+            int enabled = ((Number) v).intValue();
+            if (enabled == 0 || enabled == 1) return enabled;
+            if (isChargeCapSentinel(enabled)) {
+                chargeCapProbed = true;
+                chargeCapSupported = false;
+            }
+            return -1;
         } catch (Exception e) {
             return -1;
         }
@@ -4455,6 +4732,14 @@ public class BydDataCollector {
      */
     public Boolean isChargeCapSupported() {
         return chargeCapProbed ? Boolean.valueOf(chargeCapSupported) : null;
+    }
+
+    private static boolean isChargeCapSentinel(int value) {
+        return value == 255 || value == 254
+                || value == 65534 || value == 65535
+                || value == BydFeatureIds.BMS_UNAVAILABLE
+                || value == BydFeatureIds.INVALID_VALUE
+                || value == BydFeatureIds.INVALID_VALUE_2;
     }
 
     /**
@@ -4672,6 +4957,123 @@ public class BydDataCollector {
         return seatVentFeatureSupported;
     }
 
+    /** Read-only capability probe for seat heating. */
+    public boolean isSeatHeatingSupported(int position) {
+        return normalizeSeatGetterLevel(readSeatGetterRaw("getSeatHeatingState", position)) >= 0;
+    }
+
+    /** Read-only best-effort probe for driver seat memory recall support. */
+    public boolean isDriverSeatMemoryRecallSupported() {
+        if (settingDevice == null) return false;
+        int memorySet = BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SETTING_LF_MEMORY_LOCATION_SET);
+        int memoryWake = BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SETTING_LF_MEMORY_LOCATION_WAKE_SET);
+        return memorySet >= 0 || memoryWake >= 0;
+    }
+
+    /** Read-only diagnostics used to verify trim-specific seat hardware on the actual car. */
+    public org.json.JSONObject diagnoseSeatCapabilities() {
+        org.json.JSONObject out = new org.json.JSONObject();
+        try {
+            out.put("settingDeviceClass", settingDevice == null ? org.json.JSONObject.NULL : settingDevice.getClass().getName());
+
+            org.json.JSONObject methods = new org.json.JSONObject();
+            methods.put("getSeatHeatingState", hasPublicMethod(settingDevice, "getSeatHeatingState", int.class));
+            methods.put("setSeatHeatingState", hasPublicMethod(settingDevice, "setSeatHeatingState", int.class, int.class));
+            methods.put("getSeatVentilatingState", hasPublicMethod(settingDevice, "getSeatVentilatingState", int.class));
+            methods.put("setSeatVentilatingState", hasPublicMethod(settingDevice, "setSeatVentilatingState", int.class, int.class));
+            methods.put("hasFeature", hasPublicMethod(settingDevice, "hasFeature", String.class));
+            out.put("methods", methods);
+
+            org.json.JSONArray heatRaw = new org.json.JSONArray();
+            org.json.JSONArray heatLevel = new org.json.JSONArray();
+            org.json.JSONArray heatSupported = new org.json.JSONArray();
+            org.json.JSONArray coolRaw = new org.json.JSONArray();
+            org.json.JSONArray coolLevel = new org.json.JSONArray();
+            org.json.JSONArray coolGetterSupported = new org.json.JSONArray();
+            for (int pos = 1; pos <= 2; pos++) {
+                int hr = readSeatGetterRaw("getSeatHeatingState", pos);
+                int hl = normalizeSeatGetterLevel(hr);
+                putIntOrNull(heatRaw, hr);
+                heatLevel.put(hl);
+                heatSupported.put(hl >= 0);
+
+                int cr = readSeatGetterRaw("getSeatVentilatingState", pos);
+                int cl = normalizeSeatGetterLevel(cr);
+                putIntOrNull(coolRaw, cr);
+                coolLevel.put(cl);
+                coolGetterSupported.put(cl >= 0);
+            }
+            out.put("heatRaw", heatRaw);
+            out.put("heatLevel", heatLevel);
+            out.put("heatSupportedByGetter", heatSupported);
+            out.put("coolRaw", coolRaw);
+            out.put("coolLevel", coolLevel);
+            out.put("coolSupportedByGetter", coolGetterSupported);
+
+            org.json.JSONObject hasFeature = new org.json.JSONObject();
+            String[] candidates = new String[] {
+                    "SEAT_HEATING", "SEAT_VENTILATING", "SEAT_MEMORY", "SEAT_POSITION"
+            };
+            for (String feature : candidates) {
+                int value = probeHasFeatureValue(settingDevice, feature);
+                putIntOrNull(hasFeature, feature, value);
+            }
+            out.put("hasFeature", hasFeature);
+
+            org.json.JSONObject featureGet = new org.json.JSONObject();
+            putIntOrNull(featureGet, "SETTING_LF_MEMORY_LOCATION_SET",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SETTING_LF_MEMORY_LOCATION_SET));
+            putIntOrNull(featureGet, "SETTING_LF_MEMORY_LOCATION_WAKE_SET",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SETTING_LF_MEMORY_LOCATION_WAKE_SET));
+            putIntOrNull(featureGet, "SET_DRIVER_SEAT_HEATING_STATE",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SET_DRIVER_SEAT_HEATING_STATE));
+            putIntOrNull(featureGet, "SET_DRIVER_SEAT_VENTILATING_STATE",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SET_DRIVER_SEAT_VENTILATING_STATE));
+            putIntOrNull(featureGet, "SET_PASSENGER_SEAT_HEATING_STATE",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SET_PASSENGER_SEAT_HEATING_STATE));
+            putIntOrNull(featureGet, "SET_PASSENGER_SEAT_VENTILATING_STATE",
+                    BydDeviceHelper.callGetSingle(settingDevice, BydFeatureIds.SET_PASSENGER_SEAT_VENTILATING_STATE));
+            out.put("featureGet", featureGet);
+
+            org.json.JSONObject supported = new org.json.JSONObject();
+            supported.put("driverHeat", isSeatHeatingSupported(1));
+            supported.put("passengerHeat", isSeatHeatingSupported(2));
+            supported.put("driverCool", isSeatVentilationSupported());
+            supported.put("passengerCool", isSeatVentilationSupported());
+            supported.put("driverMemoryRecall", isDriverSeatMemoryRecallSupported());
+            out.put("supported", supported);
+        } catch (Exception e) {
+            try {
+                out.put("error", e.getMessage());
+            } catch (Exception ignored) {
+                // Keep diagnostics best-effort.
+            }
+        }
+        return out;
+    }
+
+    private int readSeatGetterRaw(String methodName, int position) {
+        if (position < 1 || position > 2) return Integer.MIN_VALUE;
+        Object value = BydDeviceHelper.callGetter(settingDevice, methodName, position);
+        return value instanceof Number ? ((Number) value).intValue() : Integer.MIN_VALUE;
+    }
+
+    private static int normalizeSeatGetterLevel(int raw) {
+        if (raw == Integer.MIN_VALUE) return -1;
+        int normalized = raw - 1;
+        return (normalized >= 0 && normalized <= 2) ? normalized : -1;
+    }
+
+    private static boolean hasPublicMethod(Object target, String methodName, Class<?>... parameterTypes) {
+        if (target == null) return false;
+        try {
+            target.getClass().getMethod(methodName, parameterTypes);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Capability probe via BYDAutoSettingDevice.hasFeature(String).
      * Returns DEVICE_HAS_THE_FEATURE (1) on supported vehicles per the
@@ -4689,6 +5091,25 @@ public class BydDataCollector {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private static int probeHasFeatureValue(Object settingDevice, String feature) {
+        if (settingDevice == null || feature == null) return Integer.MIN_VALUE;
+        try {
+            Method m = settingDevice.getClass().getMethod("hasFeature", String.class);
+            Object result = m.invoke(settingDevice, feature);
+            return result instanceof Number ? ((Number) result).intValue() : Integer.MIN_VALUE;
+        } catch (Exception e) {
+            return Integer.MIN_VALUE;
+        }
+    }
+
+    private static void putIntOrNull(org.json.JSONArray array, int value) {
+        array.put(value == Integer.MIN_VALUE || value < 0 ? org.json.JSONObject.NULL : value);
+    }
+
+    private static void putIntOrNull(org.json.JSONObject object, String key, int value) throws org.json.JSONException {
+        object.put(key, value == Integer.MIN_VALUE || value < 0 ? org.json.JSONObject.NULL : value);
     }
 
     // --- Lights ---
