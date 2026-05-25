@@ -20,6 +20,8 @@ import java.io.OutputStream;
  *
  * Endpoints:
  *   GET  /api/vehicle/state         — current door/window/trunk/lock state
+ *   GET  /api/vehicle/ac-diagnostics — read-only AC SDK method/getter probe
+ *   GET  /api/vehicle/seat-diagnostics — read-only seat hardware/capability probe
  *   GET  /api/vehicle/cloud-status  — BYD Cloud connection status
  *   GET  /api/vehicle/cloud-lock    — cached cloud lock state (REST refresh if stale)
  *   POST /api/vehicle/lock          — CLOUD_FIRST
@@ -48,6 +50,18 @@ public class VehicleControlApiHandler {
         // GET /api/vehicle/state
         if (cleanPath.equals("/api/vehicle/state") && method.equals("GET")) {
             handleGetState(out);
+            return true;
+        }
+
+        // GET /api/vehicle/ac-diagnostics
+        if (cleanPath.equals("/api/vehicle/ac-diagnostics") && method.equals("GET")) {
+            handleAcDiagnostics(out);
+            return true;
+        }
+
+        // GET /api/vehicle/seat-diagnostics
+        if (cleanPath.equals("/api/vehicle/seat-diagnostics") && method.equals("GET")) {
+            handleSeatDiagnostics(out);
             return true;
         }
 
@@ -234,18 +248,49 @@ public class VehicleControlApiHandler {
         }
         response.put("doors", doors);
 
-        // Window open percent [1-6]: 0=closed, 100=fully open, -1=unknown
+        // Window open percent [1-6]: 0=closed, 100=fully open, -1=unknown.
+        // Some BYD firmwares return 255 for absent/unsupported roof devices;
+        // never pass that through as a percentage or the UI renders "255%".
         // Index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade
         JSONObject windows = new JSONObject();
         if (data.windowOpenPercent != null && data.windowOpenPercent.length >= 4) {
-            windows.put("lf", data.windowOpenPercent[0]);
-            windows.put("rf", data.windowOpenPercent[1]);
-            windows.put("lr", data.windowOpenPercent[2]);
-            windows.put("rr", data.windowOpenPercent[3]);
-            if (data.windowOpenPercent.length >= 5) windows.put("sunroof", data.windowOpenPercent[4]);
-            if (data.windowOpenPercent.length >= 6) windows.put("sunshade", data.windowOpenPercent[5]);
+            windows.put("lf", sanitizePercent(data.windowOpenPercent[0]));
+            windows.put("rf", sanitizePercent(data.windowOpenPercent[1]));
+            windows.put("lr", sanitizePercent(data.windowOpenPercent[2]));
+            windows.put("rr", sanitizePercent(data.windowOpenPercent[3]));
+            if (data.windowOpenPercent.length >= 5) {
+                windows.put("sunroof", preferredPercent(data.sunroofPosition, data.windowOpenPercent[4]));
+            }
+            if (data.windowOpenPercent.length >= 6) {
+                windows.put("sunshade", preferredPercent(data.sunshadePercent, data.windowOpenPercent[5]));
+            }
         }
         response.put("windows", windows);
+
+        JSONObject capabilities = new JSONObject();
+        JSONObject windowCaps = new JSONObject();
+        int sunroofWindowPercent = data.windowOpenPercent != null && data.windowOpenPercent.length >= 5
+                ? data.windowOpenPercent[4] : BydVehicleData.UNAVAILABLE;
+        int sunshadeWindowPercent = data.windowOpenPercent != null && data.windowOpenPercent.length >= 6
+                ? data.windowOpenPercent[5] : BydVehicleData.UNAVAILABLE;
+        boolean sunroofSupported =
+                isValidPercent(preferredPercent(data.sunroofPosition, sunroofWindowPercent))
+                        || isValidPercent(data.sunroofPosition)
+                        || isValidSunroofState(data.sunroofState);
+        boolean sunshadeSupported =
+                isValidPercent(preferredPercent(data.sunshadePercent, sunshadeWindowPercent))
+                        || isValidPercent(data.sunshadePercent);
+        windowCaps.put("sunroof", sunroofSupported);
+        windowCaps.put("sunshade", sunshadeSupported);
+        capabilities.put("windows", windowCaps);
+        JSONObject seatCaps = new JSONObject();
+        seatCaps.put("driverHeat", collector.isSeatHeatingSupported(1));
+        seatCaps.put("passengerHeat", collector.isSeatHeatingSupported(2));
+        seatCaps.put("driverCool", collector.isSeatVentilationSupported());
+        seatCaps.put("passengerCool", collector.isSeatVentilationSupported());
+        seatCaps.put("driverMemoryRecall", collector.isDriverSeatMemoryRecallSupported());
+        capabilities.put("seats", seatCaps);
+        response.put("capabilities", capabilities);
 
         // Trunk/tailgate status from extended bodywork
         JSONObject trunk = new JSONObject();
@@ -302,7 +347,7 @@ public class VehicleControlApiHandler {
         // (Atto 3 base, certain Seal trims) report hasFeature("SEAT_VENTILATING")=0
         // and the BYD cloud returns 1001 on VENTILATIONHEATING. JS uses this
         // to grey out the cool buttons.
-        seats.put("ventilatedSupported", BydDataCollector.getInstance().isSeatVentilationSupported());
+        seats.put("ventilatedSupported", collector.isSeatVentilationSupported());
         response.put("seats", seats);
 
         // Climate — only report AC state if vehicle power is on (powerLevel >= 2)
@@ -312,9 +357,22 @@ public class VehicleControlApiHandler {
         if (data.acStartState != BydVehicleData.UNAVAILABLE) {
             climate.put("acOn", vehiclePoweredOn && data.acStartState == 1);
         }
-        if (!Double.isNaN(data.insideTempC)) climate.put("insideTempC", data.insideTempC);
+        int acSetpointC = collector.getAcTemperature(1);
+        if (acSetpointC >= 16 && acSetpointC <= 35) {
+            climate.put("setpointC", acSetpointC);
+            climate.put("insideTempC", acSetpointC);
+        } else if (!Double.isNaN(data.insideTempC)) {
+            climate.put("insideTempC", data.insideTempC);
+        }
         if (data.acWindMode != BydVehicleData.UNAVAILABLE) climate.put("windMode", data.acWindMode);
-        if (data.acFanLevel != BydVehicleData.UNAVAILABLE && vehiclePoweredOn) climate.put("fanLevel", data.acFanLevel);
+        int acWindLevel = collector.getAcWindLevel();
+        if (acWindLevel >= 0 && acWindLevel <= 7 && vehiclePoweredOn) {
+            climate.put("fanLevel", acWindLevel);
+        } else if (data.acFanLevel != BydVehicleData.UNAVAILABLE && vehiclePoweredOn) {
+            climate.put("fanLevel", data.acFanLevel);
+        }
+        int acMaxCoolingState = collector.getAcMaxCoolingState();
+        if (acMaxCoolingState >= 0) climate.put("maxCooling", acMaxCoolingState == 1);
         response.put("climate", climate);
 
         // Tyres — per-corner pressure (kPa + PSI), temperature, and the three
@@ -376,6 +434,20 @@ public class VehicleControlApiHandler {
         // field against the cluster's own readout first.
 
         response.put("timestamp", data.timestamp);
+        HttpResponse.sendJson(out, response.toString());
+    }
+
+    private static void handleSeatDiagnostics(OutputStream out) throws Exception {
+        JSONObject response = new JSONObject();
+        response.put("success", true);
+        response.put("seats", BydDataCollector.getInstance().diagnoseSeatCapabilities());
+        HttpResponse.sendJson(out, response.toString());
+    }
+
+    private static void handleAcDiagnostics(OutputStream out) throws Exception {
+        JSONObject response = new JSONObject();
+        response.put("success", true);
+        response.put("ac", BydDataCollector.getInstance().diagnoseAc());
         HttpResponse.sendJson(out, response.toString());
     }
 
@@ -486,6 +558,7 @@ public class VehicleControlApiHandler {
      * Window control routed through the command router.
      * Body: one of:
      *   { "area": 1-4 (LF/RF/LR/RR) or 0 for all, "command": 1=open, 2=close, 3=stop }
+     *   { "area": 0,                                "targetPercent": 0..100 } // all side windows
      *   { "area": 1-4,                              "targetPercent": 0..100 }
      *   { "area": 5-6, (Sunroof and Sunshade),      "targetPercent": 0..100 }
      *
@@ -500,7 +573,7 @@ public class VehicleControlApiHandler {
 
             // targetPercent → SDK closed-loop positioning
             if (req.has("targetPercent")) {
-                if (area < 1 || area > 6) {
+                if (area < 0 || area > 6) {
                     response.put("success", false);
                     response.put("error", Messages.get("errors.vehicle_window_target_requires_area"));
                     HttpResponse.sendJson(out, response.toString());
@@ -552,9 +625,10 @@ public class VehicleControlApiHandler {
     /**
      * Climate control routed through the command router.
      * power_on / power_off → CLOUD_FIRST (OPENAIR / CLOSEAIR with SDK fallback).
-     * set_temp / set_fan   → SDK_ONLY (no granular cloud command exposed).
-     * Body: { "action": "power_on"|"power_off"|"set_temp"|"set_fan",
-     *         "zone": 1|2, "temp": 17-33, "fan": 1-7 }
+     * set_temp / set_fan / max_cooling → SDK_ONLY (no granular cloud command exposed).
+     * Body: { "action": "power_on"|"power_off"|"set_temp"|"set_fan"|"max_cooling",
+     *         "zone": 1|2, "temp": 17-33, "fan": 1-7,
+     *         "enabled": true|false, "restoreTemp": 17-33, "restoreFan": 1-7, "restorePowerOn": true|false }
      */
     private static void handleClimate(OutputStream out, String body) throws Exception {
         JSONObject response = new JSONObject();
@@ -580,6 +654,16 @@ public class VehicleControlApiHandler {
                 case "set_fan": {
                     int fan = req.optInt("fan", 3);
                     cmd = new VehicleCommandRouter.ClimateSetFanCommand(fan);
+                    break;
+                }
+                case "max_cooling": {
+                    boolean enabled = req.optBoolean("enabled", true);
+                    boolean hasRestore = req.optBoolean("hasRestore", true);
+                    double restoreTemp = req.optDouble("restoreTemp", 22);
+                    int restoreFan = req.optInt("restoreFan", 3);
+                    boolean restorePowerOn = req.optBoolean("restorePowerOn", true);
+                    cmd = new VehicleCommandRouter.ClimateMaxCoolingCommand(
+                            enabled, hasRestore, restoreTemp, restoreFan, restorePowerOn);
                     break;
                 }
                 default:
@@ -972,6 +1056,24 @@ public class VehicleControlApiHandler {
         if (cloud == 2) return 1; // LOCKED
         if (cloud == 1) return 2; // UNLOCKED
         return -1;
+    }
+
+    private static boolean isValidPercent(int value) {
+        return value >= 0 && value <= 100;
+    }
+
+    private static int sanitizePercent(int value) {
+        return isValidPercent(value) ? value : -1;
+    }
+
+    private static int preferredPercent(int primary, int fallback) {
+        return isValidPercent(primary) ? primary : sanitizePercent(fallback);
+    }
+
+    private static boolean isValidSunroofState(int value) {
+        return value != BydVehicleData.UNAVAILABLE
+                && value >= 0
+                && value < 255;
     }
 
     /**

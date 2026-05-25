@@ -13,7 +13,7 @@
     <script src="../shared/theme.js?v=3"></script>
     <script src="../shared/app-shell.js"></script>
     <link rel="stylesheet" href="../shared/styles.css?v=12">
-    <link rel="stylesheet" href="../shared/vehicle-control.css?v=14">
+    <link rel="stylesheet" href="../shared/vehicle-control.css?v=15">
     <!-- Web fonts loaded async + non-blocking. WebView falls back to system sans-serif if offline. -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" media="print" onload="this.media='all'">
 </head>
@@ -158,6 +158,19 @@
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="5" y1="5" x2="19" y2="19"/></svg>
                                 <span data-i18n="vehicle.ac_off">AC Off</span>
                             </button>
+                            <button class="vc-tile cool" id="btnMaxCooling" title="Max Cooling">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2v20"/>
+                                    <path d="M4.9 4.9l14.2 14.2"/>
+                                    <path d="M2 12h20"/>
+                                    <path d="M4.9 19.1 19.1 4.9"/>
+                                    <path d="M9 4 12 7 15 4"/>
+                                    <path d="M9 20 12 17 15 20"/>
+                                    <path d="M4 9 7 12 4 15"/>
+                                    <path d="M20 9 17 12 20 15"/>
+                                </svg>
+                                <span>Max Cool</span>
+                            </button>
                             <button class="vc-tile" id="btnBatteryHeat" title="Battery heat" data-i18n-attr="title:vehicle_control.battery_heat_label">
                                 <!-- Battery + flame — preconditioning glyph -->
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -185,14 +198,14 @@
                         </div>
                         <!-- Seats controls -->
                         <div class="vc-panel-row" id="panelSeats" style="display:none;">
-                            <button class="vc-tile heat" id="btnSeatHeat1" title="Driver Seat Heat">
+                            <button class="vc-tile heat" id="btnSeatHeat1" title="Driver Seat Heat" hidden style="display:none;">
                                 <!-- Flame — clean fire glyph for heat. -->
                                 <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
                                     <path d="M13.5 1.5c.3 2.4-.6 4.2-2.5 6-2.4 2.3-4 4.3-4 7.5a7 7 0 0 0 14 0c0-3-1.6-5.5-4-7.8.4 1.4-.2 2.5-1.4 2.8-1 .2-1.6-.5-1.6-1.6 0-2.4 0-4.6-.5-6.9z"/>
                                 </svg>
                                 <span data-i18n="vehicle.driver_heat">D.Heat</span>
                             </button>
-                            <button class="vc-tile cool" id="btnSeatCool1" title="Driver Seat Cool">
+                            <button class="vc-tile cool" id="btnSeatCool1" title="Driver Seat Cool" hidden style="display:none;">
                                 <!-- Snowflake — clean ice glyph for cool. -->
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="2" x2="12" y2="22"/>
@@ -206,14 +219,14 @@
                                 </svg>
                                 <span data-i18n="vehicle.driver_cool">D.Cool</span>
                             </button>
-                            <button class="vc-tile heat" id="btnSeatHeat2" title="Passenger Seat Heat">
+                            <button class="vc-tile heat" id="btnSeatHeat2" title="Passenger Seat Heat" hidden style="display:none;">
                                 <!-- Flame — same icon as D.Heat (same function). -->
                                 <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
                                     <path d="M13.5 1.5c.3 2.4-.6 4.2-2.5 6-2.4 2.3-4 4.3-4 7.5a7 7 0 0 0 14 0c0-3-1.6-5.5-4-7.8.4 1.4-.2 2.5-1.4 2.8-1 .2-1.6-.5-1.6-1.6 0-2.4 0-4.6-.5-6.9z"/>
                                 </svg>
                                 <span data-i18n="vehicle.passenger_heat">P.Heat</span>
                             </button>
-                            <button class="vc-tile cool" id="btnSeatCool2" title="Passenger Seat Cool">
+                            <button class="vc-tile cool" id="btnSeatCool2" title="Passenger Seat Cool" hidden style="display:none;">
                                 <!-- Snowflake — same icon as D.Cool (same function). -->
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="2" x2="12" y2="22"/>
@@ -227,11 +240,11 @@
                                 </svg>
                                 <span data-i18n="vehicle.passenger_cool">P.Cool</span>
                             </button>
-                            <button class="vc-tile" id="btnSeatMemory1" title="Position 1" data-i18n-attr="title:vehicle.seat_pos_1_title">
+                            <button class="vc-tile" id="btnSeatMemory1" title="Position 1" data-i18n-attr="title:vehicle.seat_pos_1_title" hidden style="display:none;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 19 5 7m4 12h9" stroke-width="2.5"/><path d="M9.5 6a8 8 0 0 1 9 9"/><path d="M12 4 9.5 6 12 8.5m4 4.5 2.5 2 2.5-2"/></svg>
                                 <span data-i18n="vehicle.seat_pos_1">Pos 1</span>
                             </button>
-                            <button class="vc-tile" id="btnSeatMemory2" title="Position 2" data-i18n-attr="title:vehicle.seat_pos_2_title">
+                            <button class="vc-tile" id="btnSeatMemory2" title="Position 2" data-i18n-attr="title:vehicle.seat_pos_2_title" hidden style="display:none;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 19 5 7m4 12h9" stroke-width="2.5"/><path d="M9.5 6a8 8 0 0 1 9 9"/><path d="M12 4 9.5 6 12 8.5m4 4.5 2.5 2 2.5-2"/></svg>
                                 <span data-i18n="vehicle.seat_pos_2">Pos 2</span>
                             </button>
@@ -244,9 +257,9 @@
                                 <div class="vc-window-label"><span class="label-area">LF</span><span class="label-pct" id="winLabel_lf">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
@@ -254,9 +267,9 @@
                                 <div class="vc-window-label"><span class="label-area">RF</span><span class="label-pct" id="winLabel_rf">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
@@ -264,9 +277,9 @@
                                 <div class="vc-window-label"><span class="label-area">LR</span><span class="label-pct" id="winLabel_lr">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
@@ -274,9 +287,9 @@
                                 <div class="vc-window-label"><span class="label-area">RR</span><span class="label-pct" id="winLabel_rr">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
@@ -284,26 +297,27 @@
                                 <div class="vc-window-label"><span class="label-area" data-i18n="vehicle.all_windows">All Windows</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" id="btnWinAllClose" title="All Windows Closed">0</button>
+                                    <button class="vc-preset vc-preset-wide" id="btnWinVent" title="Open ventilation gap">Vent</button>
                                     <button class="vc-preset" id="btnWinAllOpen" title="All Windows Open">100</button>
                                 </div>
                             </div>
-                            <div class="vc-window-row" data-area="sunroof" data-area-num="5">
+                            <div class="vc-window-row vc-capability-row" data-area="sunroof" data-area-num="5" data-capability="sunroof" style="display:none;">
                                 <div class="vc-window-label"><span class="label-area" data-i18n="vehicle.sunroof">Sunroof</span><span class="label-pct" id="winLabel_sunroof">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
-                            <div class="vc-window-row" data-area="sunshade" data-area-num="6">
+                            <div class="vc-window-row vc-capability-row" data-area="sunshade" data-area-num="6" data-capability="sunshade" style="display:none;">
                                 <div class="vc-window-label"><span class="label-area" data-i18n="vehicle.sunshade">Sunshade</span><span class="label-pct" id="winLabel_sunshade">--%</span></div>
                                 <div class="vc-window-presets">
                                     <button class="vc-preset" data-preset="0" title="Closed">0</button>
-                                    <button class="vc-preset" data-preset="25" title="25% open">¼</button>
-                                    <button class="vc-preset" data-preset="50" title="Half open">½</button>
-                                    <button class="vc-preset" data-preset="75" title="75% open">¾</button>
+                                    <button class="vc-preset" data-preset="25" title="25% open">25</button>
+                                    <button class="vc-preset" data-preset="50" title="Half open">50</button>
+                                    <button class="vc-preset" data-preset="75" title="75% open">75</button>
                                     <button class="vc-preset" data-preset="100" title="Fully open">100</button>
                                 </div>
                             </div>
@@ -399,7 +413,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
                             <span data-i18n="vehicle.tab_climate">Climate</span>
                         </button>
-                        <button class="vc-tab" data-panel="panelSeats" onclick="VC.togglePanel('panelSeats', this)">
+                        <button class="vc-tab" data-panel="panelSeats" onclick="VC.togglePanel('panelSeats', this)" style="display:none;">
                             <span class="tab-dot"></span>
                             <!-- Seat silhouette: backrest, cushion, base — the
                                  universal "seat" glyph. Matches the seat
@@ -462,7 +476,7 @@
     <script src="../shared/vendor/GLTFLoader.js?v=12"></script>
     <script src="../shared/vendor/OrbitControls.js?v=12"></script>
     <script src="../shared/vendor/gsap.min.js?v=12"></script>
-    <script src="../shared/vehicle-control.js?v=16"></script>
+    <script src="../shared/vehicle-control.js?v=21"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');

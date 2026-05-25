@@ -380,6 +380,7 @@ public final class VehicleCommandRouter {
         public Capability sdkCapability() { return Capability.REQUIRED; }
         public RoutePreference defaultPreference() { return RoutePreference.SDK_ONLY; }
         public boolean executeViaSdk(BydDataCollector c) {
+            if (targetPercent != null && area == 0) return c.moveSideWindowsToPercent(targetPercent);
             if (targetPercent != null) return c.moveWindowToPercent(area, targetPercent);
             if (area == 0) return c.setAllWindowsCommand(action);
             return c.setWindowCommand(area, action);
@@ -402,6 +403,27 @@ public final class VehicleCommandRouter {
         public Capability sdkCapability() { return Capability.REQUIRED; }
         public RoutePreference defaultPreference() { return RoutePreference.SDK_ONLY; }
         public boolean executeViaSdk(BydDataCollector c) { return c.setAcFanLevel(level); }
+    }
+
+    public static final class ClimateMaxCoolingCommand extends VehicleCommand {
+        public final boolean enabled;
+        public final boolean hasRestore;
+        public final double restoreTempCelsius;
+        public final int restoreFanLevel;
+        public final boolean restorePowerOn;
+        public ClimateMaxCoolingCommand(boolean enabled, boolean hasRestore, double restoreTempCelsius, int restoreFanLevel, boolean restorePowerOn) {
+            this.enabled = enabled;
+            this.hasRestore = hasRestore;
+            this.restoreTempCelsius = restoreTempCelsius;
+            this.restoreFanLevel = restoreFanLevel;
+            this.restorePowerOn = restorePowerOn;
+        }
+        public String name() { return "climate-max-cooling"; }
+        public Capability sdkCapability() { return Capability.REQUIRED; }
+        public RoutePreference defaultPreference() { return RoutePreference.SDK_ONLY; }
+        public boolean executeViaSdk(BydDataCollector c) {
+            return c.setMaxCooling(enabled, hasRestore, restoreTempCelsius, restoreFanLevel, restorePowerOn);
+        }
     }
 
     /**
