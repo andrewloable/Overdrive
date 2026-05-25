@@ -23,14 +23,19 @@ class SecretConfigStore @JvmOverloads constructor(
     private val file: File = File(DEFAULT_PATH)
 ) {
     companion object {
-        const val DEFAULT_PATH = "/data/local/tmp/overdrive_secrets.json"
+        const val DEFAULT_PATH = "/storage/emulated/0/Android/data/com.overdrive.app/files/overdrive_secrets.json"
+        private const val LEGACY_PATH = "/data/local/tmp/overdrive_secrets.json"
     }
 
     private val lock = Any()
 
     fun exists(): Boolean = file.exists()
 
-    fun canReadDirectly(): Boolean = !file.exists() || file.canRead()
+    fun canReadDirectly(): Boolean {
+        if (file.exists()) return file.canRead()
+        val legacyFile = File(LEGACY_PATH)
+        return !legacyFile.exists() || legacyFile.canRead()
+    }
 
     fun canWriteDirectly(): Boolean {
         // Only the shell-owned daemon process should ever write the secret
@@ -149,10 +154,18 @@ class SecretConfigStore @JvmOverloads constructor(
 
     private fun readRootMap(): MutableMap<String, Any?> {
         if (!file.exists()) {
-            return LinkedHashMap()
+            val legacyFile = File(LEGACY_PATH)
+            if (!legacyFile.exists() || legacyFile.absolutePath == file.absolutePath) {
+                return LinkedHashMap()
+            }
+            return readRootMapFromFile(legacyFile)
         }
+        return readRootMapFromFile(file)
+    }
+
+    private fun readRootMapFromFile(source: File): MutableMap<String, Any?> {
         return try {
-            val content = file.readText()
+            val content = source.readText()
             if (content.isBlank()) {
                 LinkedHashMap()
             } else {
@@ -187,10 +200,26 @@ class SecretConfigStore @JvmOverloads constructor(
                 }
             }
             applyOwnerOnlyPermissions(file)
+            mirrorLegacy(root)
             true
         } catch (_: Exception) {
             try { tmp.delete() } catch (_: Exception) {}
             false
+        }
+    }
+
+    private fun mirrorLegacy(root: MutableMap<String, Any?>) {
+        if (file.absolutePath == LEGACY_PATH) return
+        val legacyFile = File(LEGACY_PATH)
+        val parent = legacyFile.parentFile ?: return
+        try {
+            if (!parent.exists()) parent.mkdirs()
+            FileOutputStream(legacyFile).use { out ->
+                out.write(serializeObject(root).toByteArray(StandardCharsets.UTF_8))
+            }
+            applyOwnerOnlyPermissions(legacyFile)
+        } catch (_: Exception) {
+            // Legacy mirror is best-effort for older hardcoded readers only.
         }
     }
 

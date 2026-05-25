@@ -56,12 +56,12 @@ class ZrokController(
         // 2. Saved name from Prefs
         // 3. Keep existing/generated name
         if (customUniqueName != null) {
-            ZrokLauncher.uniqueName = customUniqueName
+            zrokLauncher.rememberUniqueName(customUniqueName)
             PreferencesManager.setZrokUniqueName(customUniqueName) // SAVE IT
         } else {
             val savedName = PreferencesManager.getZrokUniqueName()
             if (!savedName.isNullOrEmpty()) {
-                ZrokLauncher.uniqueName = savedName // RESTORE IT
+                zrokLauncher.rememberUniqueName(savedName) // RESTORE IT
             }
         }
     }

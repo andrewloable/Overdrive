@@ -14,7 +14,8 @@ import java.util.concurrent.atomic.AtomicLong
  * that both the app (via IPC) and shell daemon can read/write.
  * 
  * Architecture:
- * - Single JSON file at /data/local/tmp/overdrive_config.json
+ * - Single JSON file in the app external files directory, mirrored to
+ *   /data/local/tmp/overdrive_config.json for older hardcoded readers
  * - App UI writes via IPC to daemon (daemon has shell UID 2000)
  * - Web UI/daemon writes directly (already has shell UID 2000)
  * - Both read from the same file
@@ -30,8 +31,10 @@ import java.util.concurrent.atomic.AtomicLong
 object UnifiedConfigManager {
     private const val TAG = "UnifiedConfig"
     
-    // Single source of truth - world-readable location
-    private const val CONFIG_PATH = "/data/local/tmp/overdrive_config.json"
+    // Single source of truth. /data/local/tmp can be recreated across BYD
+    // head-unit restarts, so persistent config lives under app external files.
+    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/com.overdrive.app/files/overdrive_config.json"
+    private const val LEGACY_CONFIG_PATH = "/data/local/tmp/overdrive_config.json"
     
     // Legacy paths for migration
     private const val LEGACY_SENTRY_CONFIG = "/data/local/tmp/sentry_config.json"
@@ -269,6 +272,7 @@ object UnifiedConfigManager {
     @JvmStatic
     fun loadConfig(): JSONObject {
         val configFile = File(CONFIG_PATH)
+        val legacyConfigFile = File(LEGACY_CONFIG_PATH)
         
         // Check if file changed since last load
         if (cachedConfig != null && configFile.exists()) {
@@ -280,12 +284,20 @@ object UnifiedConfigManager {
         
         return synchronized(this) {
             try {
-                if (configFile.exists()) {
-                    val content = configFile.readText()
+                val sourceFile = when {
+                    configFile.exists() -> configFile
+                    legacyConfigFile.exists() -> legacyConfigFile
+                    else -> null
+                }
+                if (sourceFile != null) {
+                    val content = sourceFile.readText()
                     val config = JSONObject(content)
                     cachedConfig = config
-                    lastModified.set(configFile.lastModified())
-                    Log.d(TAG, "Config loaded from $CONFIG_PATH")
+                    lastModified.set(sourceFile.lastModified())
+                    if (sourceFile.absolutePath != configFile.absolutePath) {
+                        saveConfigInternal(config)
+                    }
+                    Log.d(TAG, "Config loaded from ${sourceFile.absolutePath}")
                     config
                 } else {
                     Log.w(TAG, "Config file not found, initializing...")
@@ -346,6 +358,7 @@ object UnifiedConfigManager {
             tmpFile.setWritable(true, false)
             if (tmpFile.renameTo(configFile)) {
                 Log.i(TAG, "Config saved to $CONFIG_PATH (atomic)")
+                mirrorLegacyConfig(payload)
                 return true
             }
             Log.w(TAG, "Atomic rename failed; falling back to direct write")
@@ -370,11 +383,25 @@ object UnifiedConfigManager {
                 configFile.setWritable(true, false)
                 try { tmpFile.delete() } catch (_: Exception) {}
                 Log.i(TAG, "Config saved to $CONFIG_PATH (direct)")
+                mirrorLegacyConfig(payload)
                 true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save config: ${e.message}")
             false
+        }
+    }
+
+    private fun mirrorLegacyConfig(payload: String) {
+        if (CONFIG_PATH == LEGACY_CONFIG_PATH) return
+        try {
+            val legacyFile = File(LEGACY_CONFIG_PATH)
+            legacyFile.parentFile?.mkdirs()
+            FileWriter(legacyFile).use { it.write(payload) }
+            legacyFile.setReadable(true, false)
+            legacyFile.setWritable(true, false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to mirror legacy config: ${e.message}")
         }
     }
     
@@ -824,13 +851,16 @@ object UnifiedConfigManager {
      * Check if config file exists.
      */
     @JvmStatic
-    fun configExists(): Boolean = File(CONFIG_PATH).exists()
+    fun configExists(): Boolean = File(CONFIG_PATH).exists() || File(LEGACY_CONFIG_PATH).exists()
     
     /**
      * Get last modified timestamp.
      */
     @JvmStatic
     fun getLastModified(): Long {
-        return File(CONFIG_PATH).let { if (it.exists()) it.lastModified() else 0L }
+        val primary = File(CONFIG_PATH)
+        if (primary.exists()) return primary.lastModified()
+        val legacy = File(LEGACY_CONFIG_PATH)
+        return if (legacy.exists()) legacy.lastModified() else 0L
     }
 }
