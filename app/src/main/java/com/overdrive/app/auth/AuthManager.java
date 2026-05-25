@@ -63,7 +63,9 @@ public class AuthManager {
     // Device ID file — written via ADB shell from MainActivity, survives
     // app reinstall. Consulted only when the unified config has no
     // deviceId yet (cold-start before MainActivity has synced).
-    private static final String DEVICE_ID_FILE = "/data/local/tmp/.overdrive_device_id";
+    private static final String DEVICE_ID_FILE = "/storage/emulated/0/Android/data/com.overdrive.app/files/.overdrive_device_id";
+    private static final String LEGACY_DEVICE_ID_FILE = "/data/local/tmp/.overdrive_device_id";
+    private static final String LEGACY_CAMERA_DEVICE_ID_FILE = "/data/local/tmp/.byd_device_id";
 
     // JWT settings
     private static final long JWT_EXPIRY_MS = 24 * 60 * 60 * 1000L; // 24 hours
@@ -616,8 +618,52 @@ public class AuthManager {
     }
 
     private static String loadDeviceId() {
+        String persistentId = readDeviceIdFile(DEVICE_ID_FILE);
+        if (persistentId != null) return persistentId;
+
+        String legacyId = readDeviceIdFile(LEGACY_DEVICE_ID_FILE);
+        if (legacyId != null) return legacyId;
+
+        String legacyCameraId = readDeviceIdFile(LEGACY_CAMERA_DEVICE_ID_FILE);
+        if (legacyCameraId != null) return legacyCameraId;
+
         try {
-            File file = new File(DEVICE_ID_FILE);
+            String serial;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                serial = android.os.Build.getSerial();
+            } else {
+                @SuppressWarnings("deprecation")
+                String legacySerial = android.os.Build.SERIAL;
+                serial = legacySerial;
+            }
+            if (serial != null && !serial.equals("unknown")) {
+                return stableDeviceId(serial);
+            }
+        } catch (Exception e) {
+            log("Error reading device serial: " + e.getMessage());
+        }
+
+        try {
+            String fingerprint = android.os.Build.FINGERPRINT;
+            if (fingerprint != null && !fingerprint.isEmpty()) {
+                return stableDeviceId(fingerprint);
+            }
+        } catch (Exception e) {
+            log("Error reading build fingerprint: " + e.getMessage());
+        }
+
+        // File doesn't exist yet and hardware IDs were unavailable — temp ID.
+        // MainActivity writes the real persistent file via ADB shell on app
+        // launch; the next reconcile in getState() picks up the canonical ID
+        // from the unified config.
+        String tempId = "byd-" + generateSecret(8);
+        log("Device ID file not found, using temporary ID: " + tempId);
+        return tempId;
+    }
+
+    private static String readDeviceIdFile(String path) {
+        try {
+            File file = new File(path);
             if (file.exists()) {
                 try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                     String id = reader.readLine();
@@ -629,12 +675,11 @@ public class AuthManager {
         } catch (Exception e) {
             log("Error reading device ID file: " + e.getMessage());
         }
-        // File doesn't exist yet — temp ID. MainActivity writes the real
-        // file via ADB shell on app launch; the next reconcile in
-        // getState() picks up the canonical ID from the unified config.
-        String tempId = "byd-" + generateSecret(8);
-        log("Device ID file not found, using temporary ID: " + tempId);
-        return tempId;
+        return null;
+    }
+
+    private static String stableDeviceId(String source) {
+        return "byd-" + String.format(java.util.Locale.US, "%08x", source.hashCode());
     }
 
     // ==================== CRYPTO UTILS ====================
