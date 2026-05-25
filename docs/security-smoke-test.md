@@ -161,3 +161,13 @@ After a successful security run, the update sentinels should reflect the current
 
 Failure interpretation:
 If the update state files are missing when the updater says an install happened, the regression run is incomplete and should be repeated.
+
+## Source References
+
+- Manifest security posture and exported components: [AndroidManifest.xml:207](../app/src/main/AndroidManifest.xml#L207), [AndroidManifest.xml:209](../app/src/main/AndroidManifest.xml#L209), [AndroidManifest.xml:244](../app/src/main/AndroidManifest.xml#L244), [AndroidManifest.xml:306](../app/src/main/AndroidManifest.xml#L306), [AndroidManifest.xml:312](../app/src/main/AndroidManifest.xml#L312).
+- Auth token issuance, JWT validation, and thumb tokens: [AuthManager.java:50](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L349), [AuthManager.java:392](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L392), [AuthManager.java:463](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L463).
+- Login and auth API rate limiting: [AuthApiHandler.java:26](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L26), [AuthApiHandler.java:30](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L30), [AuthApiHandler.java:155](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L155).
+- HTTP auth enforcement and protected routes: [AuthMiddleware.java:133](../app/src/main/java/com/overdrive/app/server/AuthMiddleware.java#L133), [HttpServer.java:49](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L49), [HttpServer.java:650](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L650).
+- LAN binding and loopback defaults: [CameraDaemon.java:53](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L53), [UnifiedConfigManager.kt:559](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L559), [UnifiedConfigManager.kt:567](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L567).
+- Secret storage and redaction: [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [AuthManager.java:530](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L530), [SecretRedactor.java:14](../app/src/main/java/com/overdrive/app/logging/SecretRedactor.java#L14).
+- MQTT, update checksum, and OTA behavior: [MqttApiHandler.java:25](../app/src/main/java/com/overdrive/app/server/MqttApiHandler.java#L25), [build.gradle.kts:8](../app/build.gradle.kts#L8), [UpdateApiHandler.java:43](../app/src/main/java/com/overdrive/app/server/UpdateApiHandler.java#L43).

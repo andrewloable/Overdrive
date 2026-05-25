@@ -26,6 +26,8 @@ Overdrive is an Android application for BYD DiLink vehicles. The app coordinates
 - `app/build.gradle.kts` defines Android, Kotlin, CMake, embedded native downloads, and asset extraction tasks.
 - `docs/security-smoke-test.md` documents the security smoke-test plan that existed before this documentation set.
 
+Each detailed document includes a `Source References` section. References use `filename:line` labels and GitHub-style line anchors so refactors can jump from documentation to the implementation point being described.
+
 ## Important Defaults
 
 - Local daemon command TCP: `127.0.0.1:19876`.
@@ -41,3 +43,9 @@ Overdrive is an Android application for BYD DiLink vehicles. The app coordinates
 ## Security Notes
 
 The embedded web UI is token-protected in release builds, including loopback access. LAN HTTP is disabled by default. Tunnel URLs and auth tokens should be treated as secrets. Secret values embedded in local config, generated proxy config, BYD cloud credentials, MQTT credentials, tunnel tokens, and device auth secrets must not be copied into documentation or logs.
+
+## Source References
+
+- Documentation map entry points: [CameraDaemon.java:35](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L35), [HttpServer.java:49](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L49), [GpuSurveillancePipeline.java:24](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L24), [BydDataCollector.java:20](../app/src/main/java/com/overdrive/app/byd/BydDataCollector.java#L20), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100).
+- Important defaults: [CameraDaemon.java:53](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L350), [ProxyConfiguration.kt:29](../app/src/main/java/com/overdrive/app/daemon/proxy/ProxyConfiguration.kt#L29), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100).
+- Auth and secret handling: [AuthManager.java:50](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L50), [AuthMiddleware.java:133](../app/src/main/java/com/overdrive/app/server/AuthMiddleware.java#L133), [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [UnifiedConfigManager.kt:559](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L559).

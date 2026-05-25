@@ -201,3 +201,12 @@ Suggested mapping:
 - BYD local or cloud change: `byd-integrations.md`.
 - Storage/config/media change: `data-flow-and-storage.md`.
 - User-facing capability change: `features.md`.
+
+## Source References
+
+- Gradle module, SDK, namespace, ABI, and dependencies: [build.gradle.kts:276](../app/build.gradle.kts#L276), [build.gradle.kts:361](../app/build.gradle.kts#L361), [build.gradle.kts:452](../app/build.gradle.kts#L452), [build.gradle.kts:459](../app/build.gradle.kts#L459), [build.gradle.kts:481](../app/build.gradle.kts#L481).
+- Verified native downloads and extraction tasks: [build.gradle.kts:8](../app/build.gradle.kts#L8), [build.gradle.kts:33](../app/build.gradle.kts#L33), [build.gradle.kts:63](../app/build.gradle.kts#L63), [build.gradle.kts:76](../app/build.gradle.kts#L76), [build.gradle.kts:225](../app/build.gradle.kts#L225), [build.gradle.kts:232](../app/build.gradle.kts#L232).
+- BYD stub compile/runtime behavior: [build.gradle.kts:413](../app/build.gradle.kts#L413), [IAccModeManager.java:5](../app/src/main/java/android/os/IAccModeManager.java#L5).
+- Native build and hardening: [CMakeLists.txt:50](../app/src/main/cpp/CMakeLists.txt#L50), [CMakeLists.txt:98](../app/src/main/cpp/CMakeLists.txt#L98).
+- Update APIs and post-update daemon reset: [UpdateApiHandler.java:43](../app/src/main/java/com/overdrive/app/server/UpdateApiHandler.java#L43), [BootReceiver.kt:24](../app/src/main/java/com/overdrive/app/receiver/BootReceiver.kt#L24), [DaemonStartupManager.kt:15](../app/src/main/java/com/overdrive/app/ui/daemon/DaemonStartupManager.kt#L15).
+- Operational files, logs, config, and storage: [UnifiedConfigManager.kt:30](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L30), [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100), [DaemonLogger.java:382](../app/src/main/java/com/overdrive/app/logging/DaemonLogger.java#L382).
