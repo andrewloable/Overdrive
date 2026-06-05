@@ -1,4 +1,4 @@
-package com.overdrive.app.overlay;
+package com.loabletech.bladewatch.overlay;
 
 import androidx.appcompat.app.AlertDialog;
 import android.content.ComponentName;
@@ -13,7 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
-import com.overdrive.app.R;
+import com.loabletech.bladewatch.R;
 
 /**
  * First-launch and post-update setup guide.
@@ -30,7 +30,7 @@ import com.overdrive.app.R;
 public class SetupGuideDialog {
 
     private static final String TAG = "SetupGuideDialog";
-    private static final String PREFS_NAME = "overdrive_setup";
+    private static final String PREFS_NAME = "bladewatch_setup";
     private static final String KEY_LAST_SEEN_INSTALL_TIME = "last_seen_install_time";
 
     /**
@@ -68,7 +68,7 @@ public class SetupGuideDialog {
         if (tvVersionBanner != null) {
             if (isUpdate) {
                 tvVersionBanner.setText(context.getString(R.string.setup_version_banner,
-                        com.overdrive.app.updater.AppUpdater.getDisplayVersion(context)));
+                        com.loabletech.bladewatch.updater.AppUpdater.getDisplayVersion(context)));
                 tvVersionBanner.setVisibility(View.VISIBLE);
             } else {
                 tvVersionBanner.setVisibility(View.GONE);
@@ -81,7 +81,7 @@ public class SetupGuideDialog {
         TextView btnLanguage = view.findViewById(R.id.btnOpenLanguage);
         if (btnLanguage != null) {
             btnLanguage.setOnClickListener(v ->
-                com.overdrive.app.ui.dialog.LanguagePickerDialog.show(context, picked -> {
+                com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog.show(context, picked -> {
                     // After a pick, recreate the host activity so AppCompat
                     // re-applies the locale and the setup dialog re-inflates
                     // in the new language. Cheaper than juggling two dialogs.
@@ -123,7 +123,7 @@ public class SetupGuideDialog {
             }
         });
 
-        AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+        AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
                 .setView(view)
                 .setCancelable(true)
                 .create();
@@ -150,7 +150,7 @@ public class SetupGuideDialog {
      * Open the BYD autostart-management activity directly. Falls back through:
      *   1. com.byd.appstartmanagement/.frame.AppStartManagement (canonical deep link)
      *   2. Default launcher intent for com.byd.appstartmanagement
-     *   3. ACTION_APPLICATION_DETAILS_SETTINGS for OverDrive (legacy fallback)
+     *   3. ACTION_APPLICATION_DETAILS_SETTINGS for BladeWatch (legacy fallback)
      *   4. ACTION_APPLICATION_SETTINGS / ACTION_SETTINGS
      */
     private static void openAutoStartSettings(Context context) {

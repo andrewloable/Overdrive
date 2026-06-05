@@ -1,8 +1,8 @@
-package com.overdrive.app.ui.util
+package com.loabletech.bladewatch.ui.util
 
 import android.content.Context
 import android.util.Log
-import com.overdrive.app.ui.model.RecordingFile
+import com.loabletech.bladewatch.ui.model.RecordingFile
 import java.io.File
 import java.util.Calendar
 
@@ -21,7 +21,7 @@ object RecordingScanner {
     // historically held a `recordings/` subdir for dashcam clips and a
     // `sentry_events/` subdir for surveillance clips; some very old builds
     // wrote dashcam clips directly into the base dir, so we scan both.
-    private const val LEGACY_BASE_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files"
+    private const val LEGACY_BASE_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files"
     private const val LEGACY_RECORDINGS_DIR = "$LEGACY_BASE_DIR/recordings"
     private const val LEGACY_RECORDINGS_DIR_FLAT = LEGACY_BASE_DIR
     private const val LEGACY_SENTRY_DIR = "$LEGACY_BASE_DIR/sentry_events"
@@ -48,7 +48,7 @@ object RecordingScanner {
         }
         
         // Use StorageManager as single source of truth for all storage locations
-        val sm = com.overdrive.app.storage.StorageManager.getInstance()
+        val sm = com.loabletech.bladewatch.storage.StorageManager.getInstance()
         
         // Scan ALL locations for each type (active + alternate)
         val normal = mutableListOf<RecordingFile>()
@@ -206,7 +206,7 @@ object RecordingScanner {
         // file vanishes; otherwise /api/recordings would keep returning a
         // phantom row until the cache validator's mtime check finally fails.
         try {
-            com.overdrive.app.server.RecordingsApiHandler
+            com.loabletech.bladewatch.server.RecordingsApiHandler
                 .invalidateRecordingCache(recording.file.absolutePath)
         } catch (_: Throwable) {}
 
@@ -219,7 +219,7 @@ object RecordingScanner {
             }
 
             // Delete cached thumbnail from the thumbs directory
-            val sm = com.overdrive.app.storage.StorageManager.getInstance()
+            val sm = com.loabletech.bladewatch.storage.StorageManager.getInstance()
             val recordingsDir = sm.recordingsDir
             val baseDir = recordingsDir.parentFile
             if (baseDir != null) {
@@ -259,7 +259,7 @@ object RecordingScanner {
      * Uses StorageManager as single source of truth.
      */
     fun getRecordingsDir(context: Context): File {
-        return com.overdrive.app.storage.StorageManager.getInstance().recordingsDir
+        return com.loabletech.bladewatch.storage.StorageManager.getInstance().recordingsDir
     }
     
     /**
@@ -267,7 +267,7 @@ object RecordingScanner {
      * Uses StorageManager as single source of truth.
      */
     fun getSentryEventsDir(context: Context): File {
-        return com.overdrive.app.storage.StorageManager.getInstance().surveillanceDir
+        return com.loabletech.bladewatch.storage.StorageManager.getInstance().surveillanceDir
     }
     
     /**
@@ -275,7 +275,7 @@ object RecordingScanner {
      * Uses StorageManager as single source of truth.
      */
     fun getProximityEventsDir(context: Context): File {
-        return com.overdrive.app.storage.StorageManager.getInstance().proximityDir
+        return com.loabletech.bladewatch.storage.StorageManager.getInstance().proximityDir
     }
     
     // ==================== Filtered Scans ====================

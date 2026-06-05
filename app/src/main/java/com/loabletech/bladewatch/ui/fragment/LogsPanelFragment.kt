@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,10 +12,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.ui.adapter.LogsAdapter
-import com.overdrive.app.ui.viewmodel.LogsViewModel
-import com.overdrive.app.ui.viewmodel.MainViewModel
-import com.overdrive.app.R
+import com.loabletech.bladewatch.ui.adapter.LogsAdapter
+import com.loabletech.bladewatch.ui.viewmodel.LogsViewModel
+import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
+import com.loabletech.bladewatch.R
 
 /**
  * Persistent logs panel fragment that appears at the bottom (portrait) or left (landscape).

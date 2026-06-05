@@ -1,6 +1,6 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 

@@ -1,4 +1,4 @@
-package com.overdrive.app.telemetry;
+package com.loabletech.bladewatch.telemetry;
 
 import android.graphics.Bitmap;
 

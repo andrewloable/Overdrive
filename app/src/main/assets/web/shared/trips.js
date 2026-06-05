@@ -1,5 +1,5 @@
 /**
- * OverDrive - Trip Analytics Module v2
+ * BladeWatch - Trip Analytics Module v2
  * Modern trip list, interactive timeline slider, route map with marker,
  * radar hover tooltips, score descriptions, speed distribution details.
  */
@@ -2844,11 +2844,11 @@ const TRIPS = {
         var mountTripsCar3d = function () {
             var canvas = document.getElementById('tripSliderCarCanvas');
             if (!canvas) return;
-            var shell = window.OverdriveAppShell;
+            var shell = window.BladeWatchAppShell;
             if (!shell || typeof shell.mountVehicleCanvas !== 'function') return;
             self3d._sliderMarker3d = shell.mountVehicleCanvas(canvas, { view: 'top' });
         };
-        if (window.OverdriveAppShell && window.OverdriveAppShell.mountVehicleCanvas) {
+        if (window.BladeWatchAppShell && window.BladeWatchAppShell.mountVehicleCanvas) {
             mountTripsCar3d();
         } else {
             document.addEventListener('app-shell:ready', mountTripsCar3d, { once: true });

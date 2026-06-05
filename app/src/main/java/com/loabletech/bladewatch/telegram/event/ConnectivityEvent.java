@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.event;
+package com.loabletech.bladewatch.telegram.event;
 
 /**
  * Network connectivity change event.

@@ -1,7 +1,7 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.storage.ExternalStorageCleaner;
-import com.overdrive.app.storage.StorageManager;
+import com.loabletech.bladewatch.storage.ExternalStorageCleaner;
+import com.loabletech.bladewatch.storage.StorageManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -13,8 +13,8 @@ import java.util.Map;
 /**
  * External Storage API Handler - manages SD card and CDR cleanup settings.
  * 
- * SOTA: Auto-cleanup of BYD dashcam (CDR) files to ensure Overdrive has space on SD card.
- * When Overdrive uses SD card for recordings/surveillance, this automatically manages
+ * SOTA: Auto-cleanup of BYD dashcam (CDR) files to ensure BladeWatch has space on SD card.
+ * When BladeWatch uses SD card for recordings/surveillance, this automatically manages
  * the BYD dashcam files to maintain reserved space.
  * 
  * Endpoints:
@@ -141,11 +141,11 @@ public class ExternalStorageApiHandler {
         response.put("totalFilesDeleted", cleaner.getTotalFilesDeleted());
         response.put("lastCleanupTime", cleaner.getLastCleanupTime());
         
-        // SOTA: Show if Overdrive is using SD card (auto-enable recommendation)
-        boolean overdriveUsesSdCard = storage.getRecordingsStorageType() == StorageManager.StorageType.SD_CARD ||
+        // SOTA: Show if BladeWatch is using SD card (auto-enable recommendation)
+        boolean bladewatchUsesSdCard = storage.getRecordingsStorageType() == StorageManager.StorageType.SD_CARD ||
                                        storage.getSurveillanceStorageType() == StorageManager.StorageType.SD_CARD;
-        response.put("overdriveUsesSdCard", overdriveUsesSdCard);
-        response.put("recommendAutoCleanup", overdriveUsesSdCard && !cleaner.isEnabled());
+        response.put("bladewatchUsesSdCard", bladewatchUsesSdCard);
+        response.put("recommendAutoCleanup", bladewatchUsesSdCard && !cleaner.isEnabled());
         
         sendJson(out, 200, response);
     }

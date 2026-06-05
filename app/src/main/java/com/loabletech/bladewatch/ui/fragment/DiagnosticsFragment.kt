@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -19,13 +19,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
-import com.overdrive.app.R
-import com.overdrive.app.ui.MainActivity
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.RecordingScanner
-import com.overdrive.app.ui.util.navigateDrillDown
-import com.overdrive.app.ui.viewmodel.DaemonsViewModel
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.MainActivity
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.RecordingScanner
+import com.loabletech.bladewatch.ui.util.navigateDrillDown
+import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -113,7 +113,7 @@ class DiagnosticsFragment : Fragment() {
             // motion so the cardSettings shortcut feels like rail navigation.
             findNavController().navigate(
                 R.id.settingsFragment, null,
-                com.overdrive.app.ui.util.NavOptionsExt.m3FadeThrough()
+                com.loabletech.bladewatch.ui.util.NavOptionsExt.m3FadeThrough()
             )
         }
         // HEALTH tiles for Camera + Battery now act as shortcuts to the
@@ -449,7 +449,7 @@ class DiagnosticsFragment : Fragment() {
         var probedId = -1
         var manualOverride = false
         try {
-            val cfg = com.overdrive.app.config.UnifiedConfigManager.loadConfig()
+            val cfg = com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
             val cam = cfg.optJSONObject("camera")
             if (cam != null) {
                 probedId = cam.optInt("probedCameraId", -1)
@@ -481,7 +481,7 @@ class DiagnosticsFragment : Fragment() {
      * Reads the daemon SOH display status first, falling back to the legacy
      * persisted SOH file when the daemon is unavailable. The daemon exposes
      * displaySource so OEM and nominal fallbacks can be shown as data without
-     * marking them as Overdrive's measured capacity estimate.
+     * marking them as BladeWatch's measured capacity estimate.
      */
     private fun refreshBatteryTile() {
         val executor = batteryExecutor ?: Executors.newSingleThreadExecutor()
@@ -491,7 +491,7 @@ class DiagnosticsFragment : Fragment() {
             var sohPercent: Double? = null
             var displaySource = "unavailable"
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }

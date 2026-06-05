@@ -1,6 +1,6 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,7 +24,7 @@ public final class TelegramDaemonLauncher {
 
     public static final String DAEMON_PROCESS = "telegram_bot_daemon";
     private static final String DAEMON_CLASS =
-            "com.overdrive.app.daemon.TelegramBotDaemon";
+            "com.loabletech.bladewatch.daemon.TelegramBotDaemon";
     private static final String DAEMON_LOG =
             "/data/local/tmp/telegrambotdaemon.log";
 
@@ -55,7 +55,7 @@ public final class TelegramDaemonLauncher {
 
         String apkPath = resolveApkPath();
         if (apkPath == null) {
-            logger.warn("Could not find APK path for com.overdrive.app");
+            logger.warn("Could not find APK path for com.loabletech.bladewatch");
             return false;
         }
 
@@ -101,13 +101,13 @@ public final class TelegramDaemonLauncher {
      * unreachable for some reason.
      */
     private static String resolveApkPath() {
-        String apkPath = execShell("pm path com.overdrive.app 2>/dev/null | head -1 | cut -d: -f2");
+        String apkPath = execShell("pm path com.loabletech.bladewatch 2>/dev/null | head -1 | cut -d: -f2");
         if (isNonBlank(apkPath)) return apkPath.trim();
 
-        apkPath = execShell("ls /data/app/*/com.overdrive.app*/base.apk 2>/dev/null | head -1");
+        apkPath = execShell("ls /data/app/*/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
         if (isNonBlank(apkPath)) return apkPath.trim();
 
-        apkPath = execShell("ls /data/app/com.overdrive.app*/base.apk 2>/dev/null | head -1");
+        apkPath = execShell("ls /data/app/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
         if (isNonBlank(apkPath)) return apkPath.trim();
 
         return null;

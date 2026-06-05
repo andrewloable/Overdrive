@@ -1,7 +1,7 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.telegram.config.UnifiedTelegramConfig;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig;
 
 import org.json.JSONObject;
 
@@ -80,7 +80,7 @@ public class TelegramApiHandler {
         // app process (different UID, different mtime tick) is reflected
         // in the web tab without waiting on cache eviction. The cost is
         // one re-parse of a small JSON file per status hit.
-        com.overdrive.app.config.UnifiedConfigManager.forceReload();
+        com.loabletech.bladewatch.config.UnifiedConfigManager.forceReload();
         boolean configured = UnifiedTelegramConfig.hasBotToken();
         // Self-heal users who were left with orphan bot identity (and/or
         // owner) after a failed migration or partial clear: if there's
@@ -184,7 +184,7 @@ public class TelegramApiHandler {
             // "configured but no process running" until they generate a PIN
             // (which the native flow would also have caught).
             try {
-                boolean launched = com.overdrive.app.daemon.telegram
+                boolean launched = com.loabletech.bladewatch.daemon.telegram
                         .TelegramDaemonLauncher.launchIfNotRunning();
                 response.put("daemonLaunched", launched);
             } catch (Exception e) {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">Giữ Overdrive giám sát xe hoạt động trong nền. Dịch vụ này không đọc hoặc tương tác với nội dung màn hình.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">Giữ BladeWatch giám sát xe hoạt động trong nền. Dịch vụ này không đọc hoặc tương tác với nội dung màn hình.</string>
     <string name="action_cancel">Huỷ</string>
     <string name="action_clear_plain">Xoá</string>
     <string name="action_select_all">Chọn tất cả</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">Chọn ngôn ngữ</string>
-    <string name="setup_language_body">Tiền thoại của đơn vị đầu tiên của bạn mặc định. Nhấn để chọn một ngôn ngữ khác cho ứng dụng OverDrive và đường hầm web.</string>
+    <string name="setup_language_body">Tiền thoại của đơn vị đầu tiên của bạn mặc định. Nhấn để chọn một ngôn ngữ khác cho ứng dụng BladeWatch và đường hầm web.</string>
     <string name="setup_language_button">Chọn ngôn ngữ</string>
     <string name="setup_autostart_title">Thiết lập hạn chế tự động khởi động</string>
-    <string name="setup_autostart_body">Nhấp dưới đây để mở BYD Auto-Start. Tìm OverDrive trong danh sách và bỏ chọn hộp. BYD xóa này trên mỗi cài đặt  bạn sẽ làm lại nó sau khi cập nhật.</string>
+    <string name="setup_autostart_body">Nhấp dưới đây để mở BYD Auto-Start. Tìm BladeWatch trong danh sách và bỏ chọn hộp. BYD xóa này trên mỗi cài đặt  bạn sẽ làm lại nó sau khi cập nhật.</string>
     <string name="setup_autostart_button">Mở BYD Auto-Start</string>
     <string name="setup_overlay_title">Cho phép hiển thị trên các ứng dụng khác</string>
     <string name="setup_overlay_body">Khả năng điều này để hiển thị một chỉ số trạng thái nổi để ghi lại và theo dõi chuyến đi trên đầu các ứng dụng khác.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive Tình trạng</string>
+    <string name="status_overlay_notif_title">BladeWatch Tình trạng</string>
     <string name="status_overlay_notif_text">Status overlay hoạt động</string>
     <string name="rail_dashboard">bảng điều khiển</string>
     <string name="rail_live">Đời sống</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">Sub-rail cài đặt</string>
     <string name="settings_privacy_title">Bảo mật &amp; dữ liệu</string>
     <string name="settings_privacy_body">Reset xóa chỉ số ghi âm, thông tin tín dụng được lưu trữ trong cache, trạng thái daemon và sở thích trên thiết bị.</string>
-    <string name="settings_about_title">Về OverDrive</string>
+    <string name="settings_about_title">Về BladeWatch</string>
     <string name="settings_about_version_label">Phiên bản</string>
     <string name="settings_about_package_label">Xây dựng</string>
     <string name="settings_about_check_update_value">Kiểm tra bản phát hành GitHub mới nhất và cài đặt nếu mới hơn.</string>
     <string name="settings_about_support_section">Được vận hành bởi những người như anh</string>
     <string name="settings_about_support_share_title">Hãy nói với chủ xe khác</string>
-    <string name="settings_about_support_share_value">Mỗi liên kết được chia sẻ giúp một chủ sở hữu BYD khác khám phá Overdrive.</string>
-    <string name="settings_about_support_share_message">Kiểm tra Overdrive  giám sát nguồn mở &amp; dashcam cho BYD: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">Mỗi liên kết được chia sẻ giúp một chủ sở hữu BYD khác khám phá BladeWatch.</string>
+    <string name="settings_about_support_share_message">Kiểm tra BladeWatch  giám sát nguồn mở &amp; dashcam cho BYD: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Chia sẻ quá mức</string>
     <string name="settings_about_open_link_failed">Không thể mở liên kết.</string>
     <string name="settings_about_open_link_copied">Không tìm thấy trình duyệt. URL sao chép: %1$s</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">Giấy phép</string>
     <string name="settings_about_license_value">MIT  mã nguồn mở. Nhấp để xem toàn văn bản.</string>
     <string name="settings_about_source_title">Mã nguồn</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yash-srivastava/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">https://github.com/yash-srivastava/BladeWatch-release/blob/main/license</string>
+    <string name="settings_about_source_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">Thả trên GitHub</string>
     <string name="settings_about_star_value">Chỉ mất một giây thôi, có nghĩa là rất nhiều.</string>
-    <string name="settings_about_star_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">Cảm ơn</string>
     <string name="settings_about_thanks_subtitle">Được xây dựng với sự giúp đỡ của những người đóng góp và ủng hộ.</string>
     <string name="settings_about_contributors_title">Người đóng góp</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">Kiểm tra tế bào SOH và đóng gói số liệu thống kê.</string>
     <string name="diagnostics_settings_subtitle">Ưu tiên ứng dụng, chủ đề và ngôn ngữ.</string>
     <string name="integrations_hero_title">Kết hợp</string>
-    <string name="integrations_hero_subtitle">Kết nối Overdrive với dịch vụ của bạn.</string>
+    <string name="integrations_hero_subtitle">Kết nối BladeWatch với dịch vụ của bạn.</string>
     <string name="integrations_status_unknown">Nhấn để cấu hình</string>
     <string name="integrations_status_configured">Định dạng</string>
     <string name="integrations_status_not_set_up">Không được thiết lập</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Thiết lập</string>
     <string name="settings_action_check_update">Kiểm tra các bản cập nhật</string>
     <string name="settings_action_reset_data">Đặt lại dữ liệu...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">Đang canh chừng</string>
     <string name="dashboard_subtitle_all_systems">Tất cả hệ thống trực tuyến</string>
     <string name="dashboard_subtitle_some_offline">%1$d của các dịch vụ %2$d trực tuyến</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Các bộ đệm trước / sau, codec, giới hạn lưu trữ.</string>
     <string name="settings_section_surveillance_subtitle">Khu vực phát hiện, lịch trình, độ nhạy chuyển động.</string>
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT chạy bộ.</string>
-    <string name="settings_about_row_title">Về OverDrive</string>
+    <string name="settings_about_row_title">Về BladeWatch</string>
     <string name="settings_about_row_subtitle">Phiên bản, giấy phép, hỗ trợ phát triển.</string>
     <string name="settings_reset_row_subtitle">Chọn âm thanh, sự kiện, hoặc tất cả các kho lưu trữ.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Chủ đề, ngôn ngữ và sở thích hình ảnh.</string>
     <string name="settings_theme_active_auto_caption">Auto theo chủ đề hệ thống của bạn.</string>
     <string name="settings_theme_active_light_caption">Điện thoại ánh sáng luôn bật.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d của các ngôn ngữ %2$d có sẵn</string>
     <string name="settings_language_card_title">Ngôn ngữ hiển thị</string>
     <string name="settings_privacy_stance_title">Trên thiết bị theo mặc định</string>
-    <string name="settings_privacy_stance_body">OverDrive chạy hoàn toàn trên đơn vị đầu, không có điện đo rời khỏi xe của bạn ngoại trừ thông qua các đường hầm và tích hợp mà bạn đã thiết lập rõ ràng.</string>
+    <string name="settings_privacy_stance_body">BladeWatch chạy hoàn toàn trên đơn vị đầu, không có điện đo rời khỏi xe của bạn ngoại trừ thông qua các đường hầm và tích hợp mà bạn đã thiết lập rõ ràng.</string>
     <string name="settings_privacy_overline_storage">Lưu trữ tại địa phương</string>
     <string name="settings_privacy_overline_reset">DATA Reset</string>
     <string name="settings_privacy_storage_clips_label">Các clip trên đĩa</string>
@@ -526,7 +526,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">Dữ liệu chờ đợi</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">Chào mừng  Overdrive giờ là đôi mắt thứ hai của bạn.</string>
+    <string name="dashboard_insight_welcome">Chào mừng  BladeWatch giờ là đôi mắt thứ hai của bạn.</string>
     <string name="dashboard_insight_parked_charged_kwh">Nhặt %1$s (≈%2$s) trong khi đỗ xe</string>
     <string name="dashboard_insight_parked_charged">Nhặt %1$s trong khi đỗ xe</string>
     <string name="dashboard_insight_parked_drained_kwh">Sử dụng %1$s (≈%2$s) kể từ khi bạn đậu xe</string>

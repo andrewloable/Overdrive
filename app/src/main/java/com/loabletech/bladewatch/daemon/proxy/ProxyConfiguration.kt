@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.proxy
+package com.loabletech.bladewatch.daemon.proxy
 
 /**
  * Proxy configuration for VLESS Reality proxy.

@@ -1,13 +1,13 @@
-package com.overdrive.app.mqtt;
+package com.loabletech.bladewatch.mqtt;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatterySocData;
-import com.overdrive.app.monitor.ChargingStateData;
-import com.overdrive.app.monitor.GearMonitor;
-import com.overdrive.app.monitor.GpsMonitor;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatterySocData;
+import com.loabletech.bladewatch.monitor.ChargingStateData;
+import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -57,7 +57,7 @@ public class MqttConnectionManager {
     private String deviceId;
 
     // SOH estimator reference (optional, for capacity/soh fields)
-    private com.overdrive.app.abrp.SohEstimator sohEstimator;
+    private com.loabletech.bladewatch.abrp.SohEstimator sohEstimator;
 
     // Telemetry cache — prevents multiple MQTT threads from hammering BYD hardware concurrently.
     // Poll the car once, cache the result, let all publishers grab the cached JSON.
@@ -76,7 +76,7 @@ public class MqttConnectionManager {
     /**
      * Initialize the manager with data source references.
      */
-    public void init(String deviceId, com.overdrive.app.abrp.SohEstimator sohEstimator) {
+    public void init(String deviceId, com.loabletech.bladewatch.abrp.SohEstimator sohEstimator) {
         this.deviceId = deviceId;
         this.vehicleDataMonitor = VehicleDataMonitor.getInstance();
         this.gpsMonitor = GpsMonitor.getInstance();

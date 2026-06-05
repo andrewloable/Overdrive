@@ -205,10 +205,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
-        android:name="com.overdrive.app.OverdriveApplication"
+        android:name="com.loabletech.bladewatch.BladeWatchApplication"
         android:allowBackup="false"
         android:label="@string/app_name"
-        android:theme="@style/Theme.Overdrive.M3"
+        android:theme="@style/Theme.BladeWatch.M3"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="true"
@@ -216,7 +216,7 @@
 
         <!-- Launcher activity: must remain exported so the system can start the app from the home screen. -->
         <activity 
-            android:name="com.overdrive.app.ui.MainActivity"
+            android:name="com.loabletech.bladewatch.ui.MainActivity"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:configChanges="orientation|screenSize|keyboardHidden"
@@ -231,7 +231,7 @@
 
         <!-- Internal blocker screen only; not exported because no external app should launch it. -->
         <activity
-            android:name="com.overdrive.app.BlockerActivity"
+            android:name="com.loabletech.bladewatch.BlockerActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:excludeFromRecents="true"
@@ -241,7 +241,7 @@
 
         <!-- Internal location bootstrap helper; only the app/daemon should start it explicitly. -->
         <activity
-            android:name="com.overdrive.app.ui.LocationStarterActivity"
+            android:name="com.loabletech.bladewatch.ui.LocationStarterActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
@@ -252,7 +252,7 @@
 
         <!-- Exported for system boot and power/network broadcasts that Android delivers to apps. -->
         <receiver
-            android:name="com.overdrive.app.receiver.BootReceiver"
+            android:name="com.loabletech.bladewatch.receiver.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:directBootAware="true">
@@ -285,7 +285,7 @@
              the process if it has been killed (force-stop, OOM, OEM cleanup).
              No intent-filter: only invoked via explicit PendingIntent. -->
         <receiver
-            android:name="com.overdrive.app.receiver.ProcessRevivalReceiver"
+            android:name="com.loabletech.bladewatch.receiver.ProcessRevivalReceiver"
             android:enabled="true"
             android:exported="false"
             android:directBootAware="true" />
@@ -293,7 +293,7 @@
         <!-- Location Boot Receiver - Auto-start Location service after device reboot -->
         <!-- Exported only for BOOT_COMPLETED so the system can restart the location sidecar after reboot. -->
         <receiver
-            android:name="com.overdrive.app.receiver.LocationBootReceiver"
+            android:name="com.loabletech.bladewatch.receiver.LocationBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -303,28 +303,28 @@
 
         <!-- Location Sidecar Service - Writes GPS to shared file for daemon -->
         <service
-            android:name="com.overdrive.app.services.LocationSidecarService"
+            android:name="com.loabletech.bladewatch.services.LocationSidecarService"
             android:foregroundServiceType="location|dataSync"
             android:exported="false" />
 
         <!-- Daemon Keepalive Service - Keeps app alive and monitors SCREEN_OFF -->
         <service
-            android:name="com.overdrive.app.services.DaemonKeepaliveService"
+            android:name="com.loabletech.bladewatch.services.DaemonKeepaliveService"
             android:foregroundServiceType="specialUse|dataSync"
             android:exported="false" />
 
         <!-- Status Overlay Service - Floating recording/trip status indicator -->
         <service
-            android:name="com.overdrive.app.overlay.StatusOverlayService"
+            android:name="com.loabletech.bladewatch.overlay.StatusOverlayService"
             android:foregroundServiceType="specialUse|dataSync"
             android:exported="false" />
 
         <!-- AccessibilityService Keep-Alive - Highest process priority protection.
              Prevents BYD firmware from killing the app after 24 hours.
-             Enable via: settings put secure enabled_accessibility_services com.overdrive.app/com.overdrive.app.services.KeepAliveAccessibilityService
+             Enable via: settings put secure enabled_accessibility_services com.loabletech.bladewatch/com.loabletech.bladewatch.services.KeepAliveAccessibilityService
                          settings put secure accessibility_enabled 1 -->
         <service
-            android:name="com.overdrive.app.services.KeepAliveAccessibilityService"
+            android:name="com.loabletech.bladewatch.services.KeepAliveAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>

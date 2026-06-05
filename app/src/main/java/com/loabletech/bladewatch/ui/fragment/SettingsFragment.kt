@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -16,21 +16,21 @@ import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.overdrive.app.BuildConfig
-import com.overdrive.app.R
-import com.overdrive.app.config.UnifiedConfigManager
-import com.overdrive.app.ui.MainActivity
+import com.loabletech.bladewatch.BuildConfig
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.config.UnifiedConfigManager
+import com.loabletech.bladewatch.ui.MainActivity
 import org.json.JSONObject
-import com.overdrive.app.updater.AppUpdater
-import com.overdrive.app.ui.dialog.LanguagePickerDialog
-import com.overdrive.app.ui.fragment.settings.SettingsAppearanceFragment
-import com.overdrive.app.ui.fragment.settings.SettingsDaemonsFragment
-import com.overdrive.app.ui.fragment.settings.SettingsOverlayFragment
-import com.overdrive.app.ui.fragment.settings.SettingsPrivacyFragment
-import com.overdrive.app.ui.fragment.settings.SettingsRecordingFragment
-import com.overdrive.app.ui.fragment.settings.SettingsSurveillanceFragment
-import com.overdrive.app.ui.util.PreferencesManager
-import com.overdrive.app.ui.util.navigateDrillDown
+import com.loabletech.bladewatch.updater.AppUpdater
+import com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsAppearanceFragment
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsDaemonsFragment
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsOverlayFragment
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsPrivacyFragment
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsRecordingFragment
+import com.loabletech.bladewatch.ui.fragment.settings.SettingsSurveillanceFragment
+import com.loabletech.bladewatch.ui.util.PreferencesManager
+import com.loabletech.bladewatch.ui.util.navigateDrillDown
 import java.util.Locale
 
 /**
@@ -327,7 +327,7 @@ class SettingsFragment : Fragment() {
      */
     private fun kickOverlayRefresh() {
         val ctx = context ?: return
-        com.overdrive.app.overlay.StatusOverlayService.startIfPermitted(ctx)
+        com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(ctx)
     }
 
     private fun setupResetRow(view: View) {
@@ -338,7 +338,7 @@ class SettingsFragment : Fragment() {
 
     /**
      * Footer line at the bottom of the portrait hub. Read-only. Shows
-     * "OverDrive vX.Y · com.overdrive.app" so power users can confirm
+     * "BladeWatch vX.Y · com.loabletech.bladewatch" so power users can confirm
      * the running version + package id without diving into About.
      */
     private fun setupFooter(view: View) {

@@ -1,9 +1,9 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.GpsMonitor;
-import com.overdrive.app.monitor.VehicleDataMonitor;
-import com.overdrive.app.storage.StorageManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.storage.StorageManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -368,7 +368,7 @@ public class TripApiHandler {
             // Read current conditions from existing monitors
             double currentSoc = 0;
             try {
-                com.overdrive.app.monitor.BatterySocData socData =
+                com.loabletech.bladewatch.monitor.BatterySocData socData =
                         VehicleDataMonitor.getInstance().getBatterySoc();
                 if (socData != null) {
                     currentSoc = socData.socPercent;
@@ -413,7 +413,7 @@ public class TripApiHandler {
             if (estimate != null) {
                 // Add built-in range for comparison
                 try {
-                    com.overdrive.app.monitor.DrivingRangeData rangeData =
+                    com.loabletech.bladewatch.monitor.DrivingRangeData rangeData =
                             VehicleDataMonitor.getInstance().getDrivingRange();
                     if (rangeData != null) {
                         estimate.builtInRangeKm = rangeData.elecRangeKm;
@@ -490,8 +490,8 @@ public class TripApiHandler {
                     config.setDistanceUnit(unit);
                     // Propagate to BydDataCollector so the conversion factor updates immediately
                     try {
-                        com.overdrive.app.byd.BydDataCollector collector =
-                                com.overdrive.app.byd.BydDataCollector.getInstance();
+                        com.loabletech.bladewatch.byd.BydDataCollector collector =
+                                com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
                         if (collector != null) {
                             collector.setDistanceUnitOverride("mi".equals(unit) ? "mi" : "km");
                         }
@@ -771,8 +771,8 @@ public class TripApiHandler {
         if (trip.socStart <= 0 || trip.socEnd <= 0 || trip.socStart <= trip.socEnd) return;
         
         try {
-            com.overdrive.app.abrp.SohEstimator soh = 
-                com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+            com.loabletech.bladewatch.abrp.SohEstimator soh = 
+                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
             if (soh != null && soh.getNominalCapacityKwh() > 0) {
                 double nominal = soh.getNominalCapacityKwh();
                 double sohPercent = soh.hasEstimate() ? soh.getCurrentSoh() : 100.0;

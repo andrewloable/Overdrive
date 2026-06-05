@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">Mantenga activo el seguimiento del vehículo de Overdrive en segundo plano. Este servicio no lee ni interactúa con el contenido de la pantalla.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">Mantenga activo el seguimiento del vehículo de BladeWatch en segundo plano. Este servicio no lee ni interactúa con el contenido de la pantalla.</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_clear_plain">Borrar</string>
     <string name="action_select_all">Seleccione todos</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2 de la Comisión</string>
     <string name="setup_step_three_label">3 El Parlamento Europeo</string>
     <string name="setup_language_title">Elige tu lenguaje</string>
-    <string name="setup_language_body">Por defecto en el idioma de su unidad principal. Toque para elegir uno diferente para la aplicación OverDrive y el túnel web.</string>
+    <string name="setup_language_body">Por defecto en el idioma de su unidad principal. Toque para elegir uno diferente para la aplicación BladeWatch y el túnel web.</string>
     <string name="setup_language_button">Elige el idioma</string>
     <string name="setup_autostart_title">Deshabilitar la restricción de arranque automático</string>
-    <string name="setup_autostart_body">Toque abajo para abrir BYD Auto-Start. Encuentra OverDrive en la lista y desmarque la casilla. BYD borra esto en cada instalación  lo volverás a hacer después de las actualizaciones.</string>
+    <string name="setup_autostart_body">Toque abajo para abrir BYD Auto-Start. Encuentra BladeWatch en la lista y desmarque la casilla. BYD borra esto en cada instalación  lo volverás a hacer después de las actualizaciones.</string>
     <string name="setup_autostart_button">Abre BYD arranque automático</string>
     <string name="setup_overlay_title">Permite que se muestre en otras aplicaciones</string>
     <string name="setup_overlay_body">Habilitar esto para mostrar un indicador de estado flotante para grabar y rastrear viajes en la parte superior de otras aplicaciones.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive Estado</string>
+    <string name="status_overlay_notif_title">BladeWatch Estado</string>
     <string name="status_overlay_notif_text">Superposición de estado activa</string>
     <string name="rail_dashboard">Tablero de control</string>
     <string name="rail_live">En vivo</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">Subferril de configuración</string>
     <string name="settings_privacy_title">Privacidad y datos</string>
     <string name="settings_privacy_body">El restablecimiento elimina el índice de grabaciones, credenciales almacenadas en caché, estado del demonio y preferencias en el dispositivo.</string>
-    <string name="settings_about_title">Sobre OverDrive</string>
+    <string name="settings_about_title">Sobre BladeWatch</string>
     <string name="settings_about_version_label">Versión</string>
     <string name="settings_about_package_label">Construir</string>
     <string name="settings_about_check_update_value">Compruebe la última versión de GitHub e instálela si es más reciente.</string>
     <string name="settings_about_support_section">Alimentado por gente como tú</string>
     <string name="settings_about_support_share_title">Cuéntaselo a otro propietario</string>
-    <string name="settings_about_support_share_value">Cada enlace compartido ayuda a otro propietario de BYD a descubrir Overdrive.</string>
-    <string name="settings_about_support_share_message">Consulte Overdrive  vigilancia de código abierto y dashcam para BYD: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">Cada enlace compartido ayuda a otro propietario de BYD a descubrir BladeWatch.</string>
+    <string name="settings_about_support_share_message">Consulte BladeWatch  vigilancia de código abierto y dashcam para BYD: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Compartir el exceso</string>
     <string name="settings_about_open_link_failed">No pude abrir el enlace.</string>
     <string name="settings_about_open_link_copied">No se ha encontrado ningún navegador. URL copiado: %1$s</string>
@@ -381,7 +381,7 @@
     <string name="settings_about_license_title">Licencia</string>
     <string name="settings_about_license_value">MIT  código abierto. Toque para ver el texto completo.</string>
     <string name="settings_about_source_title">Código fuente</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_license_url">El proyecto de ley de la ley de licencia para el uso de la tecnología de la información (Licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia para la licencia de licencia para la licencia para la licencia de licencia para la licencia de licencia para la licencia para la licencia de licencia para la licencia de licencia para la licencia de licencia para la licencia para la licencia de licencia para la licencia de licencia para la licencia para la licencia de licencia para la licencia de licencia.</string>
     <string name="settings_about_source_url">La versión de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original de la versión original.</string>
     <string name="settings_about_star_title">Deja un en GitHub</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">Inspeccione la célula SOH y empaque las estadísticas.</string>
     <string name="diagnostics_settings_subtitle">Las preferencias de la aplicación, el tema y el idioma.</string>
     <string name="integrations_hero_title">Las integraciones</string>
-    <string name="integrations_hero_subtitle">Conecte Overdrive a sus servicios.</string>
+    <string name="integrations_hero_subtitle">Conecte BladeWatch a sus servicios.</string>
     <string name="integrations_status_unknown">Toque para configurar</string>
     <string name="integrations_status_configured">Configurado</string>
     <string name="integrations_status_not_set_up">No está instalado</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Configuración</string>
     <string name="settings_action_check_update">Compruebe las actualizaciones</string>
     <string name="settings_action_reset_data">Resetear los datos...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">En vigilancia</string>
     <string name="dashboard_subtitle_all_systems">Todos los sistemas en línea</string>
     <string name="dashboard_subtitle_some_offline">%1$d de los servicios %2$d en línea</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Buffers pre/post, codec, límites de almacenamiento.</string>
     <string name="settings_section_surveillance_subtitle">Zonas de detección, horario, sensibilidad al movimiento.</string>
     <string name="settings_section_daemons_subtitle">Los corredores Zrok, Telegram, MQTT.</string>
-    <string name="settings_about_row_title">Sobre OverDrive</string>
+    <string name="settings_about_row_title">Sobre BladeWatch</string>
     <string name="settings_about_row_subtitle">Versión, licencia, desarrollo de soporte.</string>
     <string name="settings_reset_row_subtitle">Grabaciones claras, eventos, o todos los cachés.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Temas, lenguaje y preferencias visuales.</string>
     <string name="settings_theme_active_auto_caption">Auto sigue su tema del sistema.</string>
     <string name="settings_theme_active_light_caption">El tema de la luz siempre está encendido.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d de las lenguas %2$d disponibles</string>
     <string name="settings_language_card_title">Lenguaje de visualización</string>
     <string name="settings_privacy_stance_title">En el dispositivo por defecto</string>
-    <string name="settings_privacy_stance_body">OverDrive funciona completamente en la unidad principal. No sale telemetría de su coche excepto a través de los túneles e integraciones que usted configure explícitamente.</string>
+    <string name="settings_privacy_stance_body">BladeWatch funciona completamente en la unidad principal. No sale telemetría de su coche excepto a través de los túneles e integraciones que usted configure explícitamente.</string>
     <string name="settings_privacy_overline_storage">Almacenamiento local</string>
     <string name="settings_privacy_overline_reset">Reset de datos</string>
     <string name="settings_privacy_storage_clips_label">Clips en el disco</string>
@@ -526,7 +526,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">Datos pendientes</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">Bienvenido  Overdrive es ahora tu segundo par de ojos.</string>
+    <string name="dashboard_insight_welcome">Bienvenido  BladeWatch es ahora tu segundo par de ojos.</string>
     <string name="dashboard_insight_parked_charged_kwh">Recogió %1$s (≈%2$s) mientras estacionado</string>
     <string name="dashboard_insight_parked_charged">Recogió %1$s mientras estacionó</string>
     <string name="dashboard_insight_parked_drained_kwh">Usó %1$s (≈%2$s) desde que estacionó</string>

@@ -1,7 +1,7 @@
-package com.overdrive.app.mqtt;
+package com.loabletech.bladewatch.mqtt;
 
-import com.overdrive.app.config.SecretConfigBridge;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.config.SecretConfigBridge;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

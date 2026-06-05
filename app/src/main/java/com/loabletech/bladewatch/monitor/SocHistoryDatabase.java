@@ -1,6 +1,6 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,7 +31,7 @@ public class SocHistoryDatabase {
     // H2 JDBC URL - file-based embedded database
     // FILE_LOCK=SOCKET uses socket-based locking (more reliable than file locks on Android)
     // AUTO_SERVER=TRUE allows multiple processes to connect via TCP fallback
-    private static final String DB_PATH = "/data/local/tmp/overdrive_soc_h2";
+    private static final String DB_PATH = "/data/local/tmp/bladewatch_soc_h2";
     // DB_CLOSE_ON_EXIT=FALSE: we drive shutdown ourselves from CameraDaemon.shutdown().
     // Without it, H2's JVM shutdown hook runs concurrently with our explicit
     // stop() and our last in-flight 2-minute SOC tick, producing the
@@ -77,7 +77,7 @@ public class SocHistoryDatabase {
     private double lastRecordedKwh = -1;
     
     // SohEstimator reference (set externally)
-    private volatile com.overdrive.app.abrp.SohEstimator sohEstimator;
+    private volatile com.loabletech.bladewatch.abrp.SohEstimator sohEstimator;
     
     private SocHistoryDatabase() {
         // Load the H2 JDBC driver (pure Java - always works)
@@ -416,11 +416,11 @@ public class SocHistoryDatabase {
             // paths, which would loop currentSoh into itself and freeze
             // the formula at its initial seed forever.
             try {
-                com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
                 if (sohEst != null) {
                     if (sohEst.getNominalCapacityKwh() <= 0) {
                         sohEst.autoDetectCarModel(
-                            com.overdrive.app.daemon.CameraDaemon.getAppContext());
+                            com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext());
                     }
                     if (sohEst.getNominalCapacityKwh() > 0 && !sohEst.hasEstimate()) {
                         sohEst.seedInitialEstimate();
@@ -429,9 +429,9 @@ public class SocHistoryDatabase {
                     double rawRemainKwh = Double.NaN;
                     double highCellV = Double.NaN;
                     try {
-                        com.overdrive.app.byd.BydDataCollector col = com.overdrive.app.byd.BydDataCollector.getInstance();
+                        com.loabletech.bladewatch.byd.BydDataCollector col = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
                         if (col != null && col.isInitialized()) {
-                            com.overdrive.app.byd.BydVehicleData vd = col.getData();
+                            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
                             if (vd != null) {
                                 if (!Double.isNaN(vd.remainKwh)) rawRemainKwh = vd.remainKwh;
                                 if (!Double.isNaN(vd.highCellVoltage)) highCellV = vd.highCellVoltage;
@@ -460,9 +460,9 @@ public class SocHistoryDatabase {
             double hvTempHigh = -999, hvTempLow = -999, hvTempAvg = -999;
             double cellVoltHigh = -999, cellVoltLow = -999;
             try {
-                com.overdrive.app.byd.BydDataCollector collector = com.overdrive.app.byd.BydDataCollector.getInstance();
+                com.loabletech.bladewatch.byd.BydDataCollector collector = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
                 if (collector.isInitialized()) {
-                    com.overdrive.app.byd.BydVehicleData vd = collector.getData();
+                    com.loabletech.bladewatch.byd.BydVehicleData vd = collector.getData();
                     if (vd != null) {
                         if (!Double.isNaN(vd.highCellTempC)) hvTempHigh = vd.highCellTempC;
                         if (!Double.isNaN(vd.lowCellTempC)) hvTempLow = vd.lowCellTempC;
@@ -487,7 +487,7 @@ public class SocHistoryDatabase {
             // SOH from SohEstimator (via AbrpTelemetryService)
             double sohPercent = -999;
             try {
-                com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
                 if (sohEst != null && sohEst.hasEstimate()) {
                     sohPercent = sohEst.getCurrentSoh();
                     logger.debug("SOH from estimator: " + String.format("%.1f", sohPercent) + "%");
@@ -632,7 +632,7 @@ public class SocHistoryDatabase {
                 boolean isAcCharge = true; // Assume AC unless peak power > 20 kW
                 double packTemp = 25.0;    // Default — updated below if available
                 
-                com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
                 double nominalKwh = sohEst != null ? sohEst.getNominalCapacityKwh() : 0;
                 
                 if (nominalKwh > 0 && socDelta > 0) {
@@ -687,10 +687,10 @@ public class SocHistoryDatabase {
                 if (sohEst != null && socDelta > 0 && energyAdded > 0) {
                     double highCellV = Double.NaN;
                     try {
-                        com.overdrive.app.byd.BydDataCollector col =
-                            com.overdrive.app.byd.BydDataCollector.getInstance();
+                        com.loabletech.bladewatch.byd.BydDataCollector col =
+                            com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
                         if (col != null && col.isInitialized()) {
-                            com.overdrive.app.byd.BydVehicleData vd = col.getData();
+                            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
                             if (vd != null && !Double.isNaN(vd.highCellVoltage)) {
                                 highCellV = vd.highCellVoltage;
                             }
@@ -923,7 +923,7 @@ public class SocHistoryDatabase {
                 double liveKwh = monitor.getBatteryRemainPowerKwh();
                 if (liveKwh > 0) livePoint.put("kwh", Math.round(liveKwh * 10) / 10.0);
                 
-                com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
                 if (sohEst != null && sohEst.hasEstimate()) {
                     livePoint.put("soh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
                 }
@@ -958,7 +958,7 @@ public class SocHistoryDatabase {
     /**
      * Set the SohEstimator reference for recording SOH alongside battery data.
      */
-    public void setSohEstimator(com.overdrive.app.abrp.SohEstimator estimator) {
+    public void setSohEstimator(com.loabletech.bladewatch.abrp.SohEstimator estimator) {
         this.sohEstimator = estimator;
     }
     
@@ -990,7 +990,7 @@ public class SocHistoryDatabase {
         }
     }
     
-    public com.overdrive.app.abrp.SohEstimator getSohEstimator() {
+    public com.loabletech.bladewatch.abrp.SohEstimator getSohEstimator() {
         return sohEstimator;
     }
 
@@ -1009,11 +1009,11 @@ public class SocHistoryDatabase {
      */
     private boolean isVehicleAtRest() {
         try {
-            com.overdrive.app.byd.BydDataCollector col =
-                com.overdrive.app.byd.BydDataCollector.getInstance();
+            com.loabletech.bladewatch.byd.BydDataCollector col =
+                com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
             if (col == null || !col.isInitialized()) return false;
 
-            com.overdrive.app.byd.BydVehicleData vd = col.getData();
+            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
             if (vd == null) return false;
 
             // Speed must be reported and effectively zero.
@@ -1175,7 +1175,7 @@ public class SocHistoryDatabase {
                 current.put("thermalStatus", thermalData.getStatus());
             }
             
-            com.overdrive.app.abrp.SohEstimator sohEst = getSohEstimator();
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
             double oemSoh = sohEst != null ? sohEst.getOemSohPercent() : -1;
             if (sohEst != null && sohEst.hasEstimate()) {
                 current.put("soh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
@@ -1406,7 +1406,7 @@ public class SocHistoryDatabase {
      *
      * Best-effort: any exception is caught and logged; never propagates.
      */
-    public void recordAccEvent(String eventType, com.overdrive.app.byd.BydVehicleData data) {
+    public void recordAccEvent(String eventType, com.loabletech.bladewatch.byd.BydVehicleData data) {
         try {
             if (eventType == null) return;
             String type = eventType.trim().toUpperCase();
@@ -1435,7 +1435,7 @@ public class SocHistoryDatabase {
                 if (!Double.isNaN(data.voltage12v) && data.voltage12v > 0) {
                     voltageV = data.voltage12v;
                 }
-                if (data.elecRangeKm != com.overdrive.app.byd.BydVehicleData.UNAVAILABLE
+                if (data.elecRangeKm != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE
                         && data.elecRangeKm >= 0) {
                     rangeKm = data.elecRangeKm;
                 }

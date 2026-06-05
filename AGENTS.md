@@ -2,6 +2,8 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+> **Legacy reference**: This app was forked from "Overdrive" and rebranded to BladeWatch. The legacy BladeWatch app lives at `/Volumes/mandark-1Tb/projects/loabletech/BladeWatch-Legacy` for reference only — do not modify it.
+
 ## Quick Reference
 
 ```bash

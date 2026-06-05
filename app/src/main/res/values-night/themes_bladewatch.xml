@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Material 3 themes for Overdrive — DARK variant.
+  Material 3 themes for BladeWatch — DARK variant.
   Activated automatically when the system or AppCompatDelegate sets night mode.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.Overdrive.M3" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.BladeWatch.M3" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary -->
         <item name="colorPrimary">@color/md_sys_color_primary_dark</item>
         <item name="colorOnPrimary">@color/md_sys_color_on_primary_dark</item>
@@ -67,14 +67,14 @@
         <item name="android:textColorHint">@color/md_sys_color_outline_dark</item>
 
         <!-- Inherited component styles -->
-        <item name="materialCardViewStyle">@style/Widget.Overdrive.M3.CardView</item>
-        <item name="materialButtonStyle">@style/Widget.Overdrive.M3.Button</item>
-        <item name="materialButtonOutlinedStyle">@style/Widget.Overdrive.M3.Button.Outlined</item>
-        <item name="toolbarStyle">@style/Widget.Overdrive.M3.Toolbar</item>
-        <item name="sliderStyle">@style/Widget.Overdrive.M3.Slider</item>
-        <item name="bottomSheetDialogTheme">@style/Theme.Overdrive.M3.BottomSheet</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Overdrive.M3.MaterialAlertDialog</item>
-        <item name="alertDialogTheme">@style/ThemeOverlay.Overdrive.M3.MaterialAlertDialog</item>
+        <item name="materialCardViewStyle">@style/Widget.BladeWatch.M3.CardView</item>
+        <item name="materialButtonStyle">@style/Widget.BladeWatch.M3.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.BladeWatch.M3.Button.Outlined</item>
+        <item name="toolbarStyle">@style/Widget.BladeWatch.M3.Toolbar</item>
+        <item name="sliderStyle">@style/Widget.BladeWatch.M3.Slider</item>
+        <item name="bottomSheetDialogTheme">@style/Theme.BladeWatch.M3.BottomSheet</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.BladeWatch.M3.MaterialAlertDialog</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.BladeWatch.M3.MaterialAlertDialog</item>
     </style>
 
 </resources>

@@ -1,7 +1,7 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.monitor.GpsMonitor;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
 
 import org.json.JSONObject;
 

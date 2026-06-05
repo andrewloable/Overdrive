@@ -184,7 +184,7 @@
         var action = this.getAttribute('data-action');
         var lang = this.getAttribute('data-lang');
         if (action === 'auto') {
-            try { localStorage.removeItem('overdrive_locale'); } catch (err) {}
+            try { localStorage.removeItem('bladewatch_locale'); } catch (err) {}
             // Re-detect from navigator.language
             var detected = navigator.language || 'en';
             BYD.i18n.setLang(detected).then(closeSheet);

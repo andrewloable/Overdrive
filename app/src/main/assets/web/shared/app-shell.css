@@ -1,11 +1,11 @@
 /*
- * Overdrive — App-shell visual identity layer.
+ * BladeWatch — App-shell visual identity layer.
  *
  * The base sidebar / nav-link / status-card rules live in styles.css and are
  * already applied to the dynamically-rendered <aside class="sidebar"> emitted
  * by app-shell.js. This file adds:
  *
- *   1. The Overdrive accent stripe — a 3px linear gradient that runs across
+ *   1. The BladeWatch accent stripe — a 3px linear gradient that runs across
  *      the top of every page's sidebar, mirroring the toolbar accent stripe
  *      on the native side. Same gradient on both layers = same identity.
  *   2. A glass-style top app bar styling for pages that mount one

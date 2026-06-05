@@ -1,4 +1,4 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.graphics.ImageFormat;
 import android.hardware.HardwareBuffer;
@@ -9,7 +9,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.Surface;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.File;
 import java.lang.reflect.Constructor;

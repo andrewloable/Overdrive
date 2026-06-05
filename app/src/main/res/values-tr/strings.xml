@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
+    <string name="app_name">BladeWatch</string>
     <string name="accessibility_service_description">Bu hizmet ekran içeriğini okumamaktadır veya etkileşime girmez.</string>
     <string name="action_cancel">İptal</string>
     <string name="action_clear_plain">Temizle</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">Dilinizi Seçin</string>
-    <string name="setup_language_body">OverDrive uygulaması ve web tüneli için farklı bir dil seçmek için basın.</string>
+    <string name="setup_language_body">BladeWatch uygulaması ve web tüneli için farklı bir dil seçmek için basın.</string>
     <string name="setup_language_button">Dil Seç</string>
     <string name="setup_autostart_title">Otomatik Başlatma Sınırını Engelle</string>
-    <string name="setup_autostart_body">BYD Otomatik Başlatma açmak için aşağıdakine tıklayın. OverDrive listesinde bulun ve kutuyu açın. BYD bunu her yüklemede siler  güncelleştirmelerden sonra yeniden yapacaksınız.</string>
+    <string name="setup_autostart_body">BYD Otomatik Başlatma açmak için aşağıdakine tıklayın. BladeWatch listesinde bulun ve kutuyu açın. BYD bunu her yüklemede siler  güncelleştirmelerden sonra yeniden yapacaksınız.</string>
     <string name="setup_autostart_button">BYD Otomatik Başlatma Aç</string>
     <string name="setup_overlay_title">Diğer Uygulamalarda Gösterilmesine İzin Ver</string>
     <string name="setup_overlay_body">Diğer uygulamalar üzerinde kaydetme ve seyahat izleme için yüzen bir durum göstergesi göstermek için bunu etkinleştirin.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive Durumu</string>
+    <string name="status_overlay_notif_title">BladeWatch Durumu</string>
     <string name="status_overlay_notif_text">Durum üstü aktif</string>
     <string name="rail_dashboard">Tablo</string>
     <string name="rail_live">Canlı</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">Yapılandırma alt demiryolu</string>
     <string name="settings_privacy_title">Gizlilik &amp; Veriler</string>
     <string name="settings_privacy_body">Reset kayıt indeksini, önbelleğe alınan kimlik bilgileri, daemon durumunu ve cihazdaki tercihleri temizler.</string>
-    <string name="settings_about_title">OverDrive hakkında</string>
+    <string name="settings_about_title">BladeWatch hakkında</string>
     <string name="settings_about_version_label">Versiyon</string>
     <string name="settings_about_package_label">İnşaat</string>
     <string name="settings_about_check_update_value">En son GitHub sürümünü kontrol edin ve daha yeniyse yükleyin.</string>
     <string name="settings_about_support_section">Senin gibi insanlar tarafından güçlendirilmiş.</string>
     <string name="settings_about_support_share_title">Başka bir araç sahibine bahset</string>
-    <string name="settings_about_support_share_value">Paylaşılan her bağlantı başka bir BYD sahibinin Overdrive\'i keşfetmesine yardımcı olur.</string>
-    <string name="settings_about_support_share_message">BYD için Overdrive  açık kaynaklı gözetim &amp; dashcam\'ı kontrol edin: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">Paylaşılan her bağlantı başka bir BYD sahibinin BladeWatch\'i keşfetmesine yardımcı olur.</string>
+    <string name="settings_about_support_share_message">BYD için BladeWatch  açık kaynaklı gözetim &amp; dashcam\'ı kontrol edin: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Paylaşım Aşırı Sürüş</string>
     <string name="settings_about_open_link_failed">Bağlantıyı açamadım.</string>
     <string name="settings_about_open_link_copied">URL kopyalandı: %1$s</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">Lisans</string>
     <string name="settings_about_license_value">MIT  açık kaynak. Tam metni görüntülemek için dokunun.</string>
     <string name="settings_about_source_title">Kaynak kodu</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yash-srivastava/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">https://github.com/yash-srivastava/BladeWatch-release/blob/main/license</string>
+    <string name="settings_about_source_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">GitHub\'da bir bırak</string>
     <string name="settings_about_star_value">Bir saniye sürer, çok şey ifade eder.</string>
-    <string name="settings_about_star_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">Teşekkürler</string>
     <string name="settings_about_thanks_subtitle">Katkıda bulunanların ve destekçilerin yardımıyla kuruldu.</string>
     <string name="settings_about_contributors_title">Katkıda bulunanlar</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">SOH hücresini kontrol et ve istatistikleri topla.</string>
     <string name="diagnostics_settings_subtitle">Uygulama tercihleri, tema ve dil.</string>
     <string name="integrations_hero_title">Entegreler</string>
-    <string name="integrations_hero_subtitle">Overdrive\'ı hizmetlerinize bağlayın.</string>
+    <string name="integrations_hero_subtitle">BladeWatch\'ı hizmetlerinize bağlayın.</string>
     <string name="integrations_status_unknown">Yapılandırmak için dokun</string>
     <string name="integrations_status_configured">Yapılandırılmış</string>
     <string name="integrations_status_not_set_up">Yapılandırılmamış .</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Yapılandırma</string>
     <string name="settings_action_check_update">Güncellemeleri kontrol edin</string>
     <string name="settings_action_reset_data">Verileri yeniden ayarlayın...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">Nöbette</string>
     <string name="dashboard_subtitle_all_systems">Tüm sistemler çevrimiçi</string>
     <string name="dashboard_subtitle_some_offline">%1$d of %2$d online hizmetleri</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Ön / sonrası tamponlar, kodekler, depolama sınırları.</string>
     <string name="settings_section_surveillance_subtitle">Deteksiyon bölgeleri, program, hareket hassasiyeti.</string>
     <string name="settings_section_daemons_subtitle">Bulutlu, Zrok, Telegram, MQTT koşucuları.</string>
-    <string name="settings_about_row_title">OverDrive hakkında</string>
+    <string name="settings_about_row_title">BladeWatch hakkında</string>
     <string name="settings_about_row_subtitle">Versiyon, lisans, destek geliştirme.</string>
     <string name="settings_reset_row_subtitle">Kayıtları, olayları ya da tüm gizli yerleri temizle.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Tema, dil ve görsel tercihler.</string>
     <string name="settings_theme_active_auto_caption">Otomatik sistem temasını takip eder.</string>
     <string name="settings_theme_active_light_caption">Işık teması her zaman açık.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d\'den %2$d dillerinde mevcut</string>
     <string name="settings_language_card_title">Gösterim dili</string>
     <string name="settings_privacy_stance_title">Öntanımlı olarak cihazda</string>
-    <string name="settings_privacy_stance_body">OverDrive tamamen ana birimle çalışır. Arabanızdan açıkça ayarladığınız tüneller ve entegrasyonlar dışında hiçbir telemetri çıkmaz.</string>
+    <string name="settings_privacy_stance_body">BladeWatch tamamen ana birimle çalışır. Arabanızdan açıkça ayarladığınız tüneller ve entegrasyonlar dışında hiçbir telemetri çıkmaz.</string>
     <string name="settings_privacy_overline_storage">Yerel depolama</string>
     <string name="settings_privacy_overline_reset">Veri Yeniden Sunu</string>
     <string name="settings_privacy_storage_clips_label">Disk üzerindeki klipler</string>
@@ -526,7 +526,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">Bekleyen veriler</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">Hoşgeldiniz  Overdrive şimdi ikinci göz çiftiniz.</string>
+    <string name="dashboard_insight_welcome">Hoşgeldiniz  BladeWatch şimdi ikinci göz çiftiniz.</string>
     <string name="dashboard_insight_parked_charged_kwh">%1$s (≈%2$s) park ederken alındı.</string>
     <string name="dashboard_insight_parked_charged">%1$s\'i park ederken aldım.</string>
     <string name="dashboard_insight_parked_drained_kwh">Park ettiğinden beri %1$s (≈%2$s) kullandın</string>

@@ -1,6 +1,6 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.util.ArrayList;
 import java.util.List;

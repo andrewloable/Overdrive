@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment.settings
+package com.loabletech.bladewatch.ui.fragment.settings
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -30,12 +30,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import com.overdrive.app.BuildConfig
-import com.overdrive.app.R
-import com.overdrive.app.ui.MainActivity
+import com.loabletech.bladewatch.BuildConfig
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.MainActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.overdrive.app.ui.util.PreferencesManager
-import com.overdrive.app.updater.AppUpdater
+import com.loabletech.bladewatch.ui.util.PreferencesManager
+import com.loabletech.bladewatch.updater.AppUpdater
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -96,7 +96,7 @@ class SettingsAboutFragment : Fragment() {
         }
 
         view.findViewById<View>(R.id.cardShare).setOnClickListener {
-            shareOverdrive()
+            shareBladeWatch()
         }
 
         view.findViewById<View>(R.id.cardSupport).setOnClickListener {
@@ -394,7 +394,7 @@ class SettingsAboutFragment : Fragment() {
         (v * resources.displayMetrics.density).toInt()
 
     /** Fire an Android share-chooser with a prefilled message + repo link. */
-    private fun shareOverdrive() {
+    private fun shareBladeWatch() {
         val ctx = context ?: return
         try {
             val send = Intent(Intent.ACTION_SEND).apply {

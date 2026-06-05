@@ -1,8 +1,8 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.byd.cloud.crypto.CredentialCipher;
-import com.overdrive.app.config.SecretConfigBridge;
-import com.overdrive.app.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.byd.cloud.crypto.CredentialCipher;
+import com.loabletech.bladewatch.config.SecretConfigBridge;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
 
 import org.json.JSONObject;
 
@@ -51,7 +51,7 @@ public final class BydCloudConfig {
         this.energyType = energyType != null ? energyType : "";
         // Device fingerprint derived from username (matches Niek/BYD-re)
         this.imeiMd5 = (username != null && !username.isEmpty())
-                ? com.overdrive.app.byd.cloud.crypto.BydCryptoUtils.md5Hex(username)
+                ? com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils.md5Hex(username)
                 : "00000000000000000000000000000000";
         this.appInnerVersion = "323";
         this.appVersion = "3.2.3";

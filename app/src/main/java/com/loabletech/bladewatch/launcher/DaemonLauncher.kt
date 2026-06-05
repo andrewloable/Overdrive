@@ -1,8 +1,8 @@
-package com.overdrive.app.launcher
+package com.loabletech.bladewatch.launcher
 
 import android.content.Context
 import android.provider.Settings
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Launches daemon processes via ADB shell using app_process.
@@ -201,7 +201,7 @@ class DaemonLauncher(
                 "-Djava.library.path=$nativeLibDir:/system/lib64:/vendor/lib64:/product/lib64:/odm/lib64 " +
                 "${proxyArgs}/system/bin " +
                 "--nice-name=$CAMERA_DAEMON_PROCESS " +
-                "com.overdrive.app.daemon.CameraDaemon " +
+                "com.loabletech.bladewatch.daemon.CameraDaemon " +
                 "$outputDir $nativeLibDir >> \"\$LOG_FILE\" 2>&1",
             "",
             "  EXIT_CODE=\$?",
@@ -312,7 +312,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$CAMERA_DAEMON_PROCESS ")
-            append("com.overdrive.app.daemon.CameraDaemon ")
+            append("com.loabletech.bladewatch.daemon.CameraDaemon ")
             append("$outputDir ")
             append("$nativeLibDir")
         }
@@ -380,7 +380,7 @@ class DaemonLauncher(
                 append(proxyArgs)
                 append("/system/bin ")
                 append("--nice-name=$SENTRY_DAEMON_PROCESS ")
-                append("com.overdrive.app.daemon.SentryDaemon")
+                append("com.loabletech.bladewatch.daemon.SentryDaemon")
             }
             
             logManager.debug(TAG, "SentryDaemon command: $innerCmd")
@@ -666,7 +666,7 @@ class DaemonLauncher(
             "#!/system/bin/sh",
             "# AccSentryDaemon Watchdog Script",
             "APK_PATH=\"$apkPath\"",
-            "CLS=\"com.overdrive.app.daemon.AccSentryDaemon\"",
+            "CLS=\"com.loabletech.bladewatch.daemon.AccSentryDaemon\"",
             "PROCESS_NAME=\"$ACC_SENTRY_DAEMON_PROCESS\"",
             "LOG_FILE=\"$ACC_SENTRY_DAEMON_LOG\"",
             "LOCK_FILE=\"$lockFile\"",
@@ -793,7 +793,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$ACC_SENTRY_DAEMON_PROCESS ")
-            append("com.overdrive.app.daemon.AccSentryDaemon")
+            append("com.loabletech.bladewatch.daemon.AccSentryDaemon")
         }
         
         val cmd = "nohup sh -c '$innerCmd' > $ACC_SENTRY_DAEMON_LOG 2>&1 &"
@@ -947,7 +947,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$TELEGRAM_DAEMON_PROCESS ")
-            append("com.overdrive.app.daemon.TelegramBotDaemon")
+            append("com.loabletech.bladewatch.daemon.TelegramBotDaemon")
         }
         
         val cmd = "nohup sh -c '$innerCmd' > $TELEGRAM_DAEMON_LOG 2>&1 &"
@@ -986,7 +986,7 @@ class DaemonLauncher(
             val outputDir = context.getExternalFilesDir(null)?.absolutePath
                 ?: "/sdcard/DCIM/BYDCam"
             val apkPath = context.applicationInfo.sourceDir
-            com.overdrive.app.telegram.config.UnifiedTelegramConfig
+            com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig
                 .setLaunchPaths(outputDir, apkPath)
             logManager.debug(TAG, "Wrote outputDir/apkPath to unified telegram config")
         } catch (e: Exception) {
@@ -1199,7 +1199,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$PROXY_DAEMON_PROCESS ")
-            append("com.overdrive.app.daemon.GlobalProxyDaemon")
+            append("com.loabletech.bladewatch.daemon.GlobalProxyDaemon")
         }
         
         logManager.debug(TAG, "Executing: nohup sh -c '$innerCmd' > $PROXY_DAEMON_LOG 2>&1 &")
@@ -1753,7 +1753,7 @@ class DaemonLauncher(
     }
     
     private fun grantBodyworkPermissions(callback: LaunchCallback, onComplete: () -> Unit) {
-        val packageName = "com.overdrive.app"
+        val packageName = "com.loabletech.bladewatch"
         val permissions = listOf(
             "android.permission.BYDAUTO_BODYWORK_COMMON",
             "android.permission.BYDAUTO_BODYWORK_GET",

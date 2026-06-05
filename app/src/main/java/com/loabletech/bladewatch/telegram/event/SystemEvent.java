@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.event;
+package com.loabletech.bladewatch.telegram.event;
 
 /**
  * Base class for all system events that can trigger Telegram notifications.

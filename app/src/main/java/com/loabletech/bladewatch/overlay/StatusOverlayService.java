@@ -1,4 +1,4 @@
-package com.overdrive.app.overlay;
+package com.loabletech.bladewatch.overlay;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,7 +22,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.overdrive.app.R;
+import com.loabletech.bladewatch.R;
 
 import org.json.JSONObject;
 
@@ -456,7 +456,7 @@ public class StatusOverlayService extends Service {
     private JSONObject fetchStatus() {
         HttpURLConnection conn = null;
         try {
-            conn = com.overdrive.app.util.DaemonHttpClient.open(
+            conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                 "/status", "GET", 2000, 2000);
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(
@@ -494,7 +494,7 @@ public class StatusOverlayService extends Service {
                 // Read configured mode from UnifiedConfigManager config file
                 // (both app and daemon can read this file)
                 try {
-                    java.io.File configFile = new java.io.File("/data/local/tmp/overdrive_config.json");
+                    java.io.File configFile = new java.io.File("/data/local/tmp/bladewatch_config.json");
                     if (configFile.exists()) {
                         java.io.BufferedReader cfgReader = new java.io.BufferedReader(
                                 new java.io.FileReader(configFile));
@@ -524,7 +524,7 @@ public class StatusOverlayService extends Service {
             } else {
                 // Fallback: read trip config from file
                 try {
-                    java.io.File configFile = new java.io.File("/data/local/tmp/overdrive_config.json");
+                    java.io.File configFile = new java.io.File("/data/local/tmp/bladewatch_config.json");
                     if (configFile.exists()) {
                         java.io.BufferedReader cfgReader = new java.io.BufferedReader(
                                 new java.io.FileReader(configFile));
@@ -553,7 +553,7 @@ public class StatusOverlayService extends Service {
 
     private void updateUI() {
         // User-facing visibility toggles. Stored in the unified config file
-        // (/data/local/tmp/overdrive_config.json) rather than SharedPreferences
+        // (/data/local/tmp/bladewatch_config.json) rather than SharedPreferences
         // because both the app UID and the shell/daemon UID need to see the
         // same values. Read fresh on every poll so a flip in Settings reflects
         // without a service restart. Defaults to true so existing installs
@@ -562,7 +562,7 @@ public class StatusOverlayService extends Service {
         boolean tripOverlayEnabled = true;
         try {
             JSONObject statusOverlayCfg =
-                com.overdrive.app.config.UnifiedConfigManager.loadConfig()
+                com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
                     .optJSONObject("statusOverlay");
             if (statusOverlayCfg != null) {
                 cameraOverlayEnabled = statusOverlayCfg.optBoolean("cameraVisible", true);
@@ -809,7 +809,7 @@ public class StatusOverlayService extends Service {
     private void postTripConfig(boolean enabled) {
         HttpURLConnection conn = null;
         try {
-            conn = com.overdrive.app.util.DaemonHttpClient.open(
+            conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                 "/api/trips/config", "POST", 2000, 2000);
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
@@ -895,5 +895,5 @@ public class StatusOverlayService extends Service {
     }
 
     public static final String ACTION_REFRESH_THEME =
-            "com.overdrive.app.overlay.REFRESH_THEME";
+            "com.loabletech.bladewatch.overlay.REFRESH_THEME";
 }

@@ -223,8 +223,8 @@ var VC = {
         // to re-fetch so the silhouette + paint colour update instantly,
         // without waiting for a page navigation.
         try {
-            if (window.OverdriveAppShell && typeof window.OverdriveAppShell.refreshVehicle === 'function') {
-                window.OverdriveAppShell.refreshVehicle();
+            if (window.BladeWatchAppShell && typeof window.BladeWatchAppShell.refreshVehicle === 'function') {
+                window.BladeWatchAppShell.refreshVehicle();
             }
         } catch(e) {}
     },
@@ -488,7 +488,7 @@ var VC = {
 
         // Resolve the model path: bundled (seal) loads instantly; everything else is
         // downloaded server-side and then served from the persistent cache through the
-        // same URL (HttpServer.serveStaticFile() falls back to /data/local/tmp/overdrive/models/).
+        // same URL (HttpServer.serveStaticFile() falls back to /data/local/tmp/bladewatch/models/).
         this.ModelStore.ensureLoaded(modelId, this.manifest, function(modelPath, err) {
             if (gen !== self._loadGen) return; // user picked a different model meanwhile
             if (err) {
@@ -1095,7 +1095,7 @@ var VC = {
      * download and polls for progress, surfacing a percentage to the loading overlay.
      *
      * Bundled models (manifest.bundled === true) skip the server roundtrip entirely.
-     * Once a model has been downloaded once it lives in /data/local/tmp/overdrive/models/
+     * Once a model has been downloaded once it lives in /data/local/tmp/bladewatch/models/
      * and the server transparently serves it under the same shared/models/<file>.glb URL.
      */
     ModelStore: {

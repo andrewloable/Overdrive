@@ -1,7 +1,7 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
 import android.animation.ValueAnimator;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * AdaptiveBitrateController - Adjusts encoder bitrate based on motion score.

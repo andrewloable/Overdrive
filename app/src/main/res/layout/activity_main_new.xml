@@ -233,7 +233,7 @@
                 </com.google.android.material.appbar.MaterialToolbar>
 
                 <!--
-                  Overdrive accent stripe. 3dp gradient under the toolbar
+                  BladeWatch accent stripe. 3dp gradient under the toolbar
                   (primary → tertiary), mirroring the same stripe on the
                   WebView side. Same identity, different content area.
                 -->

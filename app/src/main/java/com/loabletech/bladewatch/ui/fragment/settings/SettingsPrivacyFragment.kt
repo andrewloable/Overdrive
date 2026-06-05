@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment.settings
+package com.loabletech.bladewatch.ui.fragment.settings
 
 import android.os.Bundle
 import android.os.Handler
@@ -10,9 +10,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
-import com.overdrive.app.R
-import com.overdrive.app.ui.MainActivity
-import com.overdrive.app.ui.util.RecordingScanner
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.MainActivity
+import com.loabletech.bladewatch.ui.util.RecordingScanner
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.adapter
+package com.loabletech.bladewatch.ui.adapter
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -15,8 +15,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.ui.model.RecordingFile
-import com.overdrive.app.R
+import com.loabletech.bladewatch.ui.model.RecordingFile
+import com.loabletech.bladewatch.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

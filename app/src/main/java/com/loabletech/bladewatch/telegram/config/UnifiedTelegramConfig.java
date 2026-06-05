@@ -1,7 +1,7 @@
-package com.overdrive.app.telegram.config;
+package com.loabletech.bladewatch.telegram.config;
 
-import com.overdrive.app.config.SecretConfigBridge;
-import com.overdrive.app.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.config.SecretConfigBridge;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
 
 import org.json.JSONObject;
 

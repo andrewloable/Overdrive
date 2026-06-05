@@ -22,7 +22,7 @@
  */
 (function () {
     'use strict';
-    var STORAGE_KEY = 'overdrive_theme';
+    var STORAGE_KEY = 'bladewatch_theme';
     var DEFAULT_THEME = 'dark';
 
     // ─── Step 1: instant first paint ────────────────────────────────────────

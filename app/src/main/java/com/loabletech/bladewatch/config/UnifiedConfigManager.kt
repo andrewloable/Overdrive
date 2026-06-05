@@ -1,4 +1,4 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
 import android.util.Log
 import org.json.JSONObject
@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
  * 
  * Architecture:
  * - Single JSON file in the app external files directory, mirrored to
- *   /data/local/tmp/overdrive_config.json for older hardcoded readers
+ *   /data/local/tmp/bladewatch_config.json for older hardcoded readers
  * - App UI writes via IPC to daemon (daemon has shell UID 2000)
  * - Web UI/daemon writes directly (already has shell UID 2000)
  * - Both read from the same file
@@ -33,8 +33,8 @@ object UnifiedConfigManager {
     
     // Single source of truth. /data/local/tmp can be recreated across BYD
     // head-unit restarts, so persistent config lives under app external files.
-    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/com.overdrive.app/files/overdrive_config.json"
-    private const val LEGACY_CONFIG_PATH = "/data/local/tmp/overdrive_config.json"
+    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/bladewatch_config.json"
+    private const val LEGACY_CONFIG_PATH = "/data/local/tmp/bladewatch_config.json"
     
     // Legacy paths for migration
     private const val LEGACY_SENTRY_CONFIG = "/data/local/tmp/sentry_config.json"
@@ -420,8 +420,8 @@ object UnifiedConfigManager {
      * Returns a SurveillanceSchedule loaded from the surveillance section.
      */
     @JvmStatic
-    fun getSurveillanceSchedule(): com.overdrive.app.surveillance.SurveillanceSchedule {
-        val schedule = com.overdrive.app.surveillance.SurveillanceSchedule()
+    fun getSurveillanceSchedule(): com.loabletech.bladewatch.surveillance.SurveillanceSchedule {
+        val schedule = com.loabletech.bladewatch.surveillance.SurveillanceSchedule()
         schedule.loadFromJson(getSurveillance())
         return schedule
     }

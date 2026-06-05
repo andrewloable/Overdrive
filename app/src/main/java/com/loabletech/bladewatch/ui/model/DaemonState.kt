@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.model
+package com.loabletech.bladewatch.ui.model
 
 /**
  * Information about a subprocess running under a daemon.

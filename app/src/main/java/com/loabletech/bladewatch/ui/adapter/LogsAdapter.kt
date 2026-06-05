@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.adapter
+package com.loabletech.bladewatch.ui.adapter
 
 import android.view.LayoutInflater
 import android.view.View
@@ -8,9 +8,9 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
-import com.overdrive.app.ui.model.LogEntry
-import com.overdrive.app.ui.model.LogLevel
-import com.overdrive.app.R
+import com.loabletech.bladewatch.ui.model.LogEntry
+import com.loabletech.bladewatch.ui.model.LogLevel
+import com.loabletech.bladewatch.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -1,8 +1,8 @@
-package com.overdrive.app.service.components
+package com.loabletech.bladewatch.service.components
 
 import android.content.Context
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Coordinates tunnel lifecycle and URL management.

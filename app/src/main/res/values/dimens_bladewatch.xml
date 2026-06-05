@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Canonical Overdrive dimension tokens.
+  Canonical BladeWatch dimension tokens.
 
   Centralizing card / tile dimensions here so every fragment renders with
   identical rhythm regardless of which session shipped it. Layouts MUST

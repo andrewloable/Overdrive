@@ -1,5 +1,5 @@
 /**
- * Overdrive — Web app shell.
+ * BladeWatch — Web app shell.
  *
  * Each in-app web page used to copy-paste the same ~250-line <aside class="sidebar">
  * block. This script mounts it once at runtime so every page shares one source
@@ -127,13 +127,13 @@
         // live view, the canonical "home"). The close-X stays for mobile.
         var header = ''
             + '<div class="sidebar-header">'
-            +   '<a href="index.html" class="brand brand-link" aria-label="OverDrive — open Live View" data-i18n-attr="aria-label:nav.brand_home">'
+            +   '<a href="index.html" class="brand brand-link" aria-label="BladeWatch — open Live View" data-i18n-attr="aria-label:nav.brand_home">'
             +     '<div class="brand-logo">'
-            +       '<img src="../shared/app-icon-glyph-dark.webp" alt="OverDrive">'
+            +       '<img src="../shared/app-icon-glyph-dark.webp" alt="BladeWatch">'
             +       '<span class="brand-online-pulse" aria-hidden="true"></span>'
             +     '</div>'
             +     '<div class="brand-text">'
-            +       '<span class="brand-name" data-i18n="app.name">OverDrive</span>'
+            +       '<span class="brand-name" data-i18n="app.name">BladeWatch</span>'
             +       '<span class="brand-tagline" data-i18n="app.tagline">Surveillance System</span>'
             +       '<span class="brand-version" id="appVersion"></span>'
             +     '</div>'
@@ -154,7 +154,7 @@
         // fuelBarFill) are read by core.js, vehicle-control.js, performance.js
         // — must match the legacy DOM. Battery+charging state moved off the
         // SVG bar onto the GLB body's emissive channel; core.js calls
-        // OverdriveAppShell.setSoc / setCharging instead of writing rect widths.
+        // BladeWatchAppShell.setSoc / setCharging instead of writing rect widths.
         var footer = ''
             + '<div class="sidebar-footer">'
             +   '<div class="status-card">'
@@ -425,15 +425,15 @@
     }
 
     function ensureSpriteCacheModule(cb) {
-        if (typeof window.OverdriveEvSpriteCache === 'object') { cb(window.OverdriveEvSpriteCache); return; }
+        if (typeof window.BladeWatchEvSpriteCache === 'object') { cb(window.BladeWatchEvSpriteCache); return; }
         if (spriteCacheLoadStarted) {
             // Poll briefly for the global to land.
             var tries = 0;
             var iv = setInterval(function () {
                 tries++;
-                if (typeof window.OverdriveEvSpriteCache === 'object') {
+                if (typeof window.BladeWatchEvSpriteCache === 'object') {
                     clearInterval(iv);
-                    cb(window.OverdriveEvSpriteCache);
+                    cb(window.BladeWatchEvSpriteCache);
                 } else if (tries > 60) {
                     clearInterval(iv);
                     cb(null);
@@ -445,7 +445,7 @@
         var s = document.createElement('script');
         s.src = '../shared/ev-card-sprite-cache.js';
         s.async = true;
-        s.onload = function () { cb(window.OverdriveEvSpriteCache || null); };
+        s.onload = function () { cb(window.BladeWatchEvSpriteCache || null); };
         s.onerror = function () { cb(null); };
         document.head.appendChild(s);
     }
@@ -509,9 +509,9 @@
         // a setTimeout for browsers without it (notably Safari ≤14).
         function instantiate() {
             if (ev3dInstance) return;
-            if (typeof window.OverdriveEvCard3D !== 'function') return;
+            if (typeof window.BladeWatchEvCard3D !== 'function') return;
             try {
-                ev3dInstance = new window.OverdriveEvCard3D(canvas);
+                ev3dInstance = new window.BladeWatchEvCard3D(canvas);
                 // Replay the most recent (model, colour) pair. SOC +
                 // charging state are painted on the DOM battery overlay
                 // independently so they need no replay here.
@@ -535,13 +535,13 @@
 
         function inject() {
             // Skip on pages that explicitly opt out (e.g. login.html could
-            // set window.OverdriveDisableEvCard3D = true).
-            if (window.OverdriveDisableEvCard3D) return;
+            // set window.BladeWatchDisableEvCard3D = true).
+            if (window.BladeWatchDisableEvCard3D) return;
 
             // If the global is already present (vehicle-control bundles
             // its own three.js + we got loaded second; or ev-map-sprite.js
             // got there first on a map page), instantiate immediately.
-            if (typeof window.OverdriveEvCard3D === 'function') {
+            if (typeof window.BladeWatchEvCard3D === 'function') {
                 instantiate();
                 return;
             }
@@ -549,11 +549,11 @@
             // If a previous caller has already inserted the <script>,
             // don't insert a duplicate — just poll for the global to
             // appear once that load completes.
-            if (document.querySelector('script[data-overdrive-ev-card-3d]')) {
+            if (document.querySelector('script[data-bladewatch-ev-card-3d]')) {
                 var pollTries = 0;
                 var pollIv = setInterval(function () {
                     pollTries++;
-                    if (typeof window.OverdriveEvCard3D === 'function') {
+                    if (typeof window.BladeWatchEvCard3D === 'function') {
                         clearInterval(pollIv);
                         instantiate();
                     } else if (pollTries > 60) {
@@ -566,7 +566,7 @@
             var s = document.createElement('script');
             s.src = '../shared/ev-card-3d.js';
             s.async = true;
-            s.setAttribute('data-overdrive-ev-card-3d', '1');
+            s.setAttribute('data-bladewatch-ev-card-3d', '1');
             s.onload = instantiate;
             s.onerror = function () {
                 if (window.console) console.warn('[app-shell] ev-card-3d.js load failed');
@@ -592,7 +592,7 @@
     // applyToAux) so the relationship to lastEv3dModel/lastEv3dColor is
     // visible at a glance.
     var pendingSidebarSnapshot = null;
-    // Extra OverdriveEvCard3D instances mounted by other surfaces on the
+    // Extra BladeWatchEvCard3D instances mounted by other surfaces on the
     // same page (currently: Live View's top-down camera selector). These
     // share the same model/colour as the sidebar card and stay in sync
     // when the user changes their selection on vehicle-control.html.
@@ -702,7 +702,7 @@
             try {
                 var ev;
                 if (typeof CustomEvent === 'function') {
-                    ev = new CustomEvent('overdrive:vehicle-changed', {
+                    ev = new CustomEvent('bladewatch:vehicle-changed', {
                         detail: {
                             modelId: modelId,  color: hexColor,
                             prevModelId: prevModel, prevColor: prevColor
@@ -710,7 +710,7 @@
                     });
                 } else {
                     ev = document.createEvent('CustomEvent');
-                    ev.initCustomEvent('overdrive:vehicle-changed', true, true, {
+                    ev.initCustomEvent('bladewatch:vehicle-changed', true, true, {
                         modelId: modelId,  color: hexColor,
                         prevModelId: prevModel, prevColor: prevColor
                     });
@@ -824,11 +824,11 @@
         if (currentGroup) groups.push(currentGroup);
 
         function readState(slug) {
-            try { return localStorage.getItem('overdrive.navGroup.' + slug) === '1'; }
+            try { return localStorage.getItem('bladewatch.navGroup.' + slug) === '1'; }
             catch (e) { return false; }
         }
         function writeState(slug, collapsed) {
-            try { localStorage.setItem('overdrive.navGroup.' + slug, collapsed ? '1' : '0'); }
+            try { localStorage.setItem('bladewatch.navGroup.' + slug, collapsed ? '1' : '0'); }
             catch (e) { /* ignore */ }
         }
 
@@ -910,17 +910,17 @@
 
     // Re-apply on demand (for pages that change the selection live, like
     // vehicle-control.html itself). Pages can call:
-    //     window.OverdriveAppShell.refreshVehicle()
+    //     window.BladeWatchAppShell.refreshVehicle()
     // after they save a new model/colour to /api/models/selected.
-    window.OverdriveAppShell = window.OverdriveAppShell || {};
-    window.OverdriveAppShell.refreshVehicle = applyVehicleSelection;
+    window.BladeWatchAppShell = window.BladeWatchAppShell || {};
+    window.BladeWatchAppShell.refreshVehicle = applyVehicleSelection;
 
-    // Mount an additional OverdriveEvCard3D on a custom canvas (e.g. the
+    // Mount an additional BladeWatchEvCard3D on a custom canvas (e.g. the
     // Live View camera selector). Reuses the sidebar's vendor download —
     // ev-card-3d.js is idempotent and adopts already-loaded THREE — and
     // tracks whatever (model, colour) the user has selected, replaying
     // the latest values once the renderer module is in place.
-    window.OverdriveAppShell.mountVehicleCanvas = function (canvasEl, opts) {
+    window.BladeWatchAppShell.mountVehicleCanvas = function (canvasEl, opts) {
         if (!canvasEl) return null;
         var view = (opts && opts.view === 'top') ? 'top' : 'side';
 
@@ -949,9 +949,9 @@
         var instance = null;
         function instantiate() {
             if (instance) return instance;
-            if (typeof window.OverdriveEvCard3D !== 'function') return null;
+            if (typeof window.BladeWatchEvCard3D !== 'function') return null;
             try {
-                instance = new window.OverdriveEvCard3D(canvasEl, opts || {});
+                instance = new window.BladeWatchEvCard3D(canvasEl, opts || {});
                 auxEv3dInstances.push(instance);
                 if (lastEv3dColor) instance.setColor(lastEv3dColor);
                 if (lastEv3dModel) instance.setModel(lastEv3dModel);
@@ -968,7 +968,7 @@
         // Track this canvas in auxEv3dInstances even when we satisfy it
         // from the sprite cache, so a later setEvCardAppearance can
         // re-paint it on user selection change. We use a lightweight
-        // pseudo-instance — not a real OverdriveEvCard3D — exposing the
+        // pseudo-instance — not a real BladeWatchEvCard3D — exposing the
         // minimum the iteration loop needs (canvas, view, _disposed,
         // setModel/setColor that re-attempt the cache).
         function makeSpriteOnlyAux() {
@@ -1023,7 +1023,7 @@
                 makeSpriteOnlyAux();
                 return;
             }
-            if (typeof window.OverdriveEvCard3D === 'function') {
+            if (typeof window.BladeWatchEvCard3D === 'function') {
                 instantiate();
                 return;
             }
@@ -1032,7 +1032,7 @@
             var tries = 0;
             var iv = setInterval(function () {
                 tries++;
-                if (typeof window.OverdriveEvCard3D === 'function') {
+                if (typeof window.BladeWatchEvCard3D === 'function') {
                     clearInterval(iv);
                     instantiate();
                 } else if (tries > 80) {
@@ -1054,7 +1054,7 @@
         if (pct <= 50) return 'warning';
         return 'healthy';
     }
-    window.OverdriveAppShell.setSoc = function (pct) {
+    window.BladeWatchAppShell.setSoc = function (pct) {
         var fill = document.getElementById('evBatteryFill');
         var bar  = document.getElementById('evBatteryBar');
         var clamped = Math.max(0, Math.min(100, pct));
@@ -1074,7 +1074,7 @@
         if (kw <= 150)   return 1.0;              // DC hyper
         return 0.8;                                // ultra-rapid (>150 kW)
     }
-    window.OverdriveAppShell.setCharging = function (on, powerKw) {
+    window.BladeWatchAppShell.setCharging = function (on, powerKw) {
         // The .charging class on the EV card root gates the CSS keyframes
         // (battery sweep + bolt icon scale-in). core.js already toggles
         // this class before calling us — forwarding here keeps the
@@ -1094,7 +1094,7 @@
     // update-flow.js's "Check for Updates" link). The function is
     // idempotent — already-wired headers skip the click bind, and every
     // run re-applies the persisted collapsed state to current members.
-    window.OverdriveAppShell.rewireNavGroups = function () {
+    window.BladeWatchAppShell.rewireNavGroups = function () {
         var aside = wireGroupCollapse._lastAside ||
                     document.getElementById('sidebar') ||
                     document.querySelector('.sidebar');
@@ -1104,12 +1104,12 @@
     // Auto-load the collapsible-card script so every page that includes
     // app-shell.js gets the collapse behavior without needing a per-page
     // <script> tag. Idempotent: a second injection is a no-op via the
-    // data-overdrive-collapse marker.
+    // data-bladewatch-collapse marker.
     function ensureCollapseScript() {
-        if (document.querySelector('script[data-overdrive-collapse]')) return;
+        if (document.querySelector('script[data-bladewatch-collapse]')) return;
         var s = document.createElement('script');
         s.src = '../shared/app-collapse.js';
-        s.setAttribute('data-overdrive-collapse', '1');
+        s.setAttribute('data-bladewatch-collapse', '1');
         s.async = false;
         // Place it next to app-shell.js so the relative path resolves the
         // same way as the page's other shared imports.

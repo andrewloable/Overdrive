@@ -1,7 +1,7 @@
-package com.overdrive.app.abrp;
+package com.loabletech.bladewatch.abrp;
 
-import com.overdrive.app.config.SecretConfigBridge;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.config.SecretConfigBridge;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 import org.json.JSONObject;
 
 import java.io.File;

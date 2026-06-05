@@ -1,8 +1,8 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.overdrive.app.logging.LogConfig
+import com.loabletech.bladewatch.logging.LogConfig
 import org.json.JSONObject
 
 /**
@@ -23,7 +23,7 @@ class ConfigManager private constructor(private val context: Context) {
             }
         }
         
-        private const val PREFS_NAME = "overdrive_config"
+        private const val PREFS_NAME = "bladewatch_config"
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_OUTPUT_DIR = "output_dir"
         private const val KEY_STREAM_MODE = "stream_mode"
@@ -208,7 +208,7 @@ class ConfigManager private constructor(private val context: Context) {
                 val app = root.getJSONObject("app")
                 val config = AppConfig(
                     deviceId = app.optString("deviceId", "unknown"),
-                    outputDir = app.optString("outputDir", "/sdcard/DCIM/Overdrive"),
+                    outputDir = app.optString("outputDir", "/sdcard/DCIM/BladeWatch"),
                     streamMode = StreamMode.valueOf(app.optString("streamMode", "PRIVATE")),
                     sentryModeEnabled = app.optBoolean("sentryMode", false),
                     locationSidecarEnabled = app.optBoolean("locationSidecar", false)
@@ -241,7 +241,7 @@ class ConfigManager private constructor(private val context: Context) {
     private fun loadAppConfig(): AppConfig {
         return AppConfig(
             deviceId = prefs.getString(KEY_DEVICE_ID, "unknown") ?: "unknown",
-            outputDir = prefs.getString(KEY_OUTPUT_DIR, "/sdcard/DCIM/Overdrive") ?: "/sdcard/DCIM/Overdrive",
+            outputDir = prefs.getString(KEY_OUTPUT_DIR, "/sdcard/DCIM/BladeWatch") ?: "/sdcard/DCIM/BladeWatch",
             streamMode = getStreamMode(),
             sentryModeEnabled = prefs.getBoolean(KEY_SENTRY_MODE, false),
             locationSidecarEnabled = prefs.getBoolean(KEY_LOCATION_SIDECAR_ENABLED, false)

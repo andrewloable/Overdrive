@@ -1,8 +1,8 @@
-package com.overdrive.app.daemon.camera
+package com.loabletech.bladewatch.daemon.camera
 
 import android.os.Handler
-import com.overdrive.app.surveillance.GpuSurveillancePipeline
-import com.overdrive.app.logging.DaemonLogger
+import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline
+import com.loabletech.bladewatch.logging.DaemonLogger
 import java.io.File
 
 /**
@@ -59,9 +59,9 @@ class CameraManager(
      */
     fun setStreamingQuality(quality: String) {
         val streamQuality = when (quality.uppercase()) {
-            "HQ" -> com.overdrive.app.surveillance.GpuPipelineConfig.StreamingQuality.HQ
-            "LQ" -> com.overdrive.app.surveillance.GpuPipelineConfig.StreamingQuality.LQ
-            else -> com.overdrive.app.surveillance.GpuPipelineConfig.StreamingQuality.HQ
+            "HQ" -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.StreamingQuality.HQ
+            "LQ" -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.StreamingQuality.LQ
+            else -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.StreamingQuality.HQ
         }
         
         gpuPipeline?.setStreamingQuality(streamQuality)
@@ -73,9 +73,9 @@ class CameraManager(
      */
     fun setRecordingMode(mode: String) {
         val recordingMode = when (mode.uppercase()) {
-            "NORMAL" -> com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.NORMAL
-            "SENTRY" -> com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.SENTRY
-            else -> com.overdrive.app.surveillance.GpuPipelineConfig.RecordingMode.NORMAL
+            "NORMAL" -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingMode.NORMAL
+            "SENTRY" -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingMode.SENTRY
+            else -> com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingMode.NORMAL
         }
         
         gpuPipeline?.setRecordingMode(recordingMode)

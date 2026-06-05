@@ -1,6 +1,6 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * Utility methods for AVMCamera capabilities that aren't used elsewhere in the codebase.

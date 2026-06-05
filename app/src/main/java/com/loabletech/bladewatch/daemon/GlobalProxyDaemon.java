@@ -1,6 +1,6 @@
-package com.overdrive.app.daemon;
+package com.loabletech.bladewatch.daemon;
 
-import com.overdrive.app.daemon.proxy.Safe;
+import com.loabletech.bladewatch.daemon.proxy.Safe;
 
 import java.io.*;
 
@@ -304,7 +304,7 @@ public class GlobalProxyDaemon {
     private static void setupSystemProxy() {
         // DISABLED: System-wide proxy is no longer needed and is risky.
         // If sing-box dies, stale proxy settings break ALL apps on the device.
-        // All OverDrive components use explicit proxy configuration instead:
+        // All BladeWatch components use explicit proxy configuration instead:
         // - ABRP/Telegram/Updater: ProxyHelper.getHttpProxy() via OkHttp
         // - MQTT: ProxyHelper.getMqttSocketFactory() via Paho
         // - Zrok/Cloudflared: HTTP_PROXY env var set per-process at launch
@@ -334,7 +334,7 @@ public class GlobalProxyDaemon {
         String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
         String logLine = "[" + timestamp + "] " + TAG + ": " + msg;
         System.out.println(logLine);
-        if (com.overdrive.app.logging.DaemonLogConfig.isFileLoggingEnabled(TAG)) {
+        if (com.loabletech.bladewatch.logging.DaemonLogConfig.isFileLoggingEnabled(TAG)) {
             try (FileWriter fw = new FileWriter(PROXY_LOG(), true)) {
                 fw.write(logLine + "\n");
             } catch (Exception ignored) {}

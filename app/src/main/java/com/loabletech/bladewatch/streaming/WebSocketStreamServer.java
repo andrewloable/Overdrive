@@ -1,4 +1,4 @@
-package com.overdrive.app.streaming;
+package com.loabletech.bladewatch.streaming;
 
 import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.WebSocket;
@@ -13,8 +13,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.media.MediaCodec;
-import com.overdrive.app.surveillance.HardwareEventRecorderGpu;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 public class WebSocketStreamServer extends WebSocketServer
         implements HardwareEventRecorderGpu.StreamCallback {

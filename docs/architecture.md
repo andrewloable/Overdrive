@@ -1,6 +1,6 @@
 # Architecture
 
-Overdrive is a hybrid Android, native, and web application. The installed Android app owns user interaction and lifecycle hooks, while privileged shell-launched daemon processes do long-running camera, recording, surveillance, networking, telemetry, and web-server work.
+BladeWatch is a hybrid Android, native, and web application. The installed Android app owns user interaction and lifecycle hooks, while privileged shell-launched daemon processes do long-running camera, recording, surveillance, networking, telemetry, and web-server work.
 
 ## High-Level Shape
 
@@ -34,9 +34,9 @@ BYD integrations
 
 The repository is a single Android Gradle project:
 
-- Root project: `Overdrive`.
+- Root project: `BladeWatch`.
 - Android module: `:app`.
-- Namespace and application id: `com.overdrive.app`.
+- Namespace and application id: `com.loabletech.bladewatch`.
 - Minimum SDK: 25.
 - Target SDK: 25.
 - Compile SDK: 36.
@@ -51,7 +51,7 @@ The app uses AndroidX, Material, Navigation, lifecycle, WorkManager, Dadb, OkHtt
 
 The ordinary Android app process hosts:
 
-- `OverdriveApplication`.
+- `BladeWatchApplication`.
 - `MainActivity`.
 - Native Android fragments and view models.
 - In-app WebView wrapper for the embedded web UI.
@@ -85,7 +85,7 @@ Important native areas:
 
 ## Startup Lifecycle
 
-1. Android starts `OverdriveApplication`.
+1. Android starts `BladeWatchApplication`.
 2. The application initializes logging, preferences, locale/theme, and starts `DaemonKeepaliveService`.
 3. `MainActivity` initializes device identity, storage, BYD whitelist behavior, daemon startup management, WebView pages, and update checks.
 4. `BootReceiver` handles boot, package replacement, screen, power, network, and BYD ACC events.
@@ -102,7 +102,7 @@ Core daemon timing is intentionally staggered:
 
 ## Main Components
 
-### `OverdriveApplication`
+### `BladeWatchApplication`
 
 Initializes global app concerns:
 
@@ -179,10 +179,10 @@ Cloud integration layer for BYD account login, vehicle discovery, control comman
 
 ## Source References
 
-- Application startup: [OverdriveApplication.kt:18](../app/src/main/java/com/overdrive/app/OverdriveApplication.kt#L18), [MainActivity.kt:46](../app/src/main/java/com/overdrive/app/ui/MainActivity.kt#L46).
-- Boot and foreground survival: [BootReceiver.kt:24](../app/src/main/java/com/overdrive/app/receiver/BootReceiver.kt#L24), [DaemonKeepaliveService.kt:30](../app/src/main/java/com/overdrive/app/services/DaemonKeepaliveService.kt#L30).
-- Daemon orchestration and shell launch: [DaemonStartupManager.kt:15](../app/src/main/java/com/overdrive/app/ui/daemon/DaemonStartupManager.kt#L15), [AdbDaemonLauncher.kt:17](../app/src/main/java/com/overdrive/app/launcher/AdbDaemonLauncher.kt#L17), [DaemonBootstrap.java:22](../app/src/main/java/com/overdrive/app/daemon/DaemonBootstrap.java#L22).
-- Camera daemon and local servers: [CameraDaemon.java:35](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L35), [TcpCommandServer.java:22](../app/src/main/java/com/overdrive/app/server/TcpCommandServer.java#L22), [HttpServer.java:49](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L49), [SurveillanceIpcServer.java:22](../app/src/main/java/com/overdrive/app/server/SurveillanceIpcServer.java#L22).
-- GPU surveillance and recording stack: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L24), [PanoramicCameraGpu.java:39](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/overdrive/app/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L58).
-- BYD local and cloud integration: [BydDataCollector.java:20](../app/src/main/java/com/overdrive/app/byd/BydDataCollector.java#L20), [BydCloudClient.java:22](../app/src/main/java/com/overdrive/app/byd/cloud/BydCloudClient.java#L22), [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/overdrive/app/byd/cloud/BydCloudMqttSubscriber.java#L31).
+- Application startup: [BladeWatchApplication.kt:18](../app/src/main/java/com/loabletech/bladewatch/BladeWatchApplication.kt#L18), [MainActivity.kt:46](../app/src/main/java/com/loabletech/bladewatch/ui/MainActivity.kt#L46).
+- Boot and foreground survival: [BootReceiver.kt:24](../app/src/main/java/com/loabletech/bladewatch/receiver/BootReceiver.kt#L24), [DaemonKeepaliveService.kt:30](../app/src/main/java/com/loabletech/bladewatch/services/DaemonKeepaliveService.kt#L30).
+- Daemon orchestration and shell launch: [DaemonStartupManager.kt:15](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L15), [AdbDaemonLauncher.kt:17](../app/src/main/java/com/loabletech/bladewatch/launcher/AdbDaemonLauncher.kt#L17), [DaemonBootstrap.java:22](../app/src/main/java/com/loabletech/bladewatch/daemon/DaemonBootstrap.java#L22).
+- Camera daemon and local servers: [CameraDaemon.java:35](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L35), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22).
+- GPU surveillance and recording stack: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L58).
+- BYD local and cloud integration: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [BydCloudClient.java:22](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudClient.java#L22), [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudMqttSubscriber.java#L31).
 - Build and native boundaries: [build.gradle.kts:276](../app/build.gradle.kts#L276), [build.gradle.kts:413](../app/build.gradle.kts#L413), [CMakeLists.txt:50](../app/src/main/cpp/CMakeLists.txt#L50).

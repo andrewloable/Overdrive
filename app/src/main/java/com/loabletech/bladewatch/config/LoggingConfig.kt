@@ -1,6 +1,6 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
-import com.overdrive.app.logging.LogConfig
+import com.loabletech.bladewatch.logging.LogConfig
 
 /**
  * Alias for LogConfig to keep it in config package.

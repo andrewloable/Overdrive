@@ -1,17 +1,17 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
 import android.opengl.EGLSurface;
 import android.opengl.GLUtils;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.view.Surface;
 
-import com.overdrive.app.camera.EGLCore;
-import com.overdrive.app.camera.GlUtil;
-import com.overdrive.app.telemetry.OverlayBitmapRenderer;
-import com.overdrive.app.telemetry.TelemetryDataCollector;
-import com.overdrive.app.telemetry.TelemetrySnapshot;
+import com.loabletech.bladewatch.camera.EGLCore;
+import com.loabletech.bladewatch.camera.GlUtil;
+import com.loabletech.bladewatch.telemetry.OverlayBitmapRenderer;
+import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
+import com.loabletech.bladewatch.telemetry.TelemetrySnapshot;
 
 import java.nio.FloatBuffer;
 
@@ -234,8 +234,8 @@ public class GpuMosaicRecorder {
             
             // SOTA: Trigger storage cleanup after each file is saved
             try {
-                com.overdrive.app.storage.StorageManager storageManager =
-                    com.overdrive.app.storage.StorageManager.getInstance();
+                com.loabletech.bladewatch.storage.StorageManager storageManager =
+                    com.loabletech.bladewatch.storage.StorageManager.getInstance();
                 
                 // Determine if this was a surveillance or manual recording based on output path
                 // Surveillance files go to surveillance dir, manual recordings to recordings dir
@@ -563,7 +563,7 @@ public class GpuMosaicRecorder {
 
                 // SOTA: Notify StorageManager that recording is active (for periodic cleanup)
                 try {
-                    com.overdrive.app.storage.StorageManager.getInstance().setRecordingActive(true);
+                    com.loabletech.bladewatch.storage.StorageManager.getInstance().setRecordingActive(true);
                 } catch (Exception e) {
                     logger.warn("Could not set recording active state: " + e.getMessage());
                 }
@@ -640,8 +640,8 @@ public class GpuMosaicRecorder {
         }
         // SOTA: Use StorageManager for recordings directory and auto-cleanup
         try {
-            com.overdrive.app.storage.StorageManager storageManager =
-                com.overdrive.app.storage.StorageManager.getInstance();
+            com.loabletech.bladewatch.storage.StorageManager storageManager =
+                com.loabletech.bladewatch.storage.StorageManager.getInstance();
             
             // Use provided directory or default to recordings dir
             java.io.File targetDir = outputDir != null ? outputDir : storageManager.getRecordingsDir();
@@ -668,7 +668,7 @@ public class GpuMosaicRecorder {
             String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
                     .format(new java.util.Date());
             String filename = (prefix != null ? prefix : "cam") + "_" + timestamp + ".mp4";
-            startRecording("/storage/emulated/0/Android/data/com.overdrive.app/files/" + filename);
+            startRecording("/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/" + filename);
         }
     }
     
@@ -684,7 +684,7 @@ public class GpuMosaicRecorder {
         
         // SOTA: Notify StorageManager that recording is inactive
         try {
-            com.overdrive.app.storage.StorageManager.getInstance().setRecordingActive(false);
+            com.loabletech.bladewatch.storage.StorageManager.getInstance().setRecordingActive(false);
         } catch (Exception e) {
             logger.warn("Could not set recording inactive state: " + e.getMessage());
         }
@@ -709,7 +709,7 @@ public class GpuMosaicRecorder {
         
         // SOTA: Notify StorageManager that recording is inactive
         try {
-            com.overdrive.app.storage.StorageManager.getInstance().setRecordingActive(false);
+            com.loabletech.bladewatch.storage.StorageManager.getInstance().setRecordingActive(false);
         } catch (Exception e) {
             logger.warn("Could not set recording inactive state: " + e.getMessage());
         }

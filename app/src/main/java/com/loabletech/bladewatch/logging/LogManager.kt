@@ -1,4 +1,4 @@
-package com.overdrive.app.logging
+package com.loabletech.bladewatch.logging
 
 import android.util.Log
 import java.io.File

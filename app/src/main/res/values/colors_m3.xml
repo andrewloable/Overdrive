@@ -57,9 +57,9 @@
     <color name="md_sys_color_scrim_light">#000000</color>
 
     <!-- Brand-aware status colors (paired with surface tones) -->
-    <color name="overdrive_status_success_light">#1F7A3F</color>
-    <color name="overdrive_status_warning_light">#A6601C</color>
-    <color name="overdrive_status_danger_light">#BA1A1A</color>
-    <color name="overdrive_status_info_light">#00658F</color>
+    <color name="bladewatch_status_success_light">#1F7A3F</color>
+    <color name="bladewatch_status_warning_light">#A6601C</color>
+    <color name="bladewatch_status_danger_light">#BA1A1A</color>
+    <color name="bladewatch_status_info_light">#00658F</color>
 
 </resources>

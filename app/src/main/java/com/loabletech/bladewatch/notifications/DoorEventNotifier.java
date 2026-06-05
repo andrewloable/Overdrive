@@ -1,9 +1,9 @@
-package com.overdrive.app.notifications;
+package com.loabletech.bladewatch.notifications;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.byd.bodywork.BodyworkConstants;
-import com.overdrive.app.server.Messages;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.byd.bodywork.BodyworkConstants;
+import com.loabletech.bladewatch.server.Messages;
 
 import org.json.JSONObject;
 
@@ -77,7 +77,7 @@ public final class DoorEventNotifier {
         // never make up a location.
         String body = Messages.get("notifications.while_parked");
         try {
-            String zone = com.overdrive.app.surveillance.SafeLocationManager
+            String zone = com.loabletech.bladewatch.surveillance.SafeLocationManager
                     .getInstance().getCurrentZoneName();
             if (zone != null && !zone.isEmpty()) {
                 body = Messages.get("notifications.while_parked_at", zone);

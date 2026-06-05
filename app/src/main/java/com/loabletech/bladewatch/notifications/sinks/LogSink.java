@@ -1,8 +1,8 @@
-package com.overdrive.app.notifications.sinks;
+package com.loabletech.bladewatch.notifications.sinks;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.notifications.NotificationBus;
-import com.overdrive.app.notifications.NotificationEvent;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.notifications.NotificationBus;
+import com.loabletech.bladewatch.notifications.NotificationEvent;
 
 /**
  * Diagnostic sink — writes every notification to the daemon log so we can

@@ -1,7 +1,7 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
-import com.overdrive.app.telegram.model.DaemonInfo;
-import com.overdrive.app.telegram.model.DaemonStatus;
+import com.loabletech.bladewatch.telegram.model.DaemonInfo;
+import com.loabletech.bladewatch.telegram.model.DaemonStatus;
 
 import java.util.List;
 

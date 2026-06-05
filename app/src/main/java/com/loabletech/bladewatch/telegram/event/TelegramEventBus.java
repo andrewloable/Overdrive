@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.event;
+package com.loabletech.bladewatch.telegram.event;
 
 import java.util.EnumMap;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.content.Intent
 import android.os.Bundle
@@ -13,10 +13,10 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.ui.adapter.RecordingAdapter
-import com.overdrive.app.ui.model.RecordingFile
-import com.overdrive.app.ui.util.RecordingScanner
-import com.overdrive.app.ui.util.RecordingSectionHeaderDecoration
+import com.loabletech.bladewatch.ui.adapter.RecordingAdapter
+import com.loabletech.bladewatch.ui.model.RecordingFile
+import com.loabletech.bladewatch.ui.util.RecordingScanner
+import com.loabletech.bladewatch.ui.util.RecordingSectionHeaderDecoration
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -26,7 +26,7 @@ import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.overdrive.app.R
+import com.loabletech.bladewatch.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -320,7 +320,7 @@ class RecordingLibraryFragment : Fragment() {
         dateNarrowed = narrowToDate
 
         if (view != null && ::recordingAdapter.isInitialized) {
-            com.overdrive.app.ui.util.RecordingScanner.invalidateCache()
+            com.loabletech.bladewatch.ui.util.RecordingScanner.invalidateCache()
             updateDateHeader()
             renderActiveFilters()
             loadRecordingsForSelectedDate()
@@ -335,7 +335,7 @@ class RecordingLibraryFragment : Fragment() {
         // Dismiss any leftover sheet from a previous open (e.g. config change).
         filterSheet?.dismiss()
         val ctx = context ?: return
-        val sheet = BottomSheetDialog(ctx, R.style.Theme_Overdrive_M3_BottomSheet)
+        val sheet = BottomSheetDialog(ctx, R.style.Theme_BladeWatch_M3_BottomSheet)
         val sheetView = LayoutInflater.from(ctx)
             .inflate(R.layout.sheet_recording_library_filters, null, false)
         sheet.setContentView(sheetView)
@@ -804,7 +804,7 @@ class RecordingLibraryFragment : Fragment() {
                 .navigate(
                     R.id.action_global_videoPlayer,
                     bundle,
-                    com.overdrive.app.ui.util.NavOptionsExt.m3SharedAxisZ()
+                    com.loabletech.bladewatch.ui.util.NavOptionsExt.m3SharedAxisZ()
                 )
         } catch (e: Exception) {
             try {
@@ -825,7 +825,7 @@ class RecordingLibraryFragment : Fragment() {
     }
 
     private fun confirmDelete(recording: RecordingFile) {
-        MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+        MaterialAlertDialogBuilder(requireContext(), R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_delete)
             .setTitle(getString(R.string.dialog_delete_recording_title))
             .setMessage(getString(R.string.dialog_delete_recording_message, recording.name))
@@ -849,7 +849,7 @@ class RecordingLibraryFragment : Fragment() {
         val selected = recordingAdapter.getSelectedRecordings()
         if (selected.isEmpty()) return
 
-        MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+        MaterialAlertDialogBuilder(requireContext(), R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_delete)
             .setTitle(resources.getQuantityString(R.plurals.delete_recordings_title, selected.size, selected.size))
             .setMessage(resources.getQuantityString(R.plurals.delete_recordings_message, selected.size, selected.size))

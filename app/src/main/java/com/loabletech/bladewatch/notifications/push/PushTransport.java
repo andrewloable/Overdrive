@@ -1,6 +1,6 @@
-package com.overdrive.app.notifications.push;
+package com.loabletech.bladewatch.notifications.push;
 
-import com.overdrive.app.mqtt.ProxyHelper;
+import com.loabletech.bladewatch.mqtt.ProxyHelper;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;

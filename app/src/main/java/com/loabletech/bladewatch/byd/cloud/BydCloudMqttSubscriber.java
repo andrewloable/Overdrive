@@ -1,8 +1,8 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.byd.cloud.crypto.BydCryptoUtils;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.mqtt.ProxyHelper;
+import com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.mqtt.ProxyHelper;
 
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttCallback;

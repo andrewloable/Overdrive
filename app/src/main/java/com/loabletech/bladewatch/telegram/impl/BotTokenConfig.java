@@ -1,13 +1,13 @@
-package com.overdrive.app.telegram.impl;
+package com.loabletech.bladewatch.telegram.impl;
 
 import android.content.Context;
 
 import androidx.annotation.Nullable;
 
-import com.overdrive.app.telegram.IBotTokenConfig;
-import com.overdrive.app.telegram.config.UnifiedTelegramConfig;
-import com.overdrive.app.telegram.model.BotInfo;
-import com.overdrive.app.telegram.model.ValidationResult;
+import com.loabletech.bladewatch.telegram.IBotTokenConfig;
+import com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig;
+import com.loabletech.bladewatch.telegram.model.BotInfo;
+import com.loabletech.bladewatch.telegram.model.ValidationResult;
 
 import org.json.JSONObject;
 
@@ -164,7 +164,7 @@ public class BotTokenConfig implements IBotTokenConfig {
                 delta.put(UnifiedTelegramConfig.K_BOT_USERNAME, botInfo.getUsername());
                 delta.put(UnifiedTelegramConfig.K_BOT_FIRST_NAME, botInfo.getFirstName());
             } catch (Exception ignored) {}
-            com.overdrive.app.config.UnifiedConfigManager.updateSection(
+            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection(
                     UnifiedTelegramConfig.SECTION, delta);
             return;
         }

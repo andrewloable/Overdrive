@@ -1,10 +1,10 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 

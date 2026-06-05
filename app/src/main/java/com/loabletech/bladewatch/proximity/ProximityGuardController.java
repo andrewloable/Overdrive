@@ -1,10 +1,10 @@
-package com.overdrive.app.proximity;
+package com.loabletech.bladewatch.proximity;
 
 import android.content.Context;
 
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.surveillance.GpuSurveillancePipeline;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
 
 import org.json.JSONObject;
 

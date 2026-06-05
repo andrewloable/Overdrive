@@ -1,6 +1,6 @@
-package com.overdrive.app.byd.cloud.crypto;
+package com.loabletech.bladewatch.byd.cloud.crypto;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,7 +25,7 @@ public final class CredentialCipher {
     private static final String CIPHER_ALGO = "AES/GCM/NoPadding";
     private static final int IV_LEN = 12;
     private static final int TAG_BITS = 128;
-    private static final String KD_SALT = "overdrive-byd-cred-v1";
+    private static final String KD_SALT = "bladewatch-byd-cred-v1";
     private static final String DID_PATH = "/data/local/tmp/.byd_device_id";
 
     private CredentialCipher() {}
@@ -121,6 +121,6 @@ public final class CredentialCipher {
                 if (id != null && !id.trim().isEmpty()) return id.trim();
             }
         } catch (Exception ignored) {}
-        return "overdrive-default-device";
+        return "bladewatch-default-device";
     }
 }

@@ -121,8 +121,8 @@
         // so the new sibling isn't tracked as a member yet. Ask the shell
         // to rewire — the call is idempotent (headers stay wired once,
         // the collapse state is reapplied to current siblings).
-        if (window.OverdriveAppShell && typeof window.OverdriveAppShell.rewireNavGroups === 'function') {
-            window.OverdriveAppShell.rewireNavGroups();
+        if (window.BladeWatchAppShell && typeof window.BladeWatchAppShell.rewireNavGroups === 'function') {
+            window.BladeWatchAppShell.rewireNavGroups();
         }
     }
 

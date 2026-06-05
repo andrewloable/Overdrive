@@ -27,7 +27,7 @@ BYD.i18n = (function () {
         'nb', 'nl', 'ja', 'ko', 'th', 'vi', 'hi', 'tr', 'ru'
     ];
     var DEFAULT_LANG = 'en';
-    var STORAGE_KEY = 'overdrive_locale';
+    var STORAGE_KEY = 'bladewatch_locale';
 
     // Native-script display labels (sidebar picker shows these — no flags by design).
     var DISPLAY_NAMES = {
@@ -804,11 +804,11 @@ BYD.core = {
             }
 
             // Body-mesh emissive glow. The teal/amber/red ramp + intensity
-            // scaling lives in OverdriveEvCard3D — see ev-card-3d.js
+            // scaling lives in BladeWatchEvCard3D — see ev-card-3d.js
             // socRampColor + _applyEmissive. No-op on pages where the 3D
             // shell isn't loaded yet (login.html, dev-only pages).
-            if (window.OverdriveAppShell && window.OverdriveAppShell.setSoc) {
-                window.OverdriveAppShell.setSoc(soc);
+            if (window.BladeWatchAppShell && window.BladeWatchAppShell.setSoc) {
+                window.BladeWatchAppShell.setSoc(soc);
             }
         }
 
@@ -874,8 +874,8 @@ BYD.core = {
         // visibly snaps; AC trickle crawls.
         if (isCharging) evCard.classList.add('charging');
         else            evCard.classList.remove('charging');
-        if (window.OverdriveAppShell && window.OverdriveAppShell.setCharging) {
-            window.OverdriveAppShell.setCharging(isCharging, powerKW);
+        if (window.BladeWatchAppShell && window.BladeWatchAppShell.setCharging) {
+            window.BladeWatchAppShell.setCharging(isCharging, powerKW);
         }
 
         // SOH display

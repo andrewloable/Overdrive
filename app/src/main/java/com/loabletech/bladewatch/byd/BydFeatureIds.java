@@ -1,4 +1,4 @@
-package com.overdrive.app.byd;
+package com.loabletech.bladewatch.byd;
 
 /**
  * All BYD feature IDs decoded from the DiLink APK.

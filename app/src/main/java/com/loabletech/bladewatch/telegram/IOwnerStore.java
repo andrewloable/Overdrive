@@ -1,7 +1,7 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
-import com.overdrive.app.telegram.model.NotificationPreferences;
-import com.overdrive.app.telegram.model.OwnerInfo;
+import com.loabletech.bladewatch.telegram.model.NotificationPreferences;
+import com.loabletech.bladewatch.telegram.model.OwnerInfo;
 
 /**
  * Encrypted storage for owner data and preferences.

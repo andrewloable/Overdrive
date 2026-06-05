@@ -1023,14 +1023,14 @@ void v2_processFrame(
 // ============================================================================
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_initPipelineV2(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_initPipelineV2(
     JNIEnv* env, jclass clazz)
 {
     v2_initPipeline(&g_pipeline);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_processFrameV2(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_processFrameV2(
     JNIEnv* env, jclass clazz,
     jobject frameBuffer,
     jint width, jint height,
@@ -1068,14 +1068,14 @@ Java_com_overdrive_app_surveillance_NativeMotion_processFrameV2(
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_getPipelineConfigSize(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_getPipelineConfigSize(
     JNIEnv* env, jclass clazz)
 {
     return (jint)sizeof(PipelineConfigV2);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_getQuadrantResultSize(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_getQuadrantResultSize(
     JNIEnv* env, jclass clazz)
 {
     return (jint)sizeof(QuadrantResultV2);
@@ -1085,7 +1085,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_getQuadrantResultSize(
 // blockMask is a byte[70] array where 1=enabled, 0=disabled.
 // Passing null or empty array clears the ROI (all blocks enabled).
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_setQuadrantRoi(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_setQuadrantRoi(
     JNIEnv* env, jclass clazz,
     jint quadrant, jbyteArray blockMask)
 {
@@ -1129,7 +1129,7 @@ static TrackerState g_trackerState;
 static bool g_trackerInitialized = false;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_initTracker(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_initTracker(
     JNIEnv* env, jclass clazz)
 {
     tracker_init(&g_trackerState);
@@ -1137,7 +1137,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_initTracker(
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerStartTrack(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerStartTrack(
     JNIEnv* env, jclass clazz,
     jbyteArray frameRgb, jint width, jint height,
     jint quadrant, jint classId,
@@ -1159,7 +1159,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerStartTrack(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerUpdate(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerUpdate(
     JNIEnv* env, jclass clazz,
     jbyteArray frameRgb, jint width, jint height,
     jint quadrant, jlong nowMs)
@@ -1178,7 +1178,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerUpdate(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerHasActiveTrack(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerHasActiveTrack(
     JNIEnv* env, jclass clazz, jint quadrant)
 {
     if (!g_trackerInitialized) return JNI_FALSE;
@@ -1187,7 +1187,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerHasActiveTrack(
 
 // Returns float[7]: {x, y, w, h, confidence, classId, active} or null
 extern "C" JNIEXPORT jfloatArray JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerGetTrackBox(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerGetTrackBox(
     JNIEnv* env, jclass clazz, jint quadrant)
 {
     if (!g_trackerInitialized) return nullptr;
@@ -1205,7 +1205,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerGetTrackBox(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerDropTrack(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerDropTrack(
     JNIEnv* env, jclass clazz, jint quadrant)
 {
     if (!g_trackerInitialized) return;
@@ -1213,7 +1213,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerDropTrack(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerNeedsYoloHeartbeat(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerNeedsYoloHeartbeat(
     JNIEnv* env, jclass clazz, jint quadrant)
 {
     if (!g_trackerInitialized) return JNI_FALSE;
@@ -1221,7 +1221,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerNeedsYoloHeartbeat(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerConfirmHeartbeat(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerConfirmHeartbeat(
     JNIEnv* env, jclass clazz, jint quadrant, jlong nowMs)
 {
     if (!g_trackerInitialized) return;
@@ -1229,7 +1229,7 @@ Java_com_overdrive_app_surveillance_NativeMotion_trackerConfirmHeartbeat(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_overdrive_app_surveillance_NativeMotion_trackerRefreshTemplate(
+Java_com_loabletech_bladewatch_surveillance_NativeMotion_trackerRefreshTemplate(
     JNIEnv* env, jclass clazz,
     jbyteArray frameRgb, jint width, jint height,
     jint quadrant,

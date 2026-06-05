@@ -1,6 +1,6 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
-import com.overdrive.app.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.model.DaemonType
 
 /**
  * Interface for controlling daemon processes.

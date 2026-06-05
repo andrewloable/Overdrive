@@ -1,5 +1,5 @@
 /**
- * Overdrive — EV-card sprite cache.
+ * BladeWatch — EV-card sprite cache.
  *
  * IndexedDB-backed cache of pre-rendered EV-card images keyed by
  * (modelId, paint colour, view, dpr-bucket). The sidebar EV card is
@@ -15,7 +15,7 @@
  * sprites — so cache and selection stay in lockstep.
  *
  * Schema:
- *   db = 'overdrive-ev-sprites'
+ *   db = 'bladewatch-ev-sprites'
  *   store = 'sprites'
  *   key = `${modelId}|${color}|${view}|${dprBucket}`
  *   value = { blob: Blob, w: number, h: number, ts: number }
@@ -34,9 +34,9 @@
 (function (root) {
     'use strict';
 
-    if (root.OverdriveEvSpriteCache) return;
+    if (root.BladeWatchEvSpriteCache) return;
 
-    var DB_NAME    = 'overdrive-ev-sprites';
+    var DB_NAME    = 'bladewatch-ev-sprites';
     var DB_VERSION = 1;
     var STORE      = 'sprites';
     // Bump SPRITE_VERSION whenever the rendering pipeline changes in a
@@ -250,7 +250,7 @@
         });
     }
 
-    root.OverdriveEvSpriteCache = {
+    root.BladeWatchEvSpriteCache = {
         supported: supported,
         get: get,
         put: put,

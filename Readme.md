@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="app/src/main/assets/web/shared/app-icon-ios.webp" width="120" alt="OverDrive Logo">
+  <img src="app/src/main/assets/web/shared/app-icon-ios.webp" width="120" alt="BladeWatch Logo">
 </p>
 
-<h1 align="center">OverDrive</h1>
+<h1 align="center">BladeWatch</h1>
 <p align="center">Advanced Sentry Mode for BYD Vehicles</p>
 <p align="center">
-  <a href="https://github.com/yash-srivastava/Overdrive-release/releases/tag/alpha">Download Alpha</a> •
-  <a href="https://overdrive-5lc.pages.dev/">Website</a> •
+  <a href="https://github.com/yash-srivastava/BladeWatch-release/releases/tag/alpha">Download Alpha</a> •
+  <a href="https://bladewatch-5lc.pages.dev/">Website</a> •
   <a href="https://discord.gg/PZutk9fg4h">Discord</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start-use-pre-built-apk">Setup Guide</a>
@@ -18,7 +18,7 @@ Free, open-source dashcam and sentry mode app built specifically for BYD vehicle
 
 <p align="center">
   <a href="https://player.cloudinary.com/embed/?cloud_name=dhwuuoz67&public_id=Demo_nqf0ky">
-    <img src="https://github.com/user-attachments/assets/d5faeb2a-96dd-4737-86f4-2e87af52ec4c" alt="Click to Watch OverDrive Demo" width="100%">
+    <img src="https://github.com/user-attachments/assets/d5faeb2a-96dd-4737-86f4-2e87af52ec4c" alt="Click to Watch BladeWatch Demo" width="100%">
   </a>
 </p>
 
@@ -27,7 +27,7 @@ Free, open-source dashcam and sentry mode app built specifically for BYD vehicle
 
 ## Quick Start (Use Pre-built APK)
 
-Download the latest APK from [GitHub Releases](https://github.com/yash-srivastava/Overdrive-release/releases/tag/alpha) and install it directly on your BYD head unit.
+Download the latest APK from [GitHub Releases](https://github.com/yash-srivastava/BladeWatch-release/releases/tag/alpha) and install it directly on your BYD head unit.
 
 ### 1. Prerequisites
 - Ensure **Wireless ADB** is enabled on your device before launching the app.
@@ -55,13 +55,13 @@ Download the latest APK from [GitHub Releases](https://github.com/yash-srivastav
 ### Telegram Notifications Setup
 1. Message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot` → follow prompts → get your bot token
 2. Message [@userinfobot](https://t.me/userinfobot) → `/start` → copy your Chat ID
-3. In OverDrive: Settings → Notifications → enter bot token & chat ID
+3. In BladeWatch: Settings → Notifications → enter bot token & chat ID
 
 ---
 
-## Why OverDrive?
+## Why BladeWatch?
 
-| Feature | OverDrive | Other Apps |
+| Feature | BladeWatch | Other Apps |
 |---|---|---|
 | CPU Usage | **<28%** | 70–90% |
 | Proximity Recording | ✅ Market First | ❌ |
@@ -101,7 +101,7 @@ Free, open-source tunneling with no bandwidth limits at `https://<your-share>.sh
 **Quick Zrok setup:**
 1. Sign up at [zrok.io](https://zrok.io)
 2. Get your invite token from email
-3. Enter token in OverDrive settings
+3. Enter token in BladeWatch settings
 4. Done — tunnel URL is auto-generated
 
 ### Tailscale Tunnel
@@ -109,7 +109,7 @@ Free, with no bandwidth limits. Connect from any device connected to tailscale.
 
 **Quick Tailscale setup:**
 1. Sign up at [tailscale.com](https://tailscale.com/)
-2. Open tailscale settings in Overdrive
+2. Open tailscale settings in BladeWatch
 3. Generate a login URL and login
 4. Optionally, disable key expiry in tailscale if you would not like to log in every 6 months
 
@@ -153,7 +153,7 @@ The full codebase scan is documented in [docs/README.md](docs/README.md), with d
 ## Building from Source
 
 ```bash
-git clone https://github.com/yash-srivastava/Overdrive-release.git
+git clone https://github.com/yash-srivastava/BladeWatch-release.git
 ```
 
 Set up signing by exporting these environment variables before building:
@@ -193,7 +193,7 @@ The ISP blocklist bypass feature uses a VLESS Reality proxy. The app ships with 
    python3 generate_safe_enc.py "your.server.ip"
    ```
 
-3. Replace the corresponding `Safe.s("...")` values in `app/src/main/java/com/overdrive/app/daemon/GlobalProxyDaemon.java` (lines 71–79).
+3. Replace the corresponding `Safe.s("...")` values in `app/src/main/java/com/loabletech/bladewatch/daemon/GlobalProxyDaemon.java` (lines 71–79).
 
 4. Rebuild the app.
 
@@ -205,7 +205,7 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 
 1. Sign up at [zrok.io](https://zrok.io) and get your invite token from email.
 2. Enter the token in the app: Daemons → Zrok settings.
-3. If you are building from source, prefer the on-device settings flow instead of hardcoding the token into source. The legacy placeholder in `app/src/main/java/com/overdrive/app/daemon/telegram/DaemonCommandHandler.java` only exists for the Telegram bot's `/tunnel zrok` command.
+3. If you are building from source, prefer the on-device settings flow instead of hardcoding the token into source. The legacy placeholder in `app/src/main/java/com/loabletech/bladewatch/daemon/telegram/DaemonCommandHandler.java` only exists for the Telegram bot's `/tunnel zrok` command.
 
 ## Privacy
 
@@ -217,7 +217,7 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 ## Community
 
 - [Discord Server](https://discord.gg/PZutk9fg4h)
-- [Report Issues](https://github.com/yash-srivastava/Overdrive-release/issues)
+- [Report Issues](https://github.com/yash-srivastava/BladeWatch-release/issues)
 
 ## Acknowledgments
 
@@ -244,7 +244,7 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 ### v11 — May 2026: BYD Cloud Deterrent, Sentry Mode Alarm & Pipeline Fixes
 
 **✨ New Features**
-- **BYD Cloud Deterrent** — When surveillance detects a confirmed threat, OverDrive can now automatically flash the car's headlights or honk the horn via BYD's cloud API. Three modes available: Silent (record only), Flash Lights, and Horn + Lights. Recurring triggers every 15 seconds while motion continues
+- **BYD Cloud Deterrent** — When surveillance detects a confirmed threat, BladeWatch can now automatically flash the car's headlights or honk the horn via BYD's cloud API. Three modes available: Silent (record only), Flash Lights, and Horn + Lights. Recurring triggers every 15 seconds while motion continues
 - **BYD Cloud Account Setup** — One-time setup in Surveillance Settings to connect your BYD app account. Supports all 14 overseas server regions (EU, India, Australia, Singapore, Brazil, Japan, Korea, Saudi Arabia, Turkey, Mexico, Indonesia, Vietnam, Norway, Uzbekistan). Credentials are stored locally on the device and never sent to any third-party server — all communication goes directly to BYD's official API
 - **Native Bangcle Crypto Engine** — Full Java port of BYD's proprietary white-box AES encryption, based on the reverse engineering work by [Niek/BYD-re](https://github.com/Niek/BYD-re) and [jkaberg/pyBYD](https://github.com/jkaberg/pyBYD). Zero new dependencies — uses the existing OkHttp stack and Java crypto libraries. No Python runtime, no JavaScript bridge, no bloat
 - **Test Connection Button** — Verify your BYD Cloud setup works by flashing the car's lights directly from the settings page
@@ -268,7 +268,7 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
   - Preset configurations (Parking, Outdoor, etc.) for quick setup
 
 **⚡ Optimizations & Fixes**
-- **BYD Camera "No Signal" Fix** — Resolved the native camera signal loss issue that could occur when OverDrive is running alongside the BYD dashcam
+- **BYD Camera "No Signal" Fix** — Resolved the native camera signal loss issue that could occur when BladeWatch is running alongside the BYD dashcam
 - **CPU Performance** — Reduced CPU cycles across the recording and surveillance pipeline, yielding roughly 10–15% lower CPU usage compared to the last release
 - **Event Deletion** — Fixed a bug where automated event deletion was not properly removing files from storage
 - **SOH & Energy Display** — Corrected State of Health estimation calculations, fixed kWh consumption showing incorrect values on trip details, and charging power now displays correctly
@@ -284,10 +284,10 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 - **Trip Consumption Display** — Average consumption (kWh/100km) in trip summaries and detail view, with %/100km fallback for PHEVs
 - **Battery Health & SOH** — Battery health tracking with voltage history, cell temperatures, SOH estimation, and ABRP battery temperature uploads
 - **Zrok Token Reset** — Zrok reserved tunnel token can now be reset directly from the UI
-- **BYD Camera Arbitration** — OverDrive registers with the BYD camera service so the native dashcam no longer loses video signal
+- **BYD Camera Arbitration** — BladeWatch registers with the BYD camera service so the native dashcam no longer loses video signal
 
 **🐛 Bug Fixes**
-- Fixed "no video signal" on the native BYD AVM camera when OverDrive is running
+- Fixed "no video signal" on the native BYD AVM camera when BladeWatch is running
 - Fixed double-recording and streaming issues across drive mode switches and camera interruptions
 - Fixed trips being lost on ACC OFF and improved trip distance accuracy with GPS fallback
 - Fixed SOC reading wrong source, charging power showing 0 kW, and SOH estimation accuracy

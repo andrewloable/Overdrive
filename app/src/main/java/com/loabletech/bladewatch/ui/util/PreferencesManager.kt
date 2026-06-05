@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.util
+package com.loabletech.bladewatch.ui.util
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -6,9 +6,9 @@ import android.os.Build
 import android.os.UserManager
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
-import com.overdrive.app.BuildConfig
-import com.overdrive.app.config.SecretConfigBridge
-import com.overdrive.app.ui.model.DaemonType
+import com.loabletech.bladewatch.BuildConfig
+import com.loabletech.bladewatch.config.SecretConfigBridge
+import com.loabletech.bladewatch.ui.model.DaemonType
 
 /**
  * Manages SharedPreferences for app settings persistence.
@@ -17,7 +17,7 @@ import com.overdrive.app.ui.model.DaemonType
 object PreferencesManager {
     
     private const val TAG = "PreferencesManager"
-    private const val PREFS_NAME = "overdrive_prefs"
+    private const val PREFS_NAME = "bladewatch_prefs"
     private const val KEY_ENABLED_DAEMONS = "enabled_daemons"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_SELECTED_CAMERAS = "selected_cameras"
@@ -110,7 +110,7 @@ object PreferencesManager {
         // wouldn't notice the flip otherwise.
         appContextRef?.let { ctx ->
             try {
-                com.overdrive.app.overlay.StatusOverlayService.refreshTheme(ctx)
+                com.loabletech.bladewatch.overlay.StatusOverlayService.refreshTheme(ctx)
             } catch (e: Throwable) {
                 Log.w(TAG, "overlay theme refresh failed: ${e.message}")
             }

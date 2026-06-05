@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.camera
+package com.loabletech.bladewatch.daemon.camera
 
 /**
  * Camera configuration constants.
@@ -13,7 +13,7 @@ object CameraConfiguration {
     
     // Directories
     const val STREAM_DIR = "/data/local/tmp/cam_stream"
-    const val APP_STREAM_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files/stream"
+    const val APP_STREAM_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/stream"
     const val DEFAULT_OUTPUT_DIR = "/sdcard/DCIM/BYDCam"
     
     // Recording config (full quality)

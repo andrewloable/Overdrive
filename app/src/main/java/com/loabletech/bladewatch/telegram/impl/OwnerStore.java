@@ -1,13 +1,13 @@
-package com.overdrive.app.telegram.impl;
+package com.loabletech.bladewatch.telegram.impl;
 
 import android.content.Context;
 
 import androidx.annotation.Nullable;
 
-import com.overdrive.app.telegram.IOwnerStore;
-import com.overdrive.app.telegram.config.UnifiedTelegramConfig;
-import com.overdrive.app.telegram.model.NotificationPreferences;
-import com.overdrive.app.telegram.model.OwnerInfo;
+import com.loabletech.bladewatch.telegram.IOwnerStore;
+import com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig;
+import com.loabletech.bladewatch.telegram.model.NotificationPreferences;
+import com.loabletech.bladewatch.telegram.model.OwnerInfo;
 
 /**
  * Owner data + notification preferences backed by {@link UnifiedTelegramConfig}.

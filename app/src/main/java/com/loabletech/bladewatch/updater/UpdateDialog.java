@@ -1,4 +1,4 @@
-package com.overdrive.app.updater;
+package com.loabletech.bladewatch.updater;
 
 import android.animation.ObjectAnimator;
 import androidx.appcompat.app.AlertDialog;
@@ -15,7 +15,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.overdrive.app.R;
+import com.loabletech.bladewatch.R;
 
 public class UpdateDialog {
 
@@ -29,7 +29,7 @@ public class UpdateDialog {
         message.append(markdownToSpannable(releaseNotes));
 
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(
-                context, R.style.Theme_Overdrive_M3_Dialog)
+                context, R.style.Theme_BladeWatch_M3_Dialog)
                 .setTitle("\uD83D\uDE80 Update Available")
                 .setMessage(message)
                 .setPositiveButton("Update Now", (d, w) -> { d.dismiss(); onUpdate.run(); })
@@ -45,8 +45,8 @@ public class UpdateDialog {
         TextView percentText = view.findViewById(R.id.updatePercentText);
 
         AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(
-                context, R.style.Theme_Overdrive_M3_Dialog)
-                .setTitle("\u2B07\uFE0F Updating Overdrive")
+                context, R.style.Theme_BladeWatch_M3_Dialog)
+                .setTitle("\u2B07\uFE0F Updating BladeWatch")
                 .setView(view)
                 .setNegativeButton("Cancel", (d, w) -> { if (onCancel != null) onCancel.run(); d.dismiss(); })
                 .setCancelable(false)

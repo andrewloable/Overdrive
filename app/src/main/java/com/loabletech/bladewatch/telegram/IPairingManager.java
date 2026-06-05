@@ -1,7 +1,7 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
-import com.overdrive.app.telegram.model.OwnerInfo;
-import com.overdrive.app.telegram.model.PinState;
+import com.loabletech.bladewatch.telegram.model.OwnerInfo;
+import com.loabletech.bladewatch.telegram.model.PinState;
 
 /**
  * PIN-based pairing manager for single-owner security.

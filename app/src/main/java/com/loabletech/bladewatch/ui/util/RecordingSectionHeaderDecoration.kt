@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.util
+package com.loabletech.bladewatch.ui.util
 
 import android.content.Context
 import android.graphics.Canvas
@@ -10,8 +10,8 @@ import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.R
-import com.overdrive.app.ui.model.RecordingFile
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.model.RecordingFile
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

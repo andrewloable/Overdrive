@@ -1,12 +1,12 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.launcher.ZrokLauncher
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.launcher.ZrokLauncher
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 import android.content.Context
 
 /**
@@ -37,8 +37,8 @@ class ZrokController(
     private val zrokLauncher by lazy {
         ZrokLauncher(
             context,
-            com.overdrive.app.launcher.AdbShellExecutor(context),
-            com.overdrive.app.logging.LogManager.getInstance()
+            com.loabletech.bladewatch.launcher.AdbShellExecutor(context),
+            com.loabletech.bladewatch.logging.LogManager.getInstance()
         )
     }
     
@@ -68,7 +68,7 @@ class ZrokController(
     
     /**
      * Get the permanent URL (only valid if using reserved mode).
-     * Uses auto-generated unique name: overdrive<random>
+     * Uses auto-generated unique name: bladewatch<random>
      */
     fun getPermanentUrl(): String {
         return "https://${ZrokLauncher.uniqueName}.share.zrok.io"
@@ -165,7 +165,7 @@ class ZrokController(
      * Reserve a permanent URL (ONE-TIME setup).
      * After this, the token is saved and will be used automatically.
      * 
-     * @param customName Optional custom name. If null, uses auto-generated unique name (overdrive<random>)
+     * @param customName Optional custom name. If null, uses auto-generated unique name (bladewatch<random>)
      */
     fun reservePermanentUrl(customName: String? = null, callback: DaemonCallback) {
         callback.onStatusChanged(DaemonStatus.STARTING, "Reserving permanent URL...")

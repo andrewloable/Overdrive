@@ -1,7 +1,7 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.opengl.GLES11Ext;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 import android.opengl.GLES20;
 
 import java.nio.ByteBuffer;

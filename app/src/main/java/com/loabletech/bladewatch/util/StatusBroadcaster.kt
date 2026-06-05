@@ -1,8 +1,8 @@
-package com.overdrive.app.util
+package com.loabletech.bladewatch.util
 
 import android.content.Context
 import android.content.Intent
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Broadcasts status updates to other components.
@@ -15,14 +15,14 @@ class StatusBroadcaster(private val context: Context) {
         private const val TAG = "StatusBroadcaster"
         
         // Broadcast actions
-        const val ACTION_STATUS_UPDATE = "com.overdrive.app.STATUS_UPDATE"
-        const val ACTION_RECORDING_STARTED = "com.overdrive.app.RECORDING_STARTED"
-        const val ACTION_RECORDING_STOPPED = "com.overdrive.app.RECORDING_STOPPED"
-        const val ACTION_TUNNEL_CONNECTED = "com.overdrive.app.TUNNEL_CONNECTED"
-        const val ACTION_TUNNEL_DISCONNECTED = "com.overdrive.app.TUNNEL_DISCONNECTED"
-        const val ACTION_DAEMON_STARTED = "com.overdrive.app.DAEMON_STARTED"
-        const val ACTION_DAEMON_STOPPED = "com.overdrive.app.DAEMON_STOPPED"
-        const val ACTION_ERROR = "com.overdrive.app.ERROR"
+        const val ACTION_STATUS_UPDATE = "com.loabletech.bladewatch.STATUS_UPDATE"
+        const val ACTION_RECORDING_STARTED = "com.loabletech.bladewatch.RECORDING_STARTED"
+        const val ACTION_RECORDING_STOPPED = "com.loabletech.bladewatch.RECORDING_STOPPED"
+        const val ACTION_TUNNEL_CONNECTED = "com.loabletech.bladewatch.TUNNEL_CONNECTED"
+        const val ACTION_TUNNEL_DISCONNECTED = "com.loabletech.bladewatch.TUNNEL_DISCONNECTED"
+        const val ACTION_DAEMON_STARTED = "com.loabletech.bladewatch.DAEMON_STARTED"
+        const val ACTION_DAEMON_STOPPED = "com.loabletech.bladewatch.DAEMON_STOPPED"
+        const val ACTION_ERROR = "com.loabletech.bladewatch.ERROR"
         
         // Extras
         const val EXTRA_STATUS = "status"

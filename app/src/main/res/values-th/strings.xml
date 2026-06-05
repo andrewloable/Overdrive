@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">ทำให้ระบบตรวจสอบรถยนต์ OverDrive ทำงานในพื้นหลังตลอดเวลา บริการนี้จะไม่อ่านหรือยุ่งเกี่ยวกับเนื้อหาบนหน้าจอ</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">ทำให้ระบบตรวจสอบรถยนต์ BladeWatch ทำงานในพื้นหลังตลอดเวลา บริการนี้จะไม่อ่านหรือยุ่งเกี่ยวกับเนื้อหาบนหน้าจอ</string>
     <string name="action_cancel">ยกเลิก</string>
     <string name="action_clear_plain">ล้างข้อมูล</string>
     <string name="action_select_all">เลือกทั้งหมด</string>
@@ -78,10 +78,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">เลือกภาษาของคุณ</string>
-    <string name="setup_language_body">ค่าเริ่มต้นจะเป็นภาษาของหน้าจอรถ แตะเพื่อเปลี่ยนภาษาสำหรับแอป OverDrive และเว็บ Tunnel</string>
+    <string name="setup_language_body">ค่าเริ่มต้นจะเป็นภาษาของหน้าจอรถ แตะเพื่อเปลี่ยนภาษาสำหรับแอป BladeWatch และเว็บ Tunnel</string>
     <string name="setup_language_button">เลือกภาษา</string>
     <string name="setup_autostart_title">ปิดการจำกัดการเริ่มแอปอัตโนมัติ</string>
-    <string name="setup_autostart_body">แตะด้านล่างเพื่อเปิดการตั้งค่า Auto-Start ของ BYD หา OverDrive ในรายการแล้วเอาเครื่องหมายถูกออก BYD จะรีเซ็ตค่านี้ทุกครั้งที่ลงแอปใหม่ — คุณจะต้องทำซ้ำหลังอัปเดตแอป</string>
+    <string name="setup_autostart_body">แตะด้านล่างเพื่อเปิดการตั้งค่า Auto-Start ของ BYD หา BladeWatch ในรายการแล้วเอาเครื่องหมายถูกออก BYD จะรีเซ็ตค่านี้ทุกครั้งที่ลงแอปใหม่ — คุณจะต้องทำซ้ำหลังอัปเดตแอป</string>
     <string name="setup_autostart_button">เปิด BYD Auto-Start</string>
     <string name="setup_overlay_title">อนุญาตให้แสดงทับแอปอื่น</string>
     <string name="setup_overlay_body">เปิดใช้งานเพื่อแสดงสถานะการบันทึกวิดีโอและติดตามทริปลอยอยู่บนแอปอื่น</string>
@@ -340,7 +340,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">สถานะ OverDrive</string>
+    <string name="status_overlay_notif_title">สถานะ BladeWatch</string>
     <string name="status_overlay_notif_text">แถบสถานะทำงานอยู่</string>
     <string name="rail_dashboard">หน้าหลัก</string>
     <string name="rail_live">ภาพสด</string>
@@ -366,15 +366,15 @@
     <string name="cd_settings_subrail">เมนูตั้งค่าย่อย</string>
     <string name="settings_privacy_title">ความเป็นส่วนตัวและข้อมูล</string>
     <string name="settings_privacy_body">รีเซ็ตจะล้างข้อมูลการบันทึกวิดีโอ ข้อมูลการเข้าสู่ระบบ สถานะเบื้องหลัง และการตั้งค่าบนเครื่อง ทำแล้วกู้คืนไม่ได้นะ</string>
-    <string name="settings_about_title">เกี่ยวกับ OverDrive</string>
+    <string name="settings_about_title">เกี่ยวกับ BladeWatch</string>
     <string name="settings_about_version_label">เวอร์ชัน</string>
     <string name="settings_about_package_label">Build</string>
     <string name="settings_about_check_update_value">ตรวจสอบเวอร์ชันล่าสุดบน GitHub แล้วลงเลยถ้ามีใหม่กว่า</string>
     <string name="settings_about_support_section">โปรเจกต์นี้เดินหน้าได้เพราะคนแบบคุณ</string>
     <string name="settings_about_support_share_title">บอกต่อให้เพื่อนเจ้าของรถคนอื่น</string>
     <string name="settings_about_support_share_value">ช่วยแชร์ลิงก์ให้คนใช้ BYD คนอื่นได้รู้จักแอปนี้กันเยอะๆ</string>
-    <string name="settings_about_support_share_message">ลองโหลด Overdrive ดูดิ - แอปกล้องหน้ารถ+โหมดเฝ้าระวังแบบ Open-Source สำหรับ BYD: https://overdrive-5lc.pages.dev/</string>
-    <string name="settings_about_support_share_chooser">แชร์ Overdrive</string>
+    <string name="settings_about_support_share_message">ลองโหลด BladeWatch ดูดิ - แอปกล้องหน้ารถ+โหมดเฝ้าระวังแบบ Open-Source สำหรับ BYD: https://bladewatch-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_chooser">แชร์ BladeWatch</string>
     <string name="settings_about_open_link_failed">เปิดลิงก์ไม่ได้</string>
     <string name="settings_about_open_link_copied">หาเบราว์เซอร์ไม่เจอ คัดลอก URL แล้ว: %1$s</string>
     <string name="settings_about_support_kofi_title">สนับสนุนเวอร์ชันถัดไป ☕</string>
@@ -383,12 +383,12 @@
     <string name="settings_about_license_title">ไลเซนส์</string>
     <string name="settings_about_license_value">MIT — Open Source กดดูเต็มๆ ได้เลย</string>
     <string name="settings_about_source_title">ซอร์สโค้ด (Source Code)</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE</string>
-    <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release/blob/main/LICENSE</string>
+    <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">ไปกด ⭐ ให้ใน GitHub หน่อย</string>
     <string name="settings_about_star_value">ใช้เวลาแค่แป๊บเดียว แต่มันมีความหมายกับคนทำมากนะ</string>
-    <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">ขอบคุณ</string>
     <string name="settings_about_thanks_subtitle">แอปนี้สร้างขึ้นมาได้เพราะความช่วยเหลือจากผู้ร่วมพัฒนาและคนสนับสนุนทุกคนเลยนะ</string>
     <string name="settings_about_contributors_title">ผู้ร่วมพัฒนา</string>
@@ -441,7 +441,7 @@
     <string name="diagnostics_battery_subtitle">ดูค่า SOH และสถิติแบตเตอรี่</string>
     <string name="diagnostics_settings_subtitle">ตั้งค่าแอป, ธีม และภาษา</string>
     <string name="integrations_hero_title">ส่วนเสริม</string>
-    <string name="integrations_hero_subtitle">เชื่อมต่อ OverDrive กับบริการอื่นๆ</string>
+    <string name="integrations_hero_subtitle">เชื่อมต่อ BladeWatch กับบริการอื่นๆ</string>
     <string name="integrations_status_unknown">แตะเพื่อตั้งค่า</string>
     <string name="integrations_status_configured">ตั้งค่าแล้ว</string>
     <string name="integrations_status_not_set_up">ยังไม่ได้ตั้งค่า</string>
@@ -452,7 +452,7 @@
     <string name="integrations_configure_button">ตั้งค่า</string>
     <string name="settings_action_check_update">เช็กอัปเดต</string>
     <string name="settings_action_reset_data">ล้างข้อมูล (Reset)…</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">พร้อมเฝ้าระวัง</string>
     <string name="dashboard_subtitle_all_systems">ระบบทั้งหมดออนไลน์</string>
     <string name="dashboard_subtitle_some_offline">ออนไลน์ %1$d จาก %2$d บริการ</string>
@@ -492,7 +492,7 @@
     <string name="dashboard_action_settings">ตั้งค่า</string>
     <string name="dashboard_action_settings_subtitle">การตั้งค่าและเกี่ยวกับ</string>
     <string name="settings_hero_title">ตั้งค่า</string>
-    <string name="settings_hero_overline">OVERDRIVE</string>
+    <string name="settings_hero_overline">BLADEWATCH</string>
     <string name="settings_hero_subtitle">ปรับหน้าตา, การบันทึกวิดีโอ, โหมดเฝ้าระวัง และข้อมูลต่างๆ บนเครื่อง</string>
     <string name="settings_overline_preferences">การตั้งค่าทั่วไป</string>
     <string name="settings_overline_about_data">ข้อมูล</string>
@@ -501,10 +501,10 @@
     <string name="settings_section_recording_subtitle">ระยะเวลา Buffer, โคเดกวิดีโอ, ขีดจำกัดพื้นที่</string>
     <string name="settings_section_surveillance_subtitle">โซนตรวจจับ, การตั้งเวลา, ความไวต่อความเคลื่อนไหว</string>
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT</string>
-    <string name="settings_about_row_title">เกี่ยวกับ OverDrive</string>
+    <string name="settings_about_row_title">เกี่ยวกับ BladeWatch</string>
     <string name="settings_about_row_subtitle">เวอร์ชัน, ไลเซนส์, สนับสนุนคนทำ</string>
     <string name="settings_reset_row_subtitle">ลบไฟล์วิดีโอ, เหตุการณ์ หรือเคลียร์แคช</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">ปรับเปลี่ยนธีม, ภาษา และรูปแบบหน้าจอ</string>
     <string name="settings_theme_active_auto_caption">เปลี่ยนตามธีมของตัวรถอัตโนมัติ</string>
     <string name="settings_theme_active_light_caption">ใช้ธีมสว่างเสมอ</string>
@@ -512,7 +512,7 @@
     <string name="settings_language_count_format">มีให้เลือก %1$d จาก %2$d ภาษา</string>
     <string name="settings_language_card_title">ภาษาของแอป</string>
     <string name="settings_privacy_stance_title">เก็บข้อมูลในเครื่องคุณเท่านั้น</string>
-    <string name="settings_privacy_stance_body">OverDrive ทำงานบนจอรถของคุณ 100% จะไม่มีข้อมูลไหนถูกส่งออกจากรถยกเว้นผ่าน Tunnel และส่วนเสริมที่คุณตั้งค่าเอง</string>
+    <string name="settings_privacy_stance_body">BladeWatch ทำงานบนจอรถของคุณ 100% จะไม่มีข้อมูลไหนถูกส่งออกจากรถยกเว้นผ่าน Tunnel และส่วนเสริมที่คุณตั้งค่าเอง</string>
     <string name="settings_privacy_overline_storage">พื้นที่เก็บข้อมูลในเครื่อง</string>
     <string name="settings_privacy_overline_reset">ล้างข้อมูล (RESET)</string>
     <string name="settings_privacy_storage_clips_label">วิดีโอที่เก็บไว้</string>
@@ -528,7 +528,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">กำลังรอข้อมูล</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">ยินดีต้อนรับ — OverDrive พร้อมเป็นตาวิเศษให้รถคุณแล้ว</string>
+    <string name="dashboard_insight_welcome">ยินดีต้อนรับ — BladeWatch พร้อมเป็นตาวิเศษให้รถคุณแล้ว</string>
     <string name="dashboard_insight_parked_charged_kwh">ชาร์จไฟไป %1$s (≈%2$s) ตอนจอดรถ</string>
     <string name="dashboard_insight_parked_charged">ชาร์จไฟไป %1$s ตอนจอดรถ</string>
     <string name="dashboard_insight_parked_drained_kwh">ใช้ไฟไป %1$s (≈%2$s) ตั้งแต่เริ่มจอด</string>
@@ -544,12 +544,12 @@
         <item quantity="other">วันนี้อัดไว้ %1$d วิดีโอ</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_days_hours">
-        <item quantity="one">OverDrive เปิดมาแล้ว %1$d วัน %2$d ชม.</item>
-        <item quantity="other">OverDrive เปิดมาแล้ว %1$d วัน %2$d ชม.</item>
+        <item quantity="one">BladeWatch เปิดมาแล้ว %1$d วัน %2$d ชม.</item>
+        <item quantity="other">BladeWatch เปิดมาแล้ว %1$d วัน %2$d ชม.</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_hours">
-        <item quantity="one">OverDrive เปิดมาแล้ว %1$d ชม.</item>
-        <item quantity="other">OverDrive เปิดมาแล้ว %1$d ชม.</item>
+        <item quantity="one">BladeWatch เปิดมาแล้ว %1$d ชม.</item>
+        <item quantity="other">BladeWatch เปิดมาแล้ว %1$d ชม.</item>
     </plurals>
     <plurals name="dashboard_insight_minutes">
         <item quantity="one">%1$d นาที</item>

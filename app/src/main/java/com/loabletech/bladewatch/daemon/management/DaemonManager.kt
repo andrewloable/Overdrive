@@ -1,11 +1,11 @@
-package com.overdrive.app.daemon.management
+package com.loabletech.bladewatch.daemon.management
 
 import android.content.Context
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.config.ConfigManager
-import com.overdrive.app.config.DaemonConfig
-import com.overdrive.app.config.DaemonType
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.config.ConfigManager
+import com.loabletech.bladewatch.config.DaemonConfig
+import com.loabletech.bladewatch.config.DaemonType
+import com.loabletech.bladewatch.logging.LogManager
 import java.util.concurrent.ConcurrentHashMap
 
 /**

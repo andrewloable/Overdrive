@@ -1,6 +1,6 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Cross-process locale persistence for the Overdrive daemon.
+ * Cross-process locale persistence for the BladeWatch daemon.
  *
  * <p>The HTTP server runs as UID 2000 (shell), which cannot read app-private
  * SharedPreferences. We use the same cross-UID-readable file pattern as
- * {@code ZrokLauncher}: a plain text file under {@code /data/local/tmp/.overdrive/}
+ * {@code ZrokLauncher}: a plain text file under {@code /data/local/tmp/.bladewatch/}
  * that both the daemon and the Kotlin settings UI can read and write.
  *
  * <p>The locale chosen here drives:
@@ -38,7 +38,7 @@ public final class LocaleManager {
     private static final Set<String> SUPPORTED_SET = new HashSet<>(SUPPORTED);
     private static final String DEFAULT_LANG = "en";
 
-    private static final String STATE_DIR = "/data/local/tmp/.overdrive";
+    private static final String STATE_DIR = "/data/local/tmp/.bladewatch";
     private static final String STATE_FILE = STATE_DIR + "/locale";
 
     /** In-memory cache so we don't disk-read on every request. */

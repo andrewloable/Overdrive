@@ -1,5 +1,5 @@
 /**
- * Overdrive — Collapsible cards.
+ * BladeWatch — Collapsible cards.
  *
  * Turns every `.card` with a `.card-header` + `.card-body` into a tappable
  * accordion section. Lightweight: no animation library, just CSS transitions

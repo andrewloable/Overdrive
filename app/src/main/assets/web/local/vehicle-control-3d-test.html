@@ -9,7 +9,7 @@
         // gets the same dark default + localStorage hydration as every other
         // page, without depending on the auth-protected shared/theme.js.
         (function(){
-            var v = (function(){try{var x=localStorage.getItem("overdrive_theme");return x==="light"||x==="dark"||x==="auto"?x:"dark"}catch(e){return"dark"}})();
+            var v = (function(){try{var x=localStorage.getItem("bladewatch_theme");return x==="light"||x==="dark"||x==="auto"?x:"dark"}catch(e){return"dark"}})();
             var eff = v==="auto" ? (window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark") : (v==="light"?"light":"dark");
             document.documentElement.setAttribute("data-theme", eff);
         })();

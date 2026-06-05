@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
+    <string name="app_name">BladeWatch</string>
 
     <!-- Accessibility Service -->
-    <string name="accessibility_service_description">Keeps Overdrive vehicle monitoring active in the background. This service does not read or interact with screen content.</string>
+    <string name="accessibility_service_description">Keeps BladeWatch vehicle monitoring active in the background. This service does not read or interact with screen content.</string>
 
     <!-- Recording Mode Labels -->
 
@@ -137,10 +137,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">Pick Your Language</string>
-    <string name="setup_language_body">Defaults to your head unit\'s language. Tap to choose a different one for the OverDrive app and the web tunnel.</string>
+    <string name="setup_language_body">Defaults to your head unit\'s language. Tap to choose a different one for the BladeWatch app and the web tunnel.</string>
     <string name="setup_language_button">Choose Language</string>
     <string name="setup_autostart_title">Disable Auto-Start Restriction</string>
-    <string name="setup_autostart_body">Tap below to open BYD Auto-Start. Find OverDrive in the list and uncheck the box. BYD wipes this on every install — you\'ll redo it after updates.</string>
+    <string name="setup_autostart_body">Tap below to open BYD Auto-Start. Find BladeWatch in the list and uncheck the box. BYD wipes this on every install — you\'ll redo it after updates.</string>
     <string name="setup_autostart_button">Open BYD Auto-Start</string>
     <string name="setup_overlay_title">Allow Display Over Other Apps</string>
     <string name="setup_overlay_body">Enable this to show a floating status indicator for recording and trip tracking on top of other apps.</string>
@@ -498,7 +498,7 @@
     <string name="nav_page_byd_cloud">BYD Cloud</string>
 
     <!-- StatusOverlayService persistent notification (foreground service) -->
-    <string name="status_overlay_notif_title">OverDrive Status</string>
+    <string name="status_overlay_notif_title">BladeWatch Status</string>
     <string name="status_overlay_notif_text">Status overlay active</string>
 
     <!-- ============================================================== -->
@@ -542,7 +542,7 @@
     <string name="settings_privacy_body">Reset clears recordings index, cached credentials, daemon state, and on-device preferences. The action cannot be undone.</string>
 
     <!-- Settings → About pane copy -->
-    <string name="settings_about_title">About OverDrive</string>
+    <string name="settings_about_title">About BladeWatch</string>
     <string name="settings_about_version_label">Version</string>
     <string name="settings_about_package_label">Build</string>
     <string name="settings_about_auto_update_title">Auto-update from server</string>
@@ -554,9 +554,9 @@
     <string name="settings_about_support_section">Powered by people like you</string>
 
     <string name="settings_about_support_share_title">Tell a fellow owner</string>
-    <string name="settings_about_support_share_value">Every shared link helps another BYD owner discover Overdrive.</string>
-    <string name="settings_about_support_share_message">Check out Overdrive — open-source surveillance &amp; dashcam for BYD: https://overdrive-5lc.pages.dev/</string>
-    <string name="settings_about_support_share_chooser">Share Overdrive</string>
+    <string name="settings_about_support_share_value">Every shared link helps another BYD owner discover BladeWatch.</string>
+    <string name="settings_about_support_share_message">Check out BladeWatch — open-source surveillance &amp; dashcam for BYD: https://bladewatch-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_chooser">Share BladeWatch</string>
     <string name="settings_about_open_link_failed">Couldn\'t open link.</string>
     <string name="settings_about_open_link_copied">No browser found. URL copied: %1$s</string>
 
@@ -566,12 +566,12 @@
     <string name="settings_about_license_title">License</string>
     <string name="settings_about_license_value">MIT — open source. Tap to view full text.</string>
     <string name="settings_about_source_title">Source code</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE</string>
-    <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release/blob/main/LICENSE</string>
+    <string name="settings_about_source_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">Star us on GitHub</string>
     <string name="settings_about_star_value">Takes a second. Means a lot.</string>
-    <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url" translatable="false">https://github.com/yash-srivastava/BladeWatch-release</string>
 
     <string name="settings_about_thanks_title">Thanks</string>
     <string name="settings_about_thanks_subtitle">Built with the help of contributors and supporters.</string>
@@ -646,7 +646,7 @@
 
     <!-- SOTA Integrations page -->
     <string name="integrations_hero_title">Integrations</string>
-    <string name="integrations_hero_subtitle">Connect Overdrive to your services.</string>
+    <string name="integrations_hero_subtitle">Connect BladeWatch to your services.</string>
     <string name="integrations_status_unknown">Tap to configure</string>
     <string name="integrations_status_configured">Configured</string>
     <string name="integrations_status_not_set_up">Not set up</string>
@@ -661,7 +661,7 @@
     <string name="settings_action_reset_data">Reset data…</string>
 
     <!-- Content descriptions for rail / segmented controls -->
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
 
     <!-- ============================================================== -->
     <!-- Dashboard SOTA revamp                                            -->
@@ -669,7 +669,7 @@
 
     <!-- Hero card -->
     <!-- SOTA hero headline. Static identity statement (not a time-of-day
-         greeting) — pairs with the OVERDRIVE overline above and the live
+         greeting) — pairs with the BLADEWATCH overline above and the live
          status row of chips below. Locale catalogs auto-translate. -->
     <string name="dashboard_hero_headline">On watch</string>
     <string name="dashboard_subtitle_all_systems">All systems online</string>
@@ -724,7 +724,7 @@
 
     <!-- Hero -->
     <string name="settings_hero_title">Settings</string>
-    <string name="settings_hero_overline">OVERDRIVE</string>
+    <string name="settings_hero_overline">BLADEWATCH</string>
     <string name="settings_hero_subtitle">Tune appearance, recording, surveillance, and on-device data.</string>
 
     <!-- Section overlines -->
@@ -741,12 +741,12 @@
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT runners.</string>
 
     <!-- About / data row subtitles -->
-    <string name="settings_about_row_title">About OverDrive</string>
+    <string name="settings_about_row_title">About BladeWatch</string>
     <string name="settings_about_row_subtitle">Version, license, support development.</string>
     <string name="settings_reset_row_subtitle">Clear recordings, events, or all caches.</string>
 
     <!-- Footer -->
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
 
     <!-- ============================================================ -->
     <!-- Appearance pane — SOTA visual theme picker                    -->
@@ -766,7 +766,7 @@
     <!-- Privacy pane — stance + storage summary + reset               -->
     <!-- ============================================================ -->
     <string name="settings_privacy_stance_title">On-device by default</string>
-    <string name="settings_privacy_stance_body">OverDrive runs entirely on the head unit. No telemetry leaves your car except via the tunnels and integrations you explicitly configure.</string>
+    <string name="settings_privacy_stance_body">BladeWatch runs entirely on the head unit. No telemetry leaves your car except via the tunnels and integrations you explicitly configure.</string>
     <string name="settings_privacy_overline_storage">LOCAL STORAGE</string>
     <string name="settings_privacy_overline_reset">DATA RESET</string>
     <string name="settings_privacy_storage_clips_label">Clips on disk</string>
@@ -802,7 +802,7 @@
          (do not spell out the digits). -->
 
     <!-- First-launch welcome — only shown on the very first dashboard visit. -->
-    <string name="dashboard_insight_welcome">Welcome — Overdrive is now your second pair of eyes.</string>
+    <string name="dashboard_insight_welcome">Welcome — BladeWatch is now your second pair of eyes.</string>
 
     <!-- Parking delta. %1$s = absolute SOC delta string ("8%"); %2$s = absolute kWh string ("4 kWh"). -->
     <string name="dashboard_insight_parked_charged_kwh">Picked up %1$s (≈%2$s) while parked</string>
@@ -835,12 +835,12 @@
 
     <!-- Process uptime. Days form takes (days, hours); hours form takes hours only. -->
     <plurals name="dashboard_insight_uptime_days_hours">
-        <item quantity="one">Overdrive online for %1$d day, %2$d hr</item>
-        <item quantity="other">Overdrive online for %1$d days, %2$d hr</item>
+        <item quantity="one">BladeWatch online for %1$d day, %2$d hr</item>
+        <item quantity="other">BladeWatch online for %1$d days, %2$d hr</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_hours">
-        <item quantity="one">Overdrive online for %1$d hour</item>
-        <item quantity="other">Overdrive online for %1$d hours</item>
+        <item quantity="one">BladeWatch online for %1$d hour</item>
+        <item quantity="other">BladeWatch online for %1$d hours</item>
     </plurals>
 
     <!-- Duration helpers used inside insights (last_charge etc.). -->

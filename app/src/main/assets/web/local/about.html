@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
-    <title data-i18n="about.page_title">About — OverDrive</title>
+    <title data-i18n="about.page_title">About — BladeWatch</title>
     <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <script src="../shared/theme.js?v=3"></script>
     <script src="../shared/app-shell.js"></script>
@@ -191,7 +191,7 @@
 
                     <section class="about-section">
                         <h3 class="about-subhead" data-i18n="about.contributors_title">Contributors</h3>
-                        <p class="about-section-sub" data-i18n="about.contributors_sub">People who've shipped code to OverDrive.</p>
+                        <p class="about-section-sub" data-i18n="about.contributors_sub">People who've shipped code to BladeWatch.</p>
                         <div class="credits-card" id="contributorsList"></div>
                     </section>
 
@@ -226,7 +226,7 @@
                                 </svg>
                                 <div class="tier-text">
                                     <p class="tier-title" data-i18n="about.support.share_title">Tell a fellow owner</p>
-                                    <p class="tier-value" data-i18n="about.support.share_value">Every shared link helps another BYD owner discover Overdrive.</p>
+                                    <p class="tier-value" data-i18n="about.support.share_value">Every shared link helps another BYD owner discover BladeWatch.</p>
                                 </div>
                                 <svg class="tier-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="9 18 15 12 9 6"/>
@@ -393,7 +393,7 @@
                 ? (window.BYD.i18n.t(k) || fb) : fb;
 
             const star = document.getElementById('tierStar');
-            if (star) star.href = t('about.support.star_url', 'https://github.com/yash-srivastava/Overdrive-release');
+            if (star) star.href = t('about.support.star_url', 'https://github.com/yash-srivastava/BladeWatch-release');
 
             const kofi = document.getElementById('tierKofi');
             if (kofi) kofi.href = t('about.support.kofi_url', 'https://ko-fi.com/E1E71XALHX');
@@ -402,7 +402,7 @@
             if (share) {
                 share.addEventListener('click', async () => {
                     const text = t('about.support.share_message',
-                        'Check out Overdrive — open-source surveillance & dashcam for BYD: https://overdrive-5lc.pages.dev/');
+                        'Check out BladeWatch — open-source surveillance & dashcam for BYD: https://bladewatch-5lc.pages.dev/');
                     try {
                         if (navigator.share) {
                             await navigator.share({ text });

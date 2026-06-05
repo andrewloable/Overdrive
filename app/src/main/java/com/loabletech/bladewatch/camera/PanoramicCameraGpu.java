@@ -1,4 +1,4 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.graphics.ImageFormat;
 import android.hardware.HardwareBuffer;
@@ -8,12 +8,12 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.Surface;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.surveillance.GpuDownscaler;
-import com.overdrive.app.surveillance.FoveatedCropper;
-import com.overdrive.app.surveillance.GpuMosaicRecorder;
-import com.overdrive.app.surveillance.HardwareEventRecorderGpu;
-import com.overdrive.app.surveillance.SurveillanceEngineGpu;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.GpuDownscaler;
+import com.loabletech.bladewatch.surveillance.FoveatedCropper;
+import com.loabletech.bladewatch.surveillance.GpuMosaicRecorder;
+import com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu;
+import com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -149,7 +149,7 @@ public class PanoramicCameraGpu {
     // Consumers
     private GpuMosaicRecorder recorder;
     private HardwareEventRecorderGpu encoder;  // Direct encoder reference for draining
-    private com.overdrive.app.streaming.GpuStreamScaler streamScaler;  // Stream scaler (optional)
+    private com.loabletech.bladewatch.streaming.GpuStreamScaler streamScaler;  // Stream scaler (optional)
     private HardwareEventRecorderGpu streamEncoder;  // Stream encoder (optional)
     private GpuDownscaler downscaler;
     private SurveillanceEngineGpu sentry;
@@ -162,7 +162,7 @@ public class PanoramicCameraGpu {
     // pace and drops frames when busy. V2 motion's internal 100ms throttle
     // (MOTION_PROCESS_INTERVAL_MS) keeps actual processing at ~10 fps so
     // there's no need for a separate frame-skip counter on the GL side.
-    private com.overdrive.app.camera.AiLaneWorker aiLaneWorker;
+    private com.loabletech.bladewatch.camera.AiLaneWorker aiLaneWorker;
     // Last measured camera FPS, computed in the 2-min Stats log. Surfaced
     // via getMeasuredFps() so the UI can show actualFps when it falls below
     // requested (HAL clamp; e.g. user requests 30, HAL emits ~26).
@@ -280,7 +280,7 @@ public class PanoramicCameraGpu {
         // back to the downscaler's buffer pool so dropped frames are returned
         // immediately (no leak under sustained submit-while-busy).
         if (this.aiLaneWorker == null) {
-            this.aiLaneWorker = new com.overdrive.app.camera.AiLaneWorker(frame -> {
+            this.aiLaneWorker = new com.loabletech.bladewatch.camera.AiLaneWorker(frame -> {
                 GpuDownscaler ds = this.downscaler;
                 if (ds != null && frame != null) {
                     try {
@@ -519,7 +519,7 @@ public class PanoramicCameraGpu {
      * @param streamScaler GPU stream scaler to initialize
      * @param streamEncoder Hardware encoder for streaming
      */
-    public void initStreamScalerOnGlThread(com.overdrive.app.streaming.GpuStreamScaler streamScaler,
+    public void initStreamScalerOnGlThread(com.loabletech.bladewatch.streaming.GpuStreamScaler streamScaler,
                                           HardwareEventRecorderGpu streamEncoder) {
         if (glHandler == null) {
             logger.error("GL thread not started");
@@ -609,7 +609,7 @@ public class PanoramicCameraGpu {
     }
 
     private void probeHardwareBufferBridge() {
-        if (!com.overdrive.app.surveillance.NativeMotion.isLibraryLoaded()) {
+        if (!com.loabletech.bladewatch.surveillance.NativeMotion.isLibraryLoaded()) {
             throw new IllegalStateException("libsurveillance not loaded before camera startup");
         }
 
@@ -646,7 +646,7 @@ public class PanoramicCameraGpu {
 
     private void persistCameraConfigSnapshot(boolean validated, String failureReason) {
         try {
-            org.json.JSONObject existingCam = com.overdrive.app.config.UnifiedConfigManager
+            org.json.JSONObject existingCam = com.loabletech.bladewatch.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("camera");
             int currentId = getCameraId();
             boolean existingManual = existingCam != null && existingCam.optBoolean("manualOverride", false);
@@ -692,7 +692,7 @@ public class PanoramicCameraGpu {
                 camCfg.put("productDevice", firmwareInfo.device);
                 camCfg.put("vehicleCamSort", firmwareInfo.vehicleCamSort);
             }
-            com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
         } catch (Exception ex) {
             logger.warn("Failed to save camera config: " + ex.getMessage());
         }
@@ -1279,7 +1279,7 @@ public class PanoramicCameraGpu {
             // PASS 1B: Streaming (Parallel Zero-Copy GPU Path)
             // Only runs if streaming is enabled - uses separate encoder at lower resolution
             // Capture local refs to avoid NPE from concurrent pipeline shutdown
-            com.overdrive.app.streaming.GpuStreamScaler localStreamScaler = streamScaler;
+            com.loabletech.bladewatch.streaming.GpuStreamScaler localStreamScaler = streamScaler;
             HardwareEventRecorderGpu localStreamEncoder = streamEncoder;
             if (localStreamScaler != null && localStreamEncoder != null) {
                 localStreamScaler.drawFrame(cameraTextureId);
@@ -1735,7 +1735,7 @@ public class PanoramicCameraGpu {
                     camCfg.put("probedSurfaceMode", 0);
                     camCfg.put("probedAndValidated", true);
                     camCfg.put("fallbackFromProbe", true);
-                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
                     logger.info("Persisted fallback camera ID " + lastDataCameraId + " for next launch");
                 } catch (Exception ex) {
                     logger.warn("Failed to persist fallback camera config: " + ex.getMessage());
@@ -2346,7 +2346,7 @@ public class PanoramicCameraGpu {
      * @param streamScaler GPU stream scaler
      * @param streamEncoder Stream encoder
      */
-    public void setStreamingComponents(com.overdrive.app.streaming.GpuStreamScaler streamScaler,
+    public void setStreamingComponents(com.loabletech.bladewatch.streaming.GpuStreamScaler streamScaler,
                                       HardwareEventRecorderGpu streamEncoder) {
         this.streamScaler = streamScaler;
         this.streamEncoder = streamEncoder;

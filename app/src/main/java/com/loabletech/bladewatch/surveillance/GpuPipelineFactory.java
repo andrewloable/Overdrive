@@ -1,6 +1,6 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.File;
 

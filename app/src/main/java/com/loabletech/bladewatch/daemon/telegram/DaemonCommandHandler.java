@@ -1,7 +1,7 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
-import com.overdrive.app.config.SecretConfigStore;
-import com.overdrive.app.logging.SecretRedactor;
+import com.loabletech.bladewatch.config.SecretConfigStore;
+import com.loabletech.bladewatch.logging.SecretRedactor;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -230,7 +230,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         ctx.log("Starting daemon: " + className);
         
         // Get APK path
-        String apkPath = ctx.execShell("pm path com.overdrive.app | head -1 | cut -d: -f2");
+        String apkPath = ctx.execShell("pm path com.loabletech.bladewatch | head -1 | cut -d: -f2");
         if (apkPath == null || apkPath.trim().isEmpty()) {
             ctx.log("Cannot find APK path");
             return false;
@@ -246,7 +246,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
             // spawnDetached, NOT execShell — execShell would drain stdout
             // until the grandchild app_process exits (i.e. forever) and
             // freeze the polling thread.
-            String fullClass = "com.overdrive.app.daemon." + className;
+            String fullClass = "com.loabletech.bladewatch.daemon." + className;
             String cmd = String.format(
                 "CLASSPATH=%s app_process /system/bin --nice-name=%s %s >> /data/local/tmp/%s.log 2>&1",
                 apkPath, className.toLowerCase(), fullClass, className.toLowerCase());
@@ -275,9 +275,9 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         if (libCheck == null || !libCheck.trim().equals("yes")) {
             // Try common fallback paths
             String[] fallbacks = {
-                "/data/app/~~*/com.overdrive.app-*/lib/arm64",
-                "/data/app/com.overdrive.app-1/lib/arm64",
-                "/data/app/com.overdrive.app-2/lib/arm64"
+                "/data/app/~~*/com.loabletech.bladewatch-*/lib/arm64",
+                "/data/app/com.loabletech.bladewatch-1/lib/arm64",
+                "/data/app/com.loabletech.bladewatch-2/lib/arm64"
             };
             for (String fb : fallbacks) {
                 String found = ctx.execShell("ls -d " + fb + " 2>/dev/null | head -1");
@@ -340,7 +340,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
             "-Djava.library.path=" + nativeLibDir + ":/system/lib64:/vendor/lib64:/product/lib64:/odm/lib64 " +
             proxyArgs + "/system/bin " +
             "--nice-name=" + processName + " " +
-            "com.overdrive.app.daemon.CameraDaemon " +
+            "com.loabletech.bladewatch.daemon.CameraDaemon " +
             outputDir + " " + nativeLibDir + " >> \"$LOG_FILE\" 2>&1";
         
         // Write script line by line using echo (same approach as DaemonLauncher)
@@ -429,7 +429,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
         ctx.log("Writing watchdog script...");
         String appProcessCmd = "CLASSPATH=" + apkPath + " app_process /system/bin " +
             "--nice-name=" + processName + " " +
-            "com.overdrive.app.daemon.AccSentryDaemon >> \"$LOG_FILE\" 2>&1";
+            "com.loabletech.bladewatch.daemon.AccSentryDaemon >> \"$LOG_FILE\" 2>&1";
         
         ctx.execShell("echo '#!/system/bin/sh' > " + scriptPath);
         ctx.execShell("echo 'LOG_FILE=\"" + logFile + "\"' >> " + scriptPath);
@@ -716,7 +716,7 @@ public class DaemonCommandHandler implements TelegramCommandHandler {
             
             // Send notification message to owner — read from the unified
             // config (single source of truth shared with the app).
-            long ownerChatId = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            long ownerChatId = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
             if (ownerChatId > 0) {
                 ctx.sendMessage(ownerChatId, "🌐 *Tunnel URL*\n" + url);
                 ctx.log("Tunnel URL notification sent to owner");

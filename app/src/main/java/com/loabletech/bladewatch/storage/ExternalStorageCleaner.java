@@ -1,4 +1,4 @@
-package com.overdrive.app.storage;
+package com.loabletech.bladewatch.storage;
 
 import android.os.StatFs;
 import android.util.Log;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * ExternalStorageCleaner - Aggressive cleanup of external app recordings (BYD CDR/Dashcam)
  * 
- * SOTA: Ensures Overdrive always has reserved space on SD card by
+ * SOTA: Ensures BladeWatch always has reserved space on SD card by
  * cleaning up oldest files from BYD CDR (built-in dashcam) when needed.
  * 
  * Features:
@@ -39,11 +39,11 @@ public class ExternalStorageCleaner {
     
     // Hybrid logger
     private static boolean useDaemonLogger = false;
-    private static com.overdrive.app.logging.DaemonLogger daemonLogger = null;
+    private static com.loabletech.bladewatch.logging.DaemonLogger daemonLogger = null;
     
     public static void enableDaemonLogging() {
         useDaemonLogger = true;
-        daemonLogger = com.overdrive.app.logging.DaemonLogger.getInstance(TAG);
+        daemonLogger = com.loabletech.bladewatch.logging.DaemonLogger.getInstance(TAG);
     }
     
     private static void logInfo(String msg) {
@@ -115,7 +115,7 @@ public class ExternalStorageCleaner {
     };
     
     // Config file location (shared with StorageManager)
-    private static final String CONFIG_FILE = "/data/local/tmp/overdrive_config.json";
+    private static final String CONFIG_FILE = "/data/local/tmp/bladewatch_config.json";
     
     // Default configuration
     private static final long DEFAULT_RESERVED_SPACE_MB = 2048;  // 2GB
@@ -279,7 +279,7 @@ public class ExternalStorageCleaner {
             // Skip Android system directories
             String name = dir.getName();
             if (name.equals("Android") || name.equals(".") || name.equals("..") || 
-                name.startsWith(".") || name.equals("Overdrive")) {
+                name.startsWith(".") || name.equals("BladeWatch")) {
                 continue;
             }
             

@@ -1,14 +1,14 @@
-package com.overdrive.app.abrp;
+package com.loabletech.bladewatch.abrp;
 
 import android.content.Context;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatterySocData;
-import com.overdrive.app.monitor.BatteryThermalData;
-import com.overdrive.app.monitor.ChargingStateData;
-import com.overdrive.app.monitor.GearMonitor;
-import com.overdrive.app.monitor.GpsMonitor;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatterySocData;
+import com.loabletech.bladewatch.monitor.BatteryThermalData;
+import com.loabletech.bladewatch.monitor.ChargingStateData;
+import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 
@@ -178,8 +178,8 @@ public class AbrpTelemetryService {
 
         try {
             // Read BYD data from cached snapshot (refreshed by BydDataCollector's 5s polling timer)
-            com.overdrive.app.byd.BydDataCollector collector = com.overdrive.app.byd.BydDataCollector.getInstance();
-            com.overdrive.app.byd.BydVehicleData vd = collector.isInitialized() ? collector.getData() : null;
+            com.loabletech.bladewatch.byd.BydDataCollector collector = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+            com.loabletech.bladewatch.byd.BydVehicleData vd = collector.isInitialized() ? collector.getData() : null;
 
             // utc
             payload.put("utc", System.currentTimeMillis() / 1000);
@@ -281,14 +281,14 @@ public class AbrpTelemetryService {
             payload.put("is_charging", isCharging ? 1 : 0);
 
             // is_dcfc — gun state from collector
-            if (vd != null && vd.chargingGunState != com.overdrive.app.byd.BydVehicleData.UNAVAILABLE) {
+            if (vd != null && vd.chargingGunState != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE) {
                 payload.put("is_dcfc", vd.chargingGunState == 3 ? 1 : 0);
                 if (vd.chargingGunState == 4) payload.put("is_charging", 0); // V2L
             }
 
             // is_parked — gear from collector
             boolean isParked = false;
-            if (vd != null && vd.gearMode != com.overdrive.app.byd.BydVehicleData.UNAVAILABLE) {
+            if (vd != null && vd.gearMode != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE) {
                 isParked = vd.gearMode == GearMonitor.GEAR_P;
             } else {
                 isParked = gearMonitor.getCurrentGear() == GearMonitor.GEAR_P;
@@ -314,7 +314,7 @@ public class AbrpTelemetryService {
             }
 
             // odometer — from collector
-            if (vd != null && vd.totalMileageKm != com.overdrive.app.byd.BydVehicleData.UNAVAILABLE) {
+            if (vd != null && vd.totalMileageKm != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE) {
                 int raw = vd.totalMileageKm;
                 payload.put("odometer", raw > 1_000_000 ? raw / 10.0 : (double) raw);
             }
@@ -356,7 +356,7 @@ public class AbrpTelemetryService {
             }
 
             // est_battery_range — EV range in km (ABRP standard field)
-            if (vd != null && vd.elecRangeKm != com.overdrive.app.byd.BydVehicleData.UNAVAILABLE && vd.elecRangeKm > 0) {
+            if (vd != null && vd.elecRangeKm != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE && vd.elecRangeKm > 0) {
                 payload.put("est_battery_range", vd.elecRangeKm);
             }
 
@@ -624,7 +624,7 @@ public class AbrpTelemetryService {
             
             Request request = new Request.Builder()
                 .url(url)
-                .header("User-Agent", "OverDrive-ABRP/1.0")
+                .header("User-Agent", "BladeWatch-ABRP/1.0")
                 .build();
             
             // Use short timeout, same proxy logic as ABRP uploads

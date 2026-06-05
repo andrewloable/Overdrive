@@ -1,15 +1,15 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
 import android.content.Context
-import com.overdrive.app.launcher.AdbShellExecutor
-import com.overdrive.app.launcher.TailscaleLauncher
-import com.overdrive.app.logging.LogManager
-import com.overdrive.app.mqtt.ProxyHelper
+import com.loabletech.bladewatch.launcher.AdbShellExecutor
+import com.loabletech.bladewatch.launcher.TailscaleLauncher
+import com.loabletech.bladewatch.logging.LogManager
+import com.loabletech.bladewatch.mqtt.ProxyHelper
 
 /**
  * Controller for the Tailscale Tunnel.

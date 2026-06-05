@@ -1,9 +1,9 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.storage.StorageManager;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.storage.StorageManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 /**
  * Recordings API Handler - serves recording list, metadata, and video files.
  * 
- * SOTA: Uses StorageManager for dedicated Overdrive directories with size limits.
+ * SOTA: Uses StorageManager for dedicated BladeWatch directories with size limits.
  * 
  * Endpoints:
  * - GET /api/recordings - List all recordings with optional filters
@@ -58,7 +58,7 @@ public class RecordingsApiHandler {
     }
     
     // Legacy paths for backward compatibility (migration)
-    private static final String LEGACY_RECORDINGS_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files";
+    private static final String LEGACY_RECORDINGS_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files";
     private static final String LEGACY_SENTRY_DIR = LEGACY_RECORDINGS_DIR + "/sentry_events";
     
     // Filename patterns (support optional _N segment suffix for multi-segment recordings)

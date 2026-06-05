@@ -1,4 +1,4 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
 /**
  * Aggregated consumption data for a specific condition combination.

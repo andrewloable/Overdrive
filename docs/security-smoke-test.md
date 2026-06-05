@@ -3,7 +3,7 @@
 Use this checklist after a security fix build is installed on a BYD head unit or a close emulator/test device.
 
 Assumptions:
-- The app package name is `com.overdrive.app`.
+- The app package name is `com.loabletech.bladewatch`.
 - The device is on the same Wi-Fi network as your workstation for LAN checks.
 - `adb` is connected to the head unit.
 - Replace `<CAR_IP>` and `<TUNNEL_URL>` with the values from your environment.
@@ -40,10 +40,10 @@ Any `200 OK`, any vehicle data in the body, or any response that exposes diagnos
 
 Command:
 ```bash
-curl -i -c /tmp/overdrive.cookies -H 'Content-Type: application/json' -d '{"token":"<FULL_DEVICE_TOKEN>"}' http://127.0.0.1:8080/auth/token
-curl -i -b /tmp/overdrive.cookies http://127.0.0.1:8080/auth/status
-curl -i -X POST -b /tmp/overdrive.cookies -c /tmp/overdrive.cookies http://127.0.0.1:8080/auth/logout
-curl -i -b /tmp/overdrive.cookies http://127.0.0.1:8080/auth/status
+curl -i -c /tmp/bladewatch.cookies -H 'Content-Type: application/json' -d '{"token":"<FULL_DEVICE_TOKEN>"}' http://127.0.0.1:8080/auth/token
+curl -i -b /tmp/bladewatch.cookies http://127.0.0.1:8080/auth/status
+curl -i -X POST -b /tmp/bladewatch.cookies -c /tmp/bladewatch.cookies http://127.0.0.1:8080/auth/logout
+curl -i -b /tmp/bladewatch.cookies http://127.0.0.1:8080/auth/status
 ```
 
 Expected:
@@ -69,9 +69,9 @@ Any wildcard CORS header, or a permissive origin echo on privileged endpoints, m
 
 Command:
 ```bash
-adb shell ls -l /data/local/tmp/overdrive_secrets.json
-adb shell cat /data/local/tmp/overdrive_config.json
-adb shell "cat /data/local/tmp/overdrive_config.json | grep -E 'deviceSecret|botToken|loginKey|signPassword|commandPwd|rawPassword|user_token|api_key|enableToken|reservedToken|mqttPassword|password' || true"
+adb shell ls -l /data/local/tmp/bladewatch_secrets.json
+adb shell cat /data/local/tmp/bladewatch_config.json
+adb shell "cat /data/local/tmp/bladewatch_config.json | grep -E 'deviceSecret|botToken|loginKey|signPassword|commandPwd|rawPassword|user_token|api_key|enableToken|reservedToken|mqttPassword|password' || true"
 adb logcat -d | grep -E 'New token|Using reserved token|byd_jwt|byd_session'
 ```
 
@@ -79,13 +79,13 @@ Expected:
 The secret store file should be owner-only (`rw-------` or equivalent). The public config must not contain secret values or secret key names. The log search must return no raw tokens, session cookies, or secret material.
 
 Failure interpretation:
-If secrets appear in `overdrive_config.json`, if the secret store is world-readable, or if logs contain token material, the redaction and secret-splitting work failed.
+If secrets appear in `bladewatch_config.json`, if the secret store is world-readable, or if logs contain token material, the redaction and secret-splitting work failed.
 
 ## 6. Verify the location bootstrap component cannot be launched externally
 
 Command:
 ```bash
-adb shell am start -n com.overdrive.app/com.overdrive.app.ui.LocationStarterActivity
+adb shell am start -n com.loabletech.bladewatch/com.loabletech.bladewatch.ui.LocationStarterActivity
 ```
 
 Expected:
@@ -98,7 +98,7 @@ If the activity starts successfully from an external shell, the exported-compone
 
 Command:
 ```bash
-adb shell dumpsys package com.overdrive.app | grep -E 'allowBackup|fullBackupContent|dataExtractionRules'
+adb shell dumpsys package com.loabletech.bladewatch | grep -E 'allowBackup|fullBackupContent|dataExtractionRules'
 ```
 
 Expected:
@@ -111,7 +111,7 @@ If backups are enabled without full exclusions, Android backup can leak sensitiv
 
 Command:
 ```bash
-adb shell "cat /data/local/tmp/overdrive_config.json | grep -E 'mqtt|trustAllCerts|tcp://' || true"
+adb shell "cat /data/local/tmp/bladewatch_config.json | grep -E 'mqtt|trustAllCerts|tcp://' || true"
 ```
 
 Expected:
@@ -124,9 +124,9 @@ If a password is visible in the public config, or if insecure TLS is enabled by 
 
 Command:
 ```bash
-adb shell am start -n com.overdrive.app/com.overdrive.app.ui.MainActivity
+adb shell am start -n com.loabletech.bladewatch/com.loabletech.bladewatch.ui.MainActivity
 ```
-Then open the app's update flow and attempt to install a release whose `overdrive-update.json` checksum does not match the APK.
+Then open the app's update flow and attempt to install a release whose `bladewatch-update.json` checksum does not match the APK.
 
 Expected:
 The updater must stop with an error similar to `APK checksum mismatch` and refuse to install the package.
@@ -138,7 +138,7 @@ If the install continues after a checksum mismatch, the OTA integrity check is n
 
 Command:
 ```bash
-adb shell am start -n com.overdrive.app/com.overdrive.app.ui.MainActivity
+adb shell am start -n com.loabletech.bladewatch/com.loabletech.bladewatch.ui.MainActivity
 ```
 Then open the update flow and attempt to install a release whose `versionCode` is lower than or equal to the installed build.
 
@@ -152,8 +152,8 @@ If the updater accepts a lower or equal `versionCode`, downgrade protection is b
 
 Command:
 ```bash
-adb shell ls -l /data/local/tmp/overdrive_update_timestamp
-adb shell ls -l /data/local/tmp/overdrive_update_progress.json
+adb shell ls -l /data/local/tmp/bladewatch_update_timestamp
+adb shell ls -l /data/local/tmp/bladewatch_update_progress.json
 ```
 
 Expected:
@@ -165,9 +165,9 @@ If the update state files are missing when the updater says an install happened,
 ## Source References
 
 - Manifest security posture and exported components: [AndroidManifest.xml:207](../app/src/main/AndroidManifest.xml#L207), [AndroidManifest.xml:209](../app/src/main/AndroidManifest.xml#L209), [AndroidManifest.xml:244](../app/src/main/AndroidManifest.xml#L244), [AndroidManifest.xml:306](../app/src/main/AndroidManifest.xml#L306), [AndroidManifest.xml:312](../app/src/main/AndroidManifest.xml#L312).
-- Auth token issuance, JWT validation, and thumb tokens: [AuthManager.java:50](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L349), [AuthManager.java:392](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L392), [AuthManager.java:463](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L463).
-- Login and auth API rate limiting: [AuthApiHandler.java:26](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L26), [AuthApiHandler.java:30](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L30), [AuthApiHandler.java:155](../app/src/main/java/com/overdrive/app/server/AuthApiHandler.java#L155).
-- HTTP auth enforcement and protected routes: [AuthMiddleware.java:133](../app/src/main/java/com/overdrive/app/server/AuthMiddleware.java#L133), [HttpServer.java:49](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L49), [HttpServer.java:650](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L650).
-- LAN binding and loopback defaults: [CameraDaemon.java:53](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L53), [UnifiedConfigManager.kt:559](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L559), [UnifiedConfigManager.kt:567](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L567).
-- Secret storage and redaction: [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [AuthManager.java:530](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L530), [SecretRedactor.java:14](../app/src/main/java/com/overdrive/app/logging/SecretRedactor.java#L14).
-- MQTT, update checksum, and OTA behavior: [MqttApiHandler.java:25](../app/src/main/java/com/overdrive/app/server/MqttApiHandler.java#L25), [build.gradle.kts:8](../app/build.gradle.kts#L8), [UpdateApiHandler.java:43](../app/src/main/java/com/overdrive/app/server/UpdateApiHandler.java#L43).
+- Auth token issuance, JWT validation, and thumb tokens: [AuthManager.java:50](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L349), [AuthManager.java:392](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L392), [AuthManager.java:463](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L463).
+- Login and auth API rate limiting: [AuthApiHandler.java:26](../app/src/main/java/com/loabletech/bladewatch/server/AuthApiHandler.java#L26), [AuthApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/AuthApiHandler.java#L30), [AuthApiHandler.java:155](../app/src/main/java/com/loabletech/bladewatch/server/AuthApiHandler.java#L155).
+- HTTP auth enforcement and protected routes: [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [HttpServer.java:650](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L650).
+- LAN binding and loopback defaults: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [UnifiedConfigManager.kt:559](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L559), [UnifiedConfigManager.kt:567](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L567).
+- Secret storage and redaction: [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [AuthManager.java:530](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L530), [SecretRedactor.java:14](../app/src/main/java/com/loabletech/bladewatch/logging/SecretRedactor.java#L14).
+- MQTT, update checksum, and OTA behavior: [MqttApiHandler.java:25](../app/src/main/java/com/loabletech/bladewatch/server/MqttApiHandler.java#L25), [build.gradle.kts:8](../app/build.gradle.kts#L8), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43).

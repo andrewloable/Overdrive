@@ -1,4 +1,4 @@
-package com.overdrive.app.updater;
+package com.loabletech.bladewatch.updater;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -10,9 +10,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.overdrive.app.BuildConfig;
-import com.overdrive.app.launcher.AdbShellExecutor;
-import com.overdrive.app.ui.util.PreferencesManager;
+import com.loabletech.bladewatch.BuildConfig;
+import com.loabletech.bladewatch.launcher.AdbShellExecutor;
+import com.loabletech.bladewatch.ui.util.PreferencesManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,20 +39,20 @@ import okhttp3.Response;
  * - Update detection: compare asset updated_at vs last installed timestamp
  * - Debug tag is ignored in release builds
  *
- * API: https://api.github.com/repos/yash-srivastava/Overdrive-release/releases/tags/{channel}
+ * API: https://api.github.com/repos/yash-srivastava/BladeWatch-release/releases/tags/{channel}
  */
 public class AppUpdater {
 
     private static final String TAG = "AppUpdater";
-    private static final String GITHUB_REPO = "yash-srivastava/Overdrive-release";
+    private static final String GITHUB_REPO = "yash-srivastava/BladeWatch-release";
     private static final String PREFS_NAME = "app_updater";
     private static final String PREF_LAST_UPDATE_TIME = "last_update_timestamp";
     private static final String PREF_JUST_UPDATED = "just_updated";
     private static final String PREF_UPDATED_VERSION = "updated_version";
     // Also persist to filesystem (survives app reinstall, unlike SharedPreferences)
-    private static final String UPDATE_TIMESTAMP_FILE = "/data/local/tmp/overdrive_update_timestamp";
+    private static final String UPDATE_TIMESTAMP_FILE = "/data/local/tmp/bladewatch_update_timestamp";
     // Version file readable by daemon process (SharedPreferences are per-process)
-    public static final String VERSION_FILE = "/data/local/tmp/overdrive_version";
+    public static final String VERSION_FILE = "/data/local/tmp/bladewatch_version";
     // Sentinels for the post-update handshake (see UpdateLifecycle).
     private static final String UPDATE_IN_PROGRESS_FILE = UpdateLifecycle.UPDATE_IN_PROGRESS_FILE;
     private static final String POST_UPDATE_FILE = UpdateLifecycle.POST_UPDATE_FILE;
@@ -76,7 +76,7 @@ public class AppUpdater {
         else r.run();
     }
     private AdbShellExecutor adb; // Lazy — only created when install is triggered
-    private com.overdrive.app.launcher.AdbDaemonLauncher adbLauncher; // For daemon management
+    private com.loabletech.bladewatch.launcher.AdbDaemonLauncher adbLauncher; // For daemon management
 
     private String latestDownloadUrl;
     private String releaseNotes;
@@ -84,8 +84,8 @@ public class AppUpdater {
     private String remoteUpdatedAt;
     private ReleaseManifest releaseManifest;
 
-    private static final String EXPECTED_PACKAGE_NAME = "com.overdrive.app";
-    private static final String RELEASE_MANIFEST_ASSET = "overdrive-update.json";
+    private static final String EXPECTED_PACKAGE_NAME = "com.loabletech.bladewatch";
+    private static final String RELEASE_MANIFEST_ASSET = "bladewatch-update.json";
 
     private static final class ReleaseManifest {
         final String packageName;
@@ -164,9 +164,9 @@ public class AppUpdater {
         return adb;
     }
 
-    private com.overdrive.app.launcher.AdbDaemonLauncher getAdbLauncher() {
+    private com.loabletech.bladewatch.launcher.AdbDaemonLauncher getAdbLauncher() {
         if (adbLauncher == null) {
-            adbLauncher = new com.overdrive.app.launcher.AdbDaemonLauncher(context);
+            adbLauncher = new com.loabletech.bladewatch.launcher.AdbDaemonLauncher(context);
         }
         return adbLauncher;
     }
@@ -176,27 +176,27 @@ public class AppUpdater {
      *
      * The app process (UID 10xxx) needs to elevate to UID 2000 to write
      * /data/local/tmp and call `pm install`, so it goes through the ADB-shell
-     * tunnel ({@link com.overdrive.app.launcher.AdbDaemonLauncher}).
+     * tunnel ({@link com.loabletech.bladewatch.launcher.AdbDaemonLauncher}).
      *
      * The daemon process is ALREADY UID 2000 (it was launched via app_process
      * by the same ADB tunnel at startup), so it can — and must — execute
      * shell commands directly. Routing daemon-side calls through the ADB
      * tunnel fails on every BYD head unit because dadb tries to read the
-     * app's adbkey at /data/user/0/com.overdrive.app/files/adbkey, and that
+     * app's adbkey at /data/user/0/com.loabletech.bladewatch/files/adbkey, and that
      * directory is mode 0700 owned by the app UID — UID 2000 can't open it
      * (EACCES). The user reported this as
      * "Install failed: Download failed: ERROR: Execution failed:
-     *  /data/user/0/com.overdrive.app/files/adbkey: open failed:
+     *  /data/user/0/com.loabletech.bladewatch/files/adbkey: open failed:
      *  EACCES (Permission denied)".
      *
      * Direct exec is also faster (no socket round-trip per command).
      *
-     * Callback semantics match {@link com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback}:
+     * Callback semantics match {@link com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback}:
      * onLog gets the combined stdout/stderr, then onLaunched fires on success
      * (exit 0) or onError on a non-zero exit / spawn failure.
      */
     private void runShell(String command,
-                          com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback callback) {
+                          com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback callback) {
         if (android.os.Process.myUid() != 2000) {
             getAdbLauncher().executeShellCommand(command, callback);
             return;
@@ -242,7 +242,7 @@ public class AppUpdater {
         cancelled = true;
     }
 
-    private static final String APK_PATH = "/data/local/tmp/overdrive_update.apk";
+    private static final String APK_PATH = "/data/local/tmp/bladewatch_update.apk";
 
     private String getApkPath() {
         return APK_PATH;
@@ -257,7 +257,7 @@ public class AppUpdater {
             String cmd = "rm -f " + APK_PATH + "; " +
                     "find " + UpdateLifecycle.TELEGRAM_POST_UPDATE_HINT_FILE +
                     " -mmin +1440 -delete 2>/dev/null; echo done";
-            runShell(cmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+            runShell(cmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() { Log.i(TAG, "Cleaned up leftover APK"); }
                 @Override public void onError(String e) {}
@@ -306,7 +306,7 @@ public class AppUpdater {
                     // Find the APK asset
                     JSONArray assets = release.optJSONArray("assets");
                     if (assets == null || assets.length() == 0) {
-                        postError(callback, "No release assets found; cause: GitHub release has no downloadable files; fix: attach overdrive-update.json and the matching APK asset");
+                        postError(callback, "No release assets found; cause: GitHub release has no downloadable files; fix: attach bladewatch-update.json and the matching APK asset");
                         return;
                     }
 
@@ -325,11 +325,11 @@ public class AppUpdater {
                     String manifestBody = downloadText(client, manifestUrl);
                     releaseManifest = parseReleaseManifest(manifestBody);
                     if (releaseManifest == null) {
-                        postError(callback, "Release manifest malformed; cause: required fields were missing or invalid; fix: ensure overdrive-update.json includes packageName, versionName, versionCode, apkAssetName, apkSha256, apkSize, signingCertSha256");
+                        postError(callback, "Release manifest malformed; cause: required fields were missing or invalid; fix: ensure bladewatch-update.json includes packageName, versionName, versionCode, apkAssetName, apkSha256, apkSize, signingCertSha256");
                         return;
                     }
                     if (!EXPECTED_PACKAGE_NAME.equals(releaseManifest.packageName)) {
-                        postError(callback, "Release manifest package mismatch; cause: expected " + EXPECTED_PACKAGE_NAME + " but found " + releaseManifest.packageName + "; fix: publish a manifest for the OverDrive package");
+                        postError(callback, "Release manifest package mismatch; cause: expected " + EXPECTED_PACKAGE_NAME + " but found " + releaseManifest.packageName + "; fix: publish a manifest for the BladeWatch package");
                         return;
                     }
 
@@ -460,7 +460,7 @@ public class AppUpdater {
                 final boolean[] dlDone = {false};
                 final String[] dlResult = {null};
 
-                runShell(downloadCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                runShell(downloadCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) {
                         dlResult[0] = message;
                     }
@@ -481,7 +481,7 @@ public class AppUpdater {
                 }
 
                 if (cancelled) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -501,19 +501,19 @@ public class AppUpdater {
                 // Step 2: Verify APK size via shell
                 postProgress(callback, "Verifying download...");
                 if (releaseManifest == null) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
                     });
-                    postInstallError(callback, "Release manifest unavailable; cause: update check did not fetch overdrive-update.json; fix: rerun the update check so the manifest can be validated before install");
+                    postInstallError(callback, "Release manifest unavailable; cause: update check did not fetch bladewatch-update.json; fix: rerun the update check so the manifest can be validated before install");
                     return;
                 }
 
                 final boolean[] szDone = {false};
                 final String[] szResult = {null};
                 runShell("stat -c%s " + APK_PATH + " 2>/dev/null || echo 0",
-                        new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) { szResult[0] = message.trim(); }
                     @Override public void onLaunched() {
                         szDone[0] = true;
@@ -532,7 +532,7 @@ public class AppUpdater {
                 long fileSize = 0;
                 try { fileSize = Long.parseLong(szResult[0].trim()); } catch (Exception ignored) {}
                 if (fileSize <= 0) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -542,7 +542,7 @@ public class AppUpdater {
                 }
 
                 if (releaseManifest.apkSize > 0 && fileSize != releaseManifest.apkSize) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -553,7 +553,7 @@ public class AppUpdater {
 
                 String downloadedSha256 = sha256Hex(new File(APK_PATH));
                 if (downloadedSha256 == null || !downloadedSha256.equalsIgnoreCase(releaseManifest.apkSha256)) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -563,7 +563,7 @@ public class AppUpdater {
                 }
 
                 if (!verifyArchiveMetadata(new File(APK_PATH), releaseManifest)) {
-                    runShell("rm -f " + APK_PATH, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -614,10 +614,10 @@ public class AppUpdater {
 
                 String installCmd = "pm install -r " + APK_PATH +
                     "; rm -f " + APK_PATH +
-                    "; sleep 2; am start -n com.overdrive.app/.ui.MainActivity" +
+                    "; sleep 2; am start -n com.loabletech.bladewatch/.ui.MainActivity" +
                     " --ez " + UpdateLifecycle.EXTRA_POST_UPDATE + " true";
 
-                runShell(installCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                runShell(installCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) {
                         Log.i(TAG, "Install: " + message);
                         result[0] = message;
@@ -649,7 +649,7 @@ public class AppUpdater {
                     // there's nothing for the next launch to recover from.
                     runShell(
                             "rm -f " + UPDATE_IN_PROGRESS_FILE + " " + POST_UPDATE_FILE,
-                            new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                            new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                                 @Override public void onLog(String m) {}
                                 @Override public void onLaunched() {}
                                 @Override public void onError(String e) {}
@@ -839,8 +839,8 @@ public class AppUpdater {
      * in step 3 is what the new MainActivity reads to confirm.
      */
     private void runDetachedInstall(InstallCallback callback) {
-        String scriptPath = "/data/local/tmp/overdrive_install.sh";
-        String logPath = "/data/local/tmp/overdrive_install.log";
+        String scriptPath = "/data/local/tmp/bladewatch_install.sh";
+        String logPath = "/data/local/tmp/bladewatch_install.log";
 
         StringBuilder script = new StringBuilder();
         script.append("#!/system/bin/sh\n");
@@ -945,7 +945,7 @@ public class AppUpdater {
         script.append("  TS=$(($(date +%s) * 1000))\n");
         script.append("  printf '{\"phase\":\"error\",\"percent\":-1,");
         script.append("\"message\":\"Install failed\",\"error\":\"%s\",\"ts\":%s}' ");
-        script.append("\"$PM_ESC\" \"$TS\" > /data/local/tmp/overdrive_update_progress.json\n");
+        script.append("\"$PM_ESC\" \"$TS\" > /data/local/tmp/bladewatch_update_progress.json\n");
         script.append("  echo \"[install] FAILED rc=$INSTALL_RC\"\n");
         // Clear the in-progress sentinel so the new MainActivity doesn't run a
         // post-update hard-reset for an install that never landed. Keep
@@ -957,7 +957,7 @@ public class AppUpdater {
         // gets the app back either way (with the new APK on success, or with
         // the old APK + an error toast on failure).
         script.append("sleep 2\n");
-        script.append("am start -n com.overdrive.app/.ui.MainActivity --ez ");
+        script.append("am start -n com.loabletech.bladewatch/.ui.MainActivity --ez ");
         script.append(UpdateLifecycle.EXTRA_POST_UPDATE).append(" true\n");
         script.append("echo \"[install] done rc=$INSTALL_RC at $(date)\"\n");
 
@@ -994,7 +994,7 @@ public class AppUpdater {
 
     private void cleanup(String path) {
         try {
-            runShell("rm -f " + path, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+            runShell("rm -f " + path, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String e) {}
@@ -1005,7 +1005,7 @@ public class AppUpdater {
     private void stopAllDaemons() {
         Log.i(TAG, "Stopping all daemons...");
 
-        com.overdrive.app.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
+        com.loabletech.bladewatch.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
 
         // Step 0: Plant the post-update sentinels so the new process knows to
         // run a hard-reset before starting daemons (see UpdateLifecycle). The
@@ -1016,7 +1016,7 @@ public class AppUpdater {
                 "echo 'update at $(date)' > " + UPDATE_IN_PROGRESS_FILE + "; " +
                 "echo 'update at $(date)' > " + POST_UPDATE_FILE + "; " +
                 "echo done";
-        runShell(markerCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(markerCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 markerDone[0] = true;
@@ -1050,7 +1050,7 @@ public class AppUpdater {
                 "echo done";
         
         final boolean[] wdDone = {false};
-        runShell(killWatchdogsCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(killWatchdogsCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 Log.i(TAG, "Watchdog scripts killed");
@@ -1080,7 +1080,7 @@ public class AppUpdater {
         
         for (String daemon : daemons) {
             final boolean[] done = {false};
-            launcher.killDaemon(daemon, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+            launcher.killDaemon(daemon, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {
                     Log.i(TAG, "Stopped: " + daemon);
@@ -1133,7 +1133,7 @@ public class AppUpdater {
                 "echo done";
         
         final boolean[] sweepDone = {false};
-        runShell(finalSweepCmd, new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(finalSweepCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 sweepDone[0] = true;
@@ -1155,8 +1155,8 @@ public class AppUpdater {
 
     /**
      * Extract version from APK filename including channel.
-     * "overdrive-release-alpha-v6.1.apk" → "alpha-v6.1"
-     * "overdrive-release-prod-v2.0.1.apk" → "prod-v2.0.1"
+     * "bladewatch-release-alpha-v6.1.apk" → "alpha-v6.1"
+     * "bladewatch-release-prod-v2.0.1.apk" → "prod-v2.0.1"
      */
     static String extractVersion(String apkName) {
         if (apkName != null) {
@@ -1222,7 +1222,7 @@ public class AppUpdater {
         // Also save to filesystem via ADB shell (survives reinstall, app can't write /data/local/tmp directly)
         try {
             runShell("echo '" + timestamp + "' > " + UPDATE_TIMESTAMP_FILE,
-                    new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String error) {
@@ -1240,7 +1240,7 @@ public class AppUpdater {
         if (version == null || version.isEmpty()) return;
         try {
             runShell("echo '" + version + "' > " + VERSION_FILE,
-                    new com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String error) {
@@ -1307,7 +1307,7 @@ public class AppUpdater {
         if (!hasFailedUpdateMarker()) return null;
         String err = null;
         try {
-            java.io.File f = new java.io.File("/data/local/tmp/overdrive_update_progress.json");
+            java.io.File f = new java.io.File("/data/local/tmp/bladewatch_update_progress.json");
             StringBuilder sb = new StringBuilder();
             try (java.io.BufferedReader r = new java.io.BufferedReader(
                     new java.io.InputStreamReader(new java.io.FileInputStream(f)))) {
@@ -1328,7 +1328,7 @@ public class AppUpdater {
                     .remove(PREF_UPDATED_VERSION)
                     .apply();
         } catch (Exception ignored) {}
-        try { new java.io.File("/data/local/tmp/overdrive_update_progress.json").delete(); } catch (Exception ignored) {}
+        try { new java.io.File("/data/local/tmp/bladewatch_update_progress.json").delete(); } catch (Exception ignored) {}
         try { new java.io.File(POST_UPDATE_FILE).delete(); } catch (Exception ignored) {}
         return err;
     }
@@ -1340,7 +1340,7 @@ public class AppUpdater {
      */
     private static boolean hasFailedUpdateMarker() {
         try {
-            java.io.File f = new java.io.File("/data/local/tmp/overdrive_update_progress.json");
+            java.io.File f = new java.io.File("/data/local/tmp/bladewatch_update_progress.json");
             if (!f.exists()) return false;
             StringBuilder sb = new StringBuilder();
             try (java.io.BufferedReader r = new java.io.BufferedReader(

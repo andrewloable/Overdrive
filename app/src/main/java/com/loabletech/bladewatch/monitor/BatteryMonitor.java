@@ -1,6 +1,6 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 

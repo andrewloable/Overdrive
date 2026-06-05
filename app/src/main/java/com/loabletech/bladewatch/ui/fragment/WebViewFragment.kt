@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
@@ -19,8 +19,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
-import com.overdrive.app.R
-import com.overdrive.app.daemon.CameraDaemon
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.daemon.CameraDaemon
 
 /**
  * WebView fragment that loads pages from the daemon's HTTP server.
@@ -275,7 +275,7 @@ class WebViewFragment : Fragment() {
                 }
             });
         };
-        console.log('[OverDrive] fetch() patched to bypass proxy');
+        console.log('[BladeWatch] fetch() patched to bypass proxy');
     }
 })();
 """
@@ -401,7 +401,7 @@ class WebViewFragment : Fragment() {
                     // Strategy: try HTTP proxy first, then SOCKS proxy, then direct, then
                     // fall back to letting WebView handle it (which uses system proxy).
                     if (isMapTile) {
-                        val proxyAvailable = com.overdrive.app.mqtt.ProxyHelper.isProxyAvailable()
+                        val proxyAvailable = com.loabletech.bladewatch.mqtt.ProxyHelper.isProxyAvailable()
                         
                         // Build list of proxy strategies to try
                         val strategies = mutableListOf<java.net.Proxy>()
@@ -821,7 +821,7 @@ class WebViewFragment : Fragment() {
         @android.webkit.JavascriptInterface
         fun getAppLocale(): String {
             return try {
-                com.overdrive.app.server.LocaleManager.get()
+                com.loabletech.bladewatch.server.LocaleManager.get()
             } catch (e: Exception) {
                 "en"
             }
@@ -844,7 +844,7 @@ class WebViewFragment : Fragment() {
             // in the app left this returning "dark" until the OS itself
             // flipped, which is exactly the bug the user reported.
             try {
-                val pref = com.overdrive.app.ui.util.PreferencesManager.getThemeMode()
+                val pref = com.loabletech.bladewatch.ui.util.PreferencesManager.getThemeMode()
                 when (pref) {
                     androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> return "light"
                     androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> return "dark"
@@ -942,28 +942,28 @@ class WebViewFragment : Fragment() {
     private fun getAuthJwt(): String? {
         // Cache JWT for 5 minutes to avoid spamming auth state saves
         val now = System.currentTimeMillis()
-        val curVersion = com.overdrive.app.auth.AuthManager.getStateVersion()
+        val curVersion = com.loabletech.bladewatch.auth.AuthManager.getStateVersion()
         if (cachedJwt != null && now < jwtExpiry && cachedJwtStateVersion == curVersion) return cachedJwt
         
         return try {
             // Try to initialize AuthManager if not already done
-            if (com.overdrive.app.auth.AuthManager.getState() == null) {
-                com.overdrive.app.auth.AuthManager.initialize()
+            if (com.loabletech.bladewatch.auth.AuthManager.getState() == null) {
+                com.loabletech.bladewatch.auth.AuthManager.initialize()
             }
             
-            var jwt = com.overdrive.app.auth.AuthManager.generateJwt()
+            var jwt = com.loabletech.bladewatch.auth.AuthManager.generateJwt()
             
             // If JWT generation failed, try reading auth state directly from daemon's file
             if (jwt == null) {
                 android.util.Log.w("WebView", "JWT generation failed, retrying with fresh init...")
-                com.overdrive.app.auth.AuthManager.initialize()
-                jwt = com.overdrive.app.auth.AuthManager.generateJwt()
+                com.loabletech.bladewatch.auth.AuthManager.initialize()
+                jwt = com.loabletech.bladewatch.auth.AuthManager.generateJwt()
             }
             
             if (jwt != null) {
                 cachedJwt = jwt
                 jwtExpiry = now + 5 * 60 * 1000  // 5 min cache
-                cachedJwtStateVersion = com.overdrive.app.auth.AuthManager.getStateVersion()
+                cachedJwtStateVersion = com.loabletech.bladewatch.auth.AuthManager.getStateVersion()
                 android.util.Log.d("WebView", "JWT generated successfully")
             } else {
                 android.util.Log.e("WebView", "JWT generation failed after retry")
@@ -1104,7 +1104,7 @@ class WebViewFragment : Fragment() {
 
     private fun resolveActiveTheme(): String {
         try {
-            val pref = com.overdrive.app.ui.util.PreferencesManager.getThemeMode()
+            val pref = com.loabletech.bladewatch.ui.util.PreferencesManager.getThemeMode()
             when (pref) {
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> return "light"
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> return "dark"

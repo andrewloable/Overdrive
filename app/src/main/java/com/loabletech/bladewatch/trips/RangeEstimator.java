@@ -1,7 +1,7 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
-import com.overdrive.app.abrp.SohEstimator;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.abrp.SohEstimator;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * Personalized range prediction using bucketed consumption model with

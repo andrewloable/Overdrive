@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
 import org.json.JSONObject;
 
@@ -14,7 +14,7 @@ import org.json.JSONObject;
  * That process dies mid-install, which is the signal to the webapp/Telegram
  * that progress has moved past the point of no return. The new process boots
  * with the post-update hint planted, so the next "Tunnel URL" message reads
- * "🔄 Overdrive updated to X" instead of generic "URL changed".
+ * "🔄 BladeWatch updated to X" instead of generic "URL changed".
  */
 public class UpdateCommandHandler implements TelegramCommandHandler {
 
@@ -72,7 +72,7 @@ public class UpdateCommandHandler implements TelegramCommandHandler {
 
         if (!available) {
             ctx.sendMessage(chatId,
-                    "✅ *Up to date*\n_OverDrive " + currentVersion + "_");
+                    "✅ *Up to date*\n_BladeWatch " + currentVersion + "_");
             return;
         }
 

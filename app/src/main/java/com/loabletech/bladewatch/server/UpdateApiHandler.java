@@ -1,9 +1,9 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
 import android.content.Context;
 
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.updater.AppUpdater;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.updater.AppUpdater;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * be able to push updates remotely. Check + preview + progress are read-only,
  * so they're allowed in either access mode (still gated by AuthMiddleware).
  *
- * Progress is written as JSON to /data/local/tmp/overdrive_update_progress.json
+ * Progress is written as JSON to /data/local/tmp/bladewatch_update_progress.json
  * so it survives the inevitable daemon-restart mid-install. The webapp polls
  * this endpoint every 1-2s; when polling fails (daemon dead), the webapp
  * switches to "reconnecting" mode and retries /api/status until appVersion
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class UpdateApiHandler {
 
     private static final String TAG = "UpdateApi";
-    private static final String PROGRESS_FILE = "/data/local/tmp/overdrive_update_progress.json";
+    private static final String PROGRESS_FILE = "/data/local/tmp/bladewatch_update_progress.json";
 
     // One install at a time. AtomicReference so we don't hold an updater past
     // the install (it's GC'd along with the dying process anyway).

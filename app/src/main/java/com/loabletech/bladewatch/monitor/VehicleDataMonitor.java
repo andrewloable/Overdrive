@@ -1,10 +1,10 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 import android.content.Context;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -206,8 +206,8 @@ public class VehicleDataMonitor {
                 // Detector says CHARGING but no real kW signal arrived.
                 // Show a nominal-based hint so the UI doesn't say "Charging at 0 kW".
                 try {
-                    com.overdrive.app.abrp.SohEstimator soh =
-                        com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+                    com.loabletech.bladewatch.abrp.SohEstimator soh =
+                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
                     if (soh != null && soh.getNominalCapacityKwh() > 0) {
                         double nominal = soh.getNominalCapacityKwh();
                         // < 30 kWh nominal pack → PHEV (3.3 kW AC); else BEV (7 kW AC)
@@ -253,8 +253,8 @@ public class VehicleDataMonitor {
         double rawKwh = Double.isNaN(vd.remainKwh) ? 0 : vd.remainKwh;
 
         try {
-            com.overdrive.app.abrp.SohEstimator soh =
-                com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+            com.loabletech.bladewatch.abrp.SohEstimator soh =
+                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
             if (soh != null && soh.getNominalCapacityKwh() > 0 && soc > 0) {
                 double nominal = soh.getNominalCapacityKwh();
                 boolean isPhev = isPhevVehicle(nominal);

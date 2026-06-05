@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">Overdrive holder kjøretøyet overvåket aktivt i bakgrunnen. Denne tjenesten leser ikke eller interagerer med skjerminnholdet.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">BladeWatch holder kjøretøyet overvåket aktivt i bakgrunnen. Denne tjenesten leser ikke eller interagerer med skjerminnholdet.</string>
     <string name="action_cancel">Avbryt</string>
     <string name="action_clear_plain">Tøm</string>
     <string name="action_select_all">Velg alle</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">Velg ditt språk</string>
-    <string name="setup_language_body">Forutsetning til hovedenheten språk. Trykk for å velge en annen for OverDrive app og web tunnelen.</string>
+    <string name="setup_language_body">Forutsetning til hovedenheten språk. Trykk for å velge en annen for BladeWatch app og web tunnelen.</string>
     <string name="setup_language_button">Velg språk</string>
     <string name="setup_autostart_title">Inaktivere Auto-Start-begrensning</string>
-    <string name="setup_autostart_body">Trykk nedenfor for å åpne BYD Auto-Start. Finn OverDrive i listen og avmelde boksen. BYD sletter dette på hver installasjon  du vil gjøre det igjen etter oppdateringer.</string>
+    <string name="setup_autostart_body">Trykk nedenfor for å åpne BYD Auto-Start. Finn BladeWatch i listen og avmelde boksen. BYD sletter dette på hver installasjon  du vil gjøre det igjen etter oppdateringer.</string>
     <string name="setup_autostart_button">Åpne BYD Autostart</string>
     <string name="setup_overlay_title">Tillat visning over andre apper</string>
     <string name="setup_overlay_body">Aktiver dette for å vise en flytende statusindikator for opptak og reise sporing på toppen av andre apper.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive Status</string>
+    <string name="status_overlay_notif_title">BladeWatch Status</string>
     <string name="status_overlay_notif_text">Status overlay aktiv</string>
     <string name="rail_dashboard">Dashboard</string>
     <string name="rail_live">Leve</string>
@@ -364,15 +364,15 @@
     <string name="cd_settings_subrail">Innstillings underbanen</string>
     <string name="settings_privacy_title">Personvern og data</string>
     <string name="settings_privacy_body">Reset rydder innspillingsindeksen, cached-opplysninger, daemon-tilstanden og preferanser på enheten. Handlingen kan ikke avvikles.</string>
-    <string name="settings_about_title">Om OverDrive</string>
+    <string name="settings_about_title">Om BladeWatch</string>
     <string name="settings_about_version_label">Versjon</string>
     <string name="settings_about_package_label">Bygg</string>
     <string name="settings_about_check_update_value">Sjekk den nyeste GitHub-utgivelsen og installer den hvis den er nyere.</string>
     <string name="settings_about_support_section">Styret av folk som deg</string>
     <string name="settings_about_support_share_title">Si ifra til en annen eier</string>
-    <string name="settings_about_support_share_value">Hver delte lenke hjelper en annen BYD eier oppdage Overdrive.</string>
-    <string name="settings_about_support_share_message">Sjekk Overdrive  åpen kildekode overvåking &amp; dashcam for BYD: https://overdrive-5lc.pages.dev/</string>
-    <string name="settings_about_support_share_chooser">Del overdrive</string>
+    <string name="settings_about_support_share_value">Hver delte lenke hjelper en annen BYD eier oppdage BladeWatch.</string>
+    <string name="settings_about_support_share_message">Sjekk BladeWatch  åpen kildekode overvåking &amp; dashcam for BYD: https://bladewatch-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_chooser">Del bladewatch</string>
     <string name="settings_about_open_link_failed">Jeg kunne ikke åpne lenken.</string>
     <string name="settings_about_open_link_copied">Ingen nettleser funnet. URL kopiert: %1$s</string>
     <string name="settings_about_support_kofi_title">Brensel til neste utgivelse</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">Lisense</string>
     <string name="settings_about_license_value">MIT  åpen kildekode. Trykk for å se full tekst.</string>
     <string name="settings_about_source_title">Kildekode</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">HTTPS: http://github.com/yash-srivastava/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">HTTPS: http://github.com/yash-srivastava/BladeWatch-release/blob/main/license</string>
+    <string name="settings_about_source_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">Drop en på GitHub</string>
     <string name="settings_about_star_value">Det tar et øyeblikk, det betyr mye.</string>
-    <string name="settings_about_star_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">Takk</string>
     <string name="settings_about_thanks_subtitle">Bygget med hjelp fra bidragsytere og støttespillere.</string>
     <string name="settings_about_contributors_title">Bidragsytere</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">Sjekk celle SOH og pakke statistikk.</string>
     <string name="diagnostics_settings_subtitle">App-innstillinger, tema og språk.</string>
     <string name="integrations_hero_title">Integrasjoner</string>
-    <string name="integrations_hero_subtitle">Koble Overdrive til tjenestene dine.</string>
+    <string name="integrations_hero_subtitle">Koble BladeWatch til tjenestene dine.</string>
     <string name="integrations_status_unknown">Trykk for å konfigurere</string>
     <string name="integrations_status_configured">Konfigurert</string>
     <string name="integrations_status_not_set_up">Ikke installert</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Konfigurering</string>
     <string name="settings_action_check_update">Sjekk for oppdateringer</string>
     <string name="settings_action_reset_data">Reset data...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">På vakt</string>
     <string name="dashboard_subtitle_all_systems">Alle systemer online</string>
     <string name="dashboard_subtitle_some_offline">%1$d av %2$d tjenester online</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Pre/post buffere, codec, lagringsgrenser.</string>
     <string name="settings_section_surveillance_subtitle">Oppdagelseszoner, tidsplan, bevegelsesfølsomhet.</string>
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT løpere.</string>
-    <string name="settings_about_row_title">Om OverDrive</string>
+    <string name="settings_about_row_title">Om BladeWatch</string>
     <string name="settings_about_row_subtitle">Versjon, lisens, støtteutvikling.</string>
     <string name="settings_reset_row_subtitle">Klar opptak, hendelser, eller alle cache.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Tema, språk og visuelle preferanser.</string>
     <string name="settings_theme_active_auto_caption">Auto følger systemet tema.</string>
     <string name="settings_theme_active_light_caption">Lys tema er alltid på.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d av %2$d språk tilgjengelig</string>
     <string name="settings_language_card_title">Visningsspråk</string>
     <string name="settings_privacy_stance_title">På enheten som standard</string>
-    <string name="settings_privacy_stance_body">OverDrive kjører utelukkende på hovedenheten. Ingen telemetry forlater bilen din bortsett fra gjennom tunneler og integrasjoner du uttrykkelig konfigurerer.</string>
+    <string name="settings_privacy_stance_body">BladeWatch kjører utelukkende på hovedenheten. Ingen telemetry forlater bilen din bortsett fra gjennom tunneler og integrasjoner du uttrykkelig konfigurerer.</string>
     <string name="settings_privacy_overline_storage">Lokal lagring</string>
     <string name="settings_privacy_overline_reset">Data tilbakestilling</string>
     <string name="settings_privacy_storage_clips_label">Klipper på disk</string>
@@ -526,7 +526,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">Ventelige data</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">Velkommen  Overdrive er nå ditt andre øyepar.</string>
+    <string name="dashboard_insight_welcome">Velkommen  BladeWatch er nå ditt andre øyepar.</string>
     <string name="dashboard_insight_parked_charged_kwh">Pakket opp %1$s (≈%2$s) mens parkeret</string>
     <string name="dashboard_insight_parked_charged">Pakket opp %1$s mens du parkerte</string>
     <string name="dashboard_insight_parked_drained_kwh">Brukt %1$s (≈%2$s) siden du parkerte</string>
@@ -542,12 +542,12 @@
         <item quantity="other">%1$d-klippene som er innspilt i dag</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_days_hours">
-        <item quantity="one">Overdrive online for %1$d dag, %2$d timer</item>
-        <item quantity="other">Overdrive online i %1$d dager, %2$d hr</item>
+        <item quantity="one">BladeWatch online for %1$d dag, %2$d timer</item>
+        <item quantity="other">BladeWatch online i %1$d dager, %2$d hr</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_hours">
-        <item quantity="one">Overdrive online for %1$d time</item>
-        <item quantity="other">Overdrive online i %1$d timer</item>
+        <item quantity="one">BladeWatch online for %1$d time</item>
+        <item quantity="other">BladeWatch online i %1$d timer</item>
     </plurals>
     <plurals name="dashboard_insight_minutes">
         <item quantity="one">%1$d min</item>

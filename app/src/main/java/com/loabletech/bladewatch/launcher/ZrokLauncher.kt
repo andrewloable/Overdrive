@@ -1,8 +1,8 @@
-package com.overdrive.app.launcher
+package com.loabletech.bladewatch.launcher
 
 import android.content.Context
-import com.overdrive.app.config.SecretConfigBridge
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.config.SecretConfigBridge
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Launches Zrok tunnel processes via ADB shell for remote access.
@@ -61,12 +61,12 @@ class ZrokLauncher(
         // Set this after running reserve command once
         var reservedShareToken: String? = null
         
-        // Unique name for reserved URL (e.g., "overdrive1a2b3c" -> https://overdrive1a2b3c.share.zrok.io)
+        // Unique name for reserved URL (e.g., "bladewatch1a2b3c" -> https://bladewatch1a2b3c.share.zrok.io)
         // Generated automatically - must be lowercase alphanumeric only, 4-32 chars
-        var uniqueName: String = "overdrive"
+        var uniqueName: String = "bladewatch"
         
         // Prefix for unique name generation (no hyphens allowed!)
-        private const val UNIQUE_NAME_PREFIX = "overdrive"
+        private const val UNIQUE_NAME_PREFIX = "bladewatch"
 
         private fun isValidUniqueName(name: String?): Boolean {
             return !name.isNullOrEmpty()
@@ -80,7 +80,7 @@ class ZrokLauncher(
         
         /**
          * Generate a unique name for this device.
-         * Format: overdrive<6-char-random>
+         * Format: bladewatch<6-char-random>
          * Must be lowercase alphanumeric only, 4-32 chars (zrok requirement).
          * Returns a NEW random value each time called.
          */
@@ -788,7 +788,7 @@ class ZrokLauncher(
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
                     val name = output.trim()
-                    // Must be lowercase alphanumeric, 4-32 chars, starting with "overdrive"
+                    // Must be lowercase alphanumeric, 4-32 chars, starting with "bladewatch"
                     if (isValidUniqueName(name) && !name.contains("No such file")) {
                         SecretConfigBridge.putString(SECRET_SECTION_ZROK, SECRET_KEY_UNIQUE_NAME, name)
                         callback(name)

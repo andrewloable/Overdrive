@@ -1,10 +1,10 @@
-package com.overdrive.app.updater;
+package com.loabletech.bladewatch.updater;
 
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import com.overdrive.app.launcher.AdbDaemonLauncher;
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher;
 
 import java.io.File;
 
@@ -24,8 +24,8 @@ public final class UpdateLifecycle {
 
     private static final String TAG = "UpdateLifecycle";
 
-    public static final String UPDATE_IN_PROGRESS_FILE = "/data/local/tmp/overdrive_update_in_progress";
-    public static final String POST_UPDATE_FILE = "/data/local/tmp/overdrive_post_update";
+    public static final String UPDATE_IN_PROGRESS_FILE = "/data/local/tmp/bladewatch_update_in_progress";
+    public static final String POST_UPDATE_FILE = "/data/local/tmp/bladewatch_post_update";
     /**
      * One-shot marker read by TelegramBotDaemon's notifyTunnel handler so the
      * first post-update tunnel-URL message can include the new version (and a
@@ -34,7 +34,7 @@ public final class UpdateLifecycle {
      * daemon after consuming.
      */
     public static final String TELEGRAM_POST_UPDATE_HINT_FILE =
-            "/data/local/tmp/overdrive_post_update_pending_telegram";
+            "/data/local/tmp/bladewatch_post_update_pending_telegram";
 
     public static final String EXTRA_POST_UPDATE = "post_update";
 

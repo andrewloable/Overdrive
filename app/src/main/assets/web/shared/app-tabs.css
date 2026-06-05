@@ -1,5 +1,5 @@
 /*
- * Overdrive — Bottom-tab navigation for long settings pages.
+ * BladeWatch — Bottom-tab navigation for long settings pages.
  *
  * Pages opt in by including app-tabs.js + setting either window.OT_TABS or
  * a <meta name="ot-tabs"> manifest. The script renders a sticky bottom tab

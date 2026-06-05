@@ -3,12 +3,12 @@
   SOTA Settings — portrait hub (1080×1920 / 540dp × 960dp logical).
 
   Composition (vertical, content-driven height):
-    HERO HEADER : "OVERDRIVE" overline + "Settings" headline + 1-line subtitle
+    HERO HEADER : "BLADEWATCH" overline + "Settings" headline + 1-line subtitle
     QUICK ROW   : two tile-toggle cards (Theme / Language) — the most-used
                   switches surfaced denser than the section list
     PREFERENCES : section list — Recording, Surveillance, Daemons. Each is
                   a rich row card (icon + title + subtitle + chevron)
-    ABOUT&DATA  : two rich rows — "About OverDrive" (info) and "Reset data"
+    ABOUT&DATA  : two rich rows — "About BladeWatch" (info) and "Reset data"
                   (destructive, colorErrorContainer background)
     FOOTER      : small unobtrusive build line in colorOnSurfaceVariant
 

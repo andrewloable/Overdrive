@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon;
+package com.loabletech.bladewatch.daemon;
 
 import android.content.Context;
 
@@ -25,7 +25,7 @@ public final class DaemonBootstrap {
     
     // Hardcoded - this is the ONLY place we need to hardcode the package name
     // It's required to break the chicken-egg problem (can't decrypt package name without context)
-    private static final String BOOTSTRAP_PACKAGE = "com.overdrive.app";
+    private static final String BOOTSTRAP_PACKAGE = "com.loabletech.bladewatch";
     
     private static Context appContext = null;
     private static boolean initialized = false;
@@ -181,11 +181,11 @@ public final class DaemonBootstrap {
      */
     private static boolean verifySafeWorking() {
         try {
-            Class<?> encClass = Class.forName("com.overdrive.app.daemon.proxy.Enc");
+            Class<?> encClass = Class.forName("com.loabletech.bladewatch.daemon.proxy.Enc");
             Field appPackageField = encClass.getDeclaredField("APP_PACKAGE");
             String decrypted = (String) appPackageField.get(null);
             
-            // If decryption works, it should return "com.overdrive.app"
+            // If decryption works, it should return "com.loabletech.bladewatch"
             // If it fails, it returns "ERR" or the encrypted base64 string
             boolean works = BOOTSTRAP_PACKAGE.equals(decrypted);
             log("Enc.APP_PACKAGE = " + decrypted + " (expected: " + BOOTSTRAP_PACKAGE + ")");

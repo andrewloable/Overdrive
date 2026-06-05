@@ -1,7 +1,7 @@
-package com.overdrive.app.util
+package com.loabletech.bladewatch.util
 
-import com.overdrive.app.auth.AuthManager
-import com.overdrive.app.daemon.CameraDaemon
+import com.loabletech.bladewatch.auth.AuthManager
+import com.loabletech.bladewatch.daemon.CameraDaemon
 import java.net.HttpURLConnection
 import java.net.Proxy
 import java.net.URL

@@ -1,4 +1,4 @@
-package com.overdrive.app.byd;
+package com.loabletech.bladewatch.byd;
 
 /**
  * Common constants for BYD SDK integration

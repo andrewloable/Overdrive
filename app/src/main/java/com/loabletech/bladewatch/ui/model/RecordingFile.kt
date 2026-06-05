@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.model
+package com.loabletech.bladewatch.ui.model
 
 import android.net.Uri
 import java.io.File

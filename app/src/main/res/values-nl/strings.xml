@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">Overdrive houdt de voertuigmonitoring actief in de achtergrond. Deze dienst leest of communiceert niet met de inhoud van het scherm.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">BladeWatch houdt de voertuigmonitoring actief in de achtergrond. Deze dienst leest of communiceert niet met de inhoud van het scherm.</string>
     <string name="action_cancel">Annuleren</string>
     <string name="action_clear_plain">Wissen</string>
     <string name="action_select_all">Selecteer alle</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3 Vrouwen en kinderen</string>
     <string name="setup_language_title">Kies uw taal</string>
-    <string name="setup_language_body">Tast om een andere taal te kiezen voor de OverDrive-app en de webtunnel.</string>
+    <string name="setup_language_body">Tast om een andere taal te kiezen voor de BladeWatch-app en de webtunnel.</string>
     <string name="setup_language_button">Kies taal</string>
     <string name="setup_autostart_title">Auto-Start-beperking uitschakelen</string>
-    <string name="setup_autostart_body">Klik hieronder om BYD Auto-Start te openen. Zoek OverDrive in de lijst en verwijder het vak. BYD verwijdert dit bij elke installatie  je zult het opnieuw na updates.</string>
+    <string name="setup_autostart_body">Klik hieronder om BYD Auto-Start te openen. Zoek BladeWatch in de lijst en verwijder het vak. BYD verwijdert dit bij elke installatie  je zult het opnieuw na updates.</string>
     <string name="setup_autostart_button">Open BYD Auto-Start</string>
     <string name="setup_overlay_title">Laat het weergeven via andere apps toe</string>
     <string name="setup_overlay_body">Hiermee kan je een zwevende statusindicator tonen voor het opnemen en volgen van reizen bovenop andere apps.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive Status</string>
+    <string name="status_overlay_notif_title">BladeWatch Status</string>
     <string name="status_overlay_notif_text">Statusoverlay actief</string>
     <string name="rail_dashboard">Dashboard</string>
     <string name="rail_live">Leven</string>
@@ -364,15 +364,15 @@
     <string name="cd_settings_subrail">Opstelling sub-rail</string>
     <string name="settings_privacy_title">Privacy &amp; gegevens</string>
     <string name="settings_privacy_body">Reset verwijdert de opname index, geheugen credentials, daemon staat, en de voorkeuren op het apparaat.</string>
-    <string name="settings_about_title">Over OverDrive</string>
+    <string name="settings_about_title">Over BladeWatch</string>
     <string name="settings_about_version_label">Versie</string>
     <string name="settings_about_package_label">Bouwen</string>
     <string name="settings_about_check_update_value">Controleer de nieuwste GitHub-release en installeer indien nieuwer.</string>
     <string name="settings_about_support_section">Aangedreven door mensen als jij.</string>
     <string name="settings_about_support_share_title">Vertel het een andere eigenaar</string>
-    <string name="settings_about_support_share_value">Elke gedeelde link helpt een andere eigenaar van BYD om Overdrive te ontdekken.</string>
-    <string name="settings_about_support_share_message">Bekijk Overdrive  open source surveillance &amp; dashcam voor BYD: https://overdrive-5lc.pages.dev/</string>
-    <string name="settings_about_support_share_chooser">Deel Overdrive</string>
+    <string name="settings_about_support_share_value">Elke gedeelde link helpt een andere eigenaar van BYD om BladeWatch te ontdekken.</string>
+    <string name="settings_about_support_share_message">Bekijk BladeWatch  open source surveillance &amp; dashcam voor BYD: https://bladewatch-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_chooser">Deel BladeWatch</string>
     <string name="settings_about_open_link_failed">Ik kon de link niet openen.</string>
     <string name="settings_about_open_link_copied">Geen browser gevonden. URL gekopieerd: %1$s</string>
     <string name="settings_about_support_kofi_title">Brandstof voor de volgende release</string>
@@ -381,7 +381,7 @@
     <string name="settings_about_license_title">Vergunning</string>
     <string name="settings_about_license_value">MIT  open source. Tik om de volledige tekst te bekijken.</string>
     <string name="settings_about_source_title">Broncode</string>
-    <string name="settings_about_source_value">Github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">Github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_license_url">Het is een van de belangrijkste programma\'s van de Europese Unie.</string>
     <string name="settings_about_source_url">Het is de eerste keer dat een nieuwe computer wordt geproduceerd.</string>
     <string name="settings_about_star_title">Geef een op GitHub</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">Controleer cel SOH en pak statistieken.</string>
     <string name="diagnostics_settings_subtitle">Appvoorkeuren, thema en taal.</string>
     <string name="integrations_hero_title">Integratie</string>
-    <string name="integrations_hero_subtitle">Verbind Overdrive met uw diensten.</string>
+    <string name="integrations_hero_subtitle">Verbind BladeWatch met uw diensten.</string>
     <string name="integrations_status_unknown">Tik om te configureren</string>
     <string name="integrations_status_configured">Geconfigureerd</string>
     <string name="integrations_status_not_set_up">Niet ingesteld</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Configuratie</string>
     <string name="settings_action_check_update">Controleer of er updates zijn</string>
     <string name="settings_action_reset_data">- Dataten opnieuw instellen.</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">Op wacht</string>
     <string name="dashboard_subtitle_all_systems">Alle systemen online</string>
     <string name="dashboard_subtitle_some_offline">%1$d van %2$d diensten online</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Pre/post buffers, codec, opslaglimieten.</string>
     <string name="settings_section_surveillance_subtitle">Detectiezonen, schema, bewegingsgevoeligheid.</string>
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT hardlopers.</string>
-    <string name="settings_about_row_title">Over OverDrive</string>
+    <string name="settings_about_row_title">Over BladeWatch</string>
     <string name="settings_about_row_subtitle">Versie, licentie, ondersteuning ontwikkeling.</string>
     <string name="settings_reset_row_subtitle">Klaar opnames, gebeurtenissen of alle cache\'s.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Thema, taal en visuele voorkeuren.</string>
     <string name="settings_theme_active_auto_caption">Auto volgt uw systeem thema.</string>
     <string name="settings_theme_active_light_caption">Het licht thema is altijd aan.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d van de beschikbare talen %2$d</string>
     <string name="settings_language_card_title">Vertoontaal</string>
     <string name="settings_privacy_stance_title">Op het apparaat standaard</string>
-    <string name="settings_privacy_stance_body">OverDrive loopt volledig op de hoofdunit. Geen telemetrie verlaat je auto behalve via de tunnels en integraties die je expliciet configureert.</string>
+    <string name="settings_privacy_stance_body">BladeWatch loopt volledig op de hoofdunit. Geen telemetrie verlaat je auto behalve via de tunnels en integraties die je expliciet configureert.</string>
     <string name="settings_privacy_overline_storage">LOCALE opslag</string>
     <string name="settings_privacy_overline_reset">DATA Reset</string>
     <string name="settings_privacy_storage_clips_label">Clips op schijf</string>
@@ -526,7 +526,7 @@
     <string name="diagnostics_battery_value_soh">%1$.0f%%</string>
     <string name="diagnostics_battery_value_pending">Opwaartse gegevens</string>
     <string name="dashboard_recordings_value_live">● %1$d</string>
-    <string name="dashboard_insight_welcome">Welkom  Overdrive is nu je tweede oogpar.</string>
+    <string name="dashboard_insight_welcome">Welkom  BladeWatch is nu je tweede oogpar.</string>
     <string name="dashboard_insight_parked_charged_kwh">%1$s (≈%2$s) opgepikt tijdens het parkeren</string>
     <string name="dashboard_insight_parked_charged">%1$s opgepikt tijdens het parkeren.</string>
     <string name="dashboard_insight_parked_drained_kwh">Gebruikte %1$s (≈%2$s) sinds je geparkeerd hebt</string>
@@ -542,12 +542,12 @@
         <item quantity="other">%1$d clips opgenomen vandaag</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_days_hours">
-        <item quantity="one">Overdrive online voor %1$d dag, %2$d uur</item>
-        <item quantity="other">Overdrive online voor %1$d dagen, %2$d uur</item>
+        <item quantity="one">BladeWatch online voor %1$d dag, %2$d uur</item>
+        <item quantity="other">BladeWatch online voor %1$d dagen, %2$d uur</item>
     </plurals>
     <plurals name="dashboard_insight_uptime_hours">
-        <item quantity="one">Overdrive online voor %1$d uur</item>
-        <item quantity="other">%1$d uur online overdrive</item>
+        <item quantity="one">BladeWatch online voor %1$d uur</item>
+        <item quantity="other">%1$d uur online bladewatch</item>
     </plurals>
     <plurals name="dashboard_insight_minutes">
         <item quantity="one">%1$d min</item>

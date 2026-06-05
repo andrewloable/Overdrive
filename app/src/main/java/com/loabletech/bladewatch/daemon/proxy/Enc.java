@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.proxy;
+package com.loabletech.bladewatch.daemon.proxy;
 
 /**
  * Auto-generated encrypted string constants.
@@ -148,7 +148,7 @@ public final class Enc {
     /** https://api.telegram.org/bot */
     public static final String TELEGRAM_API_BASE = Safe.s("FS7R/5I0wopp0qBqyJXzvDKg6eI9UXmD/Oei3NbaaGQ=");
 
-    /** com.overdrive.app */
+    /** com.loabletech.bladewatch */
     public static final String APP_PACKAGE = Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8=");
 
     // ==================== SINGBOX ====================

@@ -1,12 +1,12 @@
-package com.overdrive.app.bridge;
+package com.loabletech.bladewatch.bridge;
 
 import android.webkit.JavascriptInterface;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatteryPowerData;
-import com.overdrive.app.monitor.BatteryVoltageData;
-import com.overdrive.app.monitor.ChargingStateData;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatteryPowerData;
+import com.loabletech.bladewatch.monitor.BatteryVoltageData;
+import com.loabletech.bladewatch.monitor.ChargingStateData;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 

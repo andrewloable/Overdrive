@@ -1,8 +1,8 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 import android.content.Context;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;

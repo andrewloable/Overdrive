@@ -1,10 +1,10 @@
-package com.overdrive.app.ui.viewmodel
+package com.loabletech.bladewatch.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 
 /**
  * ViewModel for main app state shared across screens.

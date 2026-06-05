@@ -1,4 +1,4 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 /**
  * Data class for driving range information.

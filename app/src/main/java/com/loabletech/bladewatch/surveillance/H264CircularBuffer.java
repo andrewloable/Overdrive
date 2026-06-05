@@ -1,7 +1,7 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
 import android.media.MediaCodec;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

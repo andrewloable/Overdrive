@@ -1,7 +1,7 @@
-package com.overdrive.app.launcher
+package com.loabletech.bladewatch.launcher
 
 import android.content.Context
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 import dadb.AdbKeyPair
 import dadb.Dadb
 import java.io.File

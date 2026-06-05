@@ -1,4 +1,4 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,8 +23,8 @@ class SecretConfigStore @JvmOverloads constructor(
     private val file: File = File(DEFAULT_PATH)
 ) {
     companion object {
-        const val DEFAULT_PATH = "/storage/emulated/0/Android/data/com.overdrive.app/files/overdrive_secrets.json"
-        private const val LEGACY_PATH = "/data/local/tmp/overdrive_secrets.json"
+        const val DEFAULT_PATH = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/bladewatch_secrets.json"
+        private const val LEGACY_PATH = "/data/local/tmp/bladewatch_secrets.json"
     }
 
     private val lock = Any()

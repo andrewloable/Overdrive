@@ -1,9 +1,9 @@
-package com.overdrive.app.manager
+package com.loabletech.bladewatch.manager
 
-import com.overdrive.app.client.CameraDaemonClient
-import com.overdrive.app.config.ConfigManager
-import com.overdrive.app.config.StreamMode
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.client.CameraDaemonClient
+import com.loabletech.bladewatch.config.ConfigManager
+import com.loabletech.bladewatch.config.StreamMode
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Manages stream mode (private/public) and syncs with daemon.

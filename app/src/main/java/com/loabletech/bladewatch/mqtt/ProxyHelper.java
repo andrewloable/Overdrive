@@ -1,6 +1,6 @@
-package com.overdrive.app.mqtt;
+package com.loabletech.bladewatch.mqtt;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.IOException;
 import java.io.InputStream;

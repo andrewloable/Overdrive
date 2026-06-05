@@ -1,8 +1,8 @@
-package com.overdrive.app.ui.util
+package com.loabletech.bladewatch.ui.util
 
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
-import com.overdrive.app.R
+import com.loabletech.bladewatch.R
 
 /**
  * Shared NavOptions presets so every navigation call across the app uses

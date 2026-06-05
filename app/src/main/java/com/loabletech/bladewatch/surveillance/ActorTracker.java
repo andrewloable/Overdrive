@@ -1,11 +1,11 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
-import com.overdrive.app.ai.Detection;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.surveillance.Actor.ClassGroup;
-import com.overdrive.app.surveillance.Actor.Proximity;
-import com.overdrive.app.surveillance.Actor.Severity;
-import com.overdrive.app.surveillance.Actor.Trend;
+import com.loabletech.bladewatch.ai.Detection;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.Actor.ClassGroup;
+import com.loabletech.bladewatch.surveillance.Actor.Proximity;
+import com.loabletech.bladewatch.surveillance.Actor.Severity;
+import com.loabletech.bladewatch.surveillance.Actor.Trend;
 
 import java.util.ArrayList;
 import java.util.Iterator;

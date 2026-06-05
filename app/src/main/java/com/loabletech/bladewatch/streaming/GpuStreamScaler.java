@@ -1,10 +1,10 @@
-package com.overdrive.app.streaming;
+package com.loabletech.bladewatch.streaming;
 
 import android.opengl.GLES20;
-import com.overdrive.app.camera.EGLCore;
-import com.overdrive.app.camera.GlUtil;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.surveillance.HardwareEventRecorderGpu;
+import com.loabletech.bladewatch.camera.EGLCore;
+import com.loabletech.bladewatch.camera.GlUtil;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu;
 import android.opengl.GLES11Ext;
 import android.opengl.EGLSurface;
 import android.view.Surface;

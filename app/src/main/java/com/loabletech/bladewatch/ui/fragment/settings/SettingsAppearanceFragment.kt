@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment.settings
+package com.loabletech.bladewatch.ui.fragment.settings
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -9,11 +9,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import com.overdrive.app.R
-import com.overdrive.app.server.LocaleManager
-import com.overdrive.app.ui.dialog.LanguagePickerDialog
-import com.overdrive.app.ui.fragment.WebViewFragment
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.server.LocaleManager
+import com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog
+import com.loabletech.bladewatch.ui.fragment.WebViewFragment
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 import java.util.Locale
 
 /**

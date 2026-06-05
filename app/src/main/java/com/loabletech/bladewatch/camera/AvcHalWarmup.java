@@ -1,7 +1,7 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.AccMonitor;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.AccMonitor;
 
 /**
  * AVC HAL Warmup — ensures the BYD camera HAL is initialized by com.byd.avc

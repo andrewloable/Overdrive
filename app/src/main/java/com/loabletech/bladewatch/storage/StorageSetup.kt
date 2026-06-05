@@ -1,4 +1,4 @@
-package com.overdrive.app.storage
+package com.loabletech.bladewatch.storage
 
 import android.Manifest
 import android.app.Activity
@@ -12,11 +12,11 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.overdrive.app.launcher.AdbShellExecutor
+import com.loabletech.bladewatch.launcher.AdbShellExecutor
 import java.io.File
 
 /**
- * StorageSetup - Creates Overdrive directories from the App (UID 10xxx)
+ * StorageSetup - Creates BladeWatch directories from the App (UID 10xxx)
  * 
  * On Android 11+, directories created by the daemon (UID 2000) cannot be
  * written to by the app. By creating directories from the app with
@@ -31,8 +31,8 @@ import java.io.File
 object StorageSetup {
     private const val TAG = "StorageSetup"
     
-    // Base directory for all Overdrive files
-    private const val BASE_DIR = "/storage/emulated/0/Overdrive"
+    // Base directory for all BladeWatch files
+    private const val BASE_DIR = "/storage/emulated/0/BladeWatch"
     
     // Subdirectories to create
     private val SUBDIRS = listOf("recordings", "surveillance", "proximity")
@@ -160,7 +160,7 @@ object StorageSetup {
     }
     
     /**
-     * Setup all Overdrive directories.
+     * Setup all BladeWatch directories.
      * App creates the directories so it becomes the OWNER.
      * 
      * @return true if all directories were created/exist successfully

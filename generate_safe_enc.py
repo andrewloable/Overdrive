@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Encrypt strings for use with Safe.s() in OverDrive.
+Encrypt strings for use with Safe.s() in BladeWatch.
 
 Uses the same AES-256-CBC key and IV as Safe.java to produce
 Base64-encoded ciphertext that Safe.s() can decrypt at runtime.

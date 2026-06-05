@@ -1,11 +1,11 @@
-package com.overdrive.app.ui.adapter
+package com.loabletech.bladewatch.ui.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.ui.model.PresetCommand
+import com.loabletech.bladewatch.ui.model.PresetCommand
 import com.google.android.material.chip.Chip
-import com.overdrive.app.R
+import com.loabletech.bladewatch.R
 
 /**
  * Adapter for displaying preset command chips.

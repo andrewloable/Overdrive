@@ -1,8 +1,8 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.surveillance.GpuPipelineConfig;
-import com.overdrive.app.surveillance.GpuSurveillancePipeline;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.surveillance.GpuPipelineConfig;
+import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

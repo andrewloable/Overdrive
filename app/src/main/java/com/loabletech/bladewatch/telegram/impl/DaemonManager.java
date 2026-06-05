@@ -1,8 +1,8 @@
-package com.overdrive.app.telegram.impl;
+package com.loabletech.bladewatch.telegram.impl;
 
-import com.overdrive.app.telegram.IDaemonManager;
-import com.overdrive.app.telegram.model.DaemonInfo;
-import com.overdrive.app.telegram.model.DaemonStatus;
+import com.loabletech.bladewatch.telegram.IDaemonManager;
+import com.loabletech.bladewatch.telegram.model.DaemonInfo;
+import com.loabletech.bladewatch.telegram.model.DaemonStatus;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

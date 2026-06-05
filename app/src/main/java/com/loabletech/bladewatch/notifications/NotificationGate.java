@@ -1,7 +1,7 @@
-package com.overdrive.app.notifications;
+package com.loabletech.bladewatch.notifications;
 
-import com.overdrive.app.surveillance.Actor;
-import com.overdrive.app.surveillance.SurveillanceConfig;
+import com.loabletech.bladewatch.surveillance.Actor;
+import com.loabletech.bladewatch.surveillance.SurveillanceConfig;
 
 /**
  * NotificationGate — Decides whether a recording's peak severity warrants a

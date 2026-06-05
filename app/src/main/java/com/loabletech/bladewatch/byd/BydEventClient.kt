@@ -1,6 +1,6 @@
-package com.overdrive.app.byd
+package com.loabletech.bladewatch.byd
 
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader

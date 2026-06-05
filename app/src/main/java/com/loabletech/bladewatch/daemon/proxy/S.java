@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.proxy;
+package com.loabletech.bladewatch.daemon.proxy;
 
 /**
  * Short alias for string decryption.

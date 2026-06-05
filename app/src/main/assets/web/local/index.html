@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title data-i18n="app.live_view_title">Live View - OverDrive</title>
+    <title data-i18n="app.live_view_title">Live View - BladeWatch</title>
     <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
@@ -36,7 +36,7 @@
                         <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
                     </svg>
                 </button>
-                <div class="brand"><span class="brand-name" style="font-size:16px;">OverDrive</span></div>
+                <div class="brand"><span class="brand-name" style="font-size:16px;">BladeWatch</span></div>
                 <div style="width:40px;"></div>
             </div>
 
@@ -963,13 +963,13 @@
         // Top-down 3D vehicle in the camera selector. Replaces the static
         // car-icon.webp PNG with the user's actual GLB tinted in their
         // chosen paint colour, kept in sync with the sidebar EV-card via
-        // OverdriveAppShell.mountVehicleCanvas. Hotspot CSS positions
+        // BladeWatchAppShell.mountVehicleCanvas. Hotspot CSS positions
         // (FRONT/REAR/LEFT/RIGHT around a 72×150 silhouette) align with
         // the auto-fit roof-down render.
         function mountLiveCarCanvas() {
             const canvas = document.getElementById('liveCarCanvas');
             if (!canvas) return;
-            const shell = window.OverdriveAppShell;
+            const shell = window.BladeWatchAppShell;
             if (!shell || typeof shell.mountVehicleCanvas !== 'function') return;
             shell.mountVehicleCanvas(canvas, { view: 'top' });
         }
@@ -977,7 +977,7 @@
         // sidebar and dispatches `app-shell:ready`. Listen for that
         // event AND check synchronously in case the shell already
         // initialised (script-load order on cached pages can flip).
-        if (window.OverdriveAppShell && window.OverdriveAppShell.mountVehicleCanvas) {
+        if (window.BladeWatchAppShell && window.BladeWatchAppShell.mountVehicleCanvas) {
             mountLiveCarCanvas();
         } else {
             document.addEventListener('app-shell:ready', mountLiveCarCanvas);

@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.model;
+package com.loabletech.bladewatch.telegram.model;
 
 /**
  * Validated bot information from Telegram API getMe() response.

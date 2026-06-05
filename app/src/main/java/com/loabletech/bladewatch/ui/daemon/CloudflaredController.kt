@@ -1,11 +1,11 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 
 /**
  * Controller for the Cloudflared Tunnel.

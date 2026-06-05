@@ -1,4 +1,4 @@
-package com.overdrive.app.services
+package com.loabletech.bladewatch.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,11 +12,11 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
-import com.overdrive.app.R
-import com.overdrive.app.receiver.ProcessRevivalReceiver
-import com.overdrive.app.receiver.ScreenOffReceiver
-import com.overdrive.app.ui.MainActivity
-import com.overdrive.app.ui.daemon.DaemonStartupManager
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.receiver.ProcessRevivalReceiver
+import com.loabletech.bladewatch.receiver.ScreenOffReceiver
+import com.loabletech.bladewatch.ui.MainActivity
+import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
 
 /**
  * Foreground service that keeps the app alive and monitors SCREEN_OFF events.
@@ -83,7 +83,7 @@ class DaemonKeepaliveService : Service() {
         //   2. Daemons launched here would be killed seconds later by the
         //      hardReset sweep, then restarted again — pointless thrash and
         //      a real risk of overlapping camera handles on the AVMCamera HAL.
-        val postUpdate = com.overdrive.app.updater.UpdateLifecycle
+        val postUpdate = com.loabletech.bladewatch.updater.UpdateLifecycle
             .isPostUpdateLaunch(applicationContext, null)
         if (postUpdate) {
             Log.i(TAG, "Post-update launch — deferring daemon startup to MainActivity")
@@ -99,7 +99,7 @@ class DaemonKeepaliveService : Service() {
         // Activity running (e.g. system killed the process, then Android
         // respawned this keepalive service via START_STICKY).
         try {
-            com.overdrive.app.overlay.StatusOverlayService.startIfPermitted(applicationContext)
+            com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(applicationContext)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to kick status overlay: ${e.message}")
         }
@@ -161,7 +161,7 @@ class DaemonKeepaliveService : Service() {
         
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Overdrive Active")
+                .setContentTitle("BladeWatch Active")
                 .setContentText("Monitoring vehicle systems")
                 .setSmallIcon(R.drawable.ic_sentry)
                 .setContentIntent(pendingIntent)
@@ -170,7 +170,7 @@ class DaemonKeepaliveService : Service() {
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
-                .setContentTitle("Overdrive Active")
+                .setContentTitle("BladeWatch Active")
                 .setContentText("Monitoring vehicle systems")
                 .setSmallIcon(R.drawable.ic_sentry)
                 .setContentIntent(pendingIntent)
@@ -186,7 +186,7 @@ class DaemonKeepaliveService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "Overdrive:DaemonKeepalive"
+                "BladeWatch:DaemonKeepalive"
             ).apply {
                 setReferenceCounted(false)
                 acquire()

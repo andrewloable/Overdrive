@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.util
+package com.loabletech.bladewatch.ui.util
 
 import android.graphics.Bitmap
 import android.graphics.Color

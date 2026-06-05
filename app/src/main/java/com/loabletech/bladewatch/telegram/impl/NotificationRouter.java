@@ -1,12 +1,12 @@
-package com.overdrive.app.telegram.impl;
+package com.loabletech.bladewatch.telegram.impl;
 
-import com.overdrive.app.telegram.INotificationRouter;
-import com.overdrive.app.telegram.IOwnerStore;
-import com.overdrive.app.telegram.event.ITelegramEventBus;
-import com.overdrive.app.telegram.event.SystemEvent;
-import com.overdrive.app.telegram.event.VideoEvent;
-import com.overdrive.app.telegram.model.NotificationPreferences;
-import com.overdrive.app.telegram.model.OwnerInfo;
+import com.loabletech.bladewatch.telegram.INotificationRouter;
+import com.loabletech.bladewatch.telegram.IOwnerStore;
+import com.loabletech.bladewatch.telegram.event.ITelegramEventBus;
+import com.loabletech.bladewatch.telegram.event.SystemEvent;
+import com.loabletech.bladewatch.telegram.event.VideoEvent;
+import com.loabletech.bladewatch.telegram.model.NotificationPreferences;
+import com.loabletech.bladewatch.telegram.model.OwnerInfo;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

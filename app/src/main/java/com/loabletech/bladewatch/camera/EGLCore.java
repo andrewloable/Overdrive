@@ -1,7 +1,7 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.opengl.EGL14;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;

@@ -1,9 +1,9 @@
-package com.overdrive.app.proximity;
+package com.loabletech.bladewatch.proximity;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.storage.StorageManager;
-import com.overdrive.app.surveillance.GpuSurveillancePipeline;
-import com.overdrive.app.telegram.TelegramNotifier;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.storage.StorageManager;
+import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import com.loabletech.bladewatch.telegram.TelegramNotifier;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -117,12 +117,12 @@ public class ProximityRecordingHandler {
                 url = "/events.html?filter=proximity";
             }
 
-            com.overdrive.app.notifications.NotificationBus.get().publish(
-                    new com.overdrive.app.notifications.NotificationEvent(
+            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
+                    new com.loabletech.bladewatch.notifications.NotificationEvent(
                             "surveillance.proximity",
                             red
-                                    ? com.overdrive.app.notifications.NotificationEvent.Severity.CRITICAL
-                                    : com.overdrive.app.notifications.NotificationEvent.Severity.WARN,
+                                    ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
+                                    : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
                             red ? "Object very close" : "Object nearby",
                             red ? "Within 0.5 m" : "Within 0.8 m",
                             "proximity-" + triggerLevel,
@@ -136,7 +136,7 @@ public class ProximityRecordingHandler {
     private String activeRecordingFilename() {
         try {
             if (pipeline == null) return null;
-            com.overdrive.app.surveillance.HardwareEventRecorderGpu enc = pipeline.getEncoder();
+            com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu enc = pipeline.getEncoder();
             if (enc == null) return null;
             String path = enc.getCurrentOutputPath();
             if (path == null || path.isEmpty()) return null;
@@ -206,7 +206,7 @@ public class ProximityRecordingHandler {
             File heroFile = new File(outputDir, heroName);
             String snapshotName = heroFile.exists() ? heroName : videoFile;
             String encSnap = java.net.URLEncoder.encode(snapshotName, "UTF-8");
-            String thumbTok = com.overdrive.app.auth.AuthManager
+            String thumbTok = com.loabletech.bladewatch.auth.AuthManager
                     .signThumbToken(snapshotName, 600L);
             String snapUrl = "/thumb/" + encSnap;
             if (thumbTok != null) snapUrl += "?t=" + thumbTok;
@@ -215,12 +215,12 @@ public class ProximityRecordingHandler {
             String enc = java.net.URLEncoder.encode(videoFile, "UTF-8");
             String url = "/events.html?filter=proximity&file=" + enc;
 
-            com.overdrive.app.notifications.NotificationBus.get().publish(
-                    new com.overdrive.app.notifications.NotificationEvent(
+            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
+                    new com.loabletech.bladewatch.notifications.NotificationEvent(
                             "surveillance.proximity",
                             red
-                                    ? com.overdrive.app.notifications.NotificationEvent.Severity.CRITICAL
-                                    : com.overdrive.app.notifications.NotificationEvent.Severity.WARN,
+                                    ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
+                                    : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
                             red ? "Object very close" : "Object nearby",
                             red ? "Within 0.5 m" : "Within 0.8 m",
                             "proximity-" + triggerLevel,

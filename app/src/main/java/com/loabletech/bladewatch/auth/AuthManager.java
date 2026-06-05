@@ -1,8 +1,8 @@
-package com.overdrive.app.auth;
+package com.loabletech.bladewatch.auth;
 
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.config.SecretConfigBridge;
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.config.SecretConfigBridge;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 
@@ -42,7 +42,7 @@ import javax.crypto.spec.SecretKeySpec;
  * exists, its contents are migrated in-place — so a device that was
  * already logged in keeps its secret and existing JWTs.
  *
- * The device ID file at {@code /data/local/tmp/.overdrive_device_id} is
+ * The device ID file at {@code /data/local/tmp/.bladewatch_device_id} is
  * still consulted (it's written by ADB shell during MainActivity startup),
  * so the deviceId remains stable across uninstalls even though the
  * unified config is wiped on factory reset.
@@ -63,8 +63,8 @@ public class AuthManager {
     // Device ID file — written via ADB shell from MainActivity, survives
     // app reinstall. Consulted only when the unified config has no
     // deviceId yet (cold-start before MainActivity has synced).
-    private static final String DEVICE_ID_FILE = "/storage/emulated/0/Android/data/com.overdrive.app/files/.overdrive_device_id";
-    private static final String LEGACY_DEVICE_ID_FILE = "/data/local/tmp/.overdrive_device_id";
+    private static final String DEVICE_ID_FILE = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/.bladewatch_device_id";
+    private static final String LEGACY_DEVICE_ID_FILE = "/data/local/tmp/.bladewatch_device_id";
     private static final String LEGACY_CAMERA_DEVICE_ID_FILE = "/data/local/tmp/.byd_device_id";
 
     // JWT settings

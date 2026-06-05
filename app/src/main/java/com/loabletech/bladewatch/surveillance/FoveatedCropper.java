@@ -1,10 +1,10 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 
-import com.overdrive.app.camera.GlUtil;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.camera.GlUtil;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -1,8 +1,8 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
 
 /**
  * Controller for the Sentry Daemon (SentryDaemon.java).

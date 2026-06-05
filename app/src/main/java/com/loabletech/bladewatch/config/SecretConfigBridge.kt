@@ -1,6 +1,6 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
-import com.overdrive.app.client.CameraDaemonClient
+import com.loabletech.bladewatch.client.CameraDaemonClient
 import android.os.Looper
 import android.util.Log
 import org.json.JSONObject

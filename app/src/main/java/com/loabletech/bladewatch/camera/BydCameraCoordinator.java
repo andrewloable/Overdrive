@@ -1,8 +1,8 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.hardware.IBYDCameraService;
 import android.hardware.IBYDCameraUser;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -180,7 +180,7 @@ public class BydCameraCoordinator {
         }
 
         // Create our camera user implementation
-        cameraUser = new BydCameraUser(activeCameraId, "com.overdrive.app");
+        cameraUser = new BydCameraUser(activeCameraId, "com.loabletech.bladewatch");
         cameraUser.setListener(new BydCameraUser.CameraYieldListener() {
             @Override
             public void onYieldRequired() {
@@ -359,7 +359,7 @@ public class BydCameraCoordinator {
                     Method getPkg = currentUser.getClass().getMethod("getPackageName");
                     String pkg = (String) getPkg.invoke(currentUser);
                     lastCameraOwnerPackage = pkg != null ? pkg : "";
-                    if (pkg != null && !"com.overdrive.app".equals(pkg)) return pkg;
+                    if (pkg != null && !"com.loabletech.bladewatch".equals(pkg)) return pkg;
                 }
             } catch (Exception e) { /* ignore */ }
         }
@@ -392,7 +392,7 @@ public class BydCameraCoordinator {
                     pkg = (String) getPkg.invoke(currentUser);
                 } catch (Exception ignored) {}
 
-                boolean isUs = "com.overdrive.app".equals(pkg);
+                boolean isUs = "com.loabletech.bladewatch".equals(pkg);
                 boolean wasActive = nativeAppActive;
                 lastCameraOwnerPackage = pkg != null ? pkg : "";
                 nativeAppActive = !isUs && pkg != null;

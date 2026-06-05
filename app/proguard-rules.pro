@@ -15,27 +15,27 @@
 # ONLY keep class names and main() - everything else gets obfuscated
 # This hides internal method names like whitelistViaBruteForce -> a()
 
--keep class com.overdrive.app.daemon.CameraDaemon {
+-keep class com.loabletech.bladewatch.daemon.CameraDaemon {
     public static void main(java.lang.String[]);
 }
--keep class com.overdrive.app.daemon.SentryDaemon {
+-keep class com.loabletech.bladewatch.daemon.SentryDaemon {
     public static void main(java.lang.String[]);
 }
--keep class com.overdrive.app.daemon.AccSentryDaemon {
+-keep class com.loabletech.bladewatch.daemon.AccSentryDaemon {
     public static void main(java.lang.String[]);
 }
--keep class com.overdrive.app.daemon.TelegramBotDaemon {
+-keep class com.loabletech.bladewatch.daemon.TelegramBotDaemon {
     public static void main(java.lang.String[]);
 }
--keep class com.overdrive.app.daemon.GlobalProxyDaemon {
+-keep class com.loabletech.bladewatch.daemon.GlobalProxyDaemon {
     public static void main(java.lang.String[]);
 }
--keep class com.overdrive.app.byd.BydEventDaemon {
+-keep class com.loabletech.bladewatch.byd.BydEventDaemon {
     public static void main(java.lang.String[]);
 }
 
 # Keep listener classes that extend BYD SDK (method names must match parent)
--keep class com.overdrive.app.daemon.AccSentryDaemon$AccListener {
+-keep class com.loabletech.bladewatch.daemon.AccSentryDaemon$AccListener {
     <methods>;
 }
 
@@ -43,28 +43,28 @@
 # These are used by daemons but don't need full preservation
 
 # Safe - Pure Java AES decryption (replaced native NativeSecrets)
--keep class com.overdrive.app.daemon.proxy.Safe {
+-keep class com.loabletech.bladewatch.daemon.proxy.Safe {
     public static java.lang.String s(java.lang.String);
 }
 
 # S - Short alias for string decryption (used throughout daemon code)
--keep class com.overdrive.app.daemon.proxy.S {
+-keep class com.loabletech.bladewatch.daemon.proxy.S {
     public static java.lang.String d(java.lang.String);
 }
 
 # Keep class names for daemon subpackages (for Class.forName if used internally)
 # but allow method/field renaming
--keepnames class com.overdrive.app.daemon.** { }
--keepnames class com.overdrive.app.byd.** { }
--keepnames class com.overdrive.app.camera.** { }
--keepnames class com.overdrive.app.server.** { }
--keepnames class com.overdrive.app.encoding.** { }
--keepnames class com.overdrive.app.stream.** { }
--keepnames class com.overdrive.app.monitor.** { }
+-keepnames class com.loabletech.bladewatch.daemon.** { }
+-keepnames class com.loabletech.bladewatch.byd.** { }
+-keepnames class com.loabletech.bladewatch.camera.** { }
+-keepnames class com.loabletech.bladewatch.server.** { }
+-keepnames class com.loabletech.bladewatch.encoding.** { }
+-keepnames class com.loabletech.bladewatch.stream.** { }
+-keepnames class com.loabletech.bladewatch.monitor.** { }
 
 # ==================== Logging (keep class names + DaemonLogConfig for runtime control) ====================
--keepnames class com.overdrive.app.logging.** { }
--keep class com.overdrive.app.logging.DaemonLogConfig { *; }
+-keepnames class com.loabletech.bladewatch.logging.** { }
+-keep class com.loabletech.bladewatch.logging.DaemonLogConfig { *; }
 
 # ==================== Native Methods (all classes) ====================
 # JNI method names must match native function signatures exactly
@@ -103,8 +103,8 @@
 
 # AI detection classes - keep class names but allow method obfuscation
 # Detection data class needs field names for any serialization
--keep class com.overdrive.app.ai.Detection { *; }
--keepnames class com.overdrive.app.ai.** { }
+-keep class com.loabletech.bladewatch.ai.Detection { *; }
+-keepnames class com.loabletech.bladewatch.ai.** { }
 
 # ==================== Kotlin & AndroidX ====================
 -dontwarn kotlin.**
@@ -118,38 +118,38 @@
 
 # ==================== App Components (declared in AndroidManifest) ====================
 # R8 auto-keeps these, but explicit rules for safety
--keep class com.overdrive.app.OverdriveApplication { *; }
--keep class com.overdrive.app.ui.MainActivity { *; }
--keep class com.overdrive.app.ui.LocationStarterActivity { *; }
--keep class com.overdrive.app.BlockerActivity { *; }
--keep class com.overdrive.app.receiver.BootReceiver { *; }
--keep class com.overdrive.app.receiver.LocationBootReceiver { *; }
--keep class com.overdrive.app.services.LocationSidecarService { *; }
+-keep class com.loabletech.bladewatch.BladeWatchApplication { *; }
+-keep class com.loabletech.bladewatch.ui.MainActivity { *; }
+-keep class com.loabletech.bladewatch.ui.LocationStarterActivity { *; }
+-keep class com.loabletech.bladewatch.BlockerActivity { *; }
+-keep class com.loabletech.bladewatch.receiver.BootReceiver { *; }
+-keep class com.loabletech.bladewatch.receiver.LocationBootReceiver { *; }
+-keep class com.loabletech.bladewatch.services.LocationSidecarService { *; }
 
 # ==================== App Packages (allow obfuscation) ====================
 # Keep class names for debugging but obfuscate methods/fields
--keepnames class com.overdrive.app.auth.** { }
--keepnames class com.overdrive.app.bridge.** { }
--keepnames class com.overdrive.app.byd.** { }
--keepnames class com.overdrive.app.client.** { }
--keepnames class com.overdrive.app.config.** { }
--keepnames class com.overdrive.app.launcher.** { }
--keepnames class com.overdrive.app.manager.** { }
--keepnames class com.overdrive.app.proximity.** { }
--keepnames class com.overdrive.app.recording.** { }
--keepnames class com.overdrive.app.service.** { }
--keepnames class com.overdrive.app.shell.** { }
--keepnames class com.overdrive.app.storage.** { }
--keepnames class com.overdrive.app.streaming.** { }
--keepnames class com.overdrive.app.surveillance.** { }
--keepnames class com.overdrive.app.telemetry.** { }
+-keepnames class com.loabletech.bladewatch.auth.** { }
+-keepnames class com.loabletech.bladewatch.bridge.** { }
+-keepnames class com.loabletech.bladewatch.byd.** { }
+-keepnames class com.loabletech.bladewatch.client.** { }
+-keepnames class com.loabletech.bladewatch.config.** { }
+-keepnames class com.loabletech.bladewatch.launcher.** { }
+-keepnames class com.loabletech.bladewatch.manager.** { }
+-keepnames class com.loabletech.bladewatch.proximity.** { }
+-keepnames class com.loabletech.bladewatch.recording.** { }
+-keepnames class com.loabletech.bladewatch.service.** { }
+-keepnames class com.loabletech.bladewatch.shell.** { }
+-keepnames class com.loabletech.bladewatch.storage.** { }
+-keepnames class com.loabletech.bladewatch.streaming.** { }
+-keepnames class com.loabletech.bladewatch.surveillance.** { }
+-keepnames class com.loabletech.bladewatch.telemetry.** { }
 # TelemetrySnapshot fields accessed by overlay renderer — keep from renaming
--keepclassmembers class com.overdrive.app.telemetry.TelemetrySnapshot { public *; }
--keepnames class com.overdrive.app.abrp.** { }
--keepnames class com.overdrive.app.telegram.** { }
--keepnames class com.overdrive.app.ui.** { }
--keepnames class com.overdrive.app.util.** { }
--keepnames class com.overdrive.app.webrtc.** { }
+-keepclassmembers class com.loabletech.bladewatch.telemetry.TelemetrySnapshot { public *; }
+-keepnames class com.loabletech.bladewatch.abrp.** { }
+-keepnames class com.loabletech.bladewatch.telegram.** { }
+-keepnames class com.loabletech.bladewatch.ui.** { }
+-keepnames class com.loabletech.bladewatch.util.** { }
+-keepnames class com.loabletech.bladewatch.webrtc.** { }
 
 # ==================== Serialization & Parcelable ====================
 -keepclassmembers class * implements android.os.Parcelable {
@@ -205,7 +205,7 @@
 
 # ==================== Log Stripping (Release Builds) ====================
 #
-# CONTROLLED BY: com.overdrive.app.logging.DaemonLogConfig
+# CONTROLLED BY: com.loabletech.bladewatch.logging.DaemonLogConfig
 #
 # DaemonLogger stripping is in a SEPARATE file: proguard-rules-strip-logs.pro
 # build.gradle.kts auto-detects DaemonLogConfig flags:
@@ -236,12 +236,12 @@
 }
 
 # Keep DaemonLogConfig (R8 needs it for runtime checks when logging is enabled)
--keep class com.overdrive.app.logging.DaemonLogConfig { *; }
+-keep class com.loabletech.bladewatch.logging.DaemonLogConfig { *; }
 
 # Keep DaemonLogger class structure
--keep class com.overdrive.app.logging.DaemonLogger { *; }
--keep class com.overdrive.app.logging.DaemonLogger$Config { *; }
--keep class com.overdrive.app.logging.DaemonLogger$Level { *; }
+-keep class com.loabletech.bladewatch.logging.DaemonLogger { *; }
+-keep class com.loabletech.bladewatch.logging.DaemonLogger$Config { *; }
+-keep class com.loabletech.bladewatch.logging.DaemonLogger$Level { *; }
 
 # Strip Kotlin null checks (minor optimization — always safe to strip)
 -assumenosideeffects class kotlin.jvm.internal.Intrinsics {

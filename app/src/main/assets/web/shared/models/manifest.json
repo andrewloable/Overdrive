@@ -1,7 +1,7 @@
 {
   "version": 6,
   "default": "seal",
-  "baseUrl": "https://github.com/yash-srivastava/Overdrive-release/releases/download/models-v1/",
+  "baseUrl": "https://github.com/yash-srivastava/BladeWatch-release/releases/download/models-v1/",
   "paintPresets": [
     {
       "name": "Aurora White",

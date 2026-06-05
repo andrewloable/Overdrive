@@ -1,7 +1,7 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
-import com.overdrive.app.telegram.model.BotInfo;
-import com.overdrive.app.telegram.model.ValidationResult;
+import com.loabletech.bladewatch.telegram.model.BotInfo;
+import com.loabletech.bladewatch.telegram.model.ValidationResult;
 
 /**
  * Bot token configuration and validation interface.

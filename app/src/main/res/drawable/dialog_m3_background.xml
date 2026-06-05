@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Window background for custom-view dialogs themed via Theme.Overdrive.M3.Dialog.
+  Window background for custom-view dialogs themed via Theme.BladeWatch.M3.Dialog.
   Uses a tonal surfaceContainerHigh fill — no border, no elevation shadow,
   pure M3 shape. Auto-flips with light/dark via the surface attr.
 -->

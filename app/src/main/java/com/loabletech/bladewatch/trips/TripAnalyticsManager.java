@@ -1,12 +1,12 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
 import android.content.Context;
 
-import com.overdrive.app.abrp.SohEstimator;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.GearMonitor;
-import com.overdrive.app.storage.StorageManager;
-import com.overdrive.app.telemetry.TelemetryDataCollector;
+import com.loabletech.bladewatch.abrp.SohEstimator;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.storage.StorageManager;
+import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
 
 import java.io.File;
 import java.util.List;
@@ -387,8 +387,8 @@ public class TripAnalyticsManager {
             if (energyUsed <= 0 && trip.socStart > 0 && trip.socEnd > 0 && trip.socStart > trip.socEnd) {
                 double nominalKwh = 0;
                 try {
-                    com.overdrive.app.abrp.SohEstimator soh = 
-                        com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+                    com.loabletech.bladewatch.abrp.SohEstimator soh = 
+                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
                     if (soh != null && soh.getNominalCapacityKwh() > 0) {
                         nominalKwh = soh.getNominalCapacityKwh();
                         double sohPercent = soh.hasEstimate() ? soh.getCurrentSoh() : 100.0;

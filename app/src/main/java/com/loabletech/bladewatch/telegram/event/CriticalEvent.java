@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.event;
+package com.loabletech.bladewatch.telegram.event;
 
 /**
  * Critical system event requiring immediate attention.

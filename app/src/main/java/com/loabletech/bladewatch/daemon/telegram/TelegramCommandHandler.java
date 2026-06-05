@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
 /**
  * Base interface for Telegram command handlers.

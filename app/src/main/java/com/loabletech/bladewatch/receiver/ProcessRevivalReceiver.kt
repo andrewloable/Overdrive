@@ -1,4 +1,4 @@
-package com.overdrive.app.receiver
+package com.loabletech.bladewatch.receiver
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import com.overdrive.app.services.DaemonKeepaliveService
+import com.loabletech.bladewatch.services.DaemonKeepaliveService
 
 /**
  * Out-of-process revival watchdog.
@@ -51,7 +51,7 @@ class ProcessRevivalReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "ProcessRevival"
-        private const val ACTION = "com.overdrive.app.action.PROCESS_REVIVAL"
+        private const val ACTION = "com.loabletech.bladewatch.action.PROCESS_REVIVAL"
 
         // 8 minutes — well inside the BYD MCU's ~10-15 min WiFi-cut budget.
         // AccSentryDaemon's in-process 10s loop dominates when the process is
@@ -75,7 +75,7 @@ class ProcessRevivalReceiver : BroadcastReceiver() {
                 action = ACTION
                 // Distinct data URIs so primary/backup PendingIntents don't
                 // collide under PendingIntent equality rules.
-                data = Uri.parse("overdrive://revival/$tag")
+                data = Uri.parse("bladewatch://revival/$tag")
             }
             return PendingIntent.getBroadcast(context, requestCode, intent, flags)
         }

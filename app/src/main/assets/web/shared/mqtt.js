@@ -1,5 +1,5 @@
 /**
- * OverDrive - MQTT Connections Module
+ * BladeWatch - MQTT Connections Module
  * Manages multiple MQTT broker connections, configuration, and live status display.
  */
 
@@ -190,7 +190,7 @@ const MQTT = {
         document.getElementById('formName').value = '';
         document.getElementById('formBrokerUrl').value = '';
         document.getElementById('formPort').value = '1883';
-        document.getElementById('formTopic').value = 'overdrive/vehicle/telemetry';
+        document.getElementById('formTopic').value = 'bladewatch/vehicle/telemetry';
         document.getElementById('formUsername').value = '';
         document.getElementById('formPassword').value = '';
         document.getElementById('formTrustAll').checked = false;

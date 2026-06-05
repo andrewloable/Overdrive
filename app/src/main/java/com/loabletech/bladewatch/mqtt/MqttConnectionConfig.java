@@ -1,4 +1,4 @@
-package com.overdrive.app.mqtt;
+package com.loabletech.bladewatch.mqtt;
 
 import org.json.JSONObject;
 
@@ -19,7 +19,7 @@ public class MqttConnectionConfig {
     public String name;                  // User-friendly label ("Home Assistant", "Fleet Server")
     public String brokerUrl;             // tcp://broker.hivemq.com or ssl://your-broker.com
     public int port;                     // 1883 (tcp) or 8883 (ssl)
-    public String topic;                 // e.g. overdrive/vehicle/telemetry
+    public String topic;                 // e.g. bladewatch/vehicle/telemetry
     public String clientId;              // Auto-generated from deviceId + connectionId
     public String username;              // Optional MQTT auth
     public String password;              // Optional MQTT auth
@@ -46,7 +46,7 @@ public class MqttConnectionConfig {
         this.name = "";
         this.brokerUrl = "";
         this.port = DEFAULT_PORT;
-        this.topic = "overdrive/vehicle/telemetry";
+        this.topic = "bladewatch/vehicle/telemetry";
         this.clientId = "";
         this.username = "";
         this.password = "";
@@ -102,9 +102,9 @@ public class MqttConnectionConfig {
             return clientId;
         }
         if (deviceId != null && !deviceId.isEmpty()) {
-            return "overdrive-" + deviceId.substring(0, Math.min(8, deviceId.length())) + "-" + id;
+            return "bladewatch-" + deviceId.substring(0, Math.min(8, deviceId.length())) + "-" + id;
         }
-        return "overdrive-" + id;
+        return "bladewatch-" + id;
     }
 
     /**
@@ -178,7 +178,7 @@ public class MqttConnectionConfig {
         config.name = json.optString("name", "");
         config.brokerUrl = json.optString("brokerUrl", "");
         config.port = json.optInt("port", DEFAULT_PORT);
-        config.topic = json.optString("topic", "overdrive/vehicle/telemetry");
+        config.topic = json.optString("topic", "bladewatch/vehicle/telemetry");
         config.clientId = json.optString("clientId", "");
         config.username = json.optString("username", "");
         config.qos = json.optInt("qos", DEFAULT_QOS);

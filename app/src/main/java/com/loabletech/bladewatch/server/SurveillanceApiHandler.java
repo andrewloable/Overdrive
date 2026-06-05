@@ -1,11 +1,11 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.surveillance.GpuSurveillancePipeline;
-import com.overdrive.app.surveillance.SurveillanceConfig;
-import com.overdrive.app.surveillance.SurveillanceConfigManager;
-import com.overdrive.app.surveillance.SurveillanceEngineGpu;
-import com.overdrive.app.surveillance.MotionPipelineV2;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import com.loabletech.bladewatch.surveillance.SurveillanceConfig;
+import com.loabletech.bladewatch.surveillance.SurveillanceConfigManager;
+import com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu;
+import com.loabletech.bladewatch.surveillance.MotionPipelineV2;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,7 +21,7 @@ import java.io.OutputStream;
  */
 public class SurveillanceApiHandler {
     
-    private static final String UNIFIED_CONFIG_FILE = "/data/local/tmp/overdrive_config.json";
+    private static final String UNIFIED_CONFIG_FILE = "/data/local/tmp/bladewatch_config.json";
     
     /**
      * Handle surveillance API requests.
@@ -99,7 +99,7 @@ public class SurveillanceApiHandler {
         }
         
         // Read persisted preference (not runtime state) for the UI toggle
-        config.put("enabled", com.overdrive.app.config.UnifiedConfigManager.isSurveillanceEnabled());
+        config.put("enabled", com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled());
         
         if (sentryConfig != null) {
             config.put("sadThreshold", sentry != null ? sentry.getSadThreshold() : 0.05f);
@@ -173,7 +173,7 @@ public class SurveillanceApiHandler {
         // the legacy recordingBitrate string. Surveillance UI consumes
         // recordingQuality; recordingBitrate is no longer surfaced.
         try {
-            JSONObject recording = com.overdrive.app.config.UnifiedConfigManager.getRecording();
+            JSONObject recording = com.loabletech.bladewatch.config.UnifiedConfigManager.getRecording();
             config.put("recordingQuality", recording.optString("recordingQuality",
                 recording.optString("quality", "STANDARD")));
             config.put("recordingCodec", recording.optString("codec", "H264"));
@@ -190,19 +190,19 @@ public class SurveillanceApiHandler {
         }
         
         // SOTA: Safe Location status
-        com.overdrive.app.surveillance.SafeLocationManager safeMgr =
-            com.overdrive.app.surveillance.SafeLocationManager.getInstance();
+        com.loabletech.bladewatch.surveillance.SafeLocationManager safeMgr =
+            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
         config.put("safeZoneSuppressed", CameraDaemon.isSafeZoneSuppressed());
         config.put("inSafeZone", safeMgr.isInSafeZone());
         config.put("safeZoneName", safeMgr.getCurrentZoneName());
         
         // SOTA: Deterrent action setting
-        JSONObject survConfig = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+        JSONObject survConfig = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
         config.put("deterrentAction", survConfig.optString("deterrentAction", "silent"));
         config.put("deterrentCooldownSeconds", survConfig.optInt("deterrentCooldownSeconds", 60));
         
         // SOTA: BYD Cloud connection status
-        JSONObject bydCloud = com.overdrive.app.config.UnifiedConfigManager.getBydCloud();
+        JSONObject bydCloud = com.loabletech.bladewatch.config.UnifiedConfigManager.getBydCloud();
         config.put("bydCloudEnabled", bydCloud.optBoolean("enabled", false));
         config.put("bydCloudUsername", bydCloud.optString("username", ""));
         config.put("bydCloudVin", bydCloud.optString("vin", ""));
@@ -260,7 +260,7 @@ public class SurveillanceApiHandler {
                 }
                 // Per-quadrant block mask and enabled flag from unified config (source of truth)
                 try {
-                    org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                    org.json.JSONObject survCfg = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
                     org.json.JSONArray blocks = survCfg.optJSONArray("roiBlocks_" + qKeys[q]);
                     if (blocks != null) config.put("roiBlocks_" + qKeys[q], blocks);
                     // Read enabled flag from persisted config, not in-memory sentryConfig
@@ -277,7 +277,7 @@ public class SurveillanceApiHandler {
             
             // Schedule — read from persisted config file (source of truth)
             try {
-                org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                org.json.JSONObject survCfg = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
                 config.put("scheduleEnabled", survCfg.optBoolean("scheduleEnabled", false));
                 org.json.JSONArray persistedRules = survCfg.optJSONArray("scheduleRules");
                 if (persistedRules != null) {
@@ -289,7 +289,7 @@ public class SurveillanceApiHandler {
                 // Fallback to in-memory if file read fails
                 config.put("scheduleEnabled", sentryConfig.getSchedule().isEnabled());
                 org.json.JSONArray schedRules = new org.json.JSONArray();
-                for (com.overdrive.app.surveillance.SurveillanceSchedule.Rule rule : sentryConfig.getSchedule().getRules()) {
+                for (com.loabletech.bladewatch.surveillance.SurveillanceSchedule.Rule rule : sentryConfig.getSchedule().getRules()) {
                     schedRules.put(rule.toJson());
                 }
                 config.put("scheduleRules", schedRules);
@@ -297,7 +297,7 @@ public class SurveillanceApiHandler {
             
             // Camera ID info
             try {
-                org.json.JSONObject camCfg = com.overdrive.app.config.UnifiedConfigManager
+                org.json.JSONObject camCfg = com.loabletech.bladewatch.config.UnifiedConfigManager
                     .loadConfig().optJSONObject("camera");
                 if (camCfg != null) {
                     config.put("cameraId", camCfg.optInt("probedCameraId", -1));
@@ -401,7 +401,7 @@ public class SurveillanceApiHandler {
                     camCfg.put("fpsSetCameraResult", "");
                     camCfg.put("fpsSetMediaCodecResult", "");
                     camCfg.put("lastCameraEvent", "");
-                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
                     CameraDaemon.log("Camera will reprobe on next restart (manual override preserved)");
                 } catch (Exception e) {
                     CameraDaemon.log("Failed to mark camera for reprobe: " + e.getMessage());
@@ -509,12 +509,12 @@ public class SurveillanceApiHandler {
             if (configJson.has("deterrentAction")) {
                 String action = configJson.optString("deterrentAction", "silent");
                 if ("silent".equals(action) || "flash_lights".equals(action) || "find_car".equals(action)) {
-                    com.overdrive.app.config.UnifiedConfigManager.updateValues(
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.updateValues(
                             "surveillance", java.util.Collections.singletonMap("deterrentAction", action));
                     CameraDaemon.log("Deterrent action set to: " + action);
                     // Reset deterrent so it picks up new config
                     try {
-                        com.overdrive.app.byd.cloud.BydCloudDeterrent.getInstance().reset();
+                        com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent.getInstance().reset();
                     } catch (Exception ignored) {}
                 }
             }
@@ -522,7 +522,7 @@ public class SurveillanceApiHandler {
             if (configJson.has("deterrentCooldownSeconds")) {
                 int cooldown = configJson.optInt("deterrentCooldownSeconds", 60);
                 if (cooldown >= 10 && cooldown <= 600) {
-                    com.overdrive.app.config.UnifiedConfigManager.updateValues(
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.updateValues(
                             "surveillance", java.util.Collections.singletonMap("deterrentCooldownSeconds", cooldown));
                 }
             }
@@ -787,7 +787,7 @@ public class SurveillanceApiHandler {
                                 // Store block mask as a synthetic polygon (not used, blocks are direct)
                                 // Apply directly to C++ via JNI
                                 try {
-                                    com.overdrive.app.surveillance.NativeMotion.setQuadrantRoi(q, blockMask);
+                                    com.loabletech.bladewatch.surveillance.NativeMotion.setQuadrantRoi(q, blockMask);
                                     CameraDaemon.log("ROI blocks applied to Q" + q + " via direct mask");
                                 } catch (Exception e) {
                                     CameraDaemon.log("ROI blocks apply failed Q" + q + ": " + e.getMessage());
@@ -798,10 +798,10 @@ public class SurveillanceApiHandler {
                             }
                             // Persist the block array in unified config
                             try {
-                                org.json.JSONObject survCfg = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                                org.json.JSONObject survCfg = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
                                 survCfg.put(blocksKey, arr);
                                 survCfg.put("roiEnabled_" + quadrantKeys[q], anyActive);
-                                com.overdrive.app.config.UnifiedConfigManager.setSurveillance(survCfg);
+                                com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillance(survCfg);
                             } catch (Exception e) {
                                 CameraDaemon.log("ROI blocks persist failed: " + e.getMessage());
                             }
@@ -814,7 +814,7 @@ public class SurveillanceApiHandler {
             // Surveillance schedule
             if (configJson.has("scheduleEnabled") || configJson.has("scheduleRules")) {
                 try {
-                    com.overdrive.app.surveillance.SurveillanceSchedule schedule = sentryConfig.getSchedule();
+                    com.loabletech.bladewatch.surveillance.SurveillanceSchedule schedule = sentryConfig.getSchedule();
                     if (configJson.has("scheduleEnabled")) {
                         schedule.setEnabled(configJson.optBoolean("scheduleEnabled", false));
                     }
@@ -822,17 +822,17 @@ public class SurveillanceApiHandler {
                         schedule.getRules().clear();
                         org.json.JSONArray rulesArr = configJson.getJSONArray("scheduleRules");
                         for (int i = 0; i < rulesArr.length(); i++) {
-                            com.overdrive.app.surveillance.SurveillanceSchedule.Rule rule =
-                                com.overdrive.app.surveillance.SurveillanceSchedule.Rule.fromJson(rulesArr.getJSONObject(i));
+                            com.loabletech.bladewatch.surveillance.SurveillanceSchedule.Rule rule =
+                                com.loabletech.bladewatch.surveillance.SurveillanceSchedule.Rule.fromJson(rulesArr.getJSONObject(i));
                             if (rule != null) schedule.getRules().add(rule);
                         }
                     }
                     // Persist schedule to unified config
-                    org.json.JSONObject survConfig = com.overdrive.app.config.UnifiedConfigManager.getSurveillance();
+                    org.json.JSONObject survConfig = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
                     org.json.JSONObject scheduleJson = schedule.toJson();
                     survConfig.put("scheduleEnabled", scheduleJson.optBoolean("scheduleEnabled", false));
                     survConfig.put("scheduleRules", scheduleJson.optJSONArray("scheduleRules"));
-                    com.overdrive.app.config.UnifiedConfigManager.setSurveillance(survConfig);
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillance(survConfig);
                     CameraDaemon.log("Schedule updated: " + schedule.getSummary());
                     configChanged = true;
                     
@@ -849,7 +849,7 @@ public class SurveillanceApiHandler {
                             CameraDaemon.log("SCHEDULE: Immediately stopping surveillance (outside new schedule window)");
                             CameraDaemon.disableSurveillance();
                         } else if (withinWindow && !currentlyActive 
-                                && !com.overdrive.app.monitor.AccMonitor.isAccOn()
+                                && !com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()
                                 && !CameraDaemon.isSafeZoneSuppressed()) {
                             CameraDaemon.log("SCHEDULE: Immediately enabling surveillance (within new schedule window)");
                             CameraDaemon.enableSurveillance();
@@ -859,9 +859,9 @@ public class SurveillanceApiHandler {
                         // resume it now (respecting safe zone and ACC state)
                         boolean currentlyActive = sentry != null && sentry.isActive();
                         if (!currentlyActive 
-                                && !com.overdrive.app.monitor.AccMonitor.isAccOn()
+                                && !com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()
                                 && !CameraDaemon.isSafeZoneSuppressed()
-                                && com.overdrive.app.config.UnifiedConfigManager.isSurveillanceEnabled()) {
+                                && com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled()) {
                             CameraDaemon.log("SCHEDULE: Disabled — resuming surveillance immediately");
                             CameraDaemon.enableSurveillance();
                         }
@@ -890,7 +890,7 @@ public class SurveillanceApiHandler {
                         }
                         org.json.JSONObject camCfg = new org.json.JSONObject();
                         camCfg.put("arbitrationMode", mode);
-                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                        com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
                         CameraDaemon.log("Camera arbitration mode set to: " + mode);
                     } catch (Exception e) {
                         CameraDaemon.log("Failed to save camera arbitration mode: " + e.getMessage());
@@ -911,8 +911,8 @@ public class SurveillanceApiHandler {
                         if (!configJson.has("cameraLayout")) {
                             CameraDaemon.log("Manual camera ID set without cameraLayout; assuming layout 0");
                         }
-                        com.overdrive.app.camera.CameraFirmwareInfo firmware =
-                            com.overdrive.app.camera.CameraFirmwareInfo.current();
+                        com.loabletech.bladewatch.camera.CameraFirmwareInfo firmware =
+                            com.loabletech.bladewatch.camera.CameraFirmwareInfo.current();
                         org.json.JSONObject camCfg = new org.json.JSONObject();
                         camCfg.put("probedCameraId", camId);
                         camCfg.put("probedSurfaceMode", 0);
@@ -942,7 +942,7 @@ public class SurveillanceApiHandler {
                         camCfg.put("fpsSetCameraResult", "");
                         camCfg.put("fpsSetMediaCodecResult", "");
                         camCfg.put("lastCameraEvent", "");
-                        com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                        com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
                         CameraDaemon.log("Manual camera ID set: " + camId + " (will take effect on next restart)");
                     } catch (Exception e) {
                         CameraDaemon.log("Failed to save manual camera ID: " + e.getMessage());
@@ -984,7 +984,7 @@ public class SurveillanceApiHandler {
                     camCfg.put("fpsSetCameraResult", "");
                     camCfg.put("fpsSetMediaCodecResult", "");
                     camCfg.put("lastCameraEvent", "");
-                    com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                    com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
                     CameraDaemon.log("Manual camera ID cleared — will auto-detect on next restart");
                 } catch (Exception e) {
                     CameraDaemon.log("Failed to clear manual camera ID: " + e.getMessage());
@@ -1018,7 +1018,7 @@ public class SurveillanceApiHandler {
             boolean recordingChanged = false;
             if (configJson.has("recordingQuality") || configJson.has("recordingBitrate") || configJson.has("recordingCodec")) {
                 try {
-                    JSONObject recording = com.overdrive.app.config.UnifiedConfigManager.getRecording();
+                    JSONObject recording = com.loabletech.bladewatch.config.UnifiedConfigManager.getRecording();
                     String appliedTier = null;
                     if (configJson.has("recordingQuality")) {
                         appliedTier = configJson.optString("recordingQuality", "STANDARD");
@@ -1056,7 +1056,7 @@ public class SurveillanceApiHandler {
                         }
                     }
                     if (recordingChanged) {
-                        com.overdrive.app.config.UnifiedConfigManager.setRecording(recording);
+                        com.loabletech.bladewatch.config.UnifiedConfigManager.setRecording(recording);
                         CameraDaemon.log("Recording settings saved: recordingQuality="
                                 + recording.optString("recordingQuality")
                                 + ", codec=" + recording.optString("codec"));
@@ -1077,10 +1077,10 @@ public class SurveillanceApiHandler {
     private static void handleEnable(OutputStream out) throws Exception {
         // SOTA: Only persist the preference. Surveillance should only activate on ACC OFF.
         // Starting motion detection while driving wastes CPU/GPU and is meaningless.
-        com.overdrive.app.config.UnifiedConfigManager.setSurveillanceEnabled(true);
+        com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(true);
         
         // Only actually start surveillance if ACC is currently OFF (sentry mode)
-        boolean accIsOn = com.overdrive.app.monitor.AccMonitor.isAccOn();
+        boolean accIsOn = com.loabletech.bladewatch.monitor.AccMonitor.isAccOn();
         if (!accIsOn) {
             CameraDaemon.enableSurveillance();
         } else {
@@ -1091,7 +1091,7 @@ public class SurveillanceApiHandler {
     
     private static void handleDisable(OutputStream out) throws Exception {
         CameraDaemon.disableSurveillance();
-        com.overdrive.app.config.UnifiedConfigManager.setSurveillanceEnabled(false);
+        com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(false);
         HttpResponse.sendJsonSuccess(out);
     }
     
@@ -1304,7 +1304,7 @@ public class SurveillanceApiHandler {
      */
     private static android.graphics.Bitmap getFrameFromLatestEvent() {
         try {
-            com.overdrive.app.storage.StorageManager storage = com.overdrive.app.storage.StorageManager.getInstance();
+            com.loabletech.bladewatch.storage.StorageManager storage = com.loabletech.bladewatch.storage.StorageManager.getInstance();
             java.io.File survDir = storage.getSurveillanceDir();
             if (survDir == null || !survDir.exists()) return null;
             

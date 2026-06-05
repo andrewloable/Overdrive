@@ -1,6 +1,6 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -368,7 +368,7 @@ public final class BydCloudDataProvider {
         } catch (Exception ignored) {}
 
         try {
-            android.content.Context ctx = com.overdrive.app.daemon.DaemonBootstrap.getContext();
+            android.content.Context ctx = com.loabletech.bladewatch.daemon.DaemonBootstrap.getContext();
             if (ctx != null) {
                 return ctx.getAssets().open("byd/bangcle_tables.bin");
             }

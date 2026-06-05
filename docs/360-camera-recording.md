@@ -1,6 +1,6 @@
 # 360 Camera Recording
 
-This document explains how Overdrive records the BYD 360 camera feed in two situations:
+This document explains how BladeWatch records the BYD 360 camera feed in two situations:
 
 - Surveillance mode, when ACC is off and sentry detection records motion events.
 - Running-car mode, when ACC is on and the app records manually or through recording modes.
@@ -99,10 +99,10 @@ Surveillance recording is ACC-off, event-driven recording.
 Surveillance files are written under the active surveillance directory:
 
 ```text
-/storage/emulated/0/Overdrive/surveillance
+/storage/emulated/0/BladeWatch/surveillance
 ```
 
-If SD-card storage is selected and mounted, `StorageManager` points the active surveillance directory at the SD-card `Overdrive/surveillance` path instead.
+If SD-card storage is selected and mounted, `StorageManager` points the active surveillance directory at the SD-card `BladeWatch/surveillance` path instead.
 
 For long events, each 2-minute MP4 segment gets matching sidecar data and thumbnails. The segment listener updates the current event file so the final metadata belongs to the final segment, not only the first one.
 
@@ -120,7 +120,7 @@ Normal recording can start from:
 Default normal recordings are written under:
 
 ```text
-/storage/emulated/0/Overdrive/recordings
+/storage/emulated/0/BladeWatch/recordings
 ```
 
 The default filename prefix is `cam`, producing files like:
@@ -132,11 +132,11 @@ cam_yyyyMMdd_HHmmss.mp4
 Proximity guard recordings use:
 
 ```text
-/storage/emulated/0/Overdrive/proximity
+/storage/emulated/0/BladeWatch/proximity
 proximity_yyyyMMdd_HHmmss.mp4
 ```
 
-As with surveillance, SD-card configuration can redirect these active directories to the SD-card `Overdrive` folder.
+As with surveillance, SD-card configuration can redirect these active directories to the SD-card `BladeWatch` folder.
 
 ## ACC-On Recording Modes
 
@@ -203,18 +203,18 @@ The recording implementation has several guards aimed at vehicle-camera reliabil
 - Temp-file writes: recordings become visible as final MP4 files only after muxer close.
 - Synchronous ACC-on finalization: surveillance recordings are closed before the car-running path takes over.
 - Camera yield/reacquire callbacks: the camera can be released and reopened around BYD native camera contention.
-- AVC keepalive: ACC-on recording keeps the BYD AVC camera stack warm while Overdrive is using the panoramic feed.
+- AVC keepalive: ACC-on recording keeps the BYD AVC camera stack warm while BladeWatch is using the panoramic feed.
 - Storage readiness checks: internal or SD-card directories are prepared before recording starts.
 - Space reservation and cleanup: `StorageManager` reserves space and prunes old files after saved clips.
 - Backpressure frame skipping: slow encoder/storage paths do not block the camera HAL indefinitely.
 
 ## Source References
 
-- Shared GPU pipeline ownership: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:85](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L85), [GpuSurveillancePipeline.java:1194](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L1194), [GpuSurveillancePipeline.java:1325](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L1325).
-- BYD panoramic camera acquisition and camera contention handling: [PanoramicCameraGpu.java:39](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L39), [PanoramicCameraGpu.java:724](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L724), [PanoramicCameraGpu.java:766](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L766), [PanoramicCameraGpu.java:335](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L335).
-- 5120x960 strip to 2560x1920 mosaic mapping: [GpuMosaicRecorder.java:31](../app/src/main/java/com/overdrive/app/surveillance/GpuMosaicRecorder.java#L31), [GpuMosaicRecorder.java:137](../app/src/main/java/com/overdrive/app/surveillance/GpuMosaicRecorder.java#L137), [GpuMosaicRecorder.java:383](../app/src/main/java/com/overdrive/app/surveillance/GpuMosaicRecorder.java#L383), [GpuDownscaler.java:112](../app/src/main/java/com/overdrive/app/surveillance/GpuDownscaler.java#L112), [MotionPipelineV2.java:24](../app/src/main/java/com/overdrive/app/surveillance/MotionPipelineV2.java#L24).
-- MediaCodec encoder, pre-record, muxer, and segmenting: [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L58), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L756), [HardwareEventRecorderGpu.java:1114](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L1114), [HardwareEventRecorderGpu.java:1296](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L1296), [HardwareEventRecorderGpu.java:1454](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L1454).
-- Surveillance event start/stop and sidecars: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3373), [EventTimelineCollector.java:42](../app/src/main/java/com/overdrive/app/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/overdrive/app/surveillance/ThumbnailBuffer.java#L32).
-- Running-car recording modes and gear gates: [RecordingModeManager.java:31](../app/src/main/java/com/overdrive/app/recording/RecordingModeManager.java#L31), [RecordingModeManager.java:346](../app/src/main/java/com/overdrive/app/recording/RecordingModeManager.java#L346), [RecordingModeManager.java:447](../app/src/main/java/com/overdrive/app/recording/RecordingModeManager.java#L447), [RecordingModeManager.java:533](../app/src/main/java/com/overdrive/app/recording/RecordingModeManager.java#L533), [ProximityRecordingHandler.java:49](../app/src/main/java/com/overdrive/app/proximity/ProximityRecordingHandler.java#L49).
-- ACC transition handling: [CameraDaemon.java:1905](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L1905), [GpuSurveillancePipeline.java:1387](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L1387), [CameraDaemon.java:2164](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L2164).
-- Storage paths and cleanup: [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100), [StorageManager.java:120](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L120), [StorageManager.java:404](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L404), [StorageManager.java:1921](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L1921), [StorageManager.java:1958](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L1958).
+- Shared GPU pipeline ownership: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:85](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L85), [GpuSurveillancePipeline.java:1194](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1194), [GpuSurveillancePipeline.java:1325](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1325).
+- BYD panoramic camera acquisition and camera contention handling: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [PanoramicCameraGpu.java:724](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L724), [PanoramicCameraGpu.java:766](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L766), [PanoramicCameraGpu.java:335](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L335).
+- 5120x960 strip to 2560x1920 mosaic mapping: [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [GpuMosaicRecorder.java:137](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L137), [GpuMosaicRecorder.java:383](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L383), [GpuDownscaler.java:112](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L112), [MotionPipelineV2.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/MotionPipelineV2.java#L24).
+- MediaCodec encoder, pre-record, muxer, and segmenting: [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L58), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L756), [HardwareEventRecorderGpu.java:1114](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L1114), [HardwareEventRecorderGpu.java:1296](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L1296), [HardwareEventRecorderGpu.java:1454](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L1454).
+- Surveillance event start/stop and sidecars: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3373), [EventTimelineCollector.java:42](../app/src/main/java/com/loabletech/bladewatch/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/loabletech/bladewatch/surveillance/ThumbnailBuffer.java#L32).
+- Running-car recording modes and gear gates: [RecordingModeManager.java:31](../app/src/main/java/com/loabletech/bladewatch/recording/RecordingModeManager.java#L31), [RecordingModeManager.java:346](../app/src/main/java/com/loabletech/bladewatch/recording/RecordingModeManager.java#L346), [RecordingModeManager.java:447](../app/src/main/java/com/loabletech/bladewatch/recording/RecordingModeManager.java#L447), [RecordingModeManager.java:533](../app/src/main/java/com/loabletech/bladewatch/recording/RecordingModeManager.java#L533), [ProximityRecordingHandler.java:49](../app/src/main/java/com/loabletech/bladewatch/proximity/ProximityRecordingHandler.java#L49).
+- ACC transition handling: [CameraDaemon.java:1905](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1905), [GpuSurveillancePipeline.java:1387](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1387), [CameraDaemon.java:2164](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L2164).
+- Storage paths and cleanup: [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100), [StorageManager.java:120](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L120), [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1921](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1921), [StorageManager.java:1958](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1958).

@@ -1,17 +1,17 @@
-package com.overdrive.app.ui.viewmodel
+package com.loabletech.bladewatch.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.logging.LogManager
-import com.overdrive.app.ui.daemon.*
-import com.overdrive.app.ui.model.DaemonState
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.model.SubprocessInfo
-import com.overdrive.app.ui.model.parseUptimeToMillis
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.logging.LogManager
+import com.loabletech.bladewatch.ui.daemon.*
+import com.loabletech.bladewatch.ui.model.DaemonState
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.model.SubprocessInfo
+import com.loabletech.bladewatch.ui.model.parseUptimeToMillis
 
 /**
  * ViewModel for managing daemon states.

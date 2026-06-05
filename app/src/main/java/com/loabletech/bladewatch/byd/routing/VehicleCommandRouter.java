@@ -1,12 +1,12 @@
-package com.overdrive.app.byd.routing;
+package com.loabletech.bladewatch.byd.routing;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.byd.cloud.BydCloudClient;
-import com.overdrive.app.byd.cloud.BydCloudConfig;
-import com.overdrive.app.byd.cloud.BydCloudDataProvider;
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.byd.cloud.BydCloudClient;
+import com.loabletech.bladewatch.byd.cloud.BydCloudConfig;
+import com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -935,6 +935,6 @@ public final class VehicleCommandRouter {
     // ── i18n key resolution ─────────────────────────────────────────────
 
     private static String msg(String key) {
-        return com.overdrive.app.server.Messages.get("vehicle_control." + key);
+        return com.loabletech.bladewatch.server.Messages.get("vehicle_control." + key);
     }
 }

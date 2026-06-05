@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -180,14 +180,14 @@ public class SystemCommandHandler implements TelegramCommandHandler {
     }
     
     private void handleHelp(long chatId, CommandContext ctx) {
-        // Read the persisted app version. AppUpdater writes /data/local/tmp/overdrive_version
+        // Read the persisted app version. AppUpdater writes /data/local/tmp/bladewatch_version
         // after each successful install — this method reads from that file and
         // falls back to "Manually Installed" when the file is missing
         // (fresh sideload before any check-for-update).
-        String version = com.overdrive.app.updater.AppUpdater.getDisplayVersionFromFile();
+        String version = com.loabletech.bladewatch.updater.AppUpdater.getDisplayVersionFromFile();
 
         String text = "📖 *Commands*\n" +
-                "_OverDrive " + version + "_\n\n" +
+                "_BladeWatch " + version + "_\n\n" +
                 "*Surveillance*\n" +
                 "`/start` - Start surveillance\n" +
                 "`/stop` - Stop surveillance\n" +

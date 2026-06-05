@@ -1,4 +1,4 @@
-package com.overdrive.app.config
+package com.loabletech.bladewatch.config
 
 /**
  * Application-level configuration.

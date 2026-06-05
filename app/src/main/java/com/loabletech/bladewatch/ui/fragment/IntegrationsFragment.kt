@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.content.Context
 import android.os.Bundle
@@ -15,11 +15,11 @@ import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.card.MaterialCardView
-import com.overdrive.app.R
-import com.overdrive.app.config.UnifiedConfigManager
-import com.overdrive.app.telegram.impl.BotTokenConfig
-import com.overdrive.app.ui.util.navigateDrillDown
-import com.overdrive.app.util.DaemonHttpClient
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.config.UnifiedConfigManager
+import com.loabletech.bladewatch.telegram.impl.BotTokenConfig
+import com.loabletech.bladewatch.ui.util.navigateDrillDown
+import com.loabletech.bladewatch.util.DaemonHttpClient
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -144,7 +144,7 @@ class IntegrationsFragment : Fragment() {
     private fun isTelegramConfigured(ctx: Context): Boolean = try {
         // Force a re-read from disk before checking. The token is written by
         // the daemon process (web UI POST → /api/telegram/token → daemon
-        // writes /data/local/tmp/overdrive_config.json), and this Fragment
+        // writes /data/local/tmp/bladewatch_config.json), and this Fragment
         // runs in the app process with its own UnifiedConfigManager cache.
         // Without forceReload() the in-process cache can return the value
         // observed at app launch — pre-token-save — making the Integrations

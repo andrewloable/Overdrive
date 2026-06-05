@@ -1,4 +1,4 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 /**
  * Event representing a vehicle data change.

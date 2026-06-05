@@ -1,8 +1,8 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.byd.cloud.crypto.BangcleCodec;
-import com.overdrive.app.byd.cloud.crypto.BydCryptoUtils;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.cloud.crypto.BangcleCodec;
+import com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -59,7 +59,7 @@ public final class BydCloudTransport {
             }
         };
 
-        java.net.Proxy proxy = com.overdrive.app.mqtt.ProxyHelper.getHttpProxy();
+        java.net.Proxy proxy = com.loabletech.bladewatch.mqtt.ProxyHelper.getHttpProxy();
         logger.info("BYD Cloud transport: baseUrl=" + config.getBaseUrl()
                 + " proxy=" + (proxy.equals(java.net.Proxy.NO_PROXY) ? "direct" : proxy.address()));
 

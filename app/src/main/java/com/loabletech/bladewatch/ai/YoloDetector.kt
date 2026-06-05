@@ -1,7 +1,7 @@
-package com.overdrive.app.ai
+package com.loabletech.bladewatch.ai
 
 import android.content.Context
-import com.overdrive.app.logging.DaemonLogger
+import com.loabletech.bladewatch.logging.DaemonLogger
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.gpu.GpuDelegate

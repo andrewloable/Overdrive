@@ -1,4 +1,4 @@
-package com.overdrive.app.storage;
+package com.loabletech.bladewatch.storage;
 
 import android.os.StatFs;
 import android.util.Log;
@@ -21,10 +21,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * StorageManager - SOTA Storage Management for Overdrive
+ * StorageManager - SOTA Storage Management for BladeWatch
  * 
  * Manages recording and surveillance storage with:
- * - Dedicated directories under /storage/emulated/0/Overdrive/ (internal) or SD card
+ * - Dedicated directories under /storage/emulated/0/BladeWatch/ (internal) or SD card
  * - Storage type selection: INTERNAL or SD_CARD for both recordings and surveillance
  * - Configurable size limits (100MB - 10000MB for SD card)
  * - Automatic cleanup of oldest files when limit is reached
@@ -54,14 +54,14 @@ public class StorageManager {
     
     // Hybrid logger - uses DaemonLogger when running as daemon, android.util.Log otherwise
     private static boolean useDaemonLogger = false;
-    private static com.overdrive.app.logging.DaemonLogger daemonLogger = null;
+    private static com.loabletech.bladewatch.logging.DaemonLogger daemonLogger = null;
     
     /**
      * Enable daemon logging mode (call from daemon process).
      */
     public static void enableDaemonLogging() {
         useDaemonLogger = true;
-        daemonLogger = com.overdrive.app.logging.DaemonLogger.getInstance(TAG);
+        daemonLogger = com.loabletech.bladewatch.logging.DaemonLogger.getInstance(TAG);
     }
     
     private static void logInfo(String msg) {
@@ -96,13 +96,13 @@ public class StorageManager {
         }
     }
     
-    // Base directories for Overdrive files
-    private static final String INTERNAL_BASE_DIR = "/storage/emulated/0/Overdrive";
+    // Base directories for BladeWatch files
+    private static final String INTERNAL_BASE_DIR = "/storage/emulated/0/BladeWatch";
 
     // Legacy paths from older app versions. Files here aren't written anymore
     // but they still count toward the user's configured limit and must be
     // reaped — otherwise a 500 MB limit can show 800 MB used in the UI.
-    private static final String LEGACY_APP_FILES_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files";
+    private static final String LEGACY_APP_FILES_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files";
     private static final String LEGACY_SURVEILLANCE_DIR = LEGACY_APP_FILES_DIR + "/sentry_events";
 
     // Known SD card mount paths (BYD and common Android paths)
@@ -123,7 +123,7 @@ public class StorageManager {
     public static final String TRIPS_SUBDIR = "trips";
     
     // Config file location
-    private static final String CONFIG_FILE = "/data/local/tmp/overdrive_config.json";
+    private static final String CONFIG_FILE = "/data/local/tmp/bladewatch_config.json";
     
     // Default limits (in bytes)
     private static final long DEFAULT_RECORDINGS_LIMIT_MB = 500;
@@ -538,7 +538,7 @@ public class StorageManager {
                         if (vol.isDirectory() && vol.canRead()) {
                             try {
                                 Process p = Runtime.getRuntime().exec(new String[]{
-                                    "sh", "-c", "touch " + vol.getAbsolutePath() + "/.overdrive_probe && rm " + vol.getAbsolutePath() + "/.overdrive_probe"
+                                    "sh", "-c", "touch " + vol.getAbsolutePath() + "/.bladewatch_probe && rm " + vol.getAbsolutePath() + "/.bladewatch_probe"
                                 });
                                 int exitCode = p.waitFor();
                                 if (exitCode == 0) {
@@ -576,7 +576,7 @@ public class StorageManager {
                             // Verify writable via shell
                             try {
                                 Process p = Runtime.getRuntime().exec(new String[]{
-                                    "sh", "-c", "touch " + mountPoint + "/.overdrive_probe && rm " + mountPoint + "/.overdrive_probe"
+                                    "sh", "-c", "touch " + mountPoint + "/.bladewatch_probe && rm " + mountPoint + "/.bladewatch_probe"
                                 });
                                 int exitCode = p.waitFor();
                                 if (exitCode == 0) {
@@ -697,7 +697,7 @@ public class StorageManager {
             return;
         }
         
-        File sdBaseDir = new File(sdCardPath, "Overdrive");
+        File sdBaseDir = new File(sdCardPath, "BladeWatch");
         
         // Always try to create directories (mkdirs is idempotent)
         // This handles the case where SD card was remounted
@@ -1022,7 +1022,7 @@ public class StorageManager {
     }
     
     /** Marker file that stores the epoch millis of the last successful broadcast scan. */
-    private static final String BROADCAST_MARKER_FILE = "/data/local/tmp/overdrive_last_mediascan";
+    private static final String BROADCAST_MARKER_FILE = "/data/local/tmp/bladewatch_last_mediascan";
     
     /** Throttle delay between individual file broadcasts (ms). */
     private static final long BROADCAST_THROTTLE_MS = 50;
@@ -1226,8 +1226,8 @@ public class StorageManager {
     }
     
     /**
-     * SOTA: Auto-enable CDR (BYD dashcam) cleanup when Overdrive uses SD card.
-     * This ensures Overdrive always has space by cleaning up old dashcam files.
+     * SOTA: Auto-enable CDR (BYD dashcam) cleanup when BladeWatch uses SD card.
+     * This ensures BladeWatch always has space by cleaning up old dashcam files.
      */
     private void autoEnableCdrCleanup() {
         try {
@@ -1246,7 +1246,7 @@ public class StorageManager {
                 
                 cleaner.setReservedSpaceMb(reservedMb);
                 cleaner.setEnabled(true);
-                logInfo("Auto-enabled CDR cleanup with " + reservedMb + "MB reserved for Overdrive");
+                logInfo("Auto-enabled CDR cleanup with " + reservedMb + "MB reserved for BladeWatch");
             }
         } catch (Exception e) {
             logWarn("Could not auto-enable CDR cleanup: " + e.getMessage());
@@ -1817,7 +1817,7 @@ public class StorageManager {
 
                 // Drop any cached entry the recordings API might still hold.
                 try {
-                    com.overdrive.app.server.RecordingsApiHandler
+                    com.loabletech.bladewatch.server.RecordingsApiHandler
                         .invalidateRecordingCache(file.getAbsolutePath());
                 } catch (Throwable ignored) {
                     // RecordingsApiHandler may not be loaded in every process.
@@ -1842,7 +1842,7 @@ public class StorageManager {
             try {
                 ExternalStorageCleaner cleaner = ExternalStorageCleaner.getInstance();
                 if (cleaner.isEnabled()) {
-                    logInfo("Overdrive cleanup insufficient on SD card — triggering CDR cleanup");
+                    logInfo("BladeWatch cleanup insufficient on SD card — triggering CDR cleanup");
                     cleaner.ensureReservedSpace();
                 }
             } catch (Exception e) {
@@ -2321,8 +2321,8 @@ public class StorageManager {
 
                         // Update running sentry engine's output directory
                         try {
-                            com.overdrive.app.surveillance.GpuSurveillancePipeline pipeline =
-                                com.overdrive.app.daemon.CameraDaemon.getGpuPipeline();
+                            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+                                com.loabletech.bladewatch.daemon.CameraDaemon.getGpuPipeline();
                             if (pipeline != null && pipeline.getSentry() != null) {
                                 pipeline.getSentry().setEventOutputDir(getSurveillanceDir());
                                 logInfo("SD card watchdog: updated sentry output dir to " + 

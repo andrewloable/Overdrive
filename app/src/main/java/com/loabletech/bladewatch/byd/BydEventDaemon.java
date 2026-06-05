@@ -1,11 +1,11 @@
-package com.overdrive.app.byd;
+package com.loabletech.bladewatch.byd;
 
 import android.content.Context;
 import android.os.Looper;
 
-import com.overdrive.app.byd.bodywork.BodyworkManager;
-import com.overdrive.app.byd.radar.RadarManager;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.bodywork.BodyworkManager;
+import com.loabletech.bladewatch.byd.radar.RadarManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -293,7 +293,7 @@ public class BydEventDaemon {
             Method getSystemContext = activityThreadClass.getMethod("getSystemContext");
             Context systemContext = (Context) getSystemContext.invoke(activityThread);
             
-            return systemContext.createPackageContext("com.overdrive.app",
+            return systemContext.createPackageContext("com.loabletech.bladewatch",
                 Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
             
         } catch (Exception e) {

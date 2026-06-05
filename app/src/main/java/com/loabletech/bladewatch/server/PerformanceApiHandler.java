@@ -1,8 +1,8 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.PerformanceMonitor;
-import com.overdrive.app.monitor.SocHistoryDatabase;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.PerformanceMonitor;
+import com.loabletech.bladewatch.monitor.SocHistoryDatabase;
 
 import org.json.JSONObject;
 
@@ -539,7 +539,7 @@ public class PerformanceApiHandler {
     private static boolean handleSohStatus(OutputStream out) throws Exception {
         try {
             SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
 
             if (sohEst != null) {
                 JSONObject status = sohEst.getStatus();
@@ -568,7 +568,7 @@ public class PerformanceApiHandler {
     private static boolean handleSohReset(OutputStream out) throws Exception {
         try {
             SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
 
             if (sohEst != null) {
                 sohEst.reset();
@@ -578,7 +578,7 @@ public class PerformanceApiHandler {
                 // getFuelPercentageValue, getBatteryCapacity all need it — which
                 // means dumpPhevDiagnostics can't infer drivetrain and the
                 // exact-Ah path can't fire. Use the daemon's app context.
-                android.content.Context appCtx = com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                android.content.Context appCtx = com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                 sohEst.autoDetectCarModel(appCtx);
                 sohEst.seedInitialEstimate();
 
@@ -636,8 +636,8 @@ public class PerformanceApiHandler {
                 try {
                     switch (cat) {
                         case "trips": {
-                            com.overdrive.app.trips.TripAnalyticsManager mgr =
-                                com.overdrive.app.daemon.CameraDaemon.getTripAnalyticsManager();
+                            com.loabletech.bladewatch.trips.TripAnalyticsManager mgr =
+                                com.loabletech.bladewatch.daemon.CameraDaemon.getTripAnalyticsManager();
                             // Refuse if a trip is being recorded right now —
                             // wiping mid-trip would leave the in-memory
                             // TripBuilder writing to a freshly-empty DB and
@@ -648,7 +648,7 @@ public class PerformanceApiHandler {
                                 r.put("error", Messages.get("errors.reset_trip_in_progress"));
                                 break;
                             }
-                            com.overdrive.app.trips.TripDatabase db =
+                            com.loabletech.bladewatch.trips.TripDatabase db =
                                 (mgr != null) ? mgr.getDatabase() : null;
                             long n = (db != null) ? db.resetAll() : -1;
                             r.put("success", n >= 0);
@@ -662,14 +662,14 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "soh": {
-                            com.overdrive.app.abrp.SohEstimator sohEst =
+                            com.loabletech.bladewatch.abrp.SohEstimator sohEst =
                                 SocHistoryDatabase.getInstance().getSohEstimator();
                             if (sohEst != null) {
                                 sohEst.reset();
                                 // Pass app context — null disables HAL probes
                                 // and forces SOC-heuristic-only re-detection.
                                 android.content.Context appCtx =
-                                    com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                                    com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                                 sohEst.autoDetectCarModel(appCtx);
                                 sohEst.seedInitialEstimate();
                                 r.put("success", true);
@@ -691,13 +691,13 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "bydCloud": {
-                            com.overdrive.app.byd.cloud.BydCloudConfig.clearCredentials();
+                            com.loabletech.bladewatch.byd.cloud.BydCloudConfig.clearCredentials();
                             r.put("success", true);
                             break;
                         }
                         case "mediaRecordings": {
-                            com.overdrive.app.storage.StorageManager sm =
-                                com.overdrive.app.storage.StorageManager.getInstance();
+                            com.loabletech.bladewatch.storage.StorageManager sm =
+                                com.loabletech.bladewatch.storage.StorageManager.getInstance();
                             // Don't wipe the dir while the encoder is writing
                             // to it — at best you'd delete the still-open file
                             // descriptor; at worst, corrupt the active MP4.
@@ -712,8 +712,8 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "mediaSurveillance": {
-                            com.overdrive.app.storage.StorageManager sm =
-                                com.overdrive.app.storage.StorageManager.getInstance();
+                            com.loabletech.bladewatch.storage.StorageManager sm =
+                                com.loabletech.bladewatch.storage.StorageManager.getInstance();
                             if (sm.isSurveillanceActive()) {
                                 r.put("success", false);
                                 r.put("error", Messages.get("errors.reset_surveillance_in_progress"));
@@ -725,14 +725,14 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "mediaProximity": {
-                            long n = com.overdrive.app.storage.StorageManager.getInstance()
+                            long n = com.loabletech.bladewatch.storage.StorageManager.getInstance()
                                 .wipeMediaCategory("proximity");
                             r.put("success", n >= 0);
                             r.put("filesDeleted", n);
                             break;
                         }
                         case "mediaTrips": {
-                            long n = com.overdrive.app.storage.StorageManager.getInstance()
+                            long n = com.loabletech.bladewatch.storage.StorageManager.getInstance()
                                 .wipeMediaCategory("trips");
                             r.put("success", n >= 0);
                             r.put("filesDeleted", n);
@@ -768,7 +768,7 @@ public class PerformanceApiHandler {
     private static boolean handleSohGetNominal(OutputStream out) throws Exception {
         try {
             SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
 
             JSONObject response = new JSONObject();
             if (sohEst != null) {
@@ -797,7 +797,7 @@ public class PerformanceApiHandler {
     private static boolean handleSohSetNominal(String body, OutputStream out) throws Exception {
         try {
             SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.overdrive.app.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
 
             if (sohEst == null) {
                 JSONObject err = new JSONObject();
@@ -838,7 +838,7 @@ public class PerformanceApiHandler {
             if (changed) {
                 sohEst.reset();
                 android.content.Context appCtx =
-                    com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                    com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                 sohEst.autoDetectCarModel(appCtx);
                 sohEst.seedInitialEstimate();
             }

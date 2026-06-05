@@ -1,6 +1,6 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -15,7 +15,7 @@ import java.io.FileWriter;
  * Cache locations (daemon UID 2000 writes to these):
  * 1. /data/local/tmp/gps_cache.json (primary - daemon can write here)
  * 
- * Note: App data directory (/data/data/com.overdrive.app/) is NOT writable by daemon (UID 2000).
+ * Note: App data directory (/data/data/com.loabletech.bladewatch/) is NOT writable by daemon (UID 2000).
  * The LocationSidecarService (app UID) handles its own cache in app data directory.
  * 
  * On startup, loads cached GPS for immediate availability.
@@ -30,10 +30,10 @@ public class GpsMonitor {
     private static final String CACHE_FILE = "/data/local/tmp/gps_cache.json";
     
     // Secondary cache file (app data directory - read-only for daemon, written by LocationSidecarService)
-    private static final String CACHE_FILE_APP = "/data/data/com.overdrive.app/files/gps_cache.json";
+    private static final String CACHE_FILE_APP = "/data/data/com.loabletech.bladewatch/files/gps_cache.json";
     
     // Command to start the sidecar service
-    private static final String START_CMD = "am start-foreground-service -n com.overdrive.app/.services.LocationSidecarService";
+    private static final String START_CMD = "am start-foreground-service -n com.loabletech.bladewatch/.services.LocationSidecarService";
 
     private volatile double latitude = 0.0;
     private volatile double longitude = 0.0;
@@ -101,7 +101,7 @@ public class GpsMonitor {
         
         // SOTA: Notify SafeLocationManager for geofence checks
         try {
-            com.overdrive.app.surveillance.SafeLocationManager.getInstance()
+            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance()
                 .onLocationUpdate(lat, lng);
         } catch (Exception e) {
             // Don't let geofence errors break GPS flow

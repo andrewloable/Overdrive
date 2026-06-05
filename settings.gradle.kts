@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Overdrive"
+rootProject.name = "BladeWatch"
 include(":app")
  

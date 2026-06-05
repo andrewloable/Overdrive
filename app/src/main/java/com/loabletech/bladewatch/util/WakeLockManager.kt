@@ -1,9 +1,9 @@
-package com.overdrive.app.util
+package com.loabletech.bladewatch.util
 
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.PowerManager
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Manages wake locks and WiFi locks to keep the device active.

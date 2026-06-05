@@ -1,7 +1,7 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * Fused charging-state detector.

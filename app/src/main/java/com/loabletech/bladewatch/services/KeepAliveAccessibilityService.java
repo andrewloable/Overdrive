@@ -1,4 +1,4 @@
-package com.overdrive.app.services;
+package com.loabletech.bladewatch.services;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
-import com.overdrive.app.ui.daemon.DaemonStartupManager;
+import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager;
 
 /**
  * Minimal AccessibilityService that keeps the app process alive indefinitely.
@@ -20,7 +20,7 @@ import com.overdrive.app.ui.daemon.DaemonStartupManager;
  * process keep-alive. The foreground notification provides user visibility.
  *
  * Enable via ADB (one-time):
- *   settings put secure enabled_accessibility_services com.overdrive.app/com.overdrive.app.services.KeepAliveAccessibilityService
+ *   settings put secure enabled_accessibility_services com.loabletech.bladewatch/com.loabletech.bladewatch.services.KeepAliveAccessibilityService
  *   settings put secure accessibility_enabled 1
  */
 public class KeepAliveAccessibilityService extends AccessibilityService {
@@ -79,7 +79,7 @@ public class KeepAliveAccessibilityService extends AccessibilityService {
 
         // Self-restart: send broadcast to trigger re-enable
         try {
-            Intent restartIntent = new Intent("com.overdrive.app.RESTART_ACCESSIBILITY");
+            Intent restartIntent = new Intent("com.loabletech.bladewatch.RESTART_ACCESSIBILITY");
             sendBroadcast(restartIntent);
         } catch (Exception e) {
             Log.e(TAG, "Restart broadcast failed: " + e.getMessage());

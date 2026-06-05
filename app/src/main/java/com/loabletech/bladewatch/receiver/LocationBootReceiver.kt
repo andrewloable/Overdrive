@@ -1,11 +1,11 @@
-package com.overdrive.app.receiver
+package com.loabletech.bladewatch.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import com.overdrive.app.services.LocationSidecarService
+import com.loabletech.bladewatch.services.LocationSidecarService
 
 /**
  * Boot receiver to auto-start LocationSidecarService after device reboot.

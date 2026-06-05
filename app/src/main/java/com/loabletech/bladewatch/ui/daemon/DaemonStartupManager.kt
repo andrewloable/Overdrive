@@ -1,16 +1,16 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.launcher.AdbShellExecutor
-import com.overdrive.app.launcher.ZrokLauncher
-import com.overdrive.app.launcher.TailscaleLauncher
-import com.overdrive.app.logging.LogManager
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.PreferencesManager
-import com.overdrive.app.ui.viewmodel.DaemonsViewModel
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.launcher.AdbShellExecutor
+import com.loabletech.bladewatch.launcher.ZrokLauncher
+import com.loabletech.bladewatch.launcher.TailscaleLauncher
+import com.loabletech.bladewatch.logging.LogManager
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.PreferencesManager
+import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
 
 class DaemonStartupManager(
     private val context: Context,
@@ -475,18 +475,18 @@ class DaemonStartupManager(
      */
     private fun enableAccessibilityKeepAlive() {
         // Check if already running in-process first
-        if (com.overdrive.app.services.KeepAliveAccessibilityService.isRunning()) {
+        if (com.loabletech.bladewatch.services.KeepAliveAccessibilityService.isRunning()) {
             log.info(TAG, "AccessibilityService already running")
             return
         }
 
         log.info(TAG, "Enabling AccessibilityService keep-alive via ADB...")
-        val serviceLauncher = com.overdrive.app.launcher.ServiceLauncher(
+        val serviceLauncher = com.loabletech.bladewatch.launcher.ServiceLauncher(
             context,
-            com.overdrive.app.launcher.AdbShellExecutor(context),
+            com.loabletech.bladewatch.launcher.AdbShellExecutor(context),
             log
         )
-        serviceLauncher.enableAccessibilityKeepAlive(object : com.overdrive.app.launcher.ServiceLauncher.LaunchCallback {
+        serviceLauncher.enableAccessibilityKeepAlive(object : com.loabletech.bladewatch.launcher.ServiceLauncher.LaunchCallback {
             override fun onLog(message: String) { log.debug(TAG, "[A11y] $message") }
             override fun onLaunched() { log.info(TAG, "AccessibilityService keep-alive enabled") }
             override fun onError(error: String) { log.warn(TAG, "AccessibilityService enable failed: $error (non-fatal)") }
@@ -549,7 +549,7 @@ class DaemonStartupManager(
             DaemonType.SINGBOX_PROXY -> "singbox"
         }
         return try {
-            com.overdrive.app.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram(telegramName)
+            com.loabletech.bladewatch.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram(telegramName)
         } catch (e: Exception) {
             false
         }

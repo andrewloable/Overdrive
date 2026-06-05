@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
+    <string name="app_name">BladeWatch</string>
     <string name="accessibility_service_description">ओवरड्राइव वाहन निगरानी को पृष्ठभूमि में सक्रिय रखता है। यह सेवा स्क्रीन सामग्री को नहीं पढ़ती या बातचीत नहीं करती है।</string>
     <string name="action_cancel">रद्द करें</string>
     <string name="action_clear_plain">साफ़ करें</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">अपनी भाषा चुनें</string>
-    <string name="setup_language_body">अपनी मुख्य इकाई की भाषा में डिफ़ॉल्ट। OverDrive ऐप और वेब सुरंग के लिए एक अलग चुनने के लिए टैप करें।</string>
+    <string name="setup_language_body">अपनी मुख्य इकाई की भाषा में डिफ़ॉल्ट। BladeWatch ऐप और वेब सुरंग के लिए एक अलग चुनने के लिए टैप करें।</string>
     <string name="setup_language_button">भाषा चुनें</string>
     <string name="setup_autostart_title">ऑटो-स्टार्ट प्रतिबंध को अक्षम करें</string>
-    <string name="setup_autostart_body">BYD ऑटो-स्टार्ट खोलने के लिए नीचे टैप करें. सूची में OverDrive खोजें और बॉक्स को अनचेक करें. BYD प्रत्येक स्थापना पर इसे मिटा देता है  आप अद्यतन के बाद इसे फिर से करेंगे.</string>
+    <string name="setup_autostart_body">BYD ऑटो-स्टार्ट खोलने के लिए नीचे टैप करें. सूची में BladeWatch खोजें और बॉक्स को अनचेक करें. BYD प्रत्येक स्थापना पर इसे मिटा देता है  आप अद्यतन के बाद इसे फिर से करेंगे.</string>
     <string name="setup_autostart_button">BYD ऑटो-स्टार्ट खोलें</string>
     <string name="setup_overlay_title">अन्य ऐप्स पर डिस्प्ले की अनुमति दें</string>
     <string name="setup_overlay_body">अन्य ऐप्स के शीर्ष पर रिकॉर्डिंग और यात्रा ट्रैकिंग के लिए एक फ्लोटिंग स्थिति सूचक दिखाने के लिए इसे सक्षम करें।</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive स्थिति</string>
+    <string name="status_overlay_notif_title">BladeWatch स्थिति</string>
     <string name="status_overlay_notif_text">स्थिति ओवरले सक्रिय</string>
     <string name="rail_dashboard">डैशबोर्ड</string>
     <string name="rail_live">जीवित</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">सेटिंग उप-रेल</string>
     <string name="settings_privacy_title">गोपनीयता और डेटा</string>
     <string name="settings_privacy_body">रीसेट रिकॉर्डिंग सूचकांक, कैश किए गए क्रेडेंशियल, डेमन राज्य, और डिवाइस पर वरीयताओं को साफ करता है। कार्रवाई को रद्द नहीं किया जा सकता है।</string>
-    <string name="settings_about_title">OverDrive के बारे में</string>
+    <string name="settings_about_title">BladeWatch के बारे में</string>
     <string name="settings_about_version_label">संस्करण</string>
     <string name="settings_about_package_label">निर्माण</string>
     <string name="settings_about_check_update_value">नवीनतम GitHub रिलीज़ की जाँच करें और यदि नया हो तो इंस्टॉल करें।</string>
     <string name="settings_about_support_section">आप जैसे लोगों द्वारा संचालित</string>
     <string name="settings_about_support_share_title">किसी और मालिक को बताएं</string>
     <string name="settings_about_support_share_value">प्रत्येक साझा लिंक एक और BYD मालिक ओवरड्राइव की खोज करने में मदद करता है।</string>
-    <string name="settings_about_support_share_message">BYD के लिए ओवरड्राइव  ओपन सोर्स निगरानी और डैशकैम देखेंः https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_message">BYD के लिए ओवरड्राइव  ओपन सोर्स निगरानी और डैशकैम देखेंः https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">शेयर ओवरड्राइव</string>
     <string name="settings_about_open_link_failed">लिंक नहीं खोल सका।</string>
     <string name="settings_about_open_link_copied">कोई ब्राउज़र नहीं मिला। URL कॉपीः %1$s</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">लाइसेंस</string>
     <string name="settings_about_license_value">MIT  ओपन सोर्स. पूर्ण पाठ देखने के लिए टैप करें.</string>
     <string name="settings_about_source_title">स्रोत कोड</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yash-srivastava/Overdrive-release/blob/main/license</string>
-    <string name="settings_about_source_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">https://github.com/yash-srivastava/BladeWatch-release/blob/main/license</string>
+    <string name="settings_about_source_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">GitHub पर छोड़ें</string>
     <string name="settings_about_star_value">यह एक सेकंड लेता है. यह बहुत मायने रखता है.</string>
-    <string name="settings_about_star_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">धन्यवाद</string>
     <string name="settings_about_thanks_subtitle">योगदानकर्ताओं और समर्थकों की मदद से निर्मित।</string>
     <string name="settings_about_contributors_title">योगदानकर्ता</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">विन्यास</string>
     <string name="settings_action_check_update">अद्यतनों की जाँच करें</string>
     <string name="settings_action_reset_data">डेटा रीसेट...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">निगरानी पर</string>
     <string name="dashboard_subtitle_all_systems">सभी प्रणाली ऑनलाइन</string>
     <string name="dashboard_subtitle_some_offline">%1$d की %2$d सेवाएं ऑनलाइन</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">पूर्व/पश्चात बफर, कोडेक, भंडारण सीमा।</string>
     <string name="settings_section_surveillance_subtitle">पता लगाने के क्षेत्रों, कार्यक्रम, गति संवेदनशीलता.</string>
     <string name="settings_section_daemons_subtitle">Cloudflared, Zrok, Telegram, MQTT धावकों.</string>
-    <string name="settings_about_row_title">OverDrive के बारे में</string>
+    <string name="settings_about_row_title">BladeWatch के बारे में</string>
     <string name="settings_about_row_subtitle">संस्करण, लाइसेंस, समर्थन विकास.</string>
     <string name="settings_reset_row_subtitle">रिकॉर्डिंग, घटनाओं, या सभी कैश साफ.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">विषय, भाषा और दृश्य वरीयताएँ।</string>
     <string name="settings_theme_active_auto_caption">ऑटो आपके सिस्टम विषय का पालन करता है।</string>
     <string name="settings_theme_active_light_caption">प्रकाश विषय हमेशा चालू है।</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d की उपलब्ध %2$d भाषाएँ</string>
     <string name="settings_language_card_title">प्रदर्शन भाषा</string>
     <string name="settings_privacy_stance_title">डिफ़ॉल्ट रूप से डिवाइस पर</string>
-    <string name="settings_privacy_stance_body">OverDrive पूरी तरह से मुख्य इकाई पर चलता है. आप स्पष्ट रूप से विन्यस्त सुरंगों और एकीकरण के माध्यम से सिवाय कोई टेलीमेट्री अपनी कार छोड़ देता है.</string>
+    <string name="settings_privacy_stance_body">BladeWatch पूरी तरह से मुख्य इकाई पर चलता है. आप स्पष्ट रूप से विन्यस्त सुरंगों और एकीकरण के माध्यम से सिवाय कोई टेलीमेट्री अपनी कार छोड़ देता है.</string>
     <string name="settings_privacy_overline_storage">स्थानीय भंडारण</string>
     <string name="settings_privacy_overline_reset">डेटा रीसेट</string>
     <string name="settings_privacy_storage_clips_label">डिस्क पर क्लिप</string>

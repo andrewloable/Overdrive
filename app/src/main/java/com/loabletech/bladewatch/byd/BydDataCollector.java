@@ -1,8 +1,8 @@
-package com.overdrive.app.byd;
+package com.loabletech.bladewatch.byd;
 
 import android.content.Context;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -293,7 +293,7 @@ public class BydDataCollector {
         // If auto-detection failed, fall back to user's persisted preference
         if (!unitDetected) {
             try {
-                com.overdrive.app.trips.TripConfig tripConfig = new com.overdrive.app.trips.TripConfig();
+                com.loabletech.bladewatch.trips.TripConfig tripConfig = new com.loabletech.bladewatch.trips.TripConfig();
                 tripConfig.load();
                 String savedUnit = tripConfig.getDistanceUnit();
                 if ("mi".equals(savedUnit)) {
@@ -330,8 +330,8 @@ public class BydDataCollector {
         // here — the door listener is only invoked once the bodywork HAL
         // fires onDoorStateChanged, which requires registerAllListeners to
         // have run first.
-        com.overdrive.app.notifications.DoorEventNotifier.start();
-        com.overdrive.app.notifications.ChargingEventNotifier.start();
+        com.loabletech.bladewatch.notifications.DoorEventNotifier.start();
+        com.loabletech.bladewatch.notifications.ChargingEventNotifier.start();
 
         // Start periodic polling to keep data fresh (listeners may not fire for all values)
         startPolling();
@@ -472,8 +472,8 @@ public class BydDataCollector {
             @Override
             public void onReceive(android.content.Context ctx, android.content.Intent intent) {
                 if (intent == null || intent.getAction() == null) return;
-                com.overdrive.app.monitor.ChargingDetector det =
-                    com.overdrive.app.monitor.ChargingDetector.getInstance();
+                com.loabletech.bladewatch.monitor.ChargingDetector det =
+                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance();
                 switch (intent.getAction()) {
                     case android.content.Intent.ACTION_POWER_CONNECTED:
                         det.onPowerConnected();
@@ -529,24 +529,24 @@ public class BydDataCollector {
             return device;
         }
 
-        // Strategy 2: Try with a proper app context for com.overdrive.app
+        // Strategy 2: Try with a proper app context for com.loabletech.bladewatch
         // The daemon runs via app_process with a synthetic context. But the actual app
         // is installed — createPackageContext gives us a real app context with proper
         // service bindings that the multimedia device might need.
         try {
             android.content.Context appPkgCtx = context.createPackageContext(
-                "com.overdrive.app",
+                "com.loabletech.bladewatch",
                 android.content.Context.CONTEXT_INCLUDE_CODE | android.content.Context.CONTEXT_IGNORE_SECURITY);
             if (appPkgCtx != null) {
                 device = BydDeviceHelper.getDevice(className, appPkgCtx);
                 if (device != null) {
-                    logger.info("Multimedia device OK via com.overdrive.app package context");
+                    logger.info("Multimedia device OK via com.loabletech.bladewatch package context");
                     availableDevices.add("Multimedia");
                     return device;
                 }
             }
         } catch (Exception e) {
-            logger.debug("Multimedia strategy 2 (overdrive package context) failed: " + e.getMessage());
+            logger.debug("Multimedia strategy 2 (bladewatch package context) failed: " + e.getMessage());
         }
 
         // Strategy 3: Try with system context directly (with timeout — can deadlock)
@@ -636,7 +636,7 @@ public class BydDataCollector {
         // Notify the fused charging detector first so it can invalidate
         // ACC-dependent signals (enginePowerKw goes stale once ACC is off
         // and must not be reused as charging evidence).
-        com.overdrive.app.monitor.ChargingDetector.getInstance().updateAccState(isOn);
+        com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().updateAccState(isOn);
 
         // ACC just transitioned OFF: also clear the snapshot's enginePowerKw
         // so any consumer reading the snapshot directly (not through the
@@ -823,17 +823,17 @@ public class BydDataCollector {
         // that's always P. The detector uses gear==P as an L3 guard.
         int gearNow;
         try {
-            com.overdrive.app.monitor.GearMonitor gm =
-                com.overdrive.app.monitor.GearMonitor.getInstance();
+            com.loabletech.bladewatch.monitor.GearMonitor gm =
+                com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
             gearNow = gm.getCurrentGear();
         } catch (Exception e) {
             gearNow = (built.gearMode != BydVehicleData.UNAVAILABLE)
                 ? built.gearMode
-                : com.overdrive.app.monitor.GearMonitor.GEAR_P;
+                : com.loabletech.bladewatch.monitor.GearMonitor.GEAR_P;
         }
-        com.overdrive.app.monitor.ChargingDetector.getInstance()
+        com.loabletech.bladewatch.monitor.ChargingDetector.getInstance()
             .updatePollEvidence(built, gearNow,
-                com.overdrive.app.monitor.GearMonitor.GEAR_P);
+                com.loabletech.bladewatch.monitor.GearMonitor.GEAR_P);
     }
 
     private void collectBodywork(BydVehicleData.Builder b) {
@@ -1362,7 +1362,7 @@ public class BydDataCollector {
                     logger.debug("collectCharging Power.isCharging error: " + e.getMessage());
                 }
             }
-            com.overdrive.app.monitor.ChargingDetector.getInstance()
+            com.loabletech.bladewatch.monitor.ChargingDetector.getInstance()
                 .updatePowerIsCharging(powerIsCharging);
 
             // Feature ID for battery device state, fallback to named getter
@@ -1846,8 +1846,8 @@ public class BydDataCollector {
         }
         // Unknown — defer to capacity-based heuristic, do NOT cache.
         try {
-            com.overdrive.app.abrp.SohEstimator sohEst =
-                com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+            com.loabletech.bladewatch.abrp.SohEstimator sohEst =
+                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
             if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
                 return sohEst.getNominalCapacityKwh() < 30.0;
             }
@@ -2023,10 +2023,10 @@ public class BydDataCollector {
                         data.put("wheel", i);
                         data.put("kPa", pressuresKpa[i]);
                         data.put("state", curP);
-                        com.overdrive.app.notifications.NotificationBus.get().publish(
-                                new com.overdrive.app.notifications.NotificationEvent(
+                        com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
+                                new com.loabletech.bladewatch.notifications.NotificationEvent(
                                         "vehicle.health.tyre.pressure",
-                                        com.overdrive.app.notifications.NotificationEvent.Severity.WARN,
+                                        com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
                                         curP == 1 ? "Underpressure" : "Overpressure",
                                         wheelLabels[i] + " — " + pressuresKpa[i] + " kPa",
                                         "tyre-pressure-" + i,
@@ -2045,12 +2045,12 @@ public class BydDataCollector {
                         data.put("wheel", i);
                         data.put("leakState", curL);
                         data.put("kPa", pressuresKpa[i]);
-                        com.overdrive.app.notifications.NotificationEvent.Severity sev =
+                        com.loabletech.bladewatch.notifications.NotificationEvent.Severity sev =
                                 curL == 2
-                                        ? com.overdrive.app.notifications.NotificationEvent.Severity.CRITICAL
-                                        : com.overdrive.app.notifications.NotificationEvent.Severity.WARN;
-                        com.overdrive.app.notifications.NotificationBus.get().publish(
-                                new com.overdrive.app.notifications.NotificationEvent(
+                                        ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
+                                        : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN;
+                        com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
+                                new com.loabletech.bladewatch.notifications.NotificationEvent(
                                         "vehicle.health.tyre.leak",
                                         sev,
                                         curL == 2 ? "Fast leak detected" : "Slow leak detected",
@@ -3053,15 +3053,15 @@ public class BydDataCollector {
      */
     private void mergeCloudData(BydVehicleData.Builder b) {
         try {
-            com.overdrive.app.byd.cloud.BydCloudConfig config =
-                    com.overdrive.app.byd.cloud.BydCloudConfig.fromUnifiedConfig();
+            com.loabletech.bladewatch.byd.cloud.BydCloudConfig config =
+                    com.loabletech.bladewatch.byd.cloud.BydCloudConfig.fromUnifiedConfig();
             if (!config.cloudDataMerge) return;
 
-            com.overdrive.app.byd.cloud.BydCloudDataProvider provider =
-                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
+                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
             if (!provider.isTelemetryFresh()) return;
 
-            com.overdrive.app.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
+            com.loabletech.bladewatch.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
             if (cs == null) return;
 
             // SOC — only if SDK didn't provide it
@@ -3401,8 +3401,8 @@ public class BydDataCollector {
                             if (isFirst) {
                                 logger.info("HV pack voltage: " + String.format("%.1f", volts) + "V");
                                 try {
-                                    com.overdrive.app.abrp.SohEstimator soh = 
-                                        com.overdrive.app.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
+                                    com.loabletech.bladewatch.abrp.SohEstimator soh = 
+                                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
                                     if (soh != null) {
                                         soh.autoDetectFromPackVoltage(volts, current);
                                     }
@@ -3457,7 +3457,7 @@ public class BydDataCollector {
                     }
                     // Push edge into fused detector regardless of whether the
                     // snapshot value moved (it may already match from a poll).
-                    com.overdrive.app.monitor.ChargingDetector.getInstance().updateBmsState(state);
+                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().updateBmsState(state);
                 }
             } catch (Exception e) { /* ignore */ }
             return;

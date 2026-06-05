@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.model
+package com.loabletech.bladewatch.ui.model
 
 /**
  * Types of background daemons managed by the app.

@@ -1,6 +1,6 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
-import com.overdrive.app.telegram.event.SystemEvent;
+import com.loabletech.bladewatch.telegram.event.SystemEvent;
 
 /**
  * Routes system events to Telegram notifications based on owner preferences.

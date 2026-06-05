@@ -1,10 +1,10 @@
-package com.overdrive.app.daemon;
+package com.loabletech.bladewatch.daemon;
 
 import android.os.Looper;
 
-import com.overdrive.app.daemon.telegram.CommandContext;
-import com.overdrive.app.daemon.telegram.CommandRouter;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.daemon.telegram.CommandContext;
+import com.loabletech.bladewatch.daemon.telegram.CommandRouter;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,7 +27,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-import com.overdrive.app.daemon.proxy.Safe;
+import com.loabletech.bladewatch.daemon.proxy.Safe;
 
 /**
  * Telegram Bot Daemon - runs as shell user (UID 2000) via ADB shell.
@@ -241,19 +241,19 @@ public class TelegramBotDaemon {
             // the daemon is launched fresh via app_process and doesn't share
             // the app's static state. init() is a no-op when the file already
             // exists and triggers legacy migration if it doesn't.
-            com.overdrive.app.config.UnifiedConfigManager.init();
+            com.loabletech.bladewatch.config.UnifiedConfigManager.init();
             // Pull any state still in /data/local/tmp/telegram_config.properties
             // into the unified store. Idempotent — no-op after first call.
-            com.overdrive.app.telegram.config.UnifiedTelegramConfig.migrateLegacyIfNeeded();
+            com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.migrateLegacyIfNeeded();
 
-            botToken = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getBotToken();
+            botToken = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getBotToken();
             if (botToken == null || botToken.isEmpty()) {
                 log("bot_token not set in unified config");
                 return false;
             }
 
-            ownerChatId = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
-            videoUploadsEnabled = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isVideoUploads();
+            ownerChatId = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            videoUploadsEnabled = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.isVideoUploads();
 
             log("Config loaded: token=***" + botToken.substring(Math.max(0, botToken.length() - 6)));
             log("Owner chat ID: " + (ownerChatId > 0 ? ownerChatId : "not set"));
@@ -279,11 +279,11 @@ public class TelegramBotDaemon {
      */
     private static void refreshConfigFromUnified() {
         try {
-            com.overdrive.app.config.UnifiedConfigManager.forceReload();
+            com.loabletech.bladewatch.config.UnifiedConfigManager.forceReload();
 
-            String newToken = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getBotToken();
-            long newOwner = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
-            boolean newVideo = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isVideoUploads();
+            String newToken = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getBotToken();
+            long newOwner = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getOwnerChatId();
+            boolean newVideo = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.isVideoUploads();
 
             if (newToken != null && !newToken.isEmpty() && !newToken.equals(botToken)) {
                 log("Bot token changed from unified config; updating");
@@ -607,7 +607,7 @@ public class TelegramBotDaemon {
                             // named cloudflared tunnels keep the same URL. Only
                             // call out the rotation when it actually happened.
                             boolean rotates = url.contains(".trycloudflare.com");
-                            msg = "🔄 *Overdrive updated to " + postUpdateVersion + "*\n" +
+                            msg = "🔄 *BladeWatch updated to " + postUpdateVersion + "*\n" +
                                   (rotates ? "New tunnel URL:\n" : "Tunnel back online:\n") + url;
                             if (rotates) {
                                 msg += "\n\n_The cloudflared link rotates after every install._";
@@ -1004,9 +1004,9 @@ public class TelegramBotDaemon {
         String expectedPin = "";
         long pinExpiry = 0;
         try {
-            com.overdrive.app.config.UnifiedConfigManager.forceReload();
-            expectedPin = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getPairPin();
-            pinExpiry = com.overdrive.app.telegram.config.UnifiedTelegramConfig.getPairPinExpiry();
+            com.loabletech.bladewatch.config.UnifiedConfigManager.forceReload();
+            expectedPin = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getPairPin();
+            pinExpiry = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getPairPinExpiry();
         } catch (Exception e) {
             log("Error reading pair PIN from config: " + e.getMessage());
         }
@@ -1038,7 +1038,7 @@ public class TelegramBotDaemon {
     
     private static void clearPairPinFromConfig() {
         try {
-            com.overdrive.app.telegram.config.UnifiedTelegramConfig.clearPairPin();
+            com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.clearPairPin();
         } catch (Exception e) {
             log("Error clearing pair PIN: " + e.getMessage());
         }
@@ -1479,7 +1479,7 @@ public class TelegramBotDaemon {
     
     private static void saveOwnerToConfig(long chatId, String username, String firstName) {
         try {
-            com.overdrive.app.telegram.config.UnifiedTelegramConfig.setOwner(
+            com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.setOwner(
                     chatId, username, firstName, System.currentTimeMillis());
             log("Owner saved to unified config: " + chatId);
         } catch (Exception e) {
@@ -1510,7 +1510,7 @@ public class TelegramBotDaemon {
      * avoid pulling the whole updater package transitively.
      */
     private static String consumePostUpdateHint() {
-        File hint = new File("/data/local/tmp/overdrive_post_update_pending_telegram");
+        File hint = new File("/data/local/tmp/bladewatch_post_update_pending_telegram");
         if (!hint.exists()) return null;
         String version = null;
         try (BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(hint)))) {

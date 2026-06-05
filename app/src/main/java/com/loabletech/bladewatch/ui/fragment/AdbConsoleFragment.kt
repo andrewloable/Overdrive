@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,13 +10,13 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.ui.adapter.PresetCommandAdapter
-import com.overdrive.app.ui.model.PRESET_COMMANDS
-import com.overdrive.app.ui.model.PresetCommand
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.ui.adapter.PresetCommandAdapter
+import com.loabletech.bladewatch.ui.model.PRESET_COMMANDS
+import com.loabletech.bladewatch.ui.model.PresetCommand
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
-import com.overdrive.app.R
+import com.loabletech.bladewatch.R
 
 /**
  * Fragment for ADB shell console with preset commands.

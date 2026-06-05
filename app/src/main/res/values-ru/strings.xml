@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">Поддерживает активный мониторинг транспортного средства Overdrive на фоне.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">Поддерживает активный мониторинг транспортного средства BladeWatch на фоне.</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_clear_plain">Очистить</string>
     <string name="action_select_all">Выберите все</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2 .</string>
     <string name="setup_step_three_label">3 .</string>
     <string name="setup_language_title">Выберите свой язык</string>
-    <string name="setup_language_body">Нажмите, чтобы выбрать другой язык для приложения OverDrive и веб- туннеля.</string>
+    <string name="setup_language_body">Нажмите, чтобы выбрать другой язык для приложения BladeWatch и веб- туннеля.</string>
     <string name="setup_language_button">Выберите язык</string>
     <string name="setup_autostart_title">Отключить ограничение автозапуска</string>
-    <string name="setup_autostart_body">Нажмите ниже, чтобы открыть BYD Auto-Start. Найдите OverDrive в списке и отберите поле. BYD стирает это при каждой установке  Вы будете переделать его после обновлений.</string>
+    <string name="setup_autostart_body">Нажмите ниже, чтобы открыть BYD Auto-Start. Найдите BladeWatch в списке и отберите поле. BYD стирает это при каждой установке  Вы будете переделать его после обновлений.</string>
     <string name="setup_autostart_button">Откройте BYD Автозапуск</string>
     <string name="setup_overlay_title">Позвольте отображаться в других приложениях</string>
     <string name="setup_overlay_body">Определить это, чтобы показать плавающий индикатор состояния для записи и отслеживания путешествий на вершине других приложений.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">Статус OverDrive</string>
+    <string name="status_overlay_notif_title">Статус BladeWatch</string>
     <string name="status_overlay_notif_text">Статус накладки активный</string>
     <string name="rail_dashboard">Дисбордная панель</string>
     <string name="rail_live">Жизнь</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">Настройки подпоезда</string>
     <string name="settings_privacy_title">Конфиденциальность и данные</string>
     <string name="settings_privacy_body">Ресет очищает индекс записей, кешированные учетные данные, состояние демона и предпочтения на устройстве.</string>
-    <string name="settings_about_title">О OverDrive</string>
+    <string name="settings_about_title">О BladeWatch</string>
     <string name="settings_about_version_label">Версия</string>
     <string name="settings_about_package_label">Построение</string>
     <string name="settings_about_check_update_value">Проверьте последнюю версию GitHub и установите, если она новее.</string>
     <string name="settings_about_support_section">Поддерживаются такими людьми, как ты.</string>
     <string name="settings_about_support_share_title">Расскажите другому владельцу</string>
-    <string name="settings_about_support_share_value">Каждый общий ссылка помогает другому владельцу BYD обнаружить Overdrive.</string>
-    <string name="settings_about_support_share_message">Проверьте Overdrive  открытый код наблюдения и дашкамы для BYD: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">Каждый общий ссылка помогает другому владельцу BYD обнаружить BladeWatch.</string>
+    <string name="settings_about_support_share_message">Проверьте BladeWatch  открытый код наблюдения и дашкамы для BYD: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">Распределяйте сверхвыгоду</string>
     <string name="settings_about_open_link_failed">Не удалось открыть ссылку.</string>
     <string name="settings_about_open_link_copied">Никакой браузер не найден. URL скопирован: %1$s</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">Лицензия</string>
     <string name="settings_about_license_value">MIT  открытый код. Нажмите, чтобы просмотреть полный текст.</string>
     <string name="settings_about_source_title">Исходный код</string>
-    <string name="settings_about_source_value">Github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">https://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE</string>
-    <string name="settings_about_source_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">Github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">https://github.com/yash-srivastava/BladeWatch-release/blob/main/LICENSE</string>
+    <string name="settings_about_source_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_star_title">Отпустить на GitHub</string>
     <string name="settings_about_star_value">Это много значит.</string>
-    <string name="settings_about_star_url">https://github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_star_url">https://github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_thanks_title">Спасибо</string>
     <string name="settings_about_thanks_subtitle">Создано с помощью контрибьюторов и сторонников.</string>
     <string name="settings_about_contributors_title">Контрибьюторы</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">Проверьте камеру SOH и упаковывайте статистику.</string>
     <string name="diagnostics_settings_subtitle">Предпочтения приложения, тема и язык.</string>
     <string name="integrations_hero_title">Интеграции</string>
-    <string name="integrations_hero_subtitle">Подключите Overdrive к вашим услугам.</string>
+    <string name="integrations_hero_subtitle">Подключите BladeWatch к вашим услугам.</string>
     <string name="integrations_status_unknown">Нажмите на настройку</string>
     <string name="integrations_status_configured">Конфигурированные</string>
     <string name="integrations_status_not_set_up">Не установлено</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">Конфигурация</string>
     <string name="settings_action_check_update">Проверяйте обновления</string>
     <string name="settings_action_reset_data">Перезагрузить данные...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">На страже</string>
     <string name="dashboard_subtitle_all_systems">Все системы онлайн</string>
     <string name="dashboard_subtitle_some_offline">%1$d услуг %2$d онлайн</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">Пре/пост буферы, кодеки, ограничения хранения.</string>
     <string name="settings_section_surveillance_subtitle">Зон обнаружения, график, чувствительность к движению.</string>
     <string name="settings_section_daemons_subtitle">Облачные, Zrok, Telegram, MQTT бегуны.</string>
-    <string name="settings_about_row_title">О OverDrive</string>
+    <string name="settings_about_row_title">О BladeWatch</string>
     <string name="settings_about_row_subtitle">Версия, лицензия, поддержка разработки.</string>
     <string name="settings_reset_row_subtitle">Чистые записи, события или все скрытые.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">Тема, язык и визуальные предпочтения.</string>
     <string name="settings_theme_active_auto_caption">Автомобиль следит за темой вашей системы.</string>
     <string name="settings_theme_active_light_caption">Светочная тема всегда включена.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d из языков %2$d доступны</string>
     <string name="settings_language_card_title">Язык отображения</string>
     <string name="settings_privacy_stance_title">На устройстве по умолчанию</string>
-    <string name="settings_privacy_stance_body">OverDrive работает полностью на головном устройстве. Никакая телеметрия не покидает вашу машину, кроме как через туннели и интеграции, которые вы изъявлено настройка.</string>
+    <string name="settings_privacy_stance_body">BladeWatch работает полностью на головном устройстве. Никакая телеметрия не покидает вашу машину, кроме как через туннели и интеграции, которые вы изъявлено настройка.</string>
     <string name="settings_privacy_overline_storage">МЕЧЕСТВОЕ Хранилище</string>
     <string name="settings_privacy_overline_reset">Перезагрузка данных</string>
     <string name="settings_privacy_storage_clips_label">Клип на диске</string>

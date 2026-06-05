@@ -1,7 +1,7 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.hardware.IBYDCameraUser;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * IBYDCameraUser implementation for cooperative camera sharing with BYD native apps.

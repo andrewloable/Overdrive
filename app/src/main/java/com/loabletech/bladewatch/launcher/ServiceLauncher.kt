@@ -1,7 +1,7 @@
-package com.overdrive.app.launcher
+package com.loabletech.bladewatch.launcher
 
 import android.content.Context
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Launches Android services and configures permissions via ADB shell.
@@ -20,7 +20,7 @@ class ServiceLauncher(
 ) {
     companion object {
         private const val TAG = "ServiceLauncher"
-        private const val PACKAGE_NAME = "com.overdrive.app"
+        private const val PACKAGE_NAME = "com.loabletech.bladewatch"
     }
     
     interface LaunchCallback {

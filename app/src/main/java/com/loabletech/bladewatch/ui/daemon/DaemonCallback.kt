@@ -1,6 +1,6 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
-import com.overdrive.app.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonStatus
 
 /**
  * Callback interface for daemon operations.

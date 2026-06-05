@@ -1,6 +1,6 @@
-package com.overdrive.app.daemon.management
+package com.loabletech.bladewatch.daemon.management
 
-import com.overdrive.app.config.DaemonType
+import com.loabletech.bladewatch.config.DaemonType
 
 /**
  * Callback interface for daemon lifecycle events.

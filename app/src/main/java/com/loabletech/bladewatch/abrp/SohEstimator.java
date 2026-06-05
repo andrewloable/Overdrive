@@ -1,11 +1,11 @@
-package com.overdrive.app.abrp;
+package com.loabletech.bladewatch.abrp;
 
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatterySocData;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatterySocData;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 
@@ -145,7 +145,7 @@ public class SohEstimator {
             } catch (Exception ignored) {}
             persistEstimate();
             try {
-                android.content.Context ctx = com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                android.content.Context ctx = com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                 autoDetectCarModel(ctx);
             } catch (Throwable t) {
                 logger.warn("Re-detect after clearUserNominal failed: " + t.getMessage());
@@ -461,7 +461,7 @@ public class SohEstimator {
 
         if (context == null) {
             try {
-                context = com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                context = com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                 if (context != null) {
                     logger.warn("autoDetectCarModel called with null context — recovered via CameraDaemon.getAppContext()");
                 } else {
@@ -597,7 +597,7 @@ public class SohEstimator {
      * cache/precedence rules stay in one place.
      */
     private double readModelNominalFromManifest() {
-        return com.overdrive.app.server.ModelsApiHandler.nominalKwhForSelectedModel();
+        return com.loabletech.bladewatch.server.ModelsApiHandler.nominalKwhForSelectedModel();
     }
 
     private boolean contradictedBySocRatio(double bmsKwh) {

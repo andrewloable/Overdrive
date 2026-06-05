@@ -1,21 +1,21 @@
-package com.overdrive.app
+package com.loabletech.bladewatch
 
 import android.app.Application
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
-import com.overdrive.app.logging.LogConfig
-import com.overdrive.app.logging.LogManager
-import com.overdrive.app.server.LocaleManager
-import com.overdrive.app.services.DaemonKeepaliveService
-// import com.overdrive.app.shell.PrivilegedShellSetup
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.logging.LogConfig
+import com.loabletech.bladewatch.logging.LogManager
+import com.loabletech.bladewatch.server.LocaleManager
+import com.loabletech.bladewatch.services.DaemonKeepaliveService
+// import com.loabletech.bladewatch.shell.PrivilegedShellSetup
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 
 /**
- * Application class for Overdrive.
+ * Application class for BladeWatch.
  * Initializes global singletons before any Activity is created.
  */
-class OverdriveApplication : Application() {
+class BladeWatchApplication : Application() {
     
     override fun onCreate() {
         super.onCreate()
@@ -67,7 +67,7 @@ class OverdriveApplication : Application() {
             }
             AppCompatDelegate.setApplicationLocales(locales)
         } catch (e: Exception) {
-            Log.w("OverdriveApplication", "applyPersistedLocale failed: ${e.message}")
+            Log.w("BladeWatchApplication", "applyPersistedLocale failed: ${e.message}")
         }
     }
 }

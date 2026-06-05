@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
-    <string name="accessibility_service_description">在背景下保持Overdrive车辆监测活动. 该服务不会读取或与屏幕内容交互.</string>
+    <string name="app_name">BladeWatch</string>
+    <string name="accessibility_service_description">在背景下保持BladeWatch车辆监测活动. 该服务不会读取或与屏幕内容交互.</string>
     <string name="action_cancel">取消</string>
     <string name="action_clear_plain">清除</string>
     <string name="action_select_all">选择所有</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">其他类型</string>
     <string name="setup_step_three_label">其他类型</string>
     <string name="setup_language_title">选择自己的语言</string>
-    <string name="setup_language_body">按键选择一个不同的OverDrive应用程序和网络道.</string>
+    <string name="setup_language_body">按键选择一个不同的BladeWatch应用程序和网络道.</string>
     <string name="setup_language_button">选择语言</string>
     <string name="setup_autostart_title">禁用自动启动限制</string>
-    <string name="setup_autostart_body">按下来打开BYD自动启动. 在列表中找到OverDrive,并打消框.BYD在每次安装时都会擦除它.</string>
+    <string name="setup_autostart_body">按下来打开BYD自动启动. 在列表中找到BladeWatch,并打消框.BYD在每次安装时都会擦除它.</string>
     <string name="setup_autostart_button">开启BYD自动启动</string>
     <string name="setup_overlay_title">允许在其他应用程序上显示</string>
     <string name="setup_overlay_body">在其他应用程序上,可显示浮动状态指标,以便记录和跟踪旅行.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive 状态</string>
+    <string name="status_overlay_notif_title">BladeWatch 状态</string>
     <string name="status_overlay_notif_text">状态覆盖活动</string>
     <string name="rail_dashboard">仪表板</string>
     <string name="rail_live">活着</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">设置子轨道</string>
     <string name="settings_privacy_title">隐私与数据</string>
     <string name="settings_privacy_body">恢复清除录音索引,缓存凭证,魔鬼状态和设备上偏好.</string>
-    <string name="settings_about_title">关于OverDrive</string>
+    <string name="settings_about_title">关于BladeWatch</string>
     <string name="settings_about_version_label">版本</string>
     <string name="settings_about_package_label">建设</string>
     <string name="settings_about_check_update_value">检查最新的GitHub版本，如果更新，请安装。</string>
     <string name="settings_about_support_section">由像你这样的人来推动</string>
     <string name="settings_about_support_share_title">告诉另一位车主</string>
-    <string name="settings_about_support_share_value">每个共享的链接都能帮助另一个BYD的所有者发现Overdrive.</string>
-    <string name="settings_about_support_share_message">查看BYD的开源监控和仪表摄像头: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">每个共享的链接都能帮助另一个BYD的所有者发现BladeWatch.</string>
+    <string name="settings_about_support_share_message">查看BYD的开源监控和仪表摄像头: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">分享过度驱动</string>
     <string name="settings_about_open_link_failed">无法打开链接.</string>
     <string name="settings_about_open_link_copied">没有浏览器. URL复制: %1$s</string>
@@ -439,7 +439,7 @@
     <string name="diagnostics_battery_subtitle">检查细胞SOH和数据包.</string>
     <string name="diagnostics_settings_subtitle">应用程序偏好,主题和语言.</string>
     <string name="integrations_hero_title">集成</string>
-    <string name="integrations_hero_subtitle">连接Overdrive到您的服务.</string>
+    <string name="integrations_hero_subtitle">连接BladeWatch到您的服务.</string>
     <string name="integrations_status_unknown">按下设置</string>
     <string name="integrations_status_configured">配置</string>
     <string name="integrations_status_not_set_up">没有设置</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">配置</string>
     <string name="settings_action_check_update">查看是否有更新</string>
     <string name="settings_action_reset_data">设置数据...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">守望中</string>
     <string name="dashboard_subtitle_all_systems">所有系统在线</string>
     <string name="dashboard_subtitle_some_offline">在线提供%1$d的%2$d服务</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">预/后缓冲器,代码,存储限制.</string>
     <string name="settings_section_surveillance_subtitle">检测区域,时间表,运动敏感性.</string>
     <string name="settings_section_daemons_subtitle">云,Zrok,Telegram,MQTT的跑步者.</string>
-    <string name="settings_about_row_title">关于OverDrive</string>
+    <string name="settings_about_row_title">关于BladeWatch</string>
     <string name="settings_about_row_subtitle">版本,许可证,支持开发.</string>
     <string name="settings_reset_row_subtitle">清晰的录音,事件,或所有隐藏.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">的主题,语言和视觉偏好.</string>
     <string name="settings_theme_active_auto_caption">自动跟踪你的系统主题.</string>
     <string name="settings_theme_active_light_caption">灯光主题总是开放.</string>

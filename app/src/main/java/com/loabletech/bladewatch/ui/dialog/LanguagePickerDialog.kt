@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.dialog
+package com.loabletech.bladewatch.ui.dialog
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -13,8 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.overdrive.app.R
-import com.overdrive.app.server.LocaleManager
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.server.LocaleManager
 
 /**
  * Language picker rendered as a real M3 [BottomSheetDialog].
@@ -63,7 +63,7 @@ object LanguagePickerDialog {
         val rv = view.findViewById<RecyclerView>(R.id.rvLanguages)
         rv.layoutManager = LinearLayoutManager(context)
 
-        val dialog = BottomSheetDialog(context, R.style.Theme_Overdrive_M3_BottomSheet).apply {
+        val dialog = BottomSheetDialog(context, R.style.Theme_BladeWatch_M3_BottomSheet).apply {
             setContentView(view)
             setCancelable(true)
         }
@@ -145,10 +145,10 @@ object LanguagePickerDialog {
 
     private fun collectWebViewFragments(
         fm: androidx.fragment.app.FragmentManager
-    ): List<com.overdrive.app.ui.fragment.WebViewFragment> {
-        val out = mutableListOf<com.overdrive.app.ui.fragment.WebViewFragment>()
+    ): List<com.loabletech.bladewatch.ui.fragment.WebViewFragment> {
+        val out = mutableListOf<com.loabletech.bladewatch.ui.fragment.WebViewFragment>()
         for (f in fm.fragments) {
-            if (f is com.overdrive.app.ui.fragment.WebViewFragment) out.add(f)
+            if (f is com.loabletech.bladewatch.ui.fragment.WebViewFragment) out.add(f)
             if (f.isAdded) out.addAll(collectWebViewFragments(f.childFragmentManager))
         }
         return out

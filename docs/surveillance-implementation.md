@@ -1,6 +1,6 @@
 # Surveillance Implementation
 
-This document explains how Overdrive implements surveillance, also called sentry mode, from vehicle state changes through camera processing, motion classification, recording, notifications, deterrents, and APIs.
+This document explains how BladeWatch implements surveillance, also called sentry mode, from vehicle state changes through camera processing, motion classification, recording, notifications, deterrents, and APIs.
 
 ## Summary
 
@@ -24,17 +24,17 @@ Vehicle ACC state changes
 
 Core source files:
 
-- `app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java`
-- `app/src/main/java/com/overdrive/app/daemon/AccSentryDaemon.java`
-- `app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java`
-- `app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java`
-- `app/src/main/java/com/overdrive/app/surveillance/MotionPipelineV2.java`
-- `app/src/main/java/com/overdrive/app/surveillance/NativeMotion.java`
+- `app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java`
+- `app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java`
+- `app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java`
+- `app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java`
+- `app/src/main/java/com/loabletech/bladewatch/surveillance/MotionPipelineV2.java`
+- `app/src/main/java/com/loabletech/bladewatch/surveillance/NativeMotion.java`
 - `app/src/main/cpp/surveillance/motion_pipeline_v2.h`
 - `app/src/main/cpp/surveillance/motion_pipeline_v2.cpp`
 - `app/src/main/cpp/surveillance/texture_tracker.cpp`
-- `app/src/main/java/com/overdrive/app/server/SurveillanceApiHandler.java`
-- `app/src/main/java/com/overdrive/app/server/SurveillanceIpcServer.java`
+- `app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java`
+- `app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java`
 
 ## Runtime Components
 
@@ -526,7 +526,7 @@ Relevant command areas:
 Main persisted surveillance config lives under the `surveillance` section of:
 
 ```text
-/data/local/tmp/overdrive_config.json
+/data/local/tmp/bladewatch_config.json
 ```
 
 Default values include:
@@ -568,7 +568,7 @@ Surveillance recordings are written through `StorageManager`.
 Main base directory:
 
 ```text
-/storage/emulated/0/Overdrive/surveillance
+/storage/emulated/0/BladeWatch/surveillance
 ```
 
 Storage behavior:
@@ -608,14 +608,14 @@ Important safety and race-condition guards:
 
 ## Source References
 
-- Sentry and ACC daemon entry points: [AccSentryDaemon.java:39](../app/src/main/java/com/overdrive/app/daemon/AccSentryDaemon.java#L39), [AccSentryDaemon.java:1900](../app/src/main/java/com/overdrive/app/daemon/AccSentryDaemon.java#L1900), [CameraDaemon.java:1439](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L1439), [CameraDaemon.java:1905](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L1905).
-- GPU surveillance pipeline lifecycle: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:1325](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L1325), [GpuSurveillancePipeline.java:1387](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L1387).
-- Camera, GPU downscale, and mosaic layout: [PanoramicCameraGpu.java:39](../app/src/main/java/com/overdrive/app/camera/PanoramicCameraGpu.java#L39), [GpuDownscaler.java:51](../app/src/main/java/com/overdrive/app/surveillance/GpuDownscaler.java#L51), [GpuDownscaler.java:112](../app/src/main/java/com/overdrive/app/surveillance/GpuDownscaler.java#L112), [GpuMosaicRecorder.java:137](../app/src/main/java/com/overdrive/app/surveillance/GpuMosaicRecorder.java#L137), [MotionPipelineV2.java:24](../app/src/main/java/com/overdrive/app/surveillance/MotionPipelineV2.java#L24).
-- Java surveillance engine and frame processing: [SurveillanceEngineGpu.java:22](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L22), [SurveillanceEngineGpu.java:621](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L621), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:817](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L817).
-- Native motion pipeline, shadow filtering, ROI, and JNI bridge: [NativeMotion.java:20](../app/src/main/java/com/overdrive/app/surveillance/NativeMotion.java#L20), [motion_pipeline_v2.cpp:186](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L186), [motion_pipeline_v2.cpp:922](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L922), [motion_pipeline_v2.cpp:1033](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1033), [SurveillanceConfig.java:330](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceConfig.java#L330).
-- AI detection, foveated crop, and filtering: [YoloDetector.kt:43](../app/src/main/java/com/overdrive/app/ai/YoloDetector.kt#L43), [SurveillanceEngineGpu.java:1669](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L1669), [FoveatedCropper.java:61](../app/src/main/java/com/overdrive/app/surveillance/FoveatedCropper.java#L61), [DetectionBaseline.java:31](../app/src/main/java/com/overdrive/app/surveillance/DetectionBaseline.java#L31).
-- Native texture tracker and actor tracking: [texture_tracker.h:69](../app/src/main/cpp/surveillance/texture_tracker.h#L69), [texture_tracker.cpp:191](../app/src/main/cpp/surveillance/texture_tracker.cpp#L191), [motion_pipeline_v2.cpp:1131](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1131), [ActorTracker.java:33](../app/src/main/java/com/overdrive/app/surveillance/ActorTracker.java#L33), [SurveillanceEngineGpu.java:1433](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L1433), [SurveillanceEngineGpu.java:2129](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L2129).
-- Recording lifecycle, pre/post windows, and metadata: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceEngineGpu.java#L3373), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/overdrive/app/surveillance/HardwareEventRecorderGpu.java#L756), [EventTimelineCollector.java:42](../app/src/main/java/com/overdrive/app/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/overdrive/app/surveillance/ThumbnailBuffer.java#L32).
-- Safe locations, schedules, and config: [SafeLocationManager.java:34](../app/src/main/java/com/overdrive/app/surveillance/SafeLocationManager.java#L34), [SurveillanceConfigManager.kt:17](../app/src/main/java/com/overdrive/app/surveillance/SurveillanceConfigManager.kt#L17), [UnifiedConfigManager.kt:30](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L30).
-- APIs, IPC, notifications, and deterrents: [SurveillanceApiHandler.java:22](../app/src/main/java/com/overdrive/app/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/overdrive/app/server/SurveillanceIpcServer.java#L22), [NotificationApiHandler.java:30](../app/src/main/java/com/overdrive/app/server/NotificationApiHandler.java#L30), [TelegramApiHandler.java:28](../app/src/main/java/com/overdrive/app/server/TelegramApiHandler.java#L28), [BydCloudDeterrent.java:33](../app/src/main/java/com/overdrive/app/byd/cloud/BydCloudDeterrent.java#L33).
-- Storage and cleanup: [StorageManager.java:404](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L404), [StorageManager.java:1685](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L1685), [StorageManager.java:1958](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L1958).
+- Sentry and ACC daemon entry points: [AccSentryDaemon.java:39](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L39), [AccSentryDaemon.java:1900](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L1900), [CameraDaemon.java:1439](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1439), [CameraDaemon.java:1905](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1905).
+- GPU surveillance pipeline lifecycle: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:1325](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1325), [GpuSurveillancePipeline.java:1387](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1387).
+- Camera, GPU downscale, and mosaic layout: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [GpuDownscaler.java:112](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L112), [GpuMosaicRecorder.java:137](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L137), [MotionPipelineV2.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/MotionPipelineV2.java#L24).
+- Java surveillance engine and frame processing: [SurveillanceEngineGpu.java:22](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L22), [SurveillanceEngineGpu.java:621](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L621), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:817](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L817).
+- Native motion pipeline, shadow filtering, ROI, and JNI bridge: [NativeMotion.java:20](../app/src/main/java/com/loabletech/bladewatch/surveillance/NativeMotion.java#L20), [motion_pipeline_v2.cpp:186](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L186), [motion_pipeline_v2.cpp:922](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L922), [motion_pipeline_v2.cpp:1033](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1033), [SurveillanceConfig.java:330](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfig.java#L330).
+- AI detection, foveated crop, and filtering: [YoloDetector.kt:43](../app/src/main/java/com/loabletech/bladewatch/ai/YoloDetector.kt#L43), [SurveillanceEngineGpu.java:1669](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1669), [FoveatedCropper.java:61](../app/src/main/java/com/loabletech/bladewatch/surveillance/FoveatedCropper.java#L61), [DetectionBaseline.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/DetectionBaseline.java#L31).
+- Native texture tracker and actor tracking: [texture_tracker.h:69](../app/src/main/cpp/surveillance/texture_tracker.h#L69), [texture_tracker.cpp:191](../app/src/main/cpp/surveillance/texture_tracker.cpp#L191), [motion_pipeline_v2.cpp:1131](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1131), [ActorTracker.java:33](../app/src/main/java/com/loabletech/bladewatch/surveillance/ActorTracker.java#L33), [SurveillanceEngineGpu.java:1433](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1433), [SurveillanceEngineGpu.java:2129](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L2129).
+- Recording lifecycle, pre/post windows, and metadata: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3373), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L756), [EventTimelineCollector.java:42](../app/src/main/java/com/loabletech/bladewatch/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/loabletech/bladewatch/surveillance/ThumbnailBuffer.java#L32).
+- Safe locations, schedules, and config: [SafeLocationManager.java:34](../app/src/main/java/com/loabletech/bladewatch/surveillance/SafeLocationManager.java#L34), [SurveillanceConfigManager.kt:17](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfigManager.kt#L17), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
+- APIs, IPC, notifications, and deterrents: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30), [TelegramApiHandler.java:28](../app/src/main/java/com/loabletech/bladewatch/server/TelegramApiHandler.java#L28), [BydCloudDeterrent.java:33](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDeterrent.java#L33).
+- Storage and cleanup: [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1685](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1685), [StorageManager.java:1958](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1958).

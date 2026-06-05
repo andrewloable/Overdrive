@@ -1,12 +1,12 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.byd.BydVehicleData;
-import com.overdrive.app.byd.cloud.BydCloudConfig;
-import com.overdrive.app.byd.routing.VehicleCommandRouter;
-import com.overdrive.app.byd.routing.VehicleCommandRouter.CommandResult;
-import com.overdrive.app.byd.routing.VehicleCommandRouter.VehicleCommand;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.byd.BydVehicleData;
+import com.loabletech.bladewatch.byd.cloud.BydCloudConfig;
+import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter;
+import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter.CommandResult;
+import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter.VehicleCommand;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -216,14 +216,14 @@ public class VehicleControlApiHandler {
             doors.put("overall", data.doorLockStatus[6]);
         }
         try {
-            com.overdrive.app.byd.cloud.BydCloudDataProvider provider =
-                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
+                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
             // Trigger an on-demand REST refresh if our cached snapshot is
             // stale. The call is internally rate-limited (30s cooldown) and
             // runs asynchronously; the *current* snapshot is used to render
             // this response, but the next request will see fresh data.
             new Thread(provider::refreshLockStateIfStale, "CloudLockRefresh").start();
-            com.overdrive.app.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
+            com.loabletech.bladewatch.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
             if (cs != null && cs.hasValidLockState()) {
                 // Cloud snapshot semantics:
                 //   leftFrontDoorLock etc.: 1=UNLOCKED, 2=LOCKED (per pyBYD)
@@ -470,8 +470,8 @@ public class VehicleControlApiHandler {
      * The refresh is rate-limited inside the provider to protect BYD's API.
      */
     private static void handleCloudLock(OutputStream out) throws Exception {
-        com.overdrive.app.byd.cloud.BydCloudDataProvider provider =
-                com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance();
+        com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
+                com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
 
         // Kick off the refresh in the background — don't block the HTTP
         // response on a BYD round-trip (REST + login can take seconds).
@@ -877,8 +877,8 @@ public class VehicleControlApiHandler {
                 HttpResponse.sendJson(out, resp.toString());
                 return;
             }
-            com.overdrive.app.byd.cloud.BydCloudClient client =
-                    com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().getSharedClient();
+            com.loabletech.bladewatch.byd.cloud.BydCloudClient client =
+                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().getSharedClient();
             if (client == null) {
                 resp.put("success", true);
                 resp.put("supported", false);
@@ -886,10 +886,10 @@ public class VehicleControlApiHandler {
                 HttpResponse.sendJson(out, resp.toString());
                 return;
             }
-            Boolean enabled = com.overdrive.app.byd.cloud.SmartChargeCache.getEnabled();
-            String start = com.overdrive.app.byd.cloud.SmartChargeCache.getStartChargeTime();
-            String end = com.overdrive.app.byd.cloud.SmartChargeCache.getEndChargeTime();
-            String way = com.overdrive.app.byd.cloud.SmartChargeCache.getChargeWay();
+            Boolean enabled = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getEnabled();
+            String start = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getStartChargeTime();
+            String end = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getEndChargeTime();
+            String way = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getChargeWay();
             resp.put("success", true);
             resp.put("supported", true);
             if (enabled == null) resp.put("enabled", JSONObject.NULL);

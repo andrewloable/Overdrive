@@ -1,4 +1,4 @@
-package com.overdrive.app.client
+package com.loabletech.bladewatch.client
 
 /**
  * Type alias for backward compatibility.

@@ -1,8 +1,8 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,7 +44,7 @@ public class ModelsApiHandler {
     private static final String TAG = "ModelsApiHandler";
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
-    public static final String MODELS_DIR = "/data/local/tmp/overdrive/models";
+    public static final String MODELS_DIR = "/data/local/tmp/bladewatch/models";
 
     // Manifest path inside the extracted web assets — bundled copy ships with the APK
     // and is the offline-safe baseline.
@@ -52,10 +52,10 @@ public class ModelsApiHandler {
     // Cached remote manifest. Persisted across app updates so an offline boot still
     // shows the most recently-seen model list. Promoted in front of the bundled copy
     // by readManifest() whenever its top-level "version" is newer.
-    private static final String MANIFEST_REMOTE_CACHE = "/data/local/tmp/overdrive/models/manifest.json";
+    private static final String MANIFEST_REMOTE_CACHE = "/data/local/tmp/bladewatch/models/manifest.json";
     // GitHub release manifest URL — same baseUrl convention as the GLBs themselves.
     private static final String MANIFEST_REMOTE_URL =
-            "https://github.com/yash-srivastava/Overdrive-release/releases/download/models-v1/manifest.json";
+            "https://github.com/yash-srivastava/BladeWatch-release/releases/download/models-v1/manifest.json";
 
     // Two concurrent downloads is plenty — the BYD AVN's storage and LTE both serialize anyway.
     private static final ExecutorService downloadExec = Executors.newFixedThreadPool(2);
@@ -324,14 +324,14 @@ public class ModelsApiHandler {
         // Skipped when only color changed — that has no SOH bearing.
         if (incoming.has("modelId")) {
             try {
-                com.overdrive.app.monitor.SocHistoryDatabase socDb =
-                    com.overdrive.app.monitor.SocHistoryDatabase.getInstance();
-                com.overdrive.app.abrp.SohEstimator sohEst =
+                com.loabletech.bladewatch.monitor.SocHistoryDatabase socDb =
+                    com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance();
+                com.loabletech.bladewatch.abrp.SohEstimator sohEst =
                     socDb != null ? socDb.getSohEstimator() : null;
                 if (sohEst != null) {
                     sohEst.reset();
                     android.content.Context appCtx =
-                        com.overdrive.app.daemon.CameraDaemon.getAppContext();
+                        com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
                     sohEst.autoDetectCarModel(appCtx);
                     sohEst.seedInitialEstimate();
                 }
@@ -584,7 +584,7 @@ public class ModelsApiHandler {
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(60000);
             conn.setInstanceFollowRedirects(false);
-            conn.setRequestProperty("User-Agent", "Overdrive/1.0");
+            conn.setRequestProperty("User-Agent", "BladeWatch/1.0");
             if (ifNoneMatch != null && !ifNoneMatch.isEmpty()) {
                 conn.setRequestProperty("If-None-Match", ifNoneMatch);
             }

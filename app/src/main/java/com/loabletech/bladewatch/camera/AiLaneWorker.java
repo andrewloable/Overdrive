@@ -1,7 +1,7 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.surveillance.SurveillanceEngineGpu;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

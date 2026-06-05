@@ -1,5 +1,5 @@
 /**
- * Overdrive — Web app tabs.
+ * BladeWatch — Web app tabs.
  *
  * Drops a sticky bottom tab bar onto pages whose long single-scroll settings
  * would benefit from logical grouping. Cards on the page opt in by tagging

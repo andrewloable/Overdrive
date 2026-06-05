@@ -1,8 +1,8 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.surveillance.SafeLocation;
-import com.overdrive.app.surveillance.SafeLocationManager;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.surveillance.SafeLocation;
+import com.loabletech.bladewatch.surveillance.SafeLocationManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

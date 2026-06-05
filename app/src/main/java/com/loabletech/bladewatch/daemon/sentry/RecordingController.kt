@@ -1,6 +1,6 @@
-package com.overdrive.app.daemon.sentry
+package com.loabletech.bladewatch.daemon.sentry
 
-import com.overdrive.app.logging.DaemonLogger
+import com.loabletech.bladewatch.logging.DaemonLogger
 import java.io.BufferedReader
 import java.io.InputStreamReader
 

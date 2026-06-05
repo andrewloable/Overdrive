@@ -1,6 +1,6 @@
 {
-  "name": "OverDrive Dashboard",
-  "short_name": "OverDrive",
+  "name": "BladeWatch Dashboard",
+  "short_name": "BladeWatch",
   "description": "Vehicle dashboard, surveillance, and alerts for your BYD",
   "start_url": "/",
   "scope": "/",

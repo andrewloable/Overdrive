@@ -125,7 +125,7 @@ bool stringContains(const char* hay, const char* needle) {
 }  // namespace
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_overdrive_app_camera_HardwareBufferTextureBinder_probeExtensionsNative(
+Java_com_loabletech_bladewatch_camera_HardwareBufferTextureBinder_probeExtensionsNative(
     JNIEnv* env, jclass /*clazz*/) {
     resolveExtensions();
 
@@ -154,7 +154,7 @@ Java_com_overdrive_app_camera_HardwareBufferTextureBinder_probeExtensionsNative(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_overdrive_app_camera_HardwareBufferTextureBinder_bindHardwareBufferToTextureNative(
+Java_com_loabletech_bladewatch_camera_HardwareBufferTextureBinder_bindHardwareBufferToTextureNative(
     JNIEnv* env, jclass /*clazz*/, jobject jHwBuffer, jint textureId) {
     if (jHwBuffer == nullptr) {
         LOGE("bindHardwareBufferToTexture: null HardwareBuffer");

@@ -1,9 +1,9 @@
-package com.overdrive.app.ui.daemon
+package com.loabletech.bladewatch.ui.daemon
 
 import android.content.Context
-import com.overdrive.app.launcher.AdbDaemonLauncher
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.Socket
@@ -38,7 +38,7 @@ class CameraDaemonController(
     override fun start(callback: DaemonCallback) {
         callback.onStatusChanged(DaemonStatus.STARTING, "Starting camera daemon...")
         
-        val outputDir = context.getExternalFilesDir(null)?.absolutePath ?: "/data/local/tmp/overdrive"
+        val outputDir = context.getExternalFilesDir(null)?.absolutePath ?: "/data/local/tmp/bladewatch"
         val nativeLibDir = context.applicationInfo.nativeLibraryDir
         
         adbLauncher.launchDaemon(

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
+    <string name="app_name">BladeWatch</string>
     <string name="accessibility_service_description">이 서비스는 스크린 콘텐츠를 읽거나 상호 작용하지 않습니다.</string>
     <string name="action_cancel">취소</string>
     <string name="action_clear_plain">지우기</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">당신 의 언어 를 선택 하십시오</string>
-    <string name="setup_language_body">OverDrive 앱과 웹 터널에 다른 언어를 선택하기 위해 버튼을 누르십시오.</string>
+    <string name="setup_language_body">BladeWatch 앱과 웹 터널에 다른 언어를 선택하기 위해 버튼을 누르십시오.</string>
     <string name="setup_language_button">언어 를 선택 하십시오</string>
     <string name="setup_autostart_title">자동 시작 제한을 비활성화</string>
-    <string name="setup_autostart_body">아래를 누르면 BYD 자동 시작을 열 수 있습니다. 목록에서 OverDrive를 찾아 상자를 삭제합니다. BYD는 모든 설치에서 이것을 삭제합니다. 업데이트 후에 다시 할 것입니다.</string>
+    <string name="setup_autostart_body">아래를 누르면 BYD 자동 시작을 열 수 있습니다. 목록에서 BladeWatch를 찾아 상자를 삭제합니다. BYD는 모든 설치에서 이것을 삭제합니다. 업데이트 후에 다시 할 것입니다.</string>
     <string name="setup_autostart_button">BYD 자동 시작 열</string>
     <string name="setup_overlay_title">다른 앱에서 표시할 수 있도록 하십시오</string>
     <string name="setup_overlay_body">다른 앱에 녹화 및 여행 추적을 위한 부동 상태 지표를 표시하기 위해 이것을 활성화하십시오.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive 상태</string>
+    <string name="status_overlay_notif_title">BladeWatch 상태</string>
     <string name="status_overlay_notif_text">상태 덮개 활성</string>
     <string name="rail_dashboard">대시보드</string>
     <string name="rail_live">생생하게</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">설정 하부 철도</string>
     <string name="settings_privacy_title">개인 정보 보호 &amp; 데이터</string>
     <string name="settings_privacy_body">리셋은 녹음 인덱스, 캐시 된 인증서, 데몬 상태 및 장치 상의 선호도를 클리어합니다. 이 동작은 취소할 수 없습니다.</string>
-    <string name="settings_about_title">OverDrive에 대해</string>
+    <string name="settings_about_title">BladeWatch에 대해</string>
     <string name="settings_about_version_label">버전</string>
     <string name="settings_about_package_label">건설</string>
     <string name="settings_about_check_update_value">최신 GitHub 릴리스를 확인하고 최신 버전인 경우 설치하십시오.</string>
     <string name="settings_about_support_section">당신 같은 사람들로부터</string>
     <string name="settings_about_support_share_title">다른 차주에게도 알려주세요</string>
     <string name="settings_about_support_share_value">공유된 모든 링크는 다른 BYD 소유자가 오버드라이브를 발견하는 데 도움이 됩니다.</string>
-    <string name="settings_about_support_share_message">BYD에 대한 오픈소스 감시 및 대시캠을 확인하세요: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_message">BYD에 대한 오픈소스 감시 및 대시캠을 확인하세요: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">공유 과장</string>
     <string name="settings_about_open_link_failed">링크를 열지 못했어요</string>
     <string name="settings_about_open_link_copied">브라우저가 없습니다. URL 복사: %1$s</string>
@@ -381,12 +381,12 @@
     <string name="settings_about_license_title">라이센스</string>
     <string name="settings_about_license_value">MIT  오픈소스. 전체 텍스트를 보기 위해 누르십시오.</string>
     <string name="settings_about_source_title">소스 코드</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
-    <string name="settings_about_license_url">[http://github.com/yash-srivastava/Overdrive-release/blob/main/LICENSE]</string>
-    <string name="settings_about_source_url">[http://github.com/yash-srivastava/Overdrive-release]</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
+    <string name="settings_about_license_url">[http://github.com/yash-srivastava/BladeWatch-release/blob/main/LICENSE]</string>
+    <string name="settings_about_source_url">[http://github.com/yash-srivastava/BladeWatch-release]</string>
     <string name="settings_about_star_title">GitHub에 를 던지십시오</string>
     <string name="settings_about_star_value">잠깐만요, 많은 것을 의미하죠</string>
-    <string name="settings_about_star_url">[http://github.com/yash-srivastava/Overdrive-release]</string>
+    <string name="settings_about_star_url">[http://github.com/yash-srivastava/BladeWatch-release]</string>
     <string name="settings_about_thanks_title">감사합니다</string>
     <string name="settings_about_thanks_subtitle">기여자와 후원자의 도움으로 만들어졌습니다.</string>
     <string name="settings_about_contributors_title">기여자</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">구성</string>
     <string name="settings_action_check_update">업데이트 확인</string>
     <string name="settings_action_reset_data">데이터 리셋...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">감시 중</string>
     <string name="dashboard_subtitle_all_systems">모든 시스템 온라인</string>
     <string name="dashboard_subtitle_some_offline">%1$d의 %2$d 온라인 서비스</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">전/후 버퍼, 코덱, 저장 제한</string>
     <string name="settings_section_surveillance_subtitle">탐지 구역, 일정, 움직임 감수성</string>
     <string name="settings_section_daemons_subtitle">클라우드플러러드, Zrok, Telegram, MQTT 러너</string>
-    <string name="settings_about_row_title">OverDrive에 대해</string>
+    <string name="settings_about_row_title">BladeWatch에 대해</string>
     <string name="settings_about_row_subtitle">버전, 라이선스, 지원 개발.</string>
     <string name="settings_reset_row_subtitle">녹음, 사건, 또는 모든 캐시</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">테마, 언어, 시각적 선호도</string>
     <string name="settings_theme_active_auto_caption">자동으로 시스템 테마를 따라갑니다.</string>
     <string name="settings_theme_active_light_caption">빛의 주제는 항상 켜져 있습니다.</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">사용 가능한 %1$d의 %2$d 언어</string>
     <string name="settings_language_card_title">디스플레이 언어</string>
     <string name="settings_privacy_stance_title">기본 장치</string>
-    <string name="settings_privacy_stance_body">OverDrive는 전용으로 작동합니다. 당신이 명시적으로 구성한 터널과 통합을 제외하고는 차에서 탈퇴할 수 없습니다.</string>
+    <string name="settings_privacy_stance_body">BladeWatch는 전용으로 작동합니다. 당신이 명시적으로 구성한 터널과 통합을 제외하고는 차에서 탈퇴할 수 없습니다.</string>
     <string name="settings_privacy_overline_storage">로컬 스토리지</string>
     <string name="settings_privacy_overline_reset">데이터 리셋</string>
     <string name="settings_privacy_storage_clips_label">디스크에 있는 클립</string>

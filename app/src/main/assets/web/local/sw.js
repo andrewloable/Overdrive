@@ -1,5 +1,5 @@
 /**
- * OverDrive Service Worker
+ * BladeWatch Service Worker
  *
  * Two responsibilities:
  *
@@ -27,7 +27,7 @@
 // Bump CACHE_VERSION whenever any precached asset changes (vendor JS bump,
 // new GLB, ev-card-3d.js logic change). The activate handler deletes any
 // cache whose name doesn't match, so old assets are reclaimed.
-const CACHE_VERSION = 'overdrive-3d-v2';
+const CACHE_VERSION = 'bladewatch-3d-v2';
 
 // Static, APK-bundled assets that the EV card needs on every page.
 // Same-origin only — the daemon serves these with public, max-age=86400,
@@ -84,7 +84,7 @@ self.addEventListener('activate', (event) => {
     // until the browser-level Cache Storage quota evicts them.
     const names = await caches.keys();
     await Promise.all(names
-      .filter((n) => n !== CACHE_VERSION && n.indexOf('overdrive-3d-') === 0)
+      .filter((n) => n !== CACHE_VERSION && n.indexOf('bladewatch-3d-') === 0)
       .map((n) => caches.delete(n)));
     await self.clients.claim();
   })());
@@ -138,14 +138,14 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch (e) {
-    payload = { title: 'OverDrive', body: '(unreadable payload)', severity: 'info' };
+    payload = { title: 'BladeWatch', body: '(unreadable payload)', severity: 'info' };
   }
 
   event.waitUntil(showFromPayload(payload));
 });
 
 function showFromPayload(payload) {
-  const title = payload.title || 'OverDrive';
+  const title = payload.title || 'BladeWatch';
   const severity = payload.severity || 'info';
 
   const options = {
@@ -159,7 +159,7 @@ function showFromPayload(payload) {
     // than the real branding. Same source file — Android renders it
     // monochrome anyway.
     badge: '/shared/app-icon-dark.webp',
-    tag: payload.tag || payload.category || 'overdrive',
+    tag: payload.tag || payload.category || 'bladewatch',
     timestamp: payload.ts || Date.now(),
     data: payload,
     renotify: severity === 'critical'

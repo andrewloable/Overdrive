@@ -1,4 +1,4 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
@@ -10,7 +10,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 

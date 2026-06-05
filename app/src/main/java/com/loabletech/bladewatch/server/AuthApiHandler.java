@@ -1,7 +1,7 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.auth.AuthManager;
-import com.overdrive.app.daemon.CameraDaemon;
+import com.loabletech.bladewatch.auth.AuthManager;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 

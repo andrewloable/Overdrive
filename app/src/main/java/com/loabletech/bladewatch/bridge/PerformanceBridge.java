@@ -1,9 +1,9 @@
-package com.overdrive.app.bridge;
+package com.loabletech.bladewatch.bridge;
 
 import android.webkit.JavascriptInterface;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.PerformanceMonitor;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.PerformanceMonitor;
 
 import org.json.JSONObject;
 

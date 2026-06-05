@@ -2339,7 +2339,7 @@ BYD.performance = {
                 hint.textContent = BYD.i18n.t('soh.set_battery_capacity_prompt');
             } else if (displaySource === 'oem') {
                 hint.style.display = 'block';
-                hint.textContent = BYD.i18n.t('soh.oem_hint') || 'Using the vehicle-reported SOH until Overdrive has enough trusted capacity data.';
+                hint.textContent = BYD.i18n.t('soh.oem_hint') || 'Using the vehicle-reported SOH until BladeWatch has enough trusted capacity data.';
             } else if (displaySource === 'nominal') {
                 hint.style.display = 'block';
                 hint.textContent = BYD.i18n.t('soh.nominal_hint') || 'Using configured battery capacity until the car provides valid SOH inputs.';

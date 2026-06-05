@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.model;
+package com.loabletech.bladewatch.telegram.model;
 
 /**
  * Daemon process status.

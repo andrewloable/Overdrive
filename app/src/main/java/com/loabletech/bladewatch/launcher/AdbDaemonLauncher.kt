@@ -1,7 +1,7 @@
-package com.overdrive.app.launcher
+package com.loabletech.bladewatch.launcher
 
 import android.content.Context
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.logging.LogManager
 
 /**
  * Facade for launching daemons, tunnels, and services via ADB shell.
@@ -196,7 +196,7 @@ class AdbDaemonLauncher(private val context: Context) {
                 // Only notify if URL is new/different to avoid duplicate messages
                 if (url.isNotEmpty() && url != lastNotifiedTunnelUrl) {
                     lastNotifiedTunnelUrl = url
-                    com.overdrive.app.telegram.TelegramNotifier.notifyTunnelUrl(url, true)
+                    com.loabletech.bladewatch.telegram.TelegramNotifier.notifyTunnelUrl(url, true)
                 }
                 callback.onTunnelUrl(url)
             }

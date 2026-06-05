@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.media.MediaPlayer
 import android.net.Uri
@@ -14,8 +14,8 @@ import android.widget.TextView
 import android.widget.VideoView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.overdrive.app.R
-import com.overdrive.app.ui.view.EventTimelineView
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.view.EventTimelineView
 import org.json.JSONObject
 import java.io.File
 

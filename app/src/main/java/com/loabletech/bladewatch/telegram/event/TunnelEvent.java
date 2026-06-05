@@ -1,4 +1,4 @@
-package com.overdrive.app.telegram.event;
+package com.loabletech.bladewatch.telegram.event;
 
 /**
  * Event emitted when Cloudflare tunnel URL is created or changed.

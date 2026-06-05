@@ -1,7 +1,7 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -276,7 +276,7 @@ public final class BydCloudDeterrent {
 
         // Strategy 2: Extract from APK assets via DaemonBootstrap context
         try {
-            android.content.Context ctx = com.overdrive.app.daemon.DaemonBootstrap.getContext();
+            android.content.Context ctx = com.loabletech.bladewatch.daemon.DaemonBootstrap.getContext();
             if (ctx != null) {
                 android.content.res.AssetManager am = ctx.getAssets();
                 if (am != null) {

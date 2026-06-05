@@ -1,4 +1,4 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 /**
  * Data model for 12V battery voltage level status.

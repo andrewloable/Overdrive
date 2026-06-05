@@ -1,4 +1,4 @@
-package com.overdrive.app.logging;
+package com.loabletech.bladewatch.logging;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

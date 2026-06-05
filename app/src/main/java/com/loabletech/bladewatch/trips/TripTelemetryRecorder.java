@@ -1,11 +1,11 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.GearMonitor;
-import com.overdrive.app.monitor.GpsMonitor;
-import com.overdrive.app.storage.StorageManager;
-import com.overdrive.app.telemetry.TelemetryDataCollector;
-import com.overdrive.app.telemetry.TelemetrySnapshot;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
+import com.loabletech.bladewatch.storage.StorageManager;
+import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
+import com.loabletech.bladewatch.telemetry.TelemetrySnapshot;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;

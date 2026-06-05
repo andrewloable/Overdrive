@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
@@ -18,12 +18,12 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.overdrive.app.ui.adapter.DaemonAdapter
-import com.overdrive.app.ui.viewmodel.DaemonsViewModel
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.R
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.util.QrCodeGenerator
+import com.loabletech.bladewatch.ui.adapter.DaemonAdapter
+import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.util.QrCodeGenerator
 
 /**
  * Fragment for managing background daemons.
@@ -65,7 +65,7 @@ class DaemonsFragment : Fragment() {
         daemonAdapter = DaemonAdapter(
             onToggle = { type, enabled -> onDaemonToggled(type, enabled) },
             onConfigureClick = { type -> onDaemonConfigureClicked(type) },
-            onDownloadLog = if (com.overdrive.app.BuildConfig.DEBUG) {
+            onDownloadLog = if (com.loabletech.bladewatch.BuildConfig.DEBUG) {
                 { type -> onDownloadLogClicked(type) }
             } else null
         )
@@ -140,7 +140,7 @@ class DaemonsFragment : Fragment() {
                 // Pre-fill with current token if exists
                 currentToken?.let { editToken.setText(it) }
                 
-                val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+                val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
                     .setIcon(R.drawable.ic_link)
                     .setTitle(getString(R.string.dialog_zrok_token_title))
                     .setMessage(getString(R.string.dialog_zrok_token_message))
@@ -222,7 +222,7 @@ class DaemonsFragment : Fragment() {
                 }
             }
 
-            val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+            val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
                 .setIcon(R.drawable.ic_mqtt)
                 .setTitle(getString(R.string.dialog_tailscale_settings_title))
                 .setMessage(getString(R.string.dialog_tailscale_settings_message))
@@ -256,7 +256,7 @@ class DaemonsFragment : Fragment() {
     private fun confirmEnableTailscaleProxy() {
         val context = context ?: return
 
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_tailscale_proxy_enable_title))
             .setMessage(getString(R.string.dialog_tailscale_proxy_enable_message))
@@ -273,7 +273,7 @@ class DaemonsFragment : Fragment() {
     private fun confirmResetZrokEnvironment() {
         val context = context ?: return
         
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_zrok_reset_title))
             .setMessage(getString(R.string.dialog_zrok_reset_message))
@@ -295,8 +295,8 @@ class DaemonsFragment : Fragment() {
         daemonsViewModel.stopDaemon(DaemonType.ZROK_TUNNEL)
 
         // Then disable the environment (removes environment.json and reserved tokens)
-        daemonsViewModel.zrokController.disableEnvironment(object : com.overdrive.app.ui.daemon.DaemonCallback {
-            override fun onStatusChanged(status: com.overdrive.app.ui.model.DaemonStatus, message: String) {
+        daemonsViewModel.zrokController.disableEnvironment(object : com.loabletech.bladewatch.ui.daemon.DaemonCallback {
+            override fun onStatusChanged(status: com.loabletech.bladewatch.ui.model.DaemonStatus, message: String) {
                 // Environment disabled, now delete the enable token
                 daemonsViewModel.zrokController.deleteEnableToken { success ->
                     activity?.runOnUiThread {
@@ -328,7 +328,7 @@ class DaemonsFragment : Fragment() {
     private fun confirmResetTailscaleEnvironment() {
         val context = context ?: return
 
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_tailscale_reset_title))
             .setMessage(getString(R.string.dialog_tailscale_reset_message))
@@ -350,8 +350,8 @@ class DaemonsFragment : Fragment() {
         daemonsViewModel.stopDaemon(DaemonType.TAILSCALE_TUNNEL)
 
         // Then disable the environment (removes environment.json and reserved tokens)
-        daemonsViewModel.tailscaleController.disableEnvironment(object : com.overdrive.app.ui.daemon.DaemonCallback {
-            override fun onStatusChanged(status: com.overdrive.app.ui.model.DaemonStatus, message: String) {
+        daemonsViewModel.tailscaleController.disableEnvironment(object : com.loabletech.bladewatch.ui.daemon.DaemonCallback {
+            override fun onStatusChanged(status: com.loabletech.bladewatch.ui.model.DaemonStatus, message: String) {
                 Toast.makeText(context, getString(R.string.toast_tailscale_reset_success), Toast.LENGTH_LONG).show()
             }
 
@@ -367,7 +367,7 @@ class DaemonsFragment : Fragment() {
                 if (saved != null) {
                     if (saved) {
                         // Force MQTT proxy probe to re-run on next reconnect
-                        com.overdrive.app.mqtt.ProxyHelper.invalidateCache()
+                        com.loabletech.bladewatch.mqtt.ProxyHelper.invalidateCache()
 
                         val status = daemonsViewModel.daemonStates.value?.get(DaemonType.TAILSCALE_TUNNEL)?.status
                         if (status != DaemonStatus.STOPPED) {
@@ -432,10 +432,10 @@ class DaemonsFragment : Fragment() {
         Toast.makeText(ctx, getString(R.string.toast_fetching_log, type.displayName), Toast.LENGTH_SHORT).show()
         
         // Use tail to limit output — 10000 lines is ~1-2MB which is safe for ADB + String
-        val adb = com.overdrive.app.launcher.AdbDaemonLauncher(ctx)
+        val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(ctx)
         adb.executeShellCommand(
             "wc -l < $logPath 2>/dev/null; echo '---SEPARATOR---'; tail -10000 $logPath 2>/dev/null",
-            object : com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback {
+            object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
                 override fun onLog(message: String) {
                     activity?.runOnUiThread {
                         if (message.isBlank()) {

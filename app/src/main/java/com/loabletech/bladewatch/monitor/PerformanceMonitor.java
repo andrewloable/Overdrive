@@ -1,11 +1,11 @@
-package com.overdrive.app.monitor;
+package com.loabletech.bladewatch.monitor;
 
 import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Debug;
 import android.os.Process;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

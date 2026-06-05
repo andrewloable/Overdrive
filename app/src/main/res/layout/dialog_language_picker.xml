@@ -3,7 +3,7 @@
   Language picker — real M3 BottomSheetDialog content.
 
   No background colour is set on the root: the BottomSheetDialog theme
-  (Theme.Overdrive.BottomSheet → Widget.Overdrive.BottomSheet) provides
+  (Theme.BladeWatch.BottomSheet → Widget.BladeWatch.BottomSheet) provides
   the surface tone and rounded top corners.
 
   IDs preserved (LanguagePickerDialog.kt findViewById targets):

@@ -1,11 +1,11 @@
-package com.overdrive.app.telegram.impl;
+package com.loabletech.bladewatch.telegram.impl;
 
 import androidx.annotation.Nullable;
 
-import com.overdrive.app.telegram.IOwnerStore;
-import com.overdrive.app.telegram.IPairingManager;
-import com.overdrive.app.telegram.model.OwnerInfo;
-import com.overdrive.app.telegram.model.PinState;
+import com.loabletech.bladewatch.telegram.IOwnerStore;
+import com.loabletech.bladewatch.telegram.IPairingManager;
+import com.loabletech.bladewatch.telegram.model.OwnerInfo;
+import com.loabletech.bladewatch.telegram.model.PinState;
 
 import java.security.SecureRandom;
 

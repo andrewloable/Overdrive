@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Light/Dark themes for Overdrive live in themes_overdrive.xml as
-  Theme.Overdrive.M3 (the manifest theme). This file holds only the
-  shape appearances referenced by Widget.Overdrive.M3.* styles.
+  Light/Dark themes for BladeWatch live in themes_bladewatch.xml as
+  Theme.BladeWatch.M3 (the manifest theme). This file holds only the
+  shape appearances referenced by Widget.BladeWatch.M3.* styles.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Shape Appearances — referenced by Widget.Overdrive.M3.* in themes_overdrive.xml. -->
-    <style name="ShapeAppearance.Overdrive.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
+    <!-- Shape Appearances — referenced by Widget.BladeWatch.M3.* in themes_bladewatch.xml. -->
+    <style name="ShapeAppearance.BladeWatch.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
         <item name="cornerSize">8dp</item>
     </style>
 
-    <style name="ShapeAppearance.Overdrive.LargeComponent" parent="ShapeAppearance.Material3.LargeComponent">
+    <style name="ShapeAppearance.BladeWatch.LargeComponent" parent="ShapeAppearance.Material3.LargeComponent">
         <item name="cornerSize">16dp</item>
     </style>
 

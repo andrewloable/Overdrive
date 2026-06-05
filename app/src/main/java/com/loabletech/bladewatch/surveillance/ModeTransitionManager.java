@@ -1,5 +1,5 @@
-package com.overdrive.app.surveillance;
-import com.overdrive.app.logging.DaemonLogger;
+package com.loabletech.bladewatch.surveillance;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 
 /**

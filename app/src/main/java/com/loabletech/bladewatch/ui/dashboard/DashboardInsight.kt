@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.dashboard
+package com.loabletech.bladewatch.ui.dashboard
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -14,10 +14,10 @@ import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.WorkerThread
-import com.overdrive.app.R
-import com.overdrive.app.ui.model.RecordingFile
-import com.overdrive.app.ui.util.RecordingScanner
-import com.overdrive.app.util.DaemonHttpClient
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.ui.model.RecordingFile
+import com.loabletech.bladewatch.ui.util.RecordingScanner
+import com.loabletech.bladewatch.util.DaemonHttpClient
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.util.Calendar
@@ -246,7 +246,7 @@ class DashboardInsightProvider(appContext: Context) {
         )
     }
 
-    /** "Overdrive online for 14 days, 6 hours" — only when uptime > 24h. */
+    /** "BladeWatch online for 14 days, 6 hours" — only when uptime > 24h. */
     private fun uptimeInsight(emphasisColor: Int): DashboardInsight? {
         val uptimeMs = readProcessUptimeMs() ?: return null
         if (uptimeMs < 24L * 60 * 60 * 1000L) return null
@@ -389,7 +389,7 @@ class DashboardInsightProvider(appContext: Context) {
     }
 
     companion object {
-        private const val PREFS_NAME = "overdrive_dashboard_insights"
+        private const val PREFS_NAME = "bladewatch_dashboard_insights"
         private const val KEY_DASHBOARD_SEEN_COUNT = "dashboard_seen_count"
     }
 }

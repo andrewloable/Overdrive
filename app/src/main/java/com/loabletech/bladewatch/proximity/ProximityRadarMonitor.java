@@ -1,11 +1,11 @@
-package com.overdrive.app.proximity;
+package com.loabletech.bladewatch.proximity;
 
 import android.content.Context;
 import android.hardware.bydauto.radar.AbsBYDAutoRadarListener;
 
-import com.overdrive.app.byd.radar.RadarConstants;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.proximity.ProximityGuardConfig.TriggerLevel;
+import com.loabletech.bladewatch.byd.radar.RadarConstants;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.proximity.ProximityGuardConfig.TriggerLevel;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;

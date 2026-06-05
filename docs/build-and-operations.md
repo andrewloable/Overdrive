@@ -10,7 +10,7 @@ build.gradle.kts
 gradle/libs.versions.toml
 app/build.gradle.kts
 app/src/main/AndroidManifest.xml
-app/src/main/java/com/overdrive/app/
+app/src/main/java/com/loabletech/bladewatch/
 app/src/main/assets/
 app/src/main/cpp/
 docs/
@@ -171,12 +171,12 @@ Project instructions require a completed session to:
 
 Important runtime files:
 
-- `/data/local/tmp/overdrive_config.json`.
-- `/data/local/tmp/overdrive_secrets.json`.
+- `/data/local/tmp/bladewatch_config.json`.
+- `/data/local/tmp/bladewatch_secrets.json`.
 - `/data/local/tmp/cloudflared.log`.
 - `/data/local/tmp/zrok.log`.
 - `/data/local/tmp/singbox.log`.
-- `/storage/emulated/0/Overdrive`.
+- `/storage/emulated/0/BladeWatch`.
 
 Runtime files can contain secrets, tokens, tunnel URLs, or vehicle data. Treat pulled logs and configs as sensitive.
 
@@ -208,5 +208,5 @@ Suggested mapping:
 - Verified native downloads and extraction tasks: [build.gradle.kts:8](../app/build.gradle.kts#L8), [build.gradle.kts:33](../app/build.gradle.kts#L33), [build.gradle.kts:63](../app/build.gradle.kts#L63), [build.gradle.kts:76](../app/build.gradle.kts#L76), [build.gradle.kts:225](../app/build.gradle.kts#L225), [build.gradle.kts:232](../app/build.gradle.kts#L232).
 - BYD stub compile/runtime behavior: [build.gradle.kts:413](../app/build.gradle.kts#L413), [IAccModeManager.java:5](../app/src/main/java/android/os/IAccModeManager.java#L5).
 - Native build and hardening: [CMakeLists.txt:50](../app/src/main/cpp/CMakeLists.txt#L50), [CMakeLists.txt:98](../app/src/main/cpp/CMakeLists.txt#L98).
-- Update APIs and post-update daemon reset: [UpdateApiHandler.java:43](../app/src/main/java/com/overdrive/app/server/UpdateApiHandler.java#L43), [BootReceiver.kt:24](../app/src/main/java/com/overdrive/app/receiver/BootReceiver.kt#L24), [DaemonStartupManager.kt:15](../app/src/main/java/com/overdrive/app/ui/daemon/DaemonStartupManager.kt#L15).
-- Operational files, logs, config, and storage: [UnifiedConfigManager.kt:30](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L30), [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100), [DaemonLogger.java:382](../app/src/main/java/com/overdrive/app/logging/DaemonLogger.java#L382).
+- Update APIs and post-update daemon reset: [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43), [BootReceiver.kt:24](../app/src/main/java/com/loabletech/bladewatch/receiver/BootReceiver.kt#L24), [DaemonStartupManager.kt:15](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L15).
+- Operational files, logs, config, and storage: [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30), [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100), [DaemonLogger.java:382](../app/src/main/java/com/loabletech/bladewatch/logging/DaemonLogger.java#L382).

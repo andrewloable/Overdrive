@@ -57,9 +57,9 @@
     <color name="md_sys_color_scrim_dark">#000000</color>
 
     <!-- Brand-aware status colors -->
-    <color name="overdrive_status_success_dark">#5BD382</color>
-    <color name="overdrive_status_warning_dark">#FFB870</color>
-    <color name="overdrive_status_danger_dark">#FFB4AB</color>
-    <color name="overdrive_status_info_dark">#85CFFF</color>
+    <color name="bladewatch_status_success_dark">#5BD382</color>
+    <color name="bladewatch_status_warning_dark">#FFB870</color>
+    <color name="bladewatch_status_danger_dark">#FFB4AB</color>
+    <color name="bladewatch_status_info_dark">#85CFFF</color>
 
 </resources>

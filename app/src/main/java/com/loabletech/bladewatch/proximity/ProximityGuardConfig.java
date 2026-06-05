@@ -1,6 +1,6 @@
-package com.overdrive.app.proximity;
+package com.loabletech.bladewatch.proximity;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 /**
  * Proximity Guard Configuration POJO

@@ -1,4 +1,4 @@
-package com.overdrive.app.telemetry;
+package com.loabletech.bladewatch.telemetry;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,7 +11,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -160,8 +160,8 @@ public class OverlayBitmapRenderer {
             // miles mode (BydDataCollector.isMilesMode reflects this).
             boolean milesMode = false;
             try {
-                com.overdrive.app.byd.BydDataCollector collector =
-                        com.overdrive.app.byd.BydDataCollector.getInstance();
+                com.loabletech.bladewatch.byd.BydDataCollector collector =
+                        com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
                 milesMode = collector != null && collector.isMilesMode();
             } catch (Throwable ignored) {}
             String spd = milesMode

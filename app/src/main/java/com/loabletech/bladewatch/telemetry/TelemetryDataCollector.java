@@ -1,8 +1,8 @@
-package com.overdrive.app.telemetry;
+package com.loabletech.bladewatch.telemetry;
 
 import android.content.Context;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Executors;

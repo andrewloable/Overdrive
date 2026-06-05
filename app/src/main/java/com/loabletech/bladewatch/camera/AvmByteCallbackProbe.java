@@ -1,4 +1,4 @@
-package com.overdrive.app.camera;
+package com.loabletech.bladewatch.camera;
 
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
@@ -6,7 +6,7 @@ import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import java.io.File;
 import java.io.FileOutputStream;

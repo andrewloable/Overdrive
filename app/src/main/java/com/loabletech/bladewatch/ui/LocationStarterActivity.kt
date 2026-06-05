@@ -1,11 +1,11 @@
-package com.overdrive.app.ui
+package com.loabletech.bladewatch.ui
 
 import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import com.overdrive.app.services.LocationSidecarService
+import com.loabletech.bladewatch.services.LocationSidecarService
 
 /**
  * Transparent activity that starts LocationSidecarService and immediately finishes.
@@ -21,7 +21,7 @@ class LocationStarterActivity : Activity() {
     
     companion object {
         private const val TAG = "LocationStarterActivity"
-        const val ACTION_START_LOCATION = "com.overdrive.app.START_LOCATION_SILENT"
+        const val ACTION_START_LOCATION = "com.loabletech.bladewatch.START_LOCATION_SILENT"
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {

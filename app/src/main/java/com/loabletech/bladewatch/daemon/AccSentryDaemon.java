@@ -1,4 +1,4 @@
-package com.overdrive.app.daemon;
+package com.loabletech.bladewatch.daemon;
 
 import android.content.Context;
 import android.hardware.bydauto.bodywork.AbsBYDAutoBodyworkListener;
@@ -7,13 +7,13 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
-import com.overdrive.app.daemon.proxy.Safe;
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatteryPowerData;
-import com.overdrive.app.monitor.BatteryVoltageData;
-import com.overdrive.app.monitor.ChargingStateData;
-import com.overdrive.app.monitor.VehicleDataListener;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.daemon.proxy.Safe;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatteryPowerData;
+import com.loabletech.bladewatch.monitor.BatteryVoltageData;
+import com.loabletech.bladewatch.monitor.ChargingStateData;
+import com.loabletech.bladewatch.monitor.VehicleDataListener;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 
@@ -43,7 +43,7 @@ public class AccSentryDaemon {
 
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
-    /** com.overdrive.app */
+    /** com.loabletech.bladewatch */
     private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
     /** accmodemanager */
     private static String SERVICE_ACCMODEMANAGER() { return Safe.s("tr877WU3+MV4zFtCjanWUw=="); }
@@ -365,7 +365,7 @@ public class AccSentryDaemon {
         // migration if needed) when AccSentryDaemon starts before CameraDaemon.
         // Idempotent — CameraDaemon also calls this.
         try {
-            com.overdrive.app.config.UnifiedConfigManager.init();
+            com.loabletech.bladewatch.config.UnifiedConfigManager.init();
         } catch (Exception e) {
             log("UnifiedConfigManager.init() failed: " + e.getMessage());
         }
@@ -1911,7 +1911,7 @@ public class AccSentryDaemon {
         // Check if user has enabled surveillance in config
         // If not enabled, skip — don't auto-start on ACC OFF
         try {
-            boolean userEnabled = com.overdrive.app.config.UnifiedConfigManager.isSurveillanceEnabled();
+            boolean userEnabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
             if (!userEnabled) {
                 log("Surveillance NOT enabled in config — skipping auto-start on ACC OFF");
                 return;
@@ -1926,8 +1926,8 @@ public class AccSentryDaemon {
         // Check safe zone — don't start surveillance if parked in a safe zone.
         // Mark as suppressed so onLeftSafeZone() can re-arm if the car is towed out.
         try {
-            com.overdrive.app.surveillance.SafeLocationManager safeLocMgr = 
-                com.overdrive.app.surveillance.SafeLocationManager.getInstance();
+            com.loabletech.bladewatch.surveillance.SafeLocationManager safeLocMgr = 
+                com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
             if (safeLocMgr.isFeatureEnabled() && safeLocMgr.isInSafeZone()) {
                 log("In safe zone '" + safeLocMgr.getCurrentZoneName() + "' — skipping surveillance");
                 CameraDaemon.setSafeZoneSuppressed(true);
@@ -1939,8 +1939,8 @@ public class AccSentryDaemon {
 
         // Check schedule — don't start surveillance outside configured time windows
         try {
-            com.overdrive.app.surveillance.SurveillanceSchedule schedule =
-                com.overdrive.app.config.UnifiedConfigManager.getSurveillanceSchedule();
+            com.loabletech.bladewatch.surveillance.SurveillanceSchedule schedule =
+                com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillanceSchedule();
             if (schedule != null && schedule.isEnabled() && !schedule.isActiveNow()) {
                 log("SCHEDULE: Outside time window (" + schedule.getSummary() + ") — skipping surveillance");
                 return;
@@ -2109,8 +2109,8 @@ public class AccSentryDaemon {
             // Force-reload so a toggle the user just flipped from the app UI
             // (different UID, different mtime tick) is visible immediately
             // rather than after the cache expires.
-            com.overdrive.app.config.UnifiedConfigManager.forceReload();
-            boolean enabled = com.overdrive.app.telegram.config.UnifiedTelegramConfig.isAutoStartAccOff();
+            com.loabletech.bladewatch.config.UnifiedConfigManager.forceReload();
+            boolean enabled = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.isAutoStartAccOff();
             log("Telegram autoStartAccOff = " + enabled);
             return enabled;
         } catch (Exception e) {
@@ -2141,7 +2141,7 @@ public class AccSentryDaemon {
         
         // Check if user explicitly stopped it via Telegram command
         try {
-            if (com.overdrive.app.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram("telegram")) {
+            if (com.loabletech.bladewatch.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram("telegram")) {
                 log("Telegram daemon was stopped via Telegram command, not auto-starting");
                 return;
             }
@@ -2193,19 +2193,19 @@ public class AccSentryDaemon {
         
         // SOTA: Use pm path to get current APK path (most reliable method)
         // This ensures we always use the correct path even after app updates
-        String apkPath = execShell("pm path com.overdrive.app 2>/dev/null | head -1 | cut -d: -f2");
+        String apkPath = execShell("pm path com.loabletech.bladewatch 2>/dev/null | head -1 | cut -d: -f2");
         
         // Fallback to ls if pm path fails
         if (apkPath == null || apkPath.trim().isEmpty()) {
             log("pm path failed, using ls fallback");
-            apkPath = execShell("ls /data/app/*/com.overdrive.app*/base.apk 2>/dev/null | head -1");
+            apkPath = execShell("ls /data/app/*/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
             if (apkPath == null || apkPath.trim().isEmpty()) {
-                apkPath = execShell("ls /data/app/com.overdrive.app*/base.apk 2>/dev/null | head -1");
+                apkPath = execShell("ls /data/app/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
             }
         }
         
         if (apkPath == null || apkPath.trim().isEmpty()) {
-            log("ERROR: Could not find APK path for com.overdrive.app");
+            log("ERROR: Could not find APK path for com.loabletech.bladewatch");
             return;
         }
         
@@ -2216,7 +2216,7 @@ public class AccSentryDaemon {
         String innerCmd = "CLASSPATH=" + apkPath + " " +
                          "app_process /system/bin " +
                          "--nice-name=" + TELEGRAM_DAEMON_PROCESS + " " +
-                         "com.overdrive.app.daemon.TelegramBotDaemon";
+                         "com.loabletech.bladewatch.daemon.TelegramBotDaemon";
         
         String cmd = "nohup sh -c '" + innerCmd + "' > /data/local/tmp/telegrambotdaemon.log 2>&1 &";
         

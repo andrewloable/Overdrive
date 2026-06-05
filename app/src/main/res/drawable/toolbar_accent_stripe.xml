@@ -2,7 +2,7 @@
 <!--
   3dp gradient stripe rendered under the MaterialToolbar.
 
-  Anchors the Overdrive identity: brand primary (M3 colorPrimary) ramps to
+  Anchors the BladeWatch identity: brand primary (M3 colorPrimary) ramps to
   tertiary (M3 colorTertiary, sky-blue accent for vehicle/data viz) across
   the screen width. Light/dark aware via theme attrs — no hardcoded hex.
 

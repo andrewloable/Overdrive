@@ -1,8 +1,8 @@
-package com.overdrive.app.surveillance
+package com.loabletech.bladewatch.surveillance
 
 import android.os.Process
 import android.util.Log
-import com.overdrive.app.config.UnifiedConfigManager
+import com.loabletech.bladewatch.config.UnifiedConfigManager
 import org.json.JSONObject
 import java.io.File
 
@@ -25,7 +25,7 @@ class SurveillanceConfigManager(
         private const val SHELL_CONFIG_PATH = "/data/local/tmp/sentry_config.json"
         
         // SOTA: Use unified config path
-        private const val UNIFIED_CONFIG_PATH = "/data/local/tmp/overdrive_config.json"
+        private const val UNIFIED_CONFIG_PATH = "/data/local/tmp/bladewatch_config.json"
         
         private fun getDefaultConfigFile(): File {
             val uid = Process.myUid()

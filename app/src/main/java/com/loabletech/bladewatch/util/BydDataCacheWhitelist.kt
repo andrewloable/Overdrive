@@ -1,10 +1,10 @@
-package com.overdrive.app.util
+package com.loabletech.bladewatch.util
 
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import android.util.Log
-import com.overdrive.app.shell.HiddenApiBypass
+import com.loabletech.bladewatch.shell.HiddenApiBypass
 
 /**
  * Utility to whitelist the app from BYD's background killing mechanism.
@@ -17,7 +17,7 @@ import com.overdrive.app.shell.HiddenApiBypass
 object BydDataCacheWhitelist {
     
     private const val TAG = "BydDataCacheWhitelist"
-    private const val PKG = "com.overdrive.app"
+    private const val PKG = "com.loabletech.bladewatch"
     
     /**
      * Apply all BYD whitelist mechanisms.

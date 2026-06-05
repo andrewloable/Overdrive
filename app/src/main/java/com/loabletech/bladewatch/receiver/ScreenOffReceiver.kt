@@ -1,4 +1,4 @@
-package com.overdrive.app.receiver
+package com.loabletech.bladewatch.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -10,7 +10,7 @@ import android.util.Log
  * Handles SCREEN_OFF events to ensure daemon survival during sleep.
  * 
  * NOTE: SCREEN_OFF cannot be registered in manifest - must be registered dynamically.
- * This receiver is registered in OverdriveApplication.
+ * This receiver is registered in BladeWatchApplication.
  * 
  * Delegates to BootReceiver to reuse the same daemon startup logic.
  */

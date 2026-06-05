@@ -1,13 +1,13 @@
-package com.overdrive.app.receiver
+package com.loabletech.bladewatch.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
 import android.util.Log
-import com.overdrive.app.services.DaemonKeepaliveService
-import com.overdrive.app.ui.daemon.DaemonStartupManager
-import com.overdrive.app.ui.util.PreferencesManager
+import com.loabletech.bladewatch.services.DaemonKeepaliveService
+import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
+import com.loabletech.bladewatch.ui.util.PreferencesManager
 
 /**
  * Handles boot and system events to start daemons.
@@ -44,14 +44,14 @@ class BootReceiver : BroadcastReceiver() {
         when (action) {
             Intent.ACTION_POWER_CONNECTED -> {
                 try {
-                    com.overdrive.app.monitor.ChargingDetector.getInstance().onPowerConnected()
+                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().onPowerConnected()
                 } catch (e: Exception) {
                     Log.w(TAG, "ChargingDetector connect notify failed: ${e.message}")
                 }
             }
             Intent.ACTION_POWER_DISCONNECTED -> {
                 try {
-                    com.overdrive.app.monitor.ChargingDetector.getInstance().onPowerDisconnected()
+                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().onPowerDisconnected()
                 } catch (e: Exception) {
                     Log.w(TAG, "ChargingDetector disconnect notify failed: ${e.message}")
                 }
@@ -81,14 +81,14 @@ class BootReceiver : BroadcastReceiver() {
             // Launching the activity keeps the app process alive (Android is less
             // likely to kill a process with a recent activity) and runs essential
             // initialization (storage, device ID, BYD whitelist). We immediately
-            // move it to the back so the user sees their home screen, not OverDrive.
+            // move it to the back so the user sees their home screen, not BladeWatch.
             Intent.ACTION_BOOT_COMPLETED,
             "android.intent.action.LOCKED_BOOT_COMPLETED",
             "android.intent.action.QUICKBOOT_POWERON",
             "com.htc.intent.action.QUICKBOOT_POWERON" -> {
                 startDaemons(context, action)
                 try {
-                    val launchIntent = Intent(context, com.overdrive.app.ui.MainActivity::class.java)
+                    val launchIntent = Intent(context, com.loabletech.bladewatch.ui.MainActivity::class.java)
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     launchIntent.putExtra("minimize_on_start", true)
                     context.startActivity(launchIntent)
@@ -103,14 +103,14 @@ class BootReceiver : BroadcastReceiver() {
             // the sole orchestrator post-update: it runs UpdateLifecycle.hardResetDaemons
             // before DaemonStartupManager. Starting daemons here would race the
             // hard reset and resurrect old/zombie watchdogs (see /data/local/tmp/
-            // overdrive_update_in_progress sentinel).
+            // bladewatch_update_in_progress sentinel).
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 lastStartTime = System.currentTimeMillis()
                 try {
-                    val launchIntent = Intent(context, com.overdrive.app.ui.MainActivity::class.java)
+                    val launchIntent = Intent(context, com.loabletech.bladewatch.ui.MainActivity::class.java)
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     launchIntent.putExtra(
-                        com.overdrive.app.updater.UpdateLifecycle.EXTRA_POST_UPDATE,
+                        com.loabletech.bladewatch.updater.UpdateLifecycle.EXTRA_POST_UPDATE,
                         true,
                     )
                     context.startActivity(launchIntent)

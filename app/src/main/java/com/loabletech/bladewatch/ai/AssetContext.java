@@ -1,4 +1,4 @@
-package com.overdrive.app.ai;
+package com.loabletech.bladewatch.ai;
 
 import android.content.ContextWrapper;
 import android.content.res.AssetManager;
@@ -30,6 +30,6 @@ public class AssetContext extends ContextWrapper {
     
     @Override
     public String getPackageName() {
-        return "com.overdrive.app";
+        return "com.loabletech.bladewatch";
     }
 }

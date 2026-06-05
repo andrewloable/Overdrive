@@ -1,13 +1,13 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
-import com.overdrive.app.byd.cloud.BydCloudClient;
-import com.overdrive.app.byd.cloud.BydCloudConfig;
-import com.overdrive.app.byd.cloud.BydCloudDataProvider;
-import com.overdrive.app.byd.cloud.BydCloudDeterrent;
-import com.overdrive.app.byd.cloud.crypto.BydCryptoUtils;
-import com.overdrive.app.config.UnifiedConfigManager;
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.cloud.BydCloudClient;
+import com.loabletech.bladewatch.byd.cloud.BydCloudConfig;
+import com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider;
+import com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent;
+import com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils;
+import com.loabletech.bladewatch.config.UnifiedConfigManager;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -79,7 +79,7 @@ public class BydCloudApiHandler {
         status.put("hasCommandPwd", !config.commandPwd.isEmpty());
 
         // Cloud push status
-        status.put("cloudPush", com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().getStatusJson());
+        status.put("cloudPush", com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().getStatusJson());
 
         response.put("status", status);
         HttpResponse.sendJson(out, response.toString());
@@ -109,7 +109,7 @@ public class BydCloudApiHandler {
             UnifiedConfigManager.updateSection("bydCloud", bydCloud);
 
             // Sync poller state based on new toggle value
-            com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().syncPollerState();
+            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().syncPollerState();
 
             response.put("success", true);
         } catch (Exception e) {
@@ -285,7 +285,7 @@ public class BydCloudApiHandler {
             BydCloudDeterrent.getInstance().reset();
 
             // Reset cloud data provider so it reconnects with new credentials
-            com.overdrive.app.byd.cloud.BydCloudDataProvider.getInstance().reset();
+            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().reset();
 
             logger.info("BYD Cloud setup complete: VIN=***" + vin.substring(Math.max(0, vin.length() - 4)));
 
@@ -399,7 +399,7 @@ public class BydCloudApiHandler {
 
         // Try assets via DaemonBootstrap context
         try {
-            android.content.Context ctx = com.overdrive.app.daemon.DaemonBootstrap.getContext();
+            android.content.Context ctx = com.loabletech.bladewatch.daemon.DaemonBootstrap.getContext();
             if (ctx != null) {
                 return ctx.getAssets().open("byd/bangcle_tables.bin");
             }

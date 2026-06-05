@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OverDrive</string>
+    <string name="app_name">BladeWatch</string>
     <string name="accessibility_service_description">オバードライブの車両モニタリングをバックグラウンドで活性化します.このサービスは画面コンテンツを読み取ったり相互作用したりしません.</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_clear_plain">クリア</string>
@@ -76,10 +76,10 @@
     <string name="setup_step_two_label">2 について</string>
     <string name="setup_step_three_label">3</string>
     <string name="setup_language_title">言語 を 選ぶ</string>
-    <string name="setup_language_body">OverDrive アプリとウェブトンネルで別の言語を選択するにはタップします.</string>
+    <string name="setup_language_body">BladeWatch アプリとウェブトンネルで別の言語を選択するにはタップします.</string>
     <string name="setup_language_button">言語 を 選ぶ</string>
     <string name="setup_autostart_title">自動開始制限を無効にする</string>
-    <string name="setup_autostart_body">BYD Auto-Start を開くには,下記にタップします.リストで OverDrive を検索して,ボックスを消します. BYD は,インストールごとにこれを消します. 更新後再起動します.</string>
+    <string name="setup_autostart_body">BYD Auto-Start を開くには,下記にタップします.リストで BladeWatch を検索して,ボックスを消します. BYD は,インストールごとにこれを消します. 更新後再起動します.</string>
     <string name="setup_autostart_button">BYD オートスタートを開く</string>
     <string name="setup_overlay_title">他のアプリで表示を許可する</string>
     <string name="setup_overlay_body">他のアプリの上に記録およびトラッキングの移動状態を示す浮動状態表示を有効にします.</string>
@@ -338,7 +338,7 @@
     <string name="nav_page_abrp">ABRP</string>
     <string name="nav_page_mqtt">MQTT</string>
     <string name="nav_page_byd_cloud">BYD Cloud</string>
-    <string name="status_overlay_notif_title">OverDrive 状態</string>
+    <string name="status_overlay_notif_title">BladeWatch 状態</string>
     <string name="status_overlay_notif_text">ステータスオーバーレイ アクティブ</string>
     <string name="rail_dashboard">デッシュボード</string>
     <string name="rail_live">生きている</string>
@@ -364,14 +364,14 @@
     <string name="cd_settings_subrail">設定サブレール</string>
     <string name="settings_privacy_title">プライバシーとデータ</string>
     <string name="settings_privacy_body">リセットは録音インデックス,キャッシュされた認証,デモン状態,デバイス上の偏好をクリアします.</string>
-    <string name="settings_about_title">OverDriveについて</string>
+    <string name="settings_about_title">BladeWatchについて</string>
     <string name="settings_about_version_label">バージョン</string>
     <string name="settings_about_package_label">建設する</string>
     <string name="settings_about_check_update_value">最新のGitHubリリースを確認し、新しい場合はインストールします。</string>
     <string name="settings_about_support_section">あなたのような人々によって動かす</string>
     <string name="settings_about_support_share_title">他のオーナーにも伝えよう</string>
-    <string name="settings_about_support_share_value">共有されたリンクは 他のBYDのオーナーがOverdriveを発見するのに役立ちます</string>
-    <string name="settings_about_support_share_message">BYDのOverdrive オープンソース監視とダッシュカメラをチェックしてください: https://overdrive-5lc.pages.dev/</string>
+    <string name="settings_about_support_share_value">共有されたリンクは 他のBYDのオーナーがBladeWatchを発見するのに役立ちます</string>
+    <string name="settings_about_support_share_message">BYDのBladeWatch オープンソース監視とダッシュカメラをチェックしてください: https://bladewatch-5lc.pages.dev/</string>
     <string name="settings_about_support_share_chooser">シェア 過剰運転</string>
     <string name="settings_about_open_link_failed">リンクを開けられなかった</string>
     <string name="settings_about_open_link_copied">ブラウザが見つかりませんでした. URLコピー: %1$s</string>
@@ -381,7 +381,7 @@
     <string name="settings_about_license_title">ライセンス</string>
     <string name="settings_about_license_value">MIT オープンソース. 完全テキストを表示するにはタップします.</string>
     <string name="settings_about_source_title">ソースコード</string>
-    <string name="settings_about_source_value">github.com/yash-srivastava/Overdrive-release</string>
+    <string name="settings_about_source_value">github.com/yash-srivastava/BladeWatch-release</string>
     <string name="settings_about_license_url">販売開始開始開始開始</string>
     <string name="settings_about_source_url">海外の反応</string>
     <string name="settings_about_star_title">を GitHub に 落とす</string>
@@ -450,7 +450,7 @@
     <string name="integrations_configure_button">設定</string>
     <string name="settings_action_check_update">更新をチェック</string>
     <string name="settings_action_reset_data">データをリセットする...</string>
-    <string name="cd_brand_logo">OverDrive</string>
+    <string name="cd_brand_logo">BladeWatch</string>
     <string name="dashboard_hero_headline">監視中</string>
     <string name="dashboard_subtitle_all_systems">すべてのシステムはオンライン</string>
     <string name="dashboard_subtitle_some_offline">オンラインでの%1$dの%2$dサービス</string>
@@ -499,10 +499,10 @@
     <string name="settings_section_recording_subtitle">預設/後設バッファ,コードック,保存制限</string>
     <string name="settings_section_surveillance_subtitle">検出ゾーン スケジュール 動き感</string>
     <string name="settings_section_daemons_subtitle">クラウッドフラード,Zrok,Telegram,MQTTランナー</string>
-    <string name="settings_about_row_title">OverDriveについて</string>
+    <string name="settings_about_row_title">BladeWatchについて</string>
     <string name="settings_about_row_subtitle">バージョン ライセンス サポート開発</string>
     <string name="settings_reset_row_subtitle">記録,イベント,またはすべてのキャッシュ.</string>
-    <string name="settings_footer_format">OverDrive %1$s · %2$s</string>
+    <string name="settings_footer_format">BladeWatch %1$s · %2$s</string>
     <string name="settings_appearance_subtitle">テーマ,言語,視覚の好み</string>
     <string name="settings_theme_active_auto_caption">自動はシステムテーマをフォローします</string>
     <string name="settings_theme_active_light_caption">ライトテーマは常にオンです</string>
@@ -510,7 +510,7 @@
     <string name="settings_language_count_format">%1$d の %2$d の言語が利用可能</string>
     <string name="settings_language_card_title">ディスプレイ言語</string>
     <string name="settings_privacy_stance_title">デフォルトでデバイス内</string>
-    <string name="settings_privacy_stance_body">OverDriveは完全にヘッドユニットで動きます 電気測定は 明らかに設定したトンネルや統合以外は 車から出ません</string>
+    <string name="settings_privacy_stance_body">BladeWatchは完全にヘッドユニットで動きます 電気測定は 明らかに設定したトンネルや統合以外は 車から出ません</string>
     <string name="settings_privacy_overline_storage">ローカル ストレージ</string>
     <string name="settings_privacy_overline_reset">データのリセット</string>
     <string name="settings_privacy_storage_clips_label">ディスク上のクリップ</string>

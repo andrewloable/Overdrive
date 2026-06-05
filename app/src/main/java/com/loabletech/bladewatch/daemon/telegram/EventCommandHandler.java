@@ -1,6 +1,6 @@
-package com.overdrive.app.daemon.telegram;
+package com.loabletech.bladewatch.daemon.telegram;
 
-import com.overdrive.app.storage.StorageManager;
+import com.loabletech.bladewatch.storage.StorageManager;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -22,7 +22,7 @@ public class EventCommandHandler implements TelegramCommandHandler {
     private static final long MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024; // 50MB Telegram limit
     
     // Fallback path if StorageManager is not available
-    private static final String FALLBACK_SURVEILLANCE_DIR = "/storage/emulated/0/Overdrive/surveillance";
+    private static final String FALLBACK_SURVEILLANCE_DIR = "/storage/emulated/0/BladeWatch/surveillance";
     
     /**
      * Get the event directory.

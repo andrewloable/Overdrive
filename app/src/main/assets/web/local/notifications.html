@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="../shared/app-icon-dark.webp">
-    <title data-i18n="app.notifications_title">Notifications - OverDrive</title>
+    <title data-i18n="app.notifications_title">Notifications - BladeWatch</title>
     <link rel="icon" type="image/webp" href="../shared/app-icon-dark.webp">
     <script src="../shared/theme.js?v=3"></script>
     <script src="../shared/app-shell.js"></script>
@@ -915,12 +915,12 @@
         if (enableBtnEl) enableBtnEl.addEventListener('click', async function () {
             hideStatus();
             if (!ORIGIN_OK) return;
-            if (!window.OverdrivePush) {
+            if (!window.BladeWatchPush) {
                 showStatus('error', BYD.i18n.t('notif.pwa_not_loaded'));
                 return;
             }
             try {
-                var result = await window.OverdrivePush.requestAndSubscribe();
+                var result = await window.BladeWatchPush.requestAndSubscribe();
                 if (!result.ok) {
                     showStatus('error', BYD.i18n.t('notif.enable_could_not', {reason: result.reason}));
                     return;
@@ -938,7 +938,7 @@
         if (disableBtnEl) disableBtnEl.addEventListener('click', async function () {
             hideStatus();
             try {
-                if (window.OverdrivePush) await window.OverdrivePush.unsubscribe();
+                if (window.BladeWatchPush) await window.BladeWatchPush.unsubscribe();
                 state.currentSubscriptionId = null;
                 await refreshPermissionUI();
                 await loadSubscriptions();

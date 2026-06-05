@@ -1,8 +1,8 @@
-package com.overdrive.app.byd
+package com.loabletech.bladewatch.byd
 
-import com.overdrive.app.byd.radar.RadarConstants
-import com.overdrive.app.client.CameraDaemonClient
-import com.overdrive.app.logging.LogManager
+import com.loabletech.bladewatch.byd.radar.RadarConstants
+import com.loabletech.bladewatch.client.CameraDaemonClient
+import com.loabletech.bladewatch.logging.LogManager
 import org.json.JSONObject
 
 /**

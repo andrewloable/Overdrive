@@ -1,8 +1,8 @@
-package com.overdrive.app.byd.cloud;
+package com.loabletech.bladewatch.byd.cloud;
 
-import com.overdrive.app.byd.cloud.crypto.BangcleCodec;
-import com.overdrive.app.byd.cloud.crypto.BydCryptoUtils;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.cloud.crypto.BangcleCodec;
+import com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -979,7 +979,7 @@ public final class BydCloudClient {
         String username = s.userId;
         long tsSeconds = System.currentTimeMillis() / 1000;
         String passwordBase = s.signToken + clientId + s.userId + tsSeconds;
-        String password = tsSeconds + com.overdrive.app.byd.cloud.crypto.BydCryptoUtils.md5Hex(passwordBase);
+        String password = tsSeconds + com.loabletech.bladewatch.byd.cloud.crypto.BydCryptoUtils.md5Hex(passwordBase);
         return new String[]{clientId, username, password};
     }
 

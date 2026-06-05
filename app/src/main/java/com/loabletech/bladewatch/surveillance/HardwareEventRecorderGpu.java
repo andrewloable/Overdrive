@@ -1,14 +1,14 @@
-package com.overdrive.app.surveillance;
+package com.loabletech.bladewatch.surveillance;
 
 import android.media.MediaCodec;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Bundle;
 import android.view.Surface;
 
-import com.overdrive.app.telegram.TelegramNotifier;
+import com.loabletech.bladewatch.telegram.TelegramNotifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -1054,7 +1054,7 @@ public class HardwareEventRecorderGpu {
 
                     // Make file visible to events page and UI app
                     try {
-                        com.overdrive.app.storage.StorageManager.getInstance().onFileSaved(finalFile);
+                        com.loabletech.bladewatch.storage.StorageManager.getInstance().onFileSaved(finalFile);
                     } catch (Exception e) {
                         logger.warn("onFileSaved error: " + e.getMessage());
                     }
@@ -1729,7 +1729,7 @@ public class HardwareEventRecorderGpu {
                             oldSegmentNumber, finalFile.getName(), oldRecordedFrames,
                             durationSec, finalFile.length() / 1024));
                     try {
-                        com.overdrive.app.storage.StorageManager.getInstance().onFileSaved(finalFile);
+                        com.loabletech.bladewatch.storage.StorageManager.getInstance().onFileSaved(finalFile);
                     } catch (Exception e) {
                         logger.warn("onFileSaved error: " + e.getMessage());
                     }
@@ -2063,7 +2063,7 @@ public class HardwareEventRecorderGpu {
         // Drop the API-handler cache entry for this segment so /api/recordings
         // doesn't keep returning a phantom row for a file that's been rotated.
         try {
-            com.overdrive.app.server.RecordingsApiHandler.invalidateRecordingCache(
+            com.loabletech.bladewatch.server.RecordingsApiHandler.invalidateRecordingCache(
                     mp4File.getAbsolutePath());
         } catch (Throwable ignored) {}
 

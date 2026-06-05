@@ -7,7 +7,7 @@
 # in proguard-rules.pro and is ALWAYS stripped in release builds.
 
 # Strip DaemonLogger (file logging for daemons)
--assumenosideeffects class com.overdrive.app.logging.DaemonLogger {
+-assumenosideeffects class com.loabletech.bladewatch.logging.DaemonLogger {
     public void debug(...);
     public void info(...);
     public void warn(...);
@@ -18,7 +18,7 @@
 }
 
 # Strip LogManager (file logging for app context)
--assumenosideeffects class com.overdrive.app.logging.LogManager {
+-assumenosideeffects class com.loabletech.bladewatch.logging.LogManager {
     public void log(...);
     public void debug(...);
     public void info(...);

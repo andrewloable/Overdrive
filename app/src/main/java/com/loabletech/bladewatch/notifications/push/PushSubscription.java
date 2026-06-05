@@ -1,6 +1,6 @@
-package com.overdrive.app.notifications.push;
+package com.loabletech.bladewatch.notifications.push;
 
-import com.overdrive.app.notifications.NotificationEvent;
+import com.loabletech.bladewatch.notifications.NotificationEvent;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

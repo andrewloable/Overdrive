@@ -1,4 +1,4 @@
-package com.overdrive.app.ui.fragment
+package com.loabletech.bladewatch.ui.fragment
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -21,20 +21,20 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.overdrive.app.R
-import com.overdrive.app.auth.AuthManager
-import com.overdrive.app.client.CameraDaemonClient
-import com.overdrive.app.ui.dashboard.DashboardInsight
-import com.overdrive.app.ui.dashboard.DashboardInsightProvider
-import com.overdrive.app.ui.model.DaemonState
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.QrCodeGenerator
-import com.overdrive.app.ui.util.RecordingScanner
-import com.overdrive.app.ui.viewmodel.DaemonsViewModel
-import com.overdrive.app.ui.viewmodel.MainViewModel
-import com.overdrive.app.ui.viewmodel.RecordingViewModel
-import com.overdrive.app.util.DeviceIdGenerator
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.auth.AuthManager
+import com.loabletech.bladewatch.client.CameraDaemonClient
+import com.loabletech.bladewatch.ui.dashboard.DashboardInsight
+import com.loabletech.bladewatch.ui.dashboard.DashboardInsightProvider
+import com.loabletech.bladewatch.ui.model.DaemonState
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.QrCodeGenerator
+import com.loabletech.bladewatch.ui.util.RecordingScanner
+import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
+import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
+import com.loabletech.bladewatch.ui.viewmodel.RecordingViewModel
+import com.loabletech.bladewatch.util.DeviceIdGenerator
 import java.util.Calendar
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -249,7 +249,7 @@ class DashboardFragment : Fragment() {
         // Tile taps deep-link to peer rail destinations. Use the same M3
         // fade-through motion the rail itself uses so the user can't tell
         // whether they tapped the tile or the rail icon.
-        val fadeThrough = com.overdrive.app.ui.util.NavOptionsExt.m3FadeThrough()
+        val fadeThrough = com.loabletech.bladewatch.ui.util.NavOptionsExt.m3FadeThrough()
         metricRecordings.setOnClickListener {
             findNavController().navigate(R.id.recordingsFragment, null, fadeThrough)
         }
@@ -815,7 +815,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showRegenerateConfirmation() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_regenerate_token_title))
             .setMessage(getString(R.string.dialog_regenerate_token_message))
@@ -886,7 +886,7 @@ class DashboardFragment : Fragment() {
             var nominalKwh = 0.0
             var modelId: String? = null
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -898,7 +898,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) { /* keep defaults */ }
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/models/selected", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -989,7 +989,7 @@ class DashboardFragment : Fragment() {
             var calTs = 0L
 
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -999,7 +999,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1022,7 +1022,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/models/manifest", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1054,7 +1054,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/models/selected", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1155,7 +1155,7 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.Theme_BladeWatch_M3_Dialog)
             .setTitle(getString(R.string.vehicle_dialog_title))
             .setView(dialogView)
             .setPositiveButton(getString(R.string.vehicle_dialog_save)) { _, _ ->
@@ -1179,7 +1179,7 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "POST", 3000, 5000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1197,7 +1197,7 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "POST", 3000, 5000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1208,7 +1208,7 @@ class DashboardFragment : Fragment() {
 
             if (!modelId.isNullOrEmpty()) {
                 try {
-                    val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                    val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                         "/api/models/selected", "POST", 3000, 5000)
                     conn.doOutput = true
                     conn.setRequestProperty("Content-Type", "application/json")

@@ -1,5 +1,5 @@
 /**
- * OverDrive PWA bootstrap.
+ * BladeWatch PWA bootstrap.
  *
  * Loaded after auth.js on every dashboard page. Skips entirely on the
  * in-app WebView (loopback host) so notification permission prompts never
@@ -142,7 +142,7 @@
 
     // Expose minimal API for the settings page to drive permission prompts
     // and explicit (re)subscribe flow.
-    window.OverdrivePush = {
+    window.BladeWatchPush = {
         async requestAndSubscribe() {
             var perm = await Notification.requestPermission();
             if (perm !== 'granted') return { ok: false, reason: 'permission-' + perm };

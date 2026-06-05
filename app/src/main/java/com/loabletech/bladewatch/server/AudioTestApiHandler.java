@@ -1,12 +1,12 @@
-package com.overdrive.app.server;
+package com.loabletech.bladewatch.server;
 
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.speech.tts.TextToSpeech;
 
-import com.overdrive.app.byd.BydDataCollector;
-import com.overdrive.app.daemon.CameraDaemon;
-import com.overdrive.app.logging.DaemonLogger;
+import com.loabletech.bladewatch.byd.BydDataCollector;
+import com.loabletech.bladewatch.daemon.CameraDaemon;
+import com.loabletech.bladewatch.logging.DaemonLogger;
 
 import org.json.JSONObject;
 

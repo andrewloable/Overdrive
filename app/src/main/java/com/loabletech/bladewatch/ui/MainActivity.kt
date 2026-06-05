@@ -1,4 +1,4 @@
-package com.overdrive.app.ui
+package com.loabletech.bladewatch.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -16,23 +16,23 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
-import com.overdrive.app.logging.LogLevel
-import com.overdrive.app.logging.LogManager
-// import com.overdrive.app.shell.PrivilegedShellSetup
-import com.overdrive.app.storage.StorageSetup
-import com.overdrive.app.ui.daemon.DaemonStartupManager
-import com.overdrive.app.ui.model.DaemonStatus
-import com.overdrive.app.ui.model.DaemonType
-import com.overdrive.app.ui.util.PreferencesManager
-import com.overdrive.app.ui.viewmodel.DaemonsViewModel
-import com.overdrive.app.ui.viewmodel.LogsViewModel
-import com.overdrive.app.ui.viewmodel.MainViewModel
-import com.overdrive.app.launcher.AdbDaemonLauncher
+import com.loabletech.bladewatch.logging.LogLevel
+import com.loabletech.bladewatch.logging.LogManager
+// import com.loabletech.bladewatch.shell.PrivilegedShellSetup
+import com.loabletech.bladewatch.storage.StorageSetup
+import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
+import com.loabletech.bladewatch.ui.model.DaemonStatus
+import com.loabletech.bladewatch.ui.model.DaemonType
+import com.loabletech.bladewatch.ui.util.PreferencesManager
+import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
+import com.loabletech.bladewatch.ui.viewmodel.LogsViewModel
+import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
+import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
 import com.google.android.material.appbar.MaterialToolbar
 import android.widget.ImageView
 import android.widget.LinearLayout
-import com.overdrive.app.R
-import com.overdrive.app.util.BydDataCacheWhitelist
+import com.loabletech.bladewatch.R
+import com.loabletech.bladewatch.util.BydDataCacheWhitelist
 
 /**
  * Main activity hosting the M3 navigation-rail shell.
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val daemonsViewModel: DaemonsViewModel by viewModels()
     private val logsViewModel: LogsViewModel by viewModels()
-    private var appUpdater: com.overdrive.app.updater.AppUpdater? = null
+    private var appUpdater: com.loabletech.bladewatch.updater.AppUpdater? = null
 
     // Daemon startup manager
     private lateinit var daemonStartupManager: DaemonStartupManager
@@ -87,12 +87,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize DeviceIdGenerator with ADB executor for file sync
-        val adbExecutor = com.overdrive.app.launcher.AdbShellExecutor(this)
-        com.overdrive.app.util.DeviceIdGenerator.init(adbExecutor)
+        val adbExecutor = com.loabletech.bladewatch.launcher.AdbShellExecutor(this)
+        com.loabletech.bladewatch.util.DeviceIdGenerator.init(adbExecutor)
         
         // Generate device ID early - this syncs to file for daemon compatibility
         // Must happen BEFORE any daemon starts
-        val deviceId = com.overdrive.app.util.DeviceIdGenerator.generateDeviceId(this)
+        val deviceId = com.loabletech.bladewatch.util.DeviceIdGenerator.generateDeviceId(this)
         android.util.Log.i("MainActivity", "Device ID initialized: $deviceId")
         
         // Apply BYD whitelist (ACC + data cache) to prevent background killing
@@ -120,12 +120,12 @@ class MainActivity : AppCompatActivity() {
         setupAdbAuthCallback()
         
         // Log app start
-        logsViewModel.info("App", "OverDrive started")
+        logsViewModel.info("App", "BladeWatch started")
 
         // Seed out-of-process revival watchdog so the process gets resurrected
         // if it ever gets force-stopped or OOM-killed without an external event.
         try {
-            com.overdrive.app.receiver.ProcessRevivalReceiver.schedule(applicationContext)
+            com.loabletech.bladewatch.receiver.ProcessRevivalReceiver.schedule(applicationContext)
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "ProcessRevivalReceiver.schedule failed: ${e.message}")
         }
@@ -145,13 +145,13 @@ class MainActivity : AppCompatActivity() {
         // FIRST so any zombie daemons / watchdogs from the previous install are
         // dead before the new daemon launcher starts. See UpdateLifecycle for
         // the sentinel handshake details.
-        val isPostUpdate = com.overdrive.app.updater.UpdateLifecycle
+        val isPostUpdate = com.loabletech.bladewatch.updater.UpdateLifecycle
             .isPostUpdateLaunch(this, intent)
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             // Sync device ID to file synchronously before daemon startup
             Thread {
                 try {
-                    val synced = com.overdrive.app.util.DeviceIdGenerator.syncDeviceIdToFileSync(this)
+                    val synced = com.loabletech.bladewatch.util.DeviceIdGenerator.syncDeviceIdToFileSync(this)
                     android.util.Log.i("MainActivity", "Device ID sync result: $synced")
                 } catch (e: Exception) {
                     android.util.Log.e("MainActivity", "Device ID sync error: ${e.message}")
@@ -168,12 +168,12 @@ class MainActivity : AppCompatActivity() {
 
                 if (isPostUpdate) {
                     logsViewModel.info("Update", "Post-update launch — hard-resetting daemons before startup")
-                    com.overdrive.app.updater.UpdateLifecycle.hardResetDaemons(this) {
+                    com.loabletech.bladewatch.updater.UpdateLifecycle.hardResetDaemons(this) {
                         // Surface failed-install errors first. consumeJustUpdatedVersion
                         // returns null when a failure marker is present, so the success
                         // toast never fires on a failed install. consumeFailedUpdateError
                         // also clears the marker so it's a one-shot.
-                        val installError = com.overdrive.app.updater.AppUpdater
+                        val installError = com.loabletech.bladewatch.updater.AppUpdater
                             .consumeFailedUpdateError(this)
                         if (installError != null) {
                             runOnUiThread {
@@ -184,7 +184,7 @@ class MainActivity : AppCompatActivity() {
                         // Consume the just-updated marker only after the cleanup
                         // completes. A crash mid-reset will leave the sentinel
                         // in place so the next launch retries.
-                        val updatedVersion = com.overdrive.app.updater.AppUpdater
+                        val updatedVersion = com.loabletech.bladewatch.updater.AppUpdater
                             .consumeJustUpdatedVersion(this)
                         if (updatedVersion != null) {
                             runOnUiThread {
@@ -199,12 +199,12 @@ class MainActivity : AppCompatActivity() {
                             // subsequent (non-update) tunnel restarts go back
                             // to the normal copy.
                             try {
-                                val adb = com.overdrive.app.launcher.AdbDaemonLauncher(this)
-                                val hintFile = com.overdrive.app.updater
+                                val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
+                                val hintFile = com.loabletech.bladewatch.updater
                                     .UpdateLifecycle.TELEGRAM_POST_UPDATE_HINT_FILE
                                 adb.executeShellCommand(
                                     "echo '$updatedVersion' > $hintFile",
-                                    object : com.overdrive.app.launcher
+                                    object : com.loabletech.bladewatch.launcher
                                         .AdbDaemonLauncher.LaunchCallback {
                                         override fun onLog(message: String) {}
                                         override fun onLaunched() {}
@@ -233,8 +233,8 @@ class MainActivity : AppCompatActivity() {
         // Check for app updates (delayed to not block startup)
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             // Clean up any leftover update APK from previous install
-            val adb = com.overdrive.app.launcher.AdbDaemonLauncher(this)
-            adb.executeShellCommand("rm -f /data/local/tmp/overdrive_update.apk", object : com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback {
+            val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
+            adb.executeShellCommand("rm -f /data/local/tmp/bladewatch_update.apk", object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
                 override fun onLog(message: String) {}
                 override fun onLaunched() {}
                 override fun onError(error: String) {}
@@ -243,14 +243,14 @@ class MainActivity : AppCompatActivity() {
             // Surface failed-install errors first (consumeJustUpdatedVersion
             // returns null when a failure marker is present, so the success
             // toast never fires on a failed install).
-            val installError = com.overdrive.app.updater.AppUpdater.consumeFailedUpdateError(this)
+            val installError = com.loabletech.bladewatch.updater.AppUpdater.consumeFailedUpdateError(this)
             if (installError != null) {
                 Toast.makeText(this, getString(R.string.toast_update_install_failed, installError), Toast.LENGTH_LONG).show()
                 logsViewModel.warn("Update", "Install failed: $installError")
             }
 
             // Show post-update message if app was just updated
-            val updatedVersion = com.overdrive.app.updater.AppUpdater.consumeJustUpdatedVersion(this)
+            val updatedVersion = com.loabletech.bladewatch.updater.AppUpdater.consumeJustUpdatedVersion(this)
             if (updatedVersion != null) {
                 Toast.makeText(this, getString(R.string.toast_updated_to, updatedVersion), Toast.LENGTH_LONG).show()
                 logsViewModel.info("Update", "App updated to $updatedVersion")
@@ -281,19 +281,19 @@ class MainActivity : AppCompatActivity() {
      * autostart whitelist on each install.
      */
     private fun startStatusOverlay() {
-        val hasPermission = com.overdrive.app.overlay.StatusOverlayService.hasOverlayPermission(this)
+        val hasPermission = com.loabletech.bladewatch.overlay.StatusOverlayService.hasOverlayPermission(this)
         android.util.Log.i("MainActivity", "Overlay permission: $hasPermission")
         logsViewModel.info("Overlay", "Overlay permission: $hasPermission")
 
         if (hasPermission) {
-            com.overdrive.app.overlay.StatusOverlayService.startIfPermitted(this)
+            com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(this)
             logsViewModel.info("Overlay", "Status overlay service started")
         }
 
         // showIfNeeded is no-op when the seen install-time matches the current
         // PackageInfo.lastUpdateTime, so it's safe to call on every launch.
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            com.overdrive.app.overlay.SetupGuideDialog.showIfNeeded(this)
+            com.loabletech.bladewatch.overlay.SetupGuideDialog.showIfNeeded(this)
         }, 2000)
     }
     
@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Try to start overlay if permission was just granted (user returned from settings)
-        com.overdrive.app.overlay.StatusOverlayService.startIfPermitted(this)
+        com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(this)
     }
     
     /**
@@ -313,7 +313,7 @@ class MainActivity : AppCompatActivity() {
      * This handles the case where user grants ADB auth after the initial connection attempt failed.
      */
     private fun setupAdbAuthCallback() {
-        com.overdrive.app.launcher.AdbShellExecutor.setAuthCallback(object : com.overdrive.app.launcher.AdbShellExecutor.AdbAuthCallback {
+        com.loabletech.bladewatch.launcher.AdbShellExecutor.setAuthCallback(object : com.loabletech.bladewatch.launcher.AdbShellExecutor.AdbAuthCallback {
             override fun onAuthPending() {
                 runOnUiThread {
                     logsViewModel.info("ADB", "⏳ Waiting for ADB authorization...")
@@ -358,11 +358,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         logsViewModel.info("Update", "Checking for updates...")
-        val updater = com.overdrive.app.updater.AppUpdater(this)
+        val updater = com.loabletech.bladewatch.updater.AppUpdater(this)
         appUpdater = updater
-        updater.checkForUpdate(object : com.overdrive.app.updater.AppUpdater.UpdateCallback {
+        updater.checkForUpdate(object : com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback {
             override fun onUpdateAvailable(currentVersion: String, newVersion: String, releaseNotes: String) {
-                com.overdrive.app.updater.UpdateDialog.showUpdateAvailable(
+                com.loabletech.bladewatch.updater.UpdateDialog.showUpdateAvailable(
                     this@MainActivity, currentVersion, newVersion, releaseNotes,
                     { performAppUpdate(updater) },
                     null
@@ -388,11 +388,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         Toast.makeText(this, getString(R.string.toast_checking_for_updates), Toast.LENGTH_SHORT).show()
-        val updater = com.overdrive.app.updater.AppUpdater(this)
+        val updater = com.loabletech.bladewatch.updater.AppUpdater(this)
         appUpdater = updater
-        updater.checkForUpdate(object : com.overdrive.app.updater.AppUpdater.UpdateCallback {
+        updater.checkForUpdate(object : com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback {
             override fun onUpdateAvailable(currentVersion: String, newVersion: String, releaseNotes: String) {
-                com.overdrive.app.updater.UpdateDialog.showUpdateAvailable(
+                com.loabletech.bladewatch.updater.UpdateDialog.showUpdateAvailable(
                     this@MainActivity, currentVersion, newVersion, releaseNotes,
                     { performAppUpdate(updater) },
                     null
@@ -426,12 +426,12 @@ class MainActivity : AppCompatActivity() {
         mainHandler.postDelayed(runnable, sixHoursMs)
     }
 
-    private fun performAppUpdate(updater: com.overdrive.app.updater.AppUpdater) {
-        val progress = com.overdrive.app.updater.UpdateDialog.showProgress(this) {
+    private fun performAppUpdate(updater: com.loabletech.bladewatch.updater.AppUpdater) {
+        val progress = com.loabletech.bladewatch.updater.UpdateDialog.showProgress(this) {
             updater.cancel()
         }
 
-        updater.downloadAndInstall(object : com.overdrive.app.updater.AppUpdater.InstallCallback {
+        updater.downloadAndInstall(object : com.loabletech.bladewatch.updater.AppUpdater.InstallCallback {
             override fun onProgress(message: String) {
                 runOnUiThread {
                     when {
@@ -500,7 +500,7 @@ class MainActivity : AppCompatActivity() {
         // of MES state, so recordings still work on this launch even if MES
         // never lands. With requestLegacyExternalStorage="true" + targetSdk 25,
         // WRITE_EXTERNAL_STORAGE is enough for our own paths under
-        // /storage/emulated/0/Overdrive.
+        // /storage/emulated/0/BladeWatch.
         val legacySuccess = StorageSetup.setupDirectories()
         android.util.Log.i("MainActivity", "Legacy-mode setupDirectories success=$legacySuccess")
 
@@ -509,7 +509,7 @@ class MainActivity : AppCompatActivity() {
         // opened if the app-ops grant fails to land.
         android.util.Log.i("MainActivity", "MES missing - attempting silent app-ops grant via ADB")
         try {
-            val adb = com.overdrive.app.launcher.AdbShellExecutor(this)
+            val adb = com.loabletech.bladewatch.launcher.AdbShellExecutor(this)
             StorageSetup.tryGrantViaAppOps(this, adb) { granted ->
                 runOnUiThread { onAppOpsGrantResult(granted) }
             }
@@ -622,14 +622,14 @@ class MainActivity : AppCompatActivity() {
         val action = intent.action
         val startLocation = intent.getBooleanExtra("start_location", false)
         
-        if (action == "com.overdrive.app.START_LOCATION_ACTIVITY" || startLocation) {
+        if (action == "com.loabletech.bladewatch.START_LOCATION_ACTIVITY" || startLocation) {
             logsViewModel.info("Location", "Received Location start intent from SentryDaemon")
             
             // Start LocationSidecarService directly
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 logsViewModel.info("Location", "Auto-starting Location service...")
                 try {
-                    val serviceIntent = android.content.Intent(this, com.overdrive.app.services.LocationSidecarService::class.java)
+                    val serviceIntent = android.content.Intent(this, com.loabletech.bladewatch.services.LocationSidecarService::class.java)
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                         startForegroundService(serviceIntent)
                     } else {
@@ -782,7 +782,7 @@ class MainActivity : AppCompatActivity() {
         // to the legacy rail-header button if a downstream layout ever
         // restores it; the dialog itself is the same.
         val languageClick = View.OnClickListener {
-            com.overdrive.app.ui.dialog.LanguagePickerDialog.show(this) {
+            com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog.show(this) {
                 recreate()
             }
         }
@@ -838,10 +838,10 @@ class MainActivity : AppCompatActivity() {
             override fun onLog(tag: String, message: String, level: LogLevel) {
                 // Convert LogManager.LogLevel to UI LogLevel
                 val uiLevel = when (level) {
-                    LogLevel.DEBUG -> com.overdrive.app.ui.model.LogLevel.DEBUG
-                    LogLevel.INFO -> com.overdrive.app.ui.model.LogLevel.INFO
-                    LogLevel.WARN -> com.overdrive.app.ui.model.LogLevel.WARN
-                    LogLevel.ERROR -> com.overdrive.app.ui.model.LogLevel.ERROR
+                    LogLevel.DEBUG -> com.loabletech.bladewatch.ui.model.LogLevel.DEBUG
+                    LogLevel.INFO -> com.loabletech.bladewatch.ui.model.LogLevel.INFO
+                    LogLevel.WARN -> com.loabletech.bladewatch.ui.model.LogLevel.WARN
+                    LogLevel.ERROR -> com.loabletech.bladewatch.ui.model.LogLevel.ERROR
                 }
                 logsViewModel.addLog(tag, message, uiLevel)
             }
@@ -970,7 +970,7 @@ class MainActivity : AppCompatActivity() {
         var currentId = -1
         var isManual = false
         try {
-            val config = com.overdrive.app.config.UnifiedConfigManager.loadConfig()
+            val config = com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
             val cameraConfig = config.optJSONObject("camera")
             if (cameraConfig != null) {
                 currentId = cameraConfig.optInt("probedCameraId", -1)
@@ -997,7 +997,7 @@ class MainActivity : AppCompatActivity() {
         val currentSelection = if (isManual && currentId >= 0) currentId + 1 else 0
         radioGroup.check(radioIds[currentSelection])
         
-        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
             .setView(dialogView)
             .setNegativeButton(getString(R.string.dialog_close), null)
             .create()
@@ -1014,7 +1014,7 @@ class MainActivity : AppCompatActivity() {
                 // Auto mode
                 Thread {
                     try {
-                        val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                        val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                             "/api/surveillance/config", "POST", 3000, 3000)
                         conn.setRequestProperty("Content-Type", "application/json")
                         conn.doOutput = true
@@ -1040,7 +1040,7 @@ class MainActivity : AppCompatActivity() {
                 val selectedCamId = selectedIndex - 1
                 Thread {
                     try {
-                        val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                        val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                             "/api/surveillance/config", "POST", 3000, 3000)
                         conn.setRequestProperty("Content-Type", "application/json")
                         conn.doOutput = true
@@ -1080,7 +1080,7 @@ class MainActivity : AppCompatActivity() {
                 val emptyCameraConfig = org.json.JSONObject()
                 emptyCameraConfig.put("probedCameraId", -1)
                 emptyCameraConfig.put("probedSurfaceMode", -1)
-                com.overdrive.app.config.UnifiedConfigManager.updateSection("camera", emptyCameraConfig)
+                com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", emptyCameraConfig)
                 
                 runOnUiThread {
                     logsViewModel.info("Camera", "Camera config cleared — restarting daemon")
@@ -1088,8 +1088,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Kill the camera daemon — DaemonLauncher's watchdog will auto-restart it
-                val adb = com.overdrive.app.launcher.AdbDaemonLauncher(this)
-                adb.killDaemon(object : com.overdrive.app.launcher.AdbDaemonLauncher.LaunchCallback {
+                val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
+                adb.killDaemon(object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
                     override fun onLog(message: String) {
                         logsViewModel.debug("Camera", message)
                     }
@@ -1195,7 +1195,7 @@ class MainActivity : AppCompatActivity() {
             // Fetch full SOH status (modelId, calibration anchor, estimated capacity) —
             // properties file alone doesn't carry modelId or live calibration shape.
             try {
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1322,7 +1322,7 @@ class MainActivity : AppCompatActivity() {
                 // SOH percent color based on health
                 val sohView = dialogView.findViewById<TextView>(R.id.tvSohPercent)
                 // OEM and nominal fallbacks are still visible percentages, but
-                // only finalHasEstimate means Overdrive calculated capacity SOH.
+                // only finalHasEstimate means BladeWatch calculated capacity SOH.
                 if (finalHasEstimate || finalDisplaySource == "oem" || finalDisplaySource == "nominal") {
                     val sohVal = finalSoh.replace("%", "").toDoubleOrNull() ?: 0.0
                     val colorRes = when {
@@ -1333,7 +1333,7 @@ class MainActivity : AppCompatActivity() {
                     sohView.setTextColor(resources.getColor(colorRes, null))
                 }
 
-                val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
                     .setView(dialogView)
                     .setPositiveButton(getString(R.string.dialog_close), null)
                     .create()
@@ -1375,7 +1375,7 @@ class MainActivity : AppCompatActivity() {
      * Confirmation dialog before resetting SOH estimation.
      */
     private fun confirmSohReset() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_reset_soh_title))
             .setMessage(getString(R.string.dialog_reset_soh_message))
@@ -1395,7 +1395,7 @@ class MainActivity : AppCompatActivity() {
         executor.execute {
             try {
                 // Use daemon API (daemon owns the file, has write permissions)
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/soh/reset", "POST", 3000, 3000)
                 conn.doOutput = true
                 conn.outputStream.use { it.write("{}".toByteArray()) }
@@ -1450,7 +1450,7 @@ class MainActivity : AppCompatActivity() {
                 dialogView.findViewById<com.google.android.material.checkbox.MaterialCheckBox>(id) to cat
             }
 
-        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
             .setView(dialogView)
             .setPositiveButton(getString(R.string.dialog_reset_selected), null)  // Wired below to allow keep-open on validate
             .setNegativeButton(getString(R.string.action_cancel), null)
@@ -1496,7 +1496,7 @@ class MainActivity : AppCompatActivity() {
             "mediaTrips" to getString(R.string.reset_label_trip_files)
         )
         val list = categories.joinToString("\n") { "• " + (labels[it] ?: it) }
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
             .setIcon(R.drawable.ic_warning)
             .setTitle(getString(R.string.dialog_reset_following_title))
             .setMessage(getString(R.string.dialog_reset_following_message, list))
@@ -1515,7 +1515,7 @@ class MainActivity : AppCompatActivity() {
                 val payload = org.json.JSONObject().apply {
                     put("categories", org.json.JSONArray(categories))
                 }
-                val conn = com.overdrive.app.util.DaemonHttpClient.open(
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
                     "/api/performance/reset", "POST", 5000, 15000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1549,7 +1549,7 @@ class MainActivity : AppCompatActivity() {
                                 lines.append("• ").append(label).append(" — ").append(err).append("\n")
                             }
                         }
-                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
                             .setIcon(R.drawable.ic_check_circle)
                             .setTitle(getString(R.string.dialog_reset_complete_title))
                             .setMessage(lines.toString().trim())
@@ -1638,7 +1638,7 @@ class MainActivity : AppCompatActivity() {
             // ADB not connected — retry the check and show explanation
             checkTrafficMonitorStatus()
             
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
                 .setIcon(R.drawable.ic_warning)
                 .setTitle(getString(R.string.dialog_traffic_cannot_check_title))
                 .setMessage(getString(R.string.dialog_traffic_cannot_check_message))
@@ -1649,7 +1649,7 @@ class MainActivity : AppCompatActivity() {
 
         if (currentlyEnabled) {
             // Currently enabled — offer to disable with full explanation
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
                 .setIcon(R.drawable.ic_traffic_monitor)
                 .setTitle(getString(R.string.dialog_traffic_disable_title))
                 .setMessage(getString(R.string.dialog_traffic_disable_message))
@@ -1660,7 +1660,7 @@ class MainActivity : AppCompatActivity() {
                 .show()
         } else {
             // Currently disabled — offer to re-enable
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_Overdrive_M3_Dialog)
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.Theme_BladeWatch_M3_Dialog)
                 .setIcon(R.drawable.ic_traffic_monitor)
                 .setTitle(getString(R.string.dialog_traffic_enable_title))
                 .setMessage(getString(R.string.dialog_traffic_enable_message))
@@ -1700,7 +1700,7 @@ class MainActivity : AppCompatActivity() {
                     logsViewModel.info("TrafficMonitor", "BYD Traffic Monitor $state")
                     
                     // Show reboot reminder
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@MainActivity, R.style.Theme_Overdrive_M3_Dialog)
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this@MainActivity, R.style.Theme_BladeWatch_M3_Dialog)
                         .setIcon(R.drawable.ic_check_circle)
                         .setTitle(getString(R.string.dialog_traffic_status_title, state.replaceFirstChar { it.uppercase() }))
                         .setMessage(getString(R.string.dialog_traffic_reboot_message))
@@ -1722,7 +1722,7 @@ class MainActivity : AppCompatActivity() {
         // Remove log listener
         LogManager.setLogListener(null)
         // Remove ADB auth callback
-        com.overdrive.app.launcher.AdbShellExecutor.setAuthCallback(null)
+        com.loabletech.bladewatch.launcher.AdbShellExecutor.setAuthCallback(null)
         // Cancel the periodic update check so the Runnable doesn't leak the
         // activity reference after recreate.
         updateCheckRunnable?.let { mainHandler.removeCallbacks(it) }

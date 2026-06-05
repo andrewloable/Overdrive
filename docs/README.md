@@ -1,8 +1,8 @@
-# Overdrive Documentation
+# BladeWatch Documentation
 
-This directory is the project reference for the Overdrive Android app, its native daemons, embedded web UI, BYD integrations, tunnels, APIs, and operational workflows.
+This directory is the project reference for the BladeWatch Android app, its native daemons, embedded web UI, BYD integrations, tunnels, APIs, and operational workflows.
 
-Overdrive is an Android application for BYD DiLink vehicles. The app coordinates Android UI screens, foreground services, privileged shell-launched daemons, camera and surveillance pipelines, local and remote web access, BYD vehicle telemetry, BYD cloud control, trip analytics, notifications, MQTT, and tunnel/proxy processes.
+BladeWatch is an Android application for BYD DiLink vehicles. The app coordinates Android UI screens, foreground services, privileged shell-launched daemons, camera and surveillance pipelines, local and remote web access, BYD vehicle telemetry, BYD cloud control, trip analytics, notifications, MQTT, and tunnel/proxy processes.
 
 ## Document Map
 
@@ -19,7 +19,7 @@ Overdrive is an Android application for BYD DiLink vehicles. The app coordinates
 
 ## Source Areas
 
-- `app/src/main/java/com/overdrive/app/` contains Android app code, daemons, local servers, BYD integrations, telemetry, storage, and UI fragments.
+- `app/src/main/java/com/loabletech/bladewatch/` contains Android app code, daemons, local servers, BYD integrations, telemetry, storage, and UI fragments.
 - `app/src/main/assets/web/` contains the local web app and PWA assets served by the camera daemon.
 - `app/src/main/assets/models/` contains AI model assets used by surveillance.
 - `app/src/main/cpp/` contains native camera, surveillance, and OpenCV/OpenH264 build integration.
@@ -36,9 +36,9 @@ Each detailed document includes a `Source References` section. References use `f
 - sing-box mixed proxy: `127.0.0.1:8119`.
 - Tailscale userspace socket: `127.0.0.1:8532`.
 - Tailscale SOCKS5 proxy: `127.0.0.1:8539`.
-- Main shared config: `/data/local/tmp/overdrive_config.json`.
-- Shared daemon secret store: `/data/local/tmp/overdrive_secrets.json`.
-- Media base directory: `/storage/emulated/0/Overdrive`.
+- Main shared config: `/data/local/tmp/bladewatch_config.json`.
+- Shared daemon secret store: `/data/local/tmp/bladewatch_secrets.json`.
+- Media base directory: `/storage/emulated/0/BladeWatch`.
 
 ## Security Notes
 
@@ -46,6 +46,6 @@ The embedded web UI is token-protected in release builds, including loopback acc
 
 ## Source References
 
-- Documentation map entry points: [CameraDaemon.java:35](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L35), [HttpServer.java:49](../app/src/main/java/com/overdrive/app/server/HttpServer.java#L49), [GpuSurveillancePipeline.java:24](../app/src/main/java/com/overdrive/app/surveillance/GpuSurveillancePipeline.java#L24), [BydDataCollector.java:20](../app/src/main/java/com/overdrive/app/byd/BydDataCollector.java#L20), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100).
-- Important defaults: [CameraDaemon.java:53](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/overdrive/app/daemon/CameraDaemon.java#L350), [ProxyConfiguration.kt:29](../app/src/main/java/com/overdrive/app/daemon/proxy/ProxyConfiguration.kt#L29), [StorageManager.java:100](../app/src/main/java/com/overdrive/app/storage/StorageManager.java#L100).
-- Auth and secret handling: [AuthManager.java:50](../app/src/main/java/com/overdrive/app/auth/AuthManager.java#L50), [AuthMiddleware.java:133](../app/src/main/java/com/overdrive/app/server/AuthMiddleware.java#L133), [SecretConfigStore.kt:22](../app/src/main/java/com/overdrive/app/config/SecretConfigStore.kt#L22), [UnifiedConfigManager.kt:559](../app/src/main/java/com/overdrive/app/config/UnifiedConfigManager.kt#L559).
+- Documentation map entry points: [CameraDaemon.java:35](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L35), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100).
+- Important defaults: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350), [ProxyConfiguration.kt:29](../app/src/main/java/com/loabletech/bladewatch/daemon/proxy/ProxyConfiguration.kt#L29), [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100).
+- Auth and secret handling: [AuthManager.java:50](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L50), [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [UnifiedConfigManager.kt:559](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L559).

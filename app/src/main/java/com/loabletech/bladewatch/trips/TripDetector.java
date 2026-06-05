@@ -1,10 +1,10 @@
-package com.overdrive.app.trips;
+package com.loabletech.bladewatch.trips;
 
-import com.overdrive.app.logging.DaemonLogger;
-import com.overdrive.app.monitor.BatterySocData;
-import com.overdrive.app.monitor.GearMonitor;
-import com.overdrive.app.monitor.GpsMonitor;
-import com.overdrive.app.monitor.VehicleDataMonitor;
+import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.BatterySocData;
+import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.monitor.GpsMonitor;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;

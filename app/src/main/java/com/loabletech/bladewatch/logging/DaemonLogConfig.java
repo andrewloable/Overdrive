@@ -1,6 +1,6 @@
-package com.overdrive.app.logging;
+package com.loabletech.bladewatch.logging;
 
-import com.overdrive.app.BuildConfig;
+import com.loabletech.bladewatch.BuildConfig;
 
 import java.util.HashSet;
 import java.util.Set;

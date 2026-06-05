@@ -1,13 +1,13 @@
-package com.overdrive.app.telegram;
+package com.loabletech.bladewatch.telegram;
 
 import android.util.Log;
 
-import com.overdrive.app.server.Messages;
-import com.overdrive.app.telegram.event.CriticalEvent;
-import com.overdrive.app.telegram.event.MotionEvent;
-import com.overdrive.app.telegram.event.TelegramEventBus;
-import com.overdrive.app.telegram.event.TunnelEvent;
-import com.overdrive.app.telegram.event.VideoEvent;
+import com.loabletech.bladewatch.server.Messages;
+import com.loabletech.bladewatch.telegram.event.CriticalEvent;
+import com.loabletech.bladewatch.telegram.event.MotionEvent;
+import com.loabletech.bladewatch.telegram.event.TelegramEventBus;
+import com.loabletech.bladewatch.telegram.event.TunnelEvent;
+import com.loabletech.bladewatch.telegram.event.VideoEvent;
 
 import org.json.JSONObject;
 
