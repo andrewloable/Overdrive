@@ -42,6 +42,10 @@ class ZrokLauncher(
         
         // Unique name file - stores the generated unique name
         private const val ZROK_UNIQUE_NAME_FILE = "/data/local/tmp/.zrok/unique_name"
+        private const val SECRET_SECTION_ZROK = "zrok"
+        private const val SECRET_KEY_ENABLE_TOKEN = "enableToken"
+        private const val SECRET_KEY_RESERVED_TOKEN = "reservedToken"
+        private const val SECRET_KEY_UNIQUE_NAME = "uniqueName"
         
         // Process name for identification
         private const val ZROK_PROCESS = "zrok"
@@ -63,6 +67,12 @@ class ZrokLauncher(
         
         // Prefix for unique name generation (no hyphens allowed!)
         private const val UNIQUE_NAME_PREFIX = "overdrive"
+
+        private fun isValidUniqueName(name: String?): Boolean {
+            return !name.isNullOrEmpty()
+                    && name.startsWith(UNIQUE_NAME_PREFIX)
+                    && name.matches(Regex("^[a-z0-9]{4,32}$"))
+        }
         
         // Proxy settings for sing-box (socks5 for zrok)
         private const val PROXY_HOST = "127.0.0.1"
@@ -302,7 +312,7 @@ class ZrokLauncher(
     }
     
     fun saveReservedToken(token: String) {
-        if (SecretConfigBridge.putString("zrok", "reservedToken", token)) {
+        if (SecretConfigBridge.putString(SECRET_SECTION_ZROK, SECRET_KEY_RESERVED_TOKEN, token)) {
             logManager.info(TAG, "Reserved token saved to secret store")
         } else {
             logManager.warn(TAG, "Failed to save reserved token to secret store")
@@ -313,13 +323,22 @@ class ZrokLauncher(
      * Load saved reserved token from file.
      */
     fun loadReservedToken(callback: (String?) -> Unit) {
-        val token = SecretConfigBridge.getString("zrok", "reservedToken")
+        val token = SecretConfigBridge.getString(SECRET_SECTION_ZROK, SECRET_KEY_RESERVED_TOKEN)
         if (!token.isNullOrEmpty()) {
             reservedShareToken = token
             callback(token)
         } else {
             callback(null)
         }
+    }
+
+    fun rememberUniqueName(name: String) {
+        if (!isValidUniqueName(name)) {
+            logManager.warn(TAG, "Ignoring invalid zrok unique name: $name")
+            return
+        }
+        uniqueName = name
+        saveUniqueName(name)
     }
     
     private fun checkAndInstallZrokForReserved(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
@@ -604,6 +623,20 @@ class ZrokLauncher(
             )
         }, 1, java.util.concurrent.TimeUnit.SECONDS)
     }
+
+    private fun persistUniqueNameFromUrlIfReserved(url: String) {
+        val hasReservedToken = reservedShareToken != null
+                || !SecretConfigBridge.getString(SECRET_SECTION_ZROK, SECRET_KEY_RESERVED_TOKEN).isNullOrEmpty()
+        if (!hasReservedToken) return
+
+        val match = Regex("^https://([a-z0-9]+)\\.share\\.zrok\\.io$").find(url.trim()) ?: return
+        val actualName = match.groupValues[1]
+        if (isValidUniqueName(actualName) && actualName != uniqueName) {
+            logManager.info(TAG, "Persisting reserved zrok unique name from running tunnel")
+            uniqueName = actualName
+            saveUniqueName(actualName)
+        }
+    }
     
     /**
      * Kill cloudflared if running (mutual exclusion).
@@ -744,14 +777,20 @@ class ZrokLauncher(
     }
     
     private fun loadSavedUniqueName(callback: (String?) -> Unit) {
+        val secretName = SecretConfigBridge.getString(SECRET_SECTION_ZROK, SECRET_KEY_UNIQUE_NAME)?.trim()
+        if (isValidUniqueName(secretName)) {
+            callback(secretName)
+            return
+        }
+
         adbShellExecutor.execute(
             command = "cat $ZROK_UNIQUE_NAME_FILE 2>/dev/null",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
                     val name = output.trim()
                     // Must be lowercase alphanumeric, 4-32 chars, starting with "overdrive"
-                    if (name.isNotEmpty() && !name.contains("No such file") && 
-                        name.startsWith("overdrive") && name.matches(Regex("^[a-z0-9]{4,32}$"))) {
+                    if (isValidUniqueName(name) && !name.contains("No such file")) {
+                        SecretConfigBridge.putString(SECRET_SECTION_ZROK, SECRET_KEY_UNIQUE_NAME, name)
                         callback(name)
                     } else {
                         callback(null)
@@ -765,6 +804,13 @@ class ZrokLauncher(
     }
     
     private fun saveUniqueName(name: String) {
+        if (!isValidUniqueName(name)) {
+            logManager.warn(TAG, "Refusing invalid zrok unique name: $name")
+            return
+        }
+        if (!SecretConfigBridge.putString(SECRET_SECTION_ZROK, SECRET_KEY_UNIQUE_NAME, name)) {
+            logManager.warn(TAG, "Failed to save unique name to secret store")
+        }
         adbShellExecutor.execute(
             command = "mkdir -p /data/local/tmp/.zrok && echo '$name' > $ZROK_UNIQUE_NAME_FILE",
             callback = object : AdbShellExecutor.ShellCallback {
@@ -1260,6 +1306,7 @@ class ZrokLauncher(
                     val url = output.trim()
                     if (url.isNotEmpty() && url.startsWith("https://")) {
                         logManager.info(TAG, "Found tunnel URL: $url")
+                        persistUniqueNameFromUrlIfReserved(url)
                         callback(url)
                     } else {
                         logManager.debug(TAG, "No tunnel URL found in log")
@@ -1329,7 +1376,7 @@ class ZrokLauncher(
             callback?.invoke(false)
             return
         }
-        val ok = SecretConfigBridge.putString("zrok", "enableToken", trimmedToken)
+        val ok = SecretConfigBridge.putString(SECRET_SECTION_ZROK, SECRET_KEY_ENABLE_TOKEN, trimmedToken)
         if (ok) {
             zrokToken = trimmedToken
             tokenLoaded = true
@@ -1345,7 +1392,7 @@ class ZrokLauncher(
      * Returns the token via callback, or null if not found.
      */
     fun loadEnableToken(callback: (String?) -> Unit) {
-        val token = SecretConfigBridge.getString("zrok", "enableToken")
+        val token = SecretConfigBridge.getString(SECRET_SECTION_ZROK, SECRET_KEY_ENABLE_TOKEN)
         if (!token.isNullOrEmpty()) {
             zrokToken = token
             tokenLoaded = true
@@ -1370,9 +1417,10 @@ class ZrokLauncher(
      * different account is incoherent. Kill the entire ~/.zrok directory.
      */
     fun deleteEnableToken(callback: ((Boolean) -> Unit)? = null) {
-        val secretOk = SecretConfigBridge.delete("zrok", "enableToken")
-        val reservedOk = SecretConfigBridge.delete("zrok", "reservedToken")
-        if (secretOk && reservedOk) {
+        val secretOk = SecretConfigBridge.delete(SECRET_SECTION_ZROK, SECRET_KEY_ENABLE_TOKEN)
+        val reservedOk = SecretConfigBridge.delete(SECRET_SECTION_ZROK, SECRET_KEY_RESERVED_TOKEN)
+        val nameOk = SecretConfigBridge.delete(SECRET_SECTION_ZROK, SECRET_KEY_UNIQUE_NAME)
+        if (secretOk && reservedOk && nameOk) {
             zrokToken = ""
             tokenLoaded = false
             reservedShareToken = null
@@ -1384,7 +1432,7 @@ class ZrokLauncher(
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
                     logManager.info(TAG, "Zrok state wiped (token, identity, reserved share, unique name)")
-                    callback?.invoke(secretOk && reservedOk)
+                    callback?.invoke(secretOk && reservedOk && nameOk)
                 }
                 override fun onError(error: String) {
                     logManager.warn(TAG, "Failed to wipe zrok state: $error")
@@ -1398,7 +1446,7 @@ class ZrokLauncher(
      * Check if enable token exists in the secret store.
      */
     fun hasEnableToken(callback: (Boolean) -> Unit) {
-        callback(!SecretConfigBridge.getString("zrok", "enableToken").isNullOrEmpty())
+        callback(!SecretConfigBridge.getString(SECRET_SECTION_ZROK, SECRET_KEY_ENABLE_TOKEN).isNullOrEmpty())
     }
     
     /**

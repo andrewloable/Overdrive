@@ -53,6 +53,7 @@ public class CameraDaemon {
     public static final int TCP_PORT = 19876;
     public static final int HTTP_PORT = 8080;
     public static String STREAM_DIR() { return PATH_CAMERA_STREAM_DIR(); }
+    public static final String APP_FILES_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files";
     public static final String APP_STREAM_DIR = "/storage/emulated/0/Android/data/com.overdrive.app/files/stream";
     
     // Recording config (full quality)
@@ -2857,8 +2858,64 @@ public class CameraDaemon {
     private static void generateDeviceId() {
         // FIRST: Try to read from shared file (written by app with context)
         // This ensures daemon uses the same ID as the app
+        String persistentId = readDeviceIdFromFile(new File(APP_FILES_DIR, ".overdrive_device_id"));
+        if (persistentId != null) {
+            deviceId = persistentId;
+            saveDeviceId(deviceId);
+            log("Device ID loaded from persistent file: " + deviceId);
+            return;
+        }
+
+        String legacyId = readDeviceIdFromFile(new File(PATH_DEVICE_ID_FILE()));
+        if (legacyId != null) {
+            deviceId = legacyId;
+            saveDeviceId(deviceId);
+            log("Device ID migrated from legacy file: " + deviceId);
+            return;
+        }
+        
+        // Fallback: use serial number hash. Android O+ moved this behind
+        // Build.getSerial(); older BYD builds still expose Build.SERIAL.
         try {
-            File idFile = new File(PATH_DEVICE_ID_FILE());
+            String serial;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                serial = android.os.Build.getSerial();
+            } else {
+                @SuppressWarnings("deprecation")
+                String legacySerial = android.os.Build.SERIAL;
+                serial = legacySerial;
+            }
+            if (serial != null && !serial.equals("unknown")) {
+                deviceId = stableDeviceId(serial);
+                saveDeviceId(deviceId);
+                log("Device ID generated from serial: " + deviceId);
+                return;
+            }
+        } catch (Exception e) {
+            log("WARN: Could not get serial: " + e.getMessage());
+        }
+        
+        // Fallback: use build fingerprint hash
+        try {
+            String fingerprint = android.os.Build.FINGERPRINT;
+            if (fingerprint != null && !fingerprint.isEmpty()) {
+                deviceId = stableDeviceId(fingerprint);
+                saveDeviceId(deviceId);
+                log("Device ID generated from fingerprint: " + deviceId);
+                return;
+            }
+        } catch (Exception e) {
+            log("WARN: Could not get fingerprint: " + e.getMessage());
+        }
+        
+        // Last resort: generate random ID
+        deviceId = "byd-" + Long.toHexString(System.currentTimeMillis()).substring(4);
+        saveDeviceId(deviceId);
+        log("Device ID generated randomly: " + deviceId);
+    }
+
+    private static String readDeviceIdFromFile(File idFile) {
+        try {
             if (idFile.exists()) {
                 // Self-heal for older installs: the legacy saveDeviceId()
                 // didn't chmod the file, leaving it at the shell-UID-only
@@ -2877,75 +2934,37 @@ public class CameraDaemon {
                 String fileId = reader.readLine();
                 reader.close();
                 if (fileId != null && !fileId.isEmpty() && fileId.startsWith("byd-")) {
-                    deviceId = fileId;
-                    log("Device ID loaded from file: " + deviceId);
-                    return;
+                    return fileId;
                 }
             }
         } catch (Exception e) {
             log("WARN: Could not read device ID from file: " + e.getMessage());
         }
-        
-        // Fallback: use serial number hash. Android O+ moved this behind
-        // Build.getSerial(); older BYD builds still expose Build.SERIAL.
-        try {
-            String serial;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                serial = android.os.Build.getSerial();
-            } else {
-                @SuppressWarnings("deprecation")
-                String legacySerial = android.os.Build.SERIAL;
-                serial = legacySerial;
-            }
-            if (serial != null && !serial.equals("unknown")) {
-                deviceId = "byd-" + Integer.toHexString(serial.hashCode()).substring(0, 8);
-                saveDeviceId(deviceId);
-                log("Device ID generated from serial: " + deviceId);
-                return;
-            }
-        } catch (Exception e) {
-            log("WARN: Could not get serial: " + e.getMessage());
-        }
-        
-        // Fallback: use build fingerprint hash
-        try {
-            String fingerprint = android.os.Build.FINGERPRINT;
-            if (fingerprint != null && !fingerprint.isEmpty()) {
-                deviceId = "byd-" + Integer.toHexString(fingerprint.hashCode()).substring(0, 8);
-                saveDeviceId(deviceId);
-                log("Device ID generated from fingerprint: " + deviceId);
-                return;
-            }
-        } catch (Exception e) {
-            log("WARN: Could not get fingerprint: " + e.getMessage());
-        }
-        
-        // Last resort: generate random ID
-        deviceId = "byd-" + Long.toHexString(System.currentTimeMillis()).substring(4);
-        saveDeviceId(deviceId);
-        log("Device ID generated randomly: " + deviceId);
+        return null;
+    }
+
+    private static String stableDeviceId(String source) {
+        return "byd-" + String.format(java.util.Locale.US, "%08x", source.hashCode());
     }
     
     private static void saveDeviceId(String id) {
         try {
-            File idFile = new File(PATH_DEVICE_ID_FILE());
-            java.io.FileWriter writer = new java.io.FileWriter(idFile);
-            writer.write(id);
-            writer.close();
-            // Files created in /data/local/tmp by the shell-UID daemon land
-            // at mode 0600 owned by shell. The app UID can't read them at
-            // that mode, so CredentialCipher.readDid() falls through to the
-            // "overdrive-default-device" sentinel and derives a different
-            // AES key — every encrypted credential (telegram bot token,
-            // BYD-cloud password) decodes to "" in the app process.
-            // Set world-readable so both UIDs read the same DID and derive
-            // the same key. setWritable too so the app can update the DID
-            // if a future migration ever needs to.
-            idFile.setReadable(true, false);
-            idFile.setWritable(true, false);
+            saveDeviceIdFile(new File(APP_FILES_DIR, ".overdrive_device_id"), id);
+            saveDeviceIdFile(new File("/data/local/tmp/.overdrive_device_id"), id);
+            saveDeviceIdFile(new File(PATH_DEVICE_ID_FILE()), id);
         } catch (Exception e) {
             log("WARN: Could not save device ID to file: " + e.getMessage());
         }
+    }
+
+    private static void saveDeviceIdFile(File idFile, String id) throws Exception {
+        File parent = idFile.getParentFile();
+        if (parent != null && !parent.exists()) parent.mkdirs();
+        java.io.FileWriter writer = new java.io.FileWriter(idFile);
+        writer.write(id);
+        writer.close();
+        idFile.setReadable(true, false);
+        idFile.setWritable(true, false);
     }
     
     private static void parseArguments(String[] args) {
