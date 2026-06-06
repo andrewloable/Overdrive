@@ -72,6 +72,58 @@ bd update <id> --claim --json
 bd update bd-42 --priority 1 --json
 ```
 
+### Writing Task Descriptions (CRITICAL)
+
+Every task you create will likely be implemented by a **different, low-context agentic AI model** that has NONE of the context you have right now. The implementing agent sees ONLY the description — not this conversation, not the files you just read, not the reasoning in your head. A thin description guarantees the implementing agent will guess, drift, and make mistakes.
+
+**Therefore: put EVERYTHING needed for implementation into the `--description`. Assume the implementer knows nothing.**
+
+Every description you write MUST contain these sections, in order:
+
+1. **Context / Problem** — What is broken or missing, and *why* this task exists. State the symptom and the root cause if known.
+2. **Exact file paths and locations** — Full paths (e.g. `app/src/main/java/com/loabletech/bladewatch/...`), class names, function names, and line numbers where the work happens. Never say "the auth file" — name it.
+3. **What to do** — Concrete, step-by-step implementation instructions. Include the current code and the intended code where helpful.
+4. **What NOT to do / Constraints** — Patterns to preserve, files that must not change, project rules (e.g. BYD SDK stub pattern, `127.0.0.1` binding, no logging of secrets, do not auto-commit).
+5. **Acceptance criteria** — ALWAYS REQUIRED. A checklist of objectively verifiable conditions that prove the task is done (e.g. "build passes", "button reverts to X after failed delete", "unit test Y added and green"). The implementing agent uses this to self-verify.
+6. **A literal warning to be careful.** ALWAYS end the description with: *"Do not make mistakes. Read the referenced files fully before editing. Verify the build compiles and all acceptance criteria pass before closing. If anything is ambiguous, stop and ask rather than guessing."*
+
+**Rules:**
+
+- ✅ Self-contained: the description alone is enough to implement correctly with zero outside context.
+- ✅ Specific: real paths, real names, real line numbers, real commands.
+- ✅ Always include acceptance criteria — no exceptions.
+- ✅ Always include the "do not make mistakes / verify before closing" warning.
+- ❌ Do NOT rely on conversational context, prior messages, or "you know what I mean."
+- ❌ Do NOT write vague descriptions like "fix the bug in live view" — name the file, the symptom, the fix, and how to verify it.
+
+**Use `--acceptance` and `--validate` to enforce this:**
+
+```bash
+bd create "fix: deleteArmed not reset after failed delete" \
+  --description="## Context
+deleteSelectedTrip() in web/app/src/app/app.ts (~line 494) only resets deleteArmed on the success path. If deleteTrip() throws, the catch block calls applyRouteError but never resets deleteArmed, leaving the button stuck on 'Confirm delete?'.
+
+## File
+web/app/src/app/app.ts — deleteSelectedTrip(), catch block ~line 494
+
+## What to do
+Add this.deleteArmed.set(false) inside the catch block, after applyRouteError(error).
+
+## Constraints
+Do not change the success-path logic. Do not touch navigate() or loadTripDetail().
+
+## Acceptance criteria
+- After a simulated failed delete (network throttle / killed gateway), the button reverts to 'Delete selected' and the warning paragraph disappears.
+- A subsequent delete requires two clicks again (re-arm).
+- npm run build passes.
+
+Do not make mistakes. Read the referenced files fully before editing. Verify the build compiles and all acceptance criteria pass before closing. If anything is ambiguous, stop and ask rather than guessing." \
+  --acceptance="Button reverts after failed delete; re-arm required; build passes" \
+  -t bug -p 2 --validate --json
+```
+
+Run `bd lint` to catch issues missing required sections.
+
 **Complete work:**
 
 ```bash
