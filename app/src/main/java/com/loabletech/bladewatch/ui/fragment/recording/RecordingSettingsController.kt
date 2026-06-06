@@ -37,6 +37,11 @@ class RecordingSettingsController(private val context: Context) {
     private var dirty = false
     private var loadedOnce = false
 
+    // Format drive state
+    private var formatConfirmPending = false
+    private var formatRunning = false
+    private var formatResultMessage: String? = null
+
     init { buildView(); loadData() }
 
     val view: View get() = root
@@ -137,6 +142,9 @@ class RecordingSettingsController(private val context: Context) {
     // ─────────────────────────── RENDER ──────────────────────────────────
 
     private fun renderCurrentTab() {
+        if (activeTab != RecordingSettingsTab.STORAGE) {
+            formatConfirmPending = false; formatRunning = false; formatResultMessage = null
+        }
         applyTheme(); updateTabs()
         contentArea.removeAllViews()
         when (val state = loadedState) {
@@ -309,6 +317,109 @@ class RecordingSettingsController(private val context: Context) {
         contentArea.addView(card)
         contentArea.addView(spacer(dp(12)))
         contentArea.addView(buildApplyButton())
+
+        if (sdAvail) {
+            contentArea.addView(spacer(dp(12)))
+            contentArea.addView(buildFormatCard())
+        }
+    }
+
+    // ─────────────────────────── FORMAT ──────────────────────────────────
+
+    private fun buildFormatCard(): android.view.View {
+        val card = makeCard()
+        card.background = GradientDrawable().apply {
+            setColor(if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE)
+            cornerRadius = dp(8).toFloat()
+            setStroke(dp(1), Color.parseColor("#FF5722"))
+        }
+        card.addView(sectionLabel("Format External Drive"))
+        card.addView(spacer(dp(6)))
+        card.addView(fieldLabel("Permanently erases ALL data on the SD card or USB drive."))
+        card.addView(spacer(dp(12)))
+
+        when {
+            formatResultMessage != null -> {
+                val isError = formatResultMessage!!.startsWith("Error") || formatResultMessage!!.contains("failed")
+                card.addView(TextView(context).apply {
+                    text = formatResultMessage
+                    textSize = 13f
+                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                })
+                card.addView(spacer(dp(8)))
+                card.addView(TextView(context).apply {
+                    text = "Dismiss"
+                    textSize = 13f; gravity = android.view.Gravity.CENTER
+                    setTextColor(mutedTextColor())
+                    setPadding(0, dp(4), 0, dp(4))
+                    setOnClickListener { formatResultMessage = null; renderCurrentTab() }
+                })
+            }
+            formatRunning -> {
+                card.addView(centeredText("Formatting… please wait", 13f))
+            }
+            formatConfirmPending -> {
+                card.addView(TextView(context).apply {
+                    text = "Tap again — ALL data will be ERASED"
+                    textSize = 13f; gravity = android.view.Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    background = pill(Color.parseColor("#F44336"))
+                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    setOnClickListener { executeFormat() }
+                })
+                card.addView(spacer(dp(8)))
+                card.addView(TextView(context).apply {
+                    text = "Cancel"
+                    textSize = 13f; gravity = android.view.Gravity.CENTER
+                    setTextColor(mutedTextColor())
+                    setPadding(0, dp(6), 0, dp(2))
+                    setOnClickListener { formatConfirmPending = false; renderCurrentTab() }
+                })
+            }
+            else -> {
+                card.addView(TextView(context).apply {
+                    text = "Format SD Card / USB"
+                    textSize = 13f; gravity = android.view.Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    background = pill(Color.parseColor("#FF5722"))
+                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    setOnClickListener { formatConfirmPending = true; renderCurrentTab() }
+                })
+            }
+        }
+        return card
+    }
+
+    private fun executeFormat() {
+        formatConfirmPending = false
+        formatRunning = true
+        renderCurrentTab()
+        Thread({
+            val volumes = client.listFormattableVolumes()
+            val first = volumes.firstOrNull()
+            if (first == null) {
+                root.post {
+                    formatRunning = false
+                    formatResultMessage = "Error: No removable drive found"
+                    renderCurrentTab()
+                }
+                return@Thread
+            }
+            val result = client.formatVolume(first.volumeId)
+            root.post {
+                formatRunning = false
+                formatResultMessage = if (result.success) {
+                    "Formatted successfully. New path: ${result.mountPath ?: "unknown"}"
+                } else {
+                    "Error: ${result.message}"
+                }
+                loadData()
+            }
+        }, "FormatDrive").apply { isDaemon = true; start() }
     }
 
     // ─────────────────────────── APPLY ───────────────────────────────────

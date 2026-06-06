@@ -6,6 +6,9 @@ import java.net.HttpURLConnection
 import java.net.Proxy
 import java.net.URL
 
+internal data class FormattableVolume(val volumeId: String, val uuid: String?, val mountPath: String?)
+internal data class FormatDriveResult(val success: Boolean, val message: String, val mountPath: String?)
+
 internal class RecordingSettingsClient {
 
     fun fetchStatus(): RecordingStatus? {
@@ -72,6 +75,45 @@ internal class RecordingSettingsClient {
             put("recordingsLimitMb", limitMb)
         }.toString()
         return httpPost("/api/settings/storage", body, jwt) == 200
+    }
+
+    fun listFormattableVolumes(): List<FormattableVolume> {
+        val jwt = getJwt() ?: return emptyList()
+        val json = httpGet("/api/storage/format", jwt) ?: return emptyList()
+        val arr = json.optJSONArray("volumes") ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val v = arr.optJSONObject(i) ?: return@mapNotNull null
+            if (!v.optBoolean("mounted", false)) return@mapNotNull null
+            FormattableVolume(
+                volumeId = v.optString("volumeId"),
+                uuid = v.optString("uuid").takeIf { it != "null" && it.isNotEmpty() },
+                mountPath = v.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
+            )
+        }
+    }
+
+    fun formatVolume(volumeId: String): FormatDriveResult {
+        val jwt = getJwt() ?: return FormatDriveResult(false, "Not authenticated", null)
+        val body = JSONObject().apply { put("volumeId", volumeId) }.toString()
+        return runCatching {
+            val conn = java.net.URL("http://127.0.0.1:8080/api/storage/format")
+                .openConnection(java.net.Proxy.NO_PROXY) as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 60_000  // format can take up to 30s
+            conn.outputStream.use { it.write(body.toByteArray()) }
+            val responseBody = try { conn.inputStream.bufferedReader().readText() }
+                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
+            val json = JSONObject(responseBody)
+            FormatDriveResult(
+                success = json.optBoolean("success", false),
+                message = json.optString("message", json.optString("error", "Unknown result")),
+                mountPath = json.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
+            )
+        }.getOrElse { e -> FormatDriveResult(false, e.message ?: "Network error", null) }
     }
 
     private fun getJwt(): String? = runCatching {

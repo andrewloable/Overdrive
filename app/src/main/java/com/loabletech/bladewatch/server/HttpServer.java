@@ -617,6 +617,11 @@ public class HttpServer {
             return PerformanceApiHandler.handle(method, path, body, out);
         }
         
+        // Format Storage API (reformat SD card / USB drive)
+        if (path.equals("/api/storage/format")) {
+            return FormatStorageApiHandler.handle(path, method, body, out);
+        }
+
         // External Storage API (SD card and CDR cleanup)
         if (path.startsWith("/api/storage/external")) {
             return ExternalStorageApiHandler.handle(path, method, body, out);
