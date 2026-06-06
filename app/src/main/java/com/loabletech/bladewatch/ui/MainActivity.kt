@@ -720,6 +720,8 @@ class MainActivity : AppCompatActivity() {
                 R.drawable.ic_vehicle_control, R.string.rail_vehicle),
             RailItem(R.id.railDestTrips, R.id.tripsFragment,
                 R.drawable.ic_trips, R.string.rail_trips),
+            RailItem(R.id.railDestLocation, R.id.locationFragment,
+                R.drawable.ic_location, R.string.rail_location),
             RailItem(R.id.railDestDiagnostics, R.id.diagnosticsFragment,
                 R.drawable.ic_diagnostics, R.string.rail_diagnostics),
             RailItem(R.id.railDestSettings, R.id.settingsFragment,

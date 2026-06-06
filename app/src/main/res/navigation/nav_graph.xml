@@ -55,6 +55,12 @@
             android:defaultValue="/recording" />
     </fragment>
 
+    <!-- Location: current car position on an OSMDroid map with GPS state machine -->
+    <fragment
+        android:id="@+id/locationFragment"
+        android:name="net.bladewatch.app.ui.fragment.LocationFragment"
+        android:label="@string/rail_location" />
+
     <!-- Vehicle (web canonical) -->
     <fragment
         android:id="@+id/vehicleControlFragment"

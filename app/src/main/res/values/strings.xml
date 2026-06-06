@@ -479,6 +479,7 @@
     <string name="rail_recordings">Recordings</string>
     <string name="rail_vehicle">Vehicle</string>
     <string name="rail_trips">Trips</string>
+    <string name="rail_location">Location</string>
     <string name="rail_diagnostics">Diagnostics</string>
     <string name="rail_settings">Settings</string>
 

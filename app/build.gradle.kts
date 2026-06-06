@@ -430,6 +430,9 @@ dependencies {
     
     // QR Code generation
     implementation(libs.zxing.core)
+
+    // OSMDroid map tiles for the Location screen
+    implementation(libs.osmdroid.android)
     
     // RTMP streaming client for pushing to MediaMTX
     implementation(libs.rtmp.client)

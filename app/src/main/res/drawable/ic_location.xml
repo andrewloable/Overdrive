@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded: location_on (24px, weight 400, fill 1) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <group
+        android:scaleX="0.025"
+        android:scaleY="0.025"
+        android:translateY="24">
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M480-120L343-257q-54-52-93.5-109T192-476q-11-45-11.5-90.5T192-658q26-112 115-187T480-920q117 0 208.5 73T800-662q6 44 5 90t-13 91q-14 52-53 109t-93 110L480-120Zm0-280q33 0 56.5-23.5T560-480q0-33-23.5-56.5T480-560q-33 0-56.5 23.5T400-480q0 33 23.5 56.5T480-400Zm0 360Z"/>
+    </group>
+</vector>
