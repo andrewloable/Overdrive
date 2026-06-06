@@ -119,6 +119,14 @@
     <string name="dashboard_access_code">Access Code</string>
     <string name="dashboard_token_masked">••••••••</string>
     <string name="dashboard_regenerate_token">Regenerate Token</string>
+    <string name="dashboard_set_password">Set Password</string>
+    <string name="cd_set_password">Set custom password</string>
+    <string name="dialog_set_password_title">Set Custom Password</string>
+    <string name="dialog_set_password_message">Enter a new access password. This replaces the auto-generated token.</string>
+    <string name="dialog_set_password_hint">New password (min 4 characters)</string>
+    <string name="toast_password_set">Password updated</string>
+    <string name="toast_password_too_short">Password must be at least 4 characters</string>
+    <string name="toast_password_save_failed">Failed to save password — daemon not ready</string>
 
     <!-- fragment_recording_controls -->
 

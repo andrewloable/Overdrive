@@ -343,6 +343,46 @@ public class AuthManager {
         return state.getDeviceToken();
     }
 
+    /**
+     * Set a user-provided custom secret (password). Caller must validate
+     * minimum length before calling. Returns the new full device token, or
+     * null if persistence failed.
+     */
+    public static synchronized String setCustomSecret(String customSecret) {
+        if (customSecret == null || customSecret.isEmpty()) return null;
+        AuthState state = getState();
+        if (state == null) {
+            state = new AuthState();
+            state.deviceId = loadDeviceId();
+        } else {
+            AuthState fresh = new AuthState();
+            fresh.deviceId = state.deviceId;
+            fresh.lastAccess = state.lastAccess;
+            fresh.tokenEpoch = state.tokenEpoch;
+            state = fresh;
+        }
+        state.deviceSecret = customSecret;
+        state.tokenEpoch = state.tokenEpoch + 1;
+
+        if (testStateOverride != null) {
+            testStateOverride = state;
+            cachedState = state;
+            stateVersion++;
+            return state.getDeviceToken();
+        }
+
+        boolean persisted = writeToConfig(state);
+        if (!persisted) {
+            log("ERROR: setCustomSecret failed to persist — keeping previous state");
+            return null;
+        }
+        cachedState = state;
+        cachedConfigMtime = UnifiedConfigManager.getLastModified();
+        stateVersion++;
+        log("Custom secret set by user");
+        return state.getDeviceToken();
+    }
+
     // ==================== JWT MANAGEMENT ====================
 
     /**

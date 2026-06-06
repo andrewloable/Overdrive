@@ -200,10 +200,12 @@
                     android:orientation="vertical">
 
                     <FrameLayout
+                        android:id="@+id/qrCodeContainer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="?attr/colorSurfaceContainerLowest"
-                        android:padding="12dp">
+                        android:padding="12dp"
+                        android:visibility="gone">
 
                         <ImageView
                             android:id="@+id/ivQrCode"
@@ -298,15 +300,31 @@
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRegenerateToken"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:layout_marginTop="8dp"
-                    android:layout_gravity="end"
-                    android:text="@string/dashboard_regenerate_token"
-                    android:textAllCaps="false" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end"
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSetPassword"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="4dp"
+                        android:contentDescription="@string/cd_set_password"
+                        android:text="@string/dashboard_set_password"
+                        android:textAllCaps="false" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRegenerateToken"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="@string/dashboard_regenerate_token"
+                        android:textAllCaps="false" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

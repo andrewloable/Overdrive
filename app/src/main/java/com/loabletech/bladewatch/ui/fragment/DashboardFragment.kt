@@ -79,6 +79,7 @@ class DashboardFragment : Fragment() {
 
     // Connect card
     private lateinit var ivQrCode: ImageView
+    private lateinit var qrCodeContainer: View
     private lateinit var tvQrPlaceholder: TextView
     private lateinit var tvUrl: TextView
     private lateinit var tvDeviceId: TextView
@@ -90,6 +91,7 @@ class DashboardFragment : Fragment() {
     private lateinit var btnToggleToken: ImageView
     private lateinit var btnCopyToken: ImageView
     private lateinit var btnRegenerateToken: MaterialButton
+    private lateinit var btnSetPassword: MaterialButton
     private var isTokenVisible = false
 
     // Quick-action tiles (cards now, not buttons — they share dimensions
@@ -228,6 +230,7 @@ class DashboardFragment : Fragment() {
         tvDaemonsStatus = view.findViewById(R.id.tvDaemonsStatus)
 
         ivQrCode = view.findViewById(R.id.ivQrCode)
+        qrCodeContainer = view.findViewById(R.id.qrCodeContainer)
         tvQrPlaceholder = view.findViewById(R.id.tvQrPlaceholder)
         tvUrl = view.findViewById(R.id.tvUrl)
         tvDeviceId = view.findViewById(R.id.tvDeviceId)
@@ -237,6 +240,7 @@ class DashboardFragment : Fragment() {
         btnToggleToken = view.findViewById(R.id.btnToggleToken)
         btnCopyToken = view.findViewById(R.id.btnCopyToken)
         btnRegenerateToken = view.findViewById(R.id.btnRegenerateToken)
+        btnSetPassword = view.findViewById(R.id.btnSetPassword)
 
         quickLive = view.findViewById(R.id.quickLive)
 
@@ -267,6 +271,7 @@ class DashboardFragment : Fragment() {
         btnToggleToken.setOnClickListener { toggleTokenVisibility() }
         btnCopyToken.setOnClickListener { copyTokenToClipboard() }
         btnRegenerateToken.setOnClickListener { showRegenerateConfirmation() }
+        btnSetPassword.setOnClickListener { showSetPasswordDialog() }
     }
 
     private fun observeViewModels() {
@@ -310,7 +315,17 @@ class DashboardFragment : Fragment() {
      * Lazy-tolerates absent chips (landscape variant has no hero chips).
      */
     private fun refreshHeroChips() {
-        heroChipTunnel?.text = metricTunnelValue.text
+        // Only show the tunnel chip when the tunnel is actually Online.
+        // Showing "Connecting..." or "Offline" adds noise without actionable info.
+        val tunnelOnline = !daemonsViewModel.zrokController.tunnelUrl.value.isNullOrEmpty()
+        heroChipTunnel?.let { chip ->
+            if (tunnelOnline) {
+                chip.text = getString(R.string.dashboard_tunnel_online)
+                chip.visibility = View.VISIBLE
+            } else {
+                chip.visibility = View.GONE
+            }
+        }
         heroChipServices?.text = tvDaemonsStatus.text
         val recording = recordingViewModel.isRecording.value == true
         heroChipRecording?.text = if (recording) {
@@ -698,6 +713,7 @@ class DashboardFragment : Fragment() {
         try {
             val qrBitmap = QrCodeGenerator.generate(url, 400)
             if (qrBitmap != null) {
+                qrCodeContainer.visibility = View.VISIBLE
                 ivQrCode.setImageBitmap(qrBitmap)
                 ivQrCode.visibility = View.VISIBLE
                 tvQrPlaceholder.visibility = View.GONE
@@ -712,10 +728,26 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showPlaceholder() {
-        ivQrCode.setImageDrawable(null)
-        ivQrCode.visibility = View.VISIBLE
-        tvQrPlaceholder.visibility = View.VISIBLE
-        tvQrPlaceholder.text = getTunnelPlaceholderText()
+        val states = daemonsViewModel.daemonStates.value
+        val zrokState = states?.get(DaemonType.ZROK_TUNNEL)
+        val tunnelActive = zrokState?.status == DaemonStatus.STARTING ||
+                zrokState?.status == DaemonStatus.RUNNING
+        if (tunnelActive) {
+            // Tunnel is starting/waiting — show the QR frame with placeholder text.
+            qrCodeContainer.visibility = View.VISIBLE
+            ivQrCode.setImageDrawable(null)
+            ivQrCode.visibility = View.VISIBLE
+            tvQrPlaceholder.visibility = View.VISIBLE
+            tvQrPlaceholder.text = if (zrokState?.status == DaemonStatus.STARTING)
+                getString(R.string.dashboard_starting_zrok) else getString(R.string.dashboard_waiting_url)
+        } else {
+            // No tunnel running — hide the QR box entirely and show status text.
+            qrCodeContainer.visibility = View.GONE
+            ivQrCode.setImageDrawable(null)
+            ivQrCode.visibility = View.GONE
+            tvQrPlaceholder.visibility = View.VISIBLE
+            tvQrPlaceholder.text = getString(R.string.dashboard_no_tunnel)
+        }
         tvUrl.visibility = View.GONE
     }
 
@@ -798,6 +830,61 @@ class DashboardFragment : Fragment() {
             .setPositiveButton(getString(R.string.dialog_regenerate)) { _, _ -> regenerateToken() }
             .setNegativeButton(getString(R.string.action_cancel), null)
             .show()
+    }
+
+    private fun showSetPasswordDialog() {
+        val ctx = context ?: return
+        val input = com.google.android.material.textfield.TextInputEditText(ctx).apply {
+            hint = getString(R.string.dialog_set_password_hint)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            setSingleLine(true)
+        }
+        val padding = (24 * resources.displayMetrics.density).toInt()
+        val container = com.google.android.material.textfield.TextInputLayout(ctx).apply {
+            addView(input)
+            setPadding(padding, 8, padding, 8)
+        }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.Theme_BladeWatch_M3_Dialog)
+            .setTitle(getString(R.string.dialog_set_password_title))
+            .setMessage(getString(R.string.dialog_set_password_message))
+            .setView(container)
+            .setPositiveButton(getString(R.string.action_done)) { _, _ ->
+                val pw = input.text?.toString()?.trim().orEmpty()
+                if (pw.length < 4) {
+                    Toast.makeText(ctx, getString(R.string.toast_password_too_short), Toast.LENGTH_SHORT).show()
+                } else {
+                    setCustomPassword(pw)
+                }
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun setCustomPassword(password: String) {
+        val ctx = context?.applicationContext ?: return
+        val newToken = AuthManager.setCustomSecret(password)
+        if (newToken == null) {
+            Toast.makeText(ctx, ctx.getString(R.string.toast_password_save_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+        loadAuthState()
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            try {
+                val client = CameraDaemonClient()
+                if (client.connect()) {
+                    client.invalidateAuthCacheSync()
+                    client.disconnect()
+                }
+            } catch (_: Exception) { }
+            mainHandler.post {
+                if (isAdded) {
+                    Toast.makeText(ctx, ctx.getString(R.string.toast_password_set), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun regenerateToken() {

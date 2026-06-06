@@ -12,6 +12,23 @@ This project was forked from "Overdrive" and rebranded to BladeWatch (package `c
 
 Do **not** run `git add`, `git commit`, or `git push` automatically. All commits are reviewed and made manually by the developer. Make code changes and stop — do not stage or commit them.
 
+## Device Connection
+
+The test device (BYD head unit) is at **192.168.0.251:5555** over ADB TCP.
+
+```bash
+# Connect to device
+adb connect 192.168.0.251:5555
+
+# Verify connection
+adb -s 192.168.0.251:5555 devices
+
+# Always target this device explicitly when multiple devices may be listed
+adb -s 192.168.0.251:5555 <command>
+```
+
+Always pass `-s 192.168.0.251:5555` to every `adb` command to avoid ambiguity if a USB device is also attached.
+
 ## Build Commands
 
 ```bash
@@ -26,6 +43,16 @@ Do **not** run `git add`, `git commit`, or `git push` automatically. All commits
 
 # Push web assets to connected device for development iteration
 ./gradlew :app:extractWebAssets
+
+# Install debug APK to device (ABI split produces arm64-v8a-specific filename)
+adb -s 192.168.0.251:5555 install -r app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+
+# View live logcat (filter to BladeWatch tags)
+adb -s 192.168.0.251:5555 logcat -s BladeWatch:V CameraDaemon:V SentryDaemon:V AccSentryDaemon:V
+
+# Push and extract web assets directly to device
+adb -s 192.168.0.251:5555 shell mkdir -p /data/local/tmp/web
+adb -s 192.168.0.251:5555 push app/src/main/assets/web/. /data/local/tmp/web/
 ```
 
 Native dependencies (OpenH264, opencv-mobile) are auto-downloaded by Gradle before any CMake/ExternalNative task. No manual download step needed.

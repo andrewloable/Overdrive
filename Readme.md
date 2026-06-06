@@ -3,31 +3,13 @@
 </p>
 
 <h1 align="center">BladeWatch</h1>
-<p align="center">Advanced Sentry Mode for BYD Vehicles</p>
-<p align="center">
-  <a href="https://github.com/yash-srivastava/BladeWatch-release/releases/tag/alpha">Download Alpha</a> •
-  <a href="https://bladewatch-5lc.pages.dev/">Website</a> •
-  <a href="https://discord.gg/PZutk9fg4h">Discord</a> •
-  <a href="#features">Features</a> •
-  <a href="#quick-start-use-pre-built-apk">Setup Guide</a>
-</p>
 
 Free, open-source dashcam and sentry mode app built specifically for BYD vehicles with DiLink v3. All data stays on your device — no cloud, no accounts, no subscriptions.
-
----
-
-<p align="center">
-  <a href="https://player.cloudinary.com/embed/?cloud_name=dhwuuoz67&public_id=Demo_nqf0ky">
-    <img src="https://github.com/user-attachments/assets/d5faeb2a-96dd-4737-86f4-2e87af52ec4c" alt="Click to Watch BladeWatch Demo" width="100%">
-  </a>
-</p>
-
----
 
 
 ## Quick Start (Use Pre-built APK)
 
-Download the latest APK from [GitHub Releases](https://github.com/yash-srivastava/BladeWatch-release/releases/tag/alpha) and install it directly on your BYD head unit.
+Download the latest APK from [GitHub Releases] and install it directly on your BYD head unit.
 
 ### 1. Prerequisites
 - Ensure **Wireless ADB** is enabled on your device before launching the app.
@@ -173,27 +155,17 @@ Then build with Gradle:
 
 ## VLESS Proxy Setup (Optional)
 
-The ISP blocklist bypass feature uses a VLESS Reality proxy. The app ships with placeholder credentials — you need to supply your own.
+The ISP blocklist bypass feature uses a VLESS Reality proxy (sing-box). The app ships with placeholder credentials — you need to supply your own.
 
-1. Edit `app/src/main/cpp/secrets/secrets.json` and fill in your VLESS server details:
-   ```json
-   "proxy": {
-     "PROXY_SERVER_IP": "your.server.ip",
-     "PROXY_SERVER_PORT": "443",
-     "PROXY_UUID": "your-uuid-here",
-     "PROXY_SHORT_ID": "your-short-id",
-     "PROXY_PUBLIC_KEY": "your-public-key",
-     "PROXY_SNI": "google.com"
-   }
-   ```
+1. Locate the sing-box configuration file generated on the device at runtime under `/data/local/tmp/`. The proxy server details (IP, port, UUID, short ID, public key, SNI) are embedded as encrypted `Safe.s("...")` constants in the daemon source.
 
-2. Encrypt each value using the helper script:
+2. To produce a new encrypted constant for a plaintext value, use the helper script:
    ```bash
    pip install pycryptodome
    python3 generate_safe_enc.py "your.server.ip"
    ```
 
-3. Replace the corresponding `Safe.s("...")` values in `app/src/main/java/com/loabletech/bladewatch/daemon/GlobalProxyDaemon.java` (lines 71–79).
+3. Replace the corresponding `Safe.s("...")` values in the daemon source files under `app/src/main/java/com/loabletech/bladewatch/daemon/` with the output of the script.
 
 4. Rebuild the app.
 
@@ -205,7 +177,7 @@ If you want to use Zrok tunneling for remote access, you need your own Zrok invi
 
 1. Sign up at [zrok.io](https://zrok.io) and get your invite token from email.
 2. Enter the token in the app: Daemons → Zrok settings.
-3. If you are building from source, prefer the on-device settings flow instead of hardcoding the token into source. The legacy placeholder in `app/src/main/java/com/loabletech/bladewatch/daemon/telegram/DaemonCommandHandler.java` only exists for the Telegram bot's `/tunnel zrok` command.
+3. If you are building from source, prefer the on-device settings flow instead of hardcoding the token into source.
 
 ## Privacy
 

@@ -842,25 +842,19 @@ class MainActivity : AppCompatActivity() {
                 else -> DaemonStatus.STOPPED
             }
             updateStatusIndicator(tunnelStatus)
+            updateUrlDisplay()
         }
     }
 
     private fun updateUrlDisplay() {
         val tunnelUrl = daemonsViewModel.zrokController.tunnelUrl.value
-
         if (tunnelUrl.isNullOrEmpty()) {
-            // Show context-aware message based on tunnel state
-            val states = daemonsViewModel.daemonStates.value
-            val zrokState = states?.get(DaemonType.ZROK_TUNNEL)
-            val message = when (zrokState?.status) {
-                DaemonStatus.STARTING -> "Starting Zrok tunnel..."
-                DaemonStatus.RUNNING -> "Waiting for tunnel URL..."
-                else -> "No tunnel running"
-            }
-            tvCurrentUrl.text = message
-            urlStatusDot.setBackgroundResource(R.drawable.status_dot_offline)
+            // No active tunnel URL — hide the pill entirely. The dashboard
+            // connect card already surfaces the "No tunnel running" state.
+            urlBar.visibility = android.view.View.GONE
             mainViewModel.setCurrentUrl(null)
         } else {
+            urlBar.visibility = android.view.View.VISIBLE
             tvCurrentUrl.text = tunnelUrl
             urlStatusDot.setBackgroundResource(R.drawable.status_dot_online)
             mainViewModel.setCurrentUrl(tunnelUrl)

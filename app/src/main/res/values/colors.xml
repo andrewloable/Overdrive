@@ -8,6 +8,9 @@
   Brand teal stays the same in both themes for identity continuity.
 -->
 <resources>
+    <!-- App icon background -->
+    <color name="ic_launcher_background">#0B0F14</color>
+
     <!-- Legacy compat colors -->
     <color name="white">#FFFFFFFF</color>
 
