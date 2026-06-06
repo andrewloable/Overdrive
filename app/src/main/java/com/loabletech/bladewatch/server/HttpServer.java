@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * Listens on 127.0.0.1:8080 by default; LAN binding is an explicit unsafe mode.
  * 
  * Single-port WebSocket: /ws endpoint upgrades to WebSocket for H.264 streaming
- * This allows Cloudflare tunnel to work (only one port needed).
+ * (single port allows Zrok tunnel to expose both HTTP and WebSocket).
  * 
  * API handlers are modularized into separate classes:
  * - RecordingsApiHandler: /api/recordings, /video/*
@@ -693,7 +693,6 @@ public class HttpServer {
         status.put("recording", TcpCommandServer.getRecordingCameras());
         status.put("viewing", TcpCommandServer.getViewOnlyCameras());
         status.put("active", TcpCommandServer.getActiveCameras());
-        status.put("streaming", TcpCommandServer.getStreamingCameras());
         status.put("available", TcpCommandServer.getAvailableCameras());
         status.put("battery", BatteryMonitor.getBatteryInfo());
         status.put("acc", AccMonitor.isAccOn());

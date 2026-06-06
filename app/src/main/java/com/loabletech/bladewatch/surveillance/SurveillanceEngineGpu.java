@@ -98,9 +98,8 @@ public class SurveillanceEngineGpu {
     private long lastRecordingStopTime = 0;  // When last recording stopped (for cooldown)
     
     // DETERRENT FLASH SUPPRESSION: After the deterrent fires, suppress new motion triggers
-    // for a window that covers the cloud API round-trip + flash sequence + ring buffer flush.
-    // The BYD cloud flash_lights command has ~15s network latency (dispatch → poll → execute).
-    // The lights then flash for 2-3 seconds. Total: 20 seconds from dispatch to scene stable.
+    // for a window that covers the flash sequence + ring buffer flush.
+    // Lights flash for 2-3 seconds; 20s total window keeps the scene stable.
     // This window prevents the deterrent's own light from triggering a second recording.
     //
     // WHY AI DOESN'T CATCH THIS (without the fix below):
@@ -336,8 +335,7 @@ public class SurveillanceEngineGpu {
     
     // Output directory
     private File eventOutputDir;
-    // volatile: read by main render thread (publishMotionFinal,
-    // sendFinalTelegramNotification) and written by the encoder drainer
+    // volatile: read by main render thread and written by the encoder drainer
     // thread (segment listener at rotation time). Without this, the main
     // thread could observe a stale File reference.
     private volatile File currentEventFile;
@@ -2745,9 +2743,7 @@ public class SurveillanceEngineGpu {
      * Fallback hero JPEG: extract a keyframe from the MP4 itself when
      * ThumbnailBuffer didn't capture one. Saves to the same path
      * `<videoBase>.jpg` so the rest of the pipeline (sidecar reference,
-     * Telegram sendPhoto, PWA push image) works unchanged. Atomic write
-     * via .tmp + rename, world-readable so the Telegram daemon (different
-     * UID) can read it.
+     * PWA push image) works unchanged. Atomic write via .tmp + rename.
      *
      * Idempotent and exception-safe — failure is logged but never thrown
      * to the caller. The notification path treats absence of the file as
@@ -3254,8 +3250,7 @@ public class SurveillanceEngineGpu {
             // Two-stage notification: replace the "Recording in progress…"
             // banner that fired at recording start with the rich threat
             // summary + hero image. Same notification tag → OS replaces, not
-            // stacks. Telegram gets the equivalent rich path with photo.
-            // Use the final segment's metadata for the user-facing notif —
+            // stacks. Use the final segment's metadata for the user-facing notif —
             // earlier segments already published their own banners on close.
             String videoName = currentEventFile.getName();
             String heroSibling = videoName.replace(".mp4", ".jpg");
@@ -3265,9 +3260,9 @@ public class SurveillanceEngineGpu {
             // ever classified during this event — e.g. very short motion-only
             // clips, or every actor was filtered out as static-NOTICE
             // background) fall back to a single keyframe extracted from the
-            // recorded MP4 so Telegram and the PWA push always have an image
-            // to show. Without this, the user gets a text-only "Motion
-            // detected" alert with no preview, which looks broken.
+            // recorded MP4 so the PWA push always has an image to show.
+            // Without this, the user gets a text-only "Motion detected"
+            // alert with no preview, which looks broken.
             if (!heroSiblingFile.exists()) {
                 writeFallbackHeroFromMp4(currentEventFile, heroSiblingFile);
             }

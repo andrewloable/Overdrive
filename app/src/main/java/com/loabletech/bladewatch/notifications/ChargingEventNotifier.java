@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  *
  * <p>This notifier is purely a downstream consumer — it never mutates
- * {@code chargingState} or {@code chargingPowerKw}. ABRP, MQTT, and the
- * SOC-history graph all read the snapshot directly via {@code getData()}
- * and are unaffected by this code path.
+ * {@code chargingState} or {@code chargingPowerKw}. The SOC-history graph
+ * reads the snapshot directly via {@code getData()} and is unaffected by
+ * this code path.
  */
 public final class ChargingEventNotifier {
 

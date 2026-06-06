@@ -60,7 +60,7 @@ public class TelemetryDataCollector {
     private volatile TelemetrySnapshot latestSnapshot;
     
     // Recording mode: when true, polls at 200ms (5Hz) for overlay.
-    // When false, polls at 1000ms (1Hz) for trip telemetry / ABRP only.
+    // When false, polls at 1000ms (1Hz) for trip telemetry only.
     private volatile boolean overlayRecordingActive = false;
     
     // Reference counting: polling stays alive as long as any consumer needs it
@@ -161,7 +161,7 @@ public class TelemetryDataCollector {
      * Start polling BYD device APIs on a background thread.
      * Rate depends on overlayRecordingActive:
      *   true  → 200ms (5Hz) for video overlay — only polls speed/accel/brake/gear fast
-     *   false → 1000ms (1Hz) for trip telemetry / ABRP
+     *   false → 1000ms (1Hz) for trip telemetry
      * Uses reference counting — multiple callers can request polling,
      * and it only stops when ALL callers have called stopPolling().
      */

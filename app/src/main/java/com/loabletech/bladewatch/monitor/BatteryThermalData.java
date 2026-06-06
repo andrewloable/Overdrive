@@ -55,7 +55,7 @@ public class BatteryThermalData {
     }
 
     /**
-     * Get the best available temperature for ABRP batt_temp field.
+     * Get the best available temperature reading for thermal monitoring.
      * Prefers average, falls back to highest, then lowest.
      */
     public double getBestTemperature() {

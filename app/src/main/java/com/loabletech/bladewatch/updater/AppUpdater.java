@@ -1129,23 +1129,6 @@ public class AppUpdater {
         return "unknown";
     }
 
-    static boolean isNewerVersion(String local, String remote) {
-        try {
-            String[] lp = local.split("\\.");
-            String[] rp = remote.split("\\.");
-            int len = Math.max(lp.length, rp.length);
-            for (int i = 0; i < len; i++) {
-                int l = i < lp.length ? Integer.parseInt(lp[i].replaceAll("[^0-9]", "")) : 0;
-                int r = i < rp.length ? Integer.parseInt(rp[i].replaceAll("[^0-9]", "")) : 0;
-                if (r > l) return true;
-                if (r < l) return false;
-            }
-            return false;
-        } catch (Exception e) {
-            return !local.equals(remote);
-        }
-    }
-
     private String getLastUpdateTimestamp() {
         // Try SharedPreferences first (fast)
         String ts = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

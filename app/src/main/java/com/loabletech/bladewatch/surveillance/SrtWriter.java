@@ -283,12 +283,7 @@ public final class SrtWriter {
     public static final String K_PERSON_CLOSE      = "srt.person_close";
     public static final String K_VEHICLE_DETECTED  = "srt.vehicle_detected";
     public static final String K_MOTION_STARTED    = "srt.motion_started";
-    public static final String K_MOTION_ENDED      = "srt.motion_ended";
     public static final String K_PROXIMITY_RED     = "srt.proximity_red";
     public static final String K_PROXIMITY_YELLOW  = "srt.proximity_yellow";
-    public static final String K_CHARGING_STARTED  = "srt.charging_started";
-    public static final String K_CHARGING_STOPPED  = "srt.charging_stopped";
-    public static final String K_CHARGING_COMPLETE = "srt.charging_complete";
     public static final String K_RECORDING_STARTED = "srt.recording_started";
-    public static final String K_RECORDING_ENDED   = "srt.recording_ended";
 }

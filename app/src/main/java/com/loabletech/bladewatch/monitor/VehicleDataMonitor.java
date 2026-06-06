@@ -416,10 +416,6 @@ public class VehicleDataMonitor {
     
     public BatteryPowerMonitor getBatteryPowerMonitor() { return batteryPowerMonitor; }
     
-    // These return null now — consumers should use the data access methods above
-    public BatteryVoltageMonitor getBatteryVoltageMonitor() { return null; }
-    public DrivingRangeMonitor getDrivingRangeMonitor() { return null; }
-    
     // ==================== LISTENER MANAGEMENT ====================
     
     public void addListener(VehicleDataListener listener) {

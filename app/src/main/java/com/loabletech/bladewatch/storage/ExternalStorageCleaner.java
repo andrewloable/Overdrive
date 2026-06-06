@@ -728,7 +728,7 @@ public class ExternalStorageCleaner {
      *
      * Gated on the {@code enabled} flag. This was previously documented as
      * "ignores the enabled flag" — that turned the manual-cleanup path into a
-     * footgun where any caller (UI tap, HTTP POST, Telegram bot) could delete
+     * footgun where any caller (UI tap, HTTP POST) could delete
      * OEM dashcam files even when the user had explicitly disabled the
      * feature in config. Honoring the flag here is the single source of
      * truth; callers should surface the rejection to the user.

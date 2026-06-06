@@ -340,17 +340,17 @@ public final class ThumbnailBuffer {
             // Atomic write: compress to <name>.tmp, fsync, rename to <name>.
             // A process kill mid-compress would otherwise leave a truncated
             // .jpg at the final filename — and the hero JPEG is now
-            // load-bearing for both PWA push and Telegram sendPhoto, with
-            // no regeneration path once the sidecar names it as heroThumbnail.
+            // load-bearing for PWA push, with no regeneration path once
+            // the sidecar names it as heroThumbnail.
             // Same discipline EventTimelineCollector uses for the JSON sidecar.
             File tmpFile = new File(outFile.getAbsolutePath() + ".tmp");
             try (FileOutputStream fos = new FileOutputStream(tmpFile)) {
                 out.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, fos);
                 try { fos.getFD().sync(); } catch (Throwable ignored) {}
             }
-            // World-readable so the Telegram daemon (separate UID, typically
-            // shell/2000) can read the JPEG with sendPhoto. Set on tmp BEFORE
-            // rename so the readable bit lands atomically with the file move.
+            // World-readable so the PWA push sender (separate process, shell UID)
+            // can read the JPEG. Set on tmp BEFORE rename so the readable bit
+            // lands atomically with the file move.
             try { tmpFile.setReadable(true, /*ownerOnly=*/false); } catch (Throwable ignored) {}
             if (!tmpFile.renameTo(outFile)) {
                 // Rename failed (e.g. cross-volume on weird mounts). Best-effort

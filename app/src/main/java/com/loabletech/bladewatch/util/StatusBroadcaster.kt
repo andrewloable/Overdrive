@@ -18,8 +18,6 @@ class StatusBroadcaster(private val context: Context) {
         const val ACTION_STATUS_UPDATE = "com.loabletech.bladewatch.STATUS_UPDATE"
         const val ACTION_RECORDING_STARTED = "com.loabletech.bladewatch.RECORDING_STARTED"
         const val ACTION_RECORDING_STOPPED = "com.loabletech.bladewatch.RECORDING_STOPPED"
-        const val ACTION_TUNNEL_CONNECTED = "com.loabletech.bladewatch.TUNNEL_CONNECTED"
-        const val ACTION_TUNNEL_DISCONNECTED = "com.loabletech.bladewatch.TUNNEL_DISCONNECTED"
         const val ACTION_DAEMON_STARTED = "com.loabletech.bladewatch.DAEMON_STARTED"
         const val ACTION_DAEMON_STOPPED = "com.loabletech.bladewatch.DAEMON_STOPPED"
         const val ACTION_ERROR = "com.loabletech.bladewatch.ERROR"
@@ -28,7 +26,6 @@ class StatusBroadcaster(private val context: Context) {
         const val EXTRA_STATUS = "status"
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_CAMERAS = "cameras"
-        const val EXTRA_TUNNEL_URL = "tunnel_url"
         const val EXTRA_ERROR = "error"
     }
     
@@ -63,25 +60,6 @@ class StatusBroadcaster(private val context: Context) {
     fun broadcastRecordingStopped() {
         context.sendBroadcast(Intent(ACTION_RECORDING_STOPPED))
         logManager.info(TAG, "Recording stopped broadcast")
-    }
-    
-    /**
-     * Broadcast tunnel connected.
-     */
-    fun broadcastTunnelConnected(tunnelUrl: String) {
-        val intent = Intent(ACTION_TUNNEL_CONNECTED).apply {
-            putExtra(EXTRA_TUNNEL_URL, tunnelUrl)
-        }
-        context.sendBroadcast(intent)
-        logManager.info(TAG, "Tunnel connected broadcast: $tunnelUrl")
-    }
-    
-    /**
-     * Broadcast tunnel disconnected.
-     */
-    fun broadcastTunnelDisconnected() {
-        context.sendBroadcast(Intent(ACTION_TUNNEL_DISCONNECTED))
-        logManager.info(TAG, "Tunnel disconnected broadcast")
     }
     
     /**

@@ -308,8 +308,8 @@ public class SurveillanceIpcServer implements Runnable {
      * Config is ALWAYS persisted even if surveillance is not running.
      *
      * synchronized: the IPC server runs an 8-thread pool; without serialization,
-     * two concurrent SET_CONFIG requests (web UI + Telegram daemon, say) could
-     * each load + mutate + save their own snapshot, losing the other's update.
+     * two concurrent SET_CONFIG requests could each load + mutate + save their
+     * own snapshot, losing the other's update.
      * Lock granularity is class-wide (CONFIG_LOCK) because the persisted file
      * is shared state, not instance state.
      */
@@ -1200,15 +1200,11 @@ public class SurveillanceIpcServer implements Runnable {
      * Two-stage install:
      *   1. Sync check to populate latestDownloadUrl (so /install can't be used
      *      as a blind download trigger, mirroring UpdateApiHandler).
-     *   2. Plant the Telegram post-update hint (so the new process's first
-     *      tunnel notification frames as "updated to X" instead of generic
-     *      "URL changed"), then kick off downloadAndInstall on a background
-     *      thread. The IPC reply returns immediately because the daemon dies
-     *      mid-install.
+     *   2. Kick off downloadAndInstall on a background thread. The IPC reply
+     *      returns immediately because the daemon dies mid-install.
      *
      * Progress reporting reuses /data/local/tmp/bladewatch_update_progress.json
-     * via UpdateApiHandler-style writes so the same polling path serves both
-     * the webapp and Telegram.
+     * via UpdateApiHandler-style writes so the webapp's polling path serves both.
      */
     private void handleInstallUpdate(JSONObject request, JSONObject response) throws Exception {
         android.content.Context ctx = CameraDaemon.getAppContext();

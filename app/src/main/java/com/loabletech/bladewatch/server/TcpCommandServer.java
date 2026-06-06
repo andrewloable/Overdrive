@@ -149,7 +149,6 @@ public class TcpCommandServer {
                 response.put("recording", getRecordingCameras());
                 response.put("viewing", getViewOnlyCameras());
                 response.put("active", getActiveCameras());
-                response.put("streaming", getStreamingCameras());
                 response.put("available", getAvailableCameras());
                 break;
 
@@ -190,52 +189,6 @@ public class TcpCommandServer {
                     try { Thread.sleep(300); } catch (InterruptedException e) {}
                     CameraDaemon.shutdown();
                 }, "ShutdownThread").start();
-                break;
-
-            // ==================== STREAMING COMMANDS ====================
-            
-            case "startStream":
-                JSONArray streamsToStart = cmd.optJSONArray("cameras");
-                if (streamsToStart != null) {
-                    for (int i = 0; i < streamsToStart.length(); i++) {
-                        CameraDaemon.startStreaming(streamsToStart.getInt(i));
-                    }
-                } else {
-                    // Start all if no cameras specified
-                    CameraDaemon.startAllStreaming();
-                }
-                response.put("status", "ok");
-                response.put("streaming", getStreamingCameras());
-                break;
-
-            case "stopStream":
-                JSONArray streamsToStop = cmd.optJSONArray("cameras");
-                if (streamsToStop != null) {
-                    for (int i = 0; i < streamsToStop.length(); i++) {
-                        CameraDaemon.stopStreaming(streamsToStop.getInt(i));
-                    }
-                } else {
-                    CameraDaemon.stopAllStreaming();
-                }
-                response.put("status", "ok");
-                response.put("streaming", getStreamingCameras());
-                break;
-
-            case "setRtmpUrl":
-                // VPS streaming removed - this command is now a no-op
-                response.put("status", "ok");
-                response.put("message", "VPS streaming removed - use local HTTP streaming");
-                break;
-
-            case "streamStatus":
-                response.put("status", "ok");
-                Map<String, Object> streamInfo = CameraDaemon.getStreamingStatus();
-                response.put("enabled", streamInfo.get("enabled"));
-                response.put("deviceId", streamInfo.get("deviceId"));
-                response.put("streaming", getStreamingCameras());
-                response.put("publisherCount", streamInfo.get("publisherCount"));
-                response.put("mode", streamInfo.get("mode"));
-                response.put("note", "VPS streaming removed - use local HTTP streaming");
                 break;
 
             case "setStreamMode":
@@ -582,14 +535,6 @@ public class TcpCommandServer {
             arr.put(2);
             arr.put(3);
             arr.put(4);
-        }
-        return arr;
-    }
-
-    public static JSONArray getStreamingCameras() {
-        JSONArray arr = new JSONArray();
-        for (Integer camId : CameraDaemon.getStreamingCameras()) {
-            arr.put(camId);
         }
         return arr;
     }

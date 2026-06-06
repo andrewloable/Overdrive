@@ -189,33 +189,6 @@ object PreferencesManager {
         requirePrefs().edit().putString(KEY_ZROK_UNIQUE_NAME, name).commit()
     }
     
-    // Zrok Enable Token - stored in the daemon secret store for app-side access
-    @Deprecated("Use unified storage via ZrokController instead")
-    fun getZrokEnableToken(): String? {
-        return SecretConfigBridge.getString("zrok", "enableToken")
-    }
-    
-    @Deprecated("Use unified storage via ZrokController instead")
-    fun setZrokEnableToken(token: String?) {
-        if (token.isNullOrBlank()) {
-            SecretConfigBridge.delete("zrok", "enableToken")
-        } else {
-            SecretConfigBridge.putString("zrok", "enableToken", token.trim())
-        }
-    }
-    
-    @Deprecated("Use unified storage via ZrokController instead")
-    fun hasZrokEnableToken(): Boolean {
-        // Keep deprecated helpers independent so legacy callers do not emit
-        // warnings from one deprecated wrapper calling another.
-        return !SecretConfigBridge.getString("zrok", "enableToken").isNullOrBlank()
-    }
-    
-    @Deprecated("Use unified storage via ZrokController instead")
-    fun clearZrokEnableToken() {
-        SecretConfigBridge.delete("zrok", "enableToken")
-    }
-    
     // Logs Panel State
     fun isLogsExpanded(): Boolean {
         return requirePrefs().getBoolean(KEY_LOGS_EXPANDED, false)

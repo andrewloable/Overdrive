@@ -1125,50 +1125,6 @@ public class CameraDaemon {
         return tripAnalyticsManager;
     }
     
-    // ==================== STREAMING CONTROL (REMOVED - VPS functionality removed) ====================
-    
-    /**
-     * Start streaming a camera (DISABLED - VPS streaming removed).
-     */
-    public static void startStreaming(int viewId) {
-        log("startStreaming(" + viewId + ") - VPS streaming removed, use local HTTP streaming instead");
-    }
-    
-    /**
-     * Stop streaming a camera (DISABLED - VPS streaming removed).
-     */
-    public static void stopStreaming(int viewId) {
-        log("stopStreaming(" + viewId + ") - VPS streaming removed");
-    }
-    
-    /**
-     * Start streaming all cameras (DISABLED - VPS streaming removed).
-     */
-    public static void startAllStreaming() {
-        log("startAllStreaming() - VPS streaming removed, use local HTTP streaming instead");
-    }
-    
-    /**
-     * Stop all streaming (DISABLED - VPS streaming removed).
-     */
-    public static void stopAllStreaming() {
-        log("stopAllStreaming() - VPS streaming removed");
-    }
-    
-    /**
-     * Check if streaming is enabled (always false - VPS streaming removed).
-     */
-    public static boolean isStreamingEnabled() {
-        return false;
-    }
-    
-    /**
-     * Get list of cameras currently streaming (empty - VPS streaming removed).
-     */
-    public static java.util.List<Integer> getStreamingCameras() {
-        return new java.util.ArrayList<>();
-    }
-    
     // ==================== SURVEILLANCE CONTROL ====================
 
     /**
@@ -2562,29 +2518,6 @@ public class CameraDaemon {
         return events;
     }
     
-    /**
-     * Get comprehensive streaming status (VPS streaming removed).
-     * Returns a map with streaming state info for API responses.
-     */
-    public static Map<String, Object> getStreamingStatus() {
-        Map<String, Object> status = new java.util.HashMap<>();
-        status.put("enabled", false);
-        status.put("deviceId", deviceId);
-        status.put("activeCameras", new java.util.ArrayList<>());
-        status.put("publisherCount", 0);
-        status.put("mode", streamMode);
-        status.put("note", "VPS streaming removed - use local HTTP streaming");
-        
-        // Per-camera status (all false)
-        Map<Integer, Boolean> cameraStatus = new java.util.HashMap<>();
-        for (int i = 1; i <= 4; i++) {
-            cameraStatus.put(i, false);
-        }
-        status.put("cameras", cameraStatus);
-        
-        return status;
-    }
-
     // ==================== STREAM MODE CONTROL ====================
     
     /**

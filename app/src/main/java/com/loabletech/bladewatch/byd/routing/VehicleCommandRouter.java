@@ -9,7 +9,7 @@ import com.loabletech.bladewatch.logging.DaemonLogger;
  * <p>Each {@link VehicleCommand} declares whether it has a local SDK path and
  * provides the per-command execution. Commands with no local primitive on this
  * platform (e.g. remote lock/unlock, find-car, flash, battery heat, smart
- * charging — historically cloud-only features) resolve to
+ * charging — no local primitive on this generation) resolve to
  * {@link Outcome#NOT_SUPPORTED}. Every dispatch returns a structured
  * {@link CommandResult} so callers can render a "sent via direct connection"
  * badge to the UI.
@@ -92,8 +92,8 @@ public final class VehicleCommandRouter {
     }
 
     // ── Concrete commands ───────────────────────────────────────────────
-    // Commands that were historically cloud-only (no local primitive on this
-    // generation) keep their class/constructor for API compatibility but have
+    // Commands with no local primitive on this generation keep their
+    // class/constructor for API compatibility but have
     // no SDK path, so they resolve to NOT_SUPPORTED.
 
     public static final class LockCommand extends VehicleCommand {
@@ -327,10 +327,9 @@ public final class VehicleCommandRouter {
     }
 
     /**
-     * Trunk open via the local tailgate motor. The remote-unlock pre-step that
-     * previously ran over the cloud is unavailable, so on locked vehicles the
-     * body controller may decline the motor or trip the alarm — the local
-     * primitive is invoked as-is.
+     * Trunk open via the local tailgate motor. There is no remote-unlock
+     * pre-step, so on locked vehicles the body controller may decline the
+     * motor or trip the alarm — the local primitive is invoked as-is.
      */
     private CommandResult executeTrunkOpen() {
         long start = System.currentTimeMillis();

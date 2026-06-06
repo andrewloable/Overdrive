@@ -16,7 +16,7 @@ import java.util.Map;
  * falls back to en for missing keys, and {0}/{1} interpolates positional args.
  *
  * Catalogs are keyed by the same dotted-path scheme as the web-side runtime so
- * both layers stay aligned (e.g. errors.bydcloud_not_configured).
+ * both layers stay aligned (e.g. errors.daemon_unavailable).
  */
 public final class Messages {
 
@@ -47,7 +47,7 @@ public final class Messages {
             if (cat != null) CATALOGS.put(lang, cat);
         }
         if (cat == null) return null;
-        // Walk dotted path: "errors.bydcloud_not_configured"
+        // Walk dotted path: "errors.daemon_unavailable"
         String[] parts = key.split("\\.");
         Object cur = cat;
         for (String p : parts) {

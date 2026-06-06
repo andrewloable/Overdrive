@@ -17,8 +17,8 @@ import java.net.URL
  * /status at ~1Hz). Cache lifetime is well under the JWT's actual expiry, so a
  * stale cached value is never delivered.
  *
- * Always uses Proxy.NO_PROXY because sing-box may be running on this device — we
- * never want our own daemon traffic routed through a system proxy.
+ * Always uses Proxy.NO_PROXY — daemon-to-daemon traffic must never be routed
+ * through a system proxy (would break loopback auth and introduce latency).
  */
 object DaemonHttpClient {
 

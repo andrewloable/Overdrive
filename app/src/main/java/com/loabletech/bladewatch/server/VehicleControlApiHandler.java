@@ -175,11 +175,10 @@ public class VehicleControlApiHandler {
         // Door lock status: 1=locked, 2=unlocked, -1=unknown
         // Index: 0=LF, 1=RF, 2=LR, 3=RR, 4=trunk, 5=unused, 6=overall(derived)
         //
-        // BydDataCollector first reads BYDAutoDoorLockDevice locally using the
+        // BydDataCollector reads BYDAutoDoorLockDevice locally using the
         // recovered legacy app's getDoorLockStatus(area)/getDoorLockState path.
-        // BYD cloud values are still overlaid when available because some
-        // firmwares return INVALID(0) for every local area. If both sources are
-        // unavailable, values stay at -1.
+        // Some firmwares return INVALID(0) for every local area; values stay
+        // at -1 when the SDK reports no data.
         // BYD bodywork SDK area numbering swaps L↔R on the FRONT axis vs the
         // physical doors: array index 0 (SDK "LEFT_FRONT") is physically
         // right-front, index 1 is left-front. The REAR axis on this car
@@ -297,9 +296,8 @@ public class VehicleControlApiHandler {
             seats.put("cool", cool);
         }
         // ventilatedSeats: hardware capability. Cars without ventilated seats
-        // (Atto 3 base, certain Seal trims) report hasFeature("SEAT_VENTILATING")=0
-        // and the BYD cloud returns 1001 on VENTILATIONHEATING. JS uses this
-        // to grey out the cool buttons.
+        // (Atto 3 base, certain Seal trims) report hasFeature("SEAT_VENTILATING")=0.
+        // JS uses this to grey out the cool buttons.
         seats.put("ventilatedSupported", collector.isSeatVentilationSupported());
         response.put("seats", seats);
 
