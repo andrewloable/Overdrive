@@ -25,29 +25,17 @@
         android:label="@string/rail_recordings"
         tools:layout="@layout/fragment_recordings" />
 
-    <!-- Surveillance settings (web) — kept reachable from Recordings → Settings ↗ button -->
+    <!-- Surveillance settings: native General/Detection/Recording/Storage/Advanced tabs -->
     <fragment
         android:id="@+id/surveillanceSettingsWebFragment"
-        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
-        android:label="@string/settings_section_surveillance"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/surveillance" />
-    </fragment>
+        android:name="net.bladewatch.app.ui.fragment.SurveillanceSettingsFragment"
+        android:label="@string/settings_section_surveillance" />
 
-    <!-- Recording settings (web) — same path -->
+    <!-- Recording settings: native Status/Capture/Quality/Storage tabs -->
     <fragment
         android:id="@+id/recordingSettingsWebFragment"
-        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
-        android:label="@string/settings_section_recording"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/recording" />
-    </fragment>
+        android:name="net.bladewatch.app.ui.fragment.RecordingSettingsFragment"
+        android:label="@string/settings_section_recording" />
 
     <!-- Location: current car position on an OSMDroid map with GPS state machine -->
     <fragment
@@ -55,29 +43,17 @@
         android:name="net.bladewatch.app.ui.fragment.LocationFragment"
         android:label="@string/rail_location" />
 
-    <!-- Vehicle (web canonical) -->
+    <!-- Vehicle: native Security/Trunk/Climate/Seats/Windows/Lights/ADAS/Charging tabs -->
     <fragment
         android:id="@+id/vehicleControlFragment"
-        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
-        android:label="@string/rail_vehicle"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/vehicle-control" />
-    </fragment>
+        android:name="net.bladewatch.app.ui.fragment.VehicleFragment"
+        android:label="@string/rail_vehicle" />
 
-    <!-- Trips (web canonical) -->
+    <!-- Trips: native three-tab screen (Trips / Stats / Storage) via /api/trips -->
     <fragment
         android:id="@+id/tripsFragment"
-        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
-        android:label="@string/rail_trips"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/trips" />
-    </fragment>
+        android:name="net.bladewatch.app.ui.fragment.TripsFragment"
+        android:label="@string/rail_trips" />
 
     <!-- Diagnostics: logs + ADB console + utilities -->
     <fragment
@@ -86,19 +62,11 @@
         android:label="@string/rail_diagnostics"
         tools:layout="@layout/fragment_diagnostics" />
 
-    <!-- Diagnostics → Performance: same daemon-hosted dashboard as mobile
-         web, exposed as a diagnostics child so the car rail stays on
-         Diagnostics instead of highlighting Live. -->
+    <!-- Diagnostics → Performance: native CPU/Memory/GPU dashboard with live polling -->
     <fragment
         android:id="@+id/performanceFragment"
-        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
-        android:label="@string/diagnostics_section_performance"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/performance" />
-    </fragment>
+        android:name="net.bladewatch.app.ui.fragment.PerformanceFragment"
+        android:label="@string/diagnostics_section_performance" />
 
     <fragment
         android:id="@+id/adbConsoleFragment"

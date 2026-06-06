@@ -1,4 +1,4 @@
-package net.bladewatch.app.ui.fragment.settings
+package net.bladewatch.app.ui.fragment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -6,18 +6,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import net.bladewatch.app.ui.fragment.surveillance.SurveillanceSettingsController
+import net.bladewatch.app.ui.fragment.recording.RecordingSettingsController
 
-class SettingsSurveillanceFragment : Fragment() {
+class RecordingSettingsFragment : Fragment() {
 
-    private var controller: SurveillanceSettingsController? = null
+    private var controller: RecordingSettingsController? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        val c = SurveillanceSettingsController(requireContext())
+        val c = RecordingSettingsController(requireContext())
         controller = c
         return c.view
     }

@@ -17,3 +17,6 @@
 recovered
 *.apk
 screenshots
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key

@@ -1,4 +1,4 @@
-package net.bladewatch.app.ui.fragment.settings
+package net.bladewatch.app.ui.fragment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import net.bladewatch.app.ui.fragment.surveillance.SurveillanceSettingsController
 
-class SettingsSurveillanceFragment : Fragment() {
+class SurveillanceSettingsFragment : Fragment() {
 
     private var controller: SurveillanceSettingsController? = null
 
