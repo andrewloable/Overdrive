@@ -92,46 +92,6 @@ public class SurveillanceIpcServer implements Runnable {
             String command = request.optString("command", "");
             
             switch (command) {
-                // ==================== TELEGRAM DAEMON COMMANDS ====================
-                // These commands are sent by TelegramBotDaemon for remote control
-                
-                case "START":
-                    // Start surveillance (from Telegram /start command)
-                    com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(true);
-                    if (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
-                        CameraDaemon.enableSurveillance();
-                        logger.info("Surveillance started via Telegram IPC");
-                    } else {
-                        logger.info("Surveillance preference saved via Telegram — will activate on ACC OFF");
-                    }
-                    response.put("success", true);
-                    response.put("enabled", true);
-                    response.put("message", "Surveillance enabled");
-                    break;
-                    
-                case "STOP":
-                    // Stop surveillance (from Telegram /stop command)
-                    CameraDaemon.disableSurveillance();
-                    com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(false);
-                    logger.info("Surveillance stopped via Telegram IPC");
-                    response.put("success", true);
-                    response.put("enabled", false);
-                    response.put("message", "Surveillance stopped");
-                    break;
-                    
-                case "STATUS": {
-                    // Get surveillance status (from Telegram /status command)
-                    // Read from persisted config (not in-memory flag which can get stale)
-                    boolean enabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
-                    boolean active = CameraDaemon.isSurveillanceActive();
-                    response.put("success", true);
-                    response.put("enabled", enabled);
-                    response.put("active", active);
-                    response.put("recording", active);
-                    logger.info("Status requested via Telegram IPC: enabled=" + enabled + ", active=" + active);
-                    break;
-                }
-                
                 // ==================== APP UI COMMANDS ====================
                 // These commands are sent by the app UI for configuration
                 
@@ -317,9 +277,6 @@ public class SurveillanceIpcServer implements Runnable {
                 }
 
                 // ==================== UPDATE COMMANDS ====================
-                // Telegram daemon delegates here because AppUpdater needs the
-                // app Context (PackageManager, SharedPreferences) which only
-                // exists in CameraDaemon's process.
 
                 case "CHECK_UPDATE":
                     handleCheckUpdate(response);
@@ -852,27 +809,6 @@ public class SurveillanceIpcServer implements Runnable {
                 }
                 configChanged = true;
             }
-            if (config.has("telegramSendStartPing")) {
-                sentryConfig.setTelegramSendStartPing(
-                        config.optBoolean("telegramSendStartPing", false));
-                configChanged = true;
-            }
-            if (config.has("telegramNotices")) {
-                sentryConfig.setTelegramNotices(
-                        config.optBoolean("telegramNotices", false));
-                configChanged = true;
-            }
-            if (config.has("telegramAlerts")) {
-                sentryConfig.setTelegramAlerts(
-                        config.optBoolean("telegramAlerts", true));
-                configChanged = true;
-            }
-            if (config.has("telegramCritical")) {
-                sentryConfig.setTelegramCritical(
-                        config.optBoolean("telegramCritical", true));
-                configChanged = true;
-            }
-
         } catch (Exception e) {
             logger.error("Failed to apply config", e);
         }
@@ -1362,7 +1298,7 @@ public class SurveillanceIpcServer implements Runnable {
             } catch (Exception e) {
                 writeInstallProgress("error", -1, "Install crashed", e.getMessage());
             }
-        }, "TelegramUpdate-Install").start();
+        }, "Update-Install").start();
 
         response.put("success", true);
         response.put("status", "scheduled");

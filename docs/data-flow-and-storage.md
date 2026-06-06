@@ -1,6 +1,6 @@
 # Data Flow and Storage
 
-BladeWatch coordinates data across the Android app process, shell-launched Java daemons, native camera code, web assets, tunnel binaries, and BYD local/cloud sources. Most cross-process state is intentionally stored in files under `/data/local/tmp`.
+BladeWatch coordinates data across the Android app process, shell-launched Java daemons, native camera code, web assets, the Zrok tunnel binary, and BYD local sources. Most cross-process state is intentionally stored in files under `/data/local/tmp`.
 
 ## Primary Data Flows
 
@@ -39,8 +39,7 @@ Camera frame
   -> per-quadrant motion state
   -> optional TFLite YOLO gate
   -> surveillance decision
-  -> event recording and notification
-  -> optional BYD cloud deterrent command
+  -> event recording and Web Push notification
 ```
 
 Surveillance uses motion detection first and AI as a gated assist. Event windows include pre-event and post-event recording.
@@ -52,7 +51,7 @@ Browser or Android WebView
   -> http://127.0.0.1:8080
   -> AuthMiddleware
   -> HttpServer route handlers
-  -> daemon managers, config, storage, camera, BYD, MQTT, trips
+  -> daemon managers, config, storage, camera, trips
 ```
 
 The Android WebView injects auth cookies and JavaScript bridge behavior so mutating API calls can bypass local proxy interference.
@@ -87,24 +86,10 @@ BYD framework device classes
   -> reflection helpers and listener proxies
   -> BydDataCollector
   -> BydVehicleData snapshot
-  -> telemetry, web APIs, trips, MQTT, ABRP, performance pages
+  -> telemetry, web APIs, trips, performance pages
 ```
 
 The collector reads initial values, registers listeners, and polls at different intervals depending on ACC state.
-
-### BYD Cloud Data
-
-```text
-BYD cloud HTTPS login and discovery
-  -> BydCloudClient
-  -> MQTT credential discovery
-  -> BydCloudMqttSubscriber
-  -> decrypted vehicleInfo pushes
-  -> BydCloudDataProvider
-  -> merged cloud snapshot
-```
-
-Cloud data can supplement local telemetry where configured.
 
 ## Configuration Files
 
@@ -121,13 +106,11 @@ Main config path:
 - Surveillance.
 - Recording.
 - Streaming.
-- Telegram.
 - Network.
 - Proximity guard.
 - Telemetry overlay.
 - Trip analytics.
 - Status overlay.
-- BYD cloud.
 - Vehicle appearance/model.
 - Auth public state.
 
@@ -147,7 +130,7 @@ Main secret path:
 /data/local/tmp/bladewatch_secrets.json
 ```
 
-`SecretConfigStore` stores secret sections such as auth device secret, tunnel tokens, cloud credentials, and integration secrets. The intended permissions are owner-only. Direct writes are restricted to shell UID where practical; the Android app uses the TCP bridge when it cannot access the file directly.
+`SecretConfigStore` stores secret sections such as auth device secret and tunnel tokens. The intended permissions are owner-only. Direct writes are restricted to shell UID where practical; the Android app uses the TCP bridge when it cannot access the file directly.
 
 Sensitive values must not be logged or copied into docs.
 
@@ -200,19 +183,11 @@ Runtime extracted assets:
 ```text
 /data/local/tmp/web
 /data/local/tmp/overlay
-/data/local/tmp/bangcle_tables.bin
 ```
 
-`HttpServer` extracts web, overlay, and Bangcle table assets when the daemon starts. Gradle also defines an `extractWebAssets` helper task that can push web assets to `/data/local/tmp/web` during development.
+`HttpServer` extracts web and overlay assets when the daemon starts. Gradle also defines an `extractWebAssets` helper task that can push web assets to `/data/local/tmp/web` during development.
 
-## Tunnel and Proxy Runtime Files
-
-Cloudflared:
-
-```text
-/data/local/tmp/cloudflared
-/data/local/tmp/cloudflared.log
-```
+## Tunnel Runtime Files
 
 Zrok:
 
@@ -221,21 +196,6 @@ Zrok:
 /data/local/tmp/zrok.log
 /data/local/tmp/.zrok/environment.json
 /data/local/tmp/.zrok/unique_name
-```
-
-Tailscale:
-
-```text
-/data/local/tmp/.tailscale/tailscale
-/data/local/tmp/.tailscale/tailscaled
-```
-
-sing-box:
-
-```text
-/data/local/tmp/sing-box
-/data/local/tmp/singbox_config.json
-/data/local/tmp/singbox.log
 ```
 
 ## Auth Data Flow
@@ -260,7 +220,7 @@ Telemetry and GPS inputs
   -> trip analytics collectors
   -> trip storage
   -> TripApiHandler
-  -> web trips pages and external integrations
+  -> web trips pages
 ```
 
 Trip APIs expose lists, details, telemetry, similar trips, GPS traces, summary, driving DNA, range analytics, config, and storage management.
@@ -268,9 +228,9 @@ Trip APIs expose lists, details, telemetry, similar trips, GPS traces, summary, 
 ## Notification Data Flow
 
 ```text
-Daemon or web event
+Daemon or surveillance event
   -> notification manager/API
-  -> Android notification or push subscription target
+  -> Web Push subscription target
   -> web notification state APIs
 ```
 
@@ -283,18 +243,18 @@ Notification APIs expose categories, push subscription management, preferences, 
 - Shared files under `/data/local/tmp` allow app and daemons to coordinate.
 - Media files live under `/storage/emulated/0/BladeWatch` or configured external storage.
 - BYD local data is read from firmware APIs and kept in memory snapshots.
-- BYD cloud credentials and tunnel secrets belong in the secret store.
+- Tunnel secrets belong in the secret store.
 
 ## Source References
 
 - Camera-to-recording path: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L58), [StorageManager.java:1921](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1921).
 - Live-stream path: [GpuSurveillancePipeline.java:30](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L30), [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19), [HttpServer.java:538](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L538).
-- Surveillance-event path: [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248), [BydCloudDeterrent.java:33](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDeterrent.java#L33).
+- Surveillance-event path: [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248).
 - Web UI to daemon: [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [WebViewFragment.kt:228](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L228).
 - App TCP client to daemon: [CameraDaemonClient.java:24](../app/src/main/java/com/loabletech/bladewatch/client/CameraDaemonClient.java#L24), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53).
 - Location IPC: [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350).
-- BYD local and cloud data flows: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [BydCloudClient.java:22](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudClient.java#L22), [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudMqttSubscriber.java#L31), [BydCloudDataProvider.java:14](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDataProvider.java#L14).
+- BYD local data flow: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20).
 - Unified config, secrets, and auth identity: [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30), [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [AuthManager.java:50](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L349).
 - Media and SD-card storage: [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100), [StorageManager.java:120](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L120), [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1671](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1671), [StorageManager.java:1685](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1685).
-- Runtime assets and tunnel files: [build.gradle.kts:232](../app/build.gradle.kts#L232), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [TunnelLauncher.kt:12](../app/src/main/java/com/loabletech/bladewatch/launcher/TunnelLauncher.kt#L12), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [TailscaleLauncher.kt:11](../app/src/main/java/com/loabletech/bladewatch/launcher/TailscaleLauncher.kt#L11), [ProxyConfiguration.kt:29](../app/src/main/java/com/loabletech/bladewatch/daemon/proxy/ProxyConfiguration.kt#L29).
+- Runtime assets and tunnel files: [build.gradle.kts:232](../app/build.gradle.kts#L232), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27).
 - Trips and notifications: [TripDetector.java:27](../app/src/main/java/com/loabletech/bladewatch/trips/TripDetector.java#L27), [TripAnalyticsManager.java:23](../app/src/main/java/com/loabletech/bladewatch/trips/TripAnalyticsManager.java#L23), [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30).

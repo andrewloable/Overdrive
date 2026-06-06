@@ -19,7 +19,7 @@ Vehicle ACC state changes
   -> optional YOLO confirms objects and tracks actors
   -> event recording starts from the circular pre-record buffer
   -> post-record timer, tracker state, and residual motion decide when to stop
-  -> sidecar metadata, thumbnails, push notifications, Telegram, and deterrents are emitted
+  -> sidecar metadata, thumbnails, and Web Push notifications are emitted
 ```
 
 Core source files:
@@ -48,7 +48,6 @@ Responsibilities:
 - Notify `CameraDaemon` when ACC turns off or on.
 - Keep the system alive during ACC-off sentry mode.
 - Manage low-voltage and charging maintenance behavior.
-- Start Telegram daemon during sentry mode when configured.
 - Disable surveillance on critical battery conditions.
 
 It does not own motion detection. It tells `CameraDaemon` whether the vehicle is entering or leaving sentry conditions.
@@ -95,8 +94,7 @@ Responsibilities:
 - Run optional YOLO detection on active quadrants.
 - Maintain cross-quadrant and texture trackers.
 - Start and stop event recording.
-- Emit notifications and Telegram messages.
-- Trigger BYD cloud deterrents.
+- Emit Web Push notifications.
 - Write event metadata and thumbnails.
 
 ### Native Motion Pipeline
@@ -137,7 +135,6 @@ Surveillance is not armed immediately when ACC turns off. `CameraDaemon` waits f
 
 Lock sources run in parallel:
 
-- BYD cloud MQTT lock state.
 - Local BYD device SDK door-lock listener.
 - Periodic local door-lock polling.
 - A force-arm timeout after roughly 60 seconds.
@@ -384,7 +381,6 @@ It emits actor records used by:
 - Hero thumbnails.
 - Per-actor thumbnails.
 - Notification severity.
-- Telegram captions.
 - UI badges and filters.
 
 Actor state is reset between surveillance sessions and after event finalization so actor IDs and dwell windows do not leak across recordings.
@@ -404,7 +400,6 @@ Start flow:
 7. Flush pre-record buffer into the event file.
 8. Start timeline collection using the actual encoder pre-record duration.
 9. Emit initial notification paths.
-10. Dispatch deterrent action if configured.
 
 Stop flow:
 
@@ -416,7 +411,7 @@ Stop flow:
 6. Write timeline sidecar.
 7. Write hero and actor thumbnails.
 8. Fall back to extracting a hero frame from MP4 when no YOLO hero exists.
-9. Publish finalized push and Telegram notifications.
+9. Publish finalized Web Push notifications.
 10. Reset actor and thumbnail state.
 
 Long events can rotate into multiple MP4 segments. A segment listener flushes metadata for each closed segment so later segments keep thumbnails, actor counts, and sidecar data.
@@ -437,37 +432,16 @@ Per-segment metadata includes:
 
 The timeline collector uses actual pre-record duration from the encoder so motion timestamps align with the video frames, even when the H.264 circular buffer flushes more than the nominal pre-record window because of keyframe boundaries.
 
-## Notifications and Telegram
+## Notifications
 
 Surveillance has two notification phases:
 
 - Start phase: low-latency "recording in progress" style signal.
 - Final phase: rich notification with threat summary and hero image.
 
-Notification severity is derived from actor state when available. Telegram follows similar start/final behavior, with config flags for start pings and per-tier mute behavior.
+Notifications are delivered through Web Push. Notification severity is derived from actor state when available.
 
 If no actor data exists, notifications fall back to generic motion wording.
-
-## BYD Cloud Deterrent
-
-`BydCloudDeterrent` is called when motion is confirmed.
-
-Supported actions:
-
-- `silent`: default, no action.
-- `flash_lights`: BYD cloud flash-lights command.
-- `find_car`: horn/lights find-car command.
-
-Design details:
-
-- Fire-and-forget from the surveillance thread.
-- Runs in a single low-priority background executor.
-- Enforces cooldown.
-- Prevents overlapping commands.
-- Reuses BYD cloud shared client when available.
-- Never throws back into the motion pipeline.
-
-`SurveillanceEngineGpu` tracks the deterrent dispatch time and suppresses self-triggering during the expected light-flash window.
 
 ## HTTP APIs
 
@@ -543,8 +517,6 @@ Default values include:
 - `blockSize`: 32.
 - `requiredBlocks`: 3.
 - `sensitivity`: 0.04.
-- `deterrentAction`: silent.
-- `deterrentCooldownSeconds`: 15.
 
 Runtime `SurveillanceConfig` also tracks:
 
@@ -559,7 +531,7 @@ Runtime `SurveillanceConfig` also tracks:
 - Per-quadrant sensitivity and zone overrides.
 - Per-quadrant ROI polygons.
 - Schedule rules.
-- Notification and Telegram tier toggles.
+- Notification tier toggles.
 
 ## Storage
 
@@ -601,7 +573,6 @@ Important safety and race-condition guards:
 - Surveillance depends on BYD firmware ACC, door-lock, camera, and power behavior.
 - Motion detection is tuned for a 2x2 360-camera mosaic and assumes the quadrant layout used by the GPU downscaler.
 - AI is opportunistic and gated; motion remains the primary trigger source.
-- BYD cloud deterrents require configured BYD cloud credentials and network availability.
 - Safe locations depend on recent GPS data.
 - Schedule checks are periodic after ACC-off entry, so window transitions are not instantaneous beyond explicit config-change enforcement.
 - If the camera HAL fails or returns blank frames, the pipeline relies on camera validation and auto-probe fallback rather than surveillance-specific recovery.
@@ -617,5 +588,5 @@ Important safety and race-condition guards:
 - Native texture tracker and actor tracking: [texture_tracker.h:69](../app/src/main/cpp/surveillance/texture_tracker.h#L69), [texture_tracker.cpp:191](../app/src/main/cpp/surveillance/texture_tracker.cpp#L191), [motion_pipeline_v2.cpp:1131](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1131), [ActorTracker.java:33](../app/src/main/java/com/loabletech/bladewatch/surveillance/ActorTracker.java#L33), [SurveillanceEngineGpu.java:1433](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1433), [SurveillanceEngineGpu.java:2129](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L2129).
 - Recording lifecycle, pre/post windows, and metadata: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3373), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L756), [EventTimelineCollector.java:42](../app/src/main/java/com/loabletech/bladewatch/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/loabletech/bladewatch/surveillance/ThumbnailBuffer.java#L32).
 - Safe locations, schedules, and config: [SafeLocationManager.java:34](../app/src/main/java/com/loabletech/bladewatch/surveillance/SafeLocationManager.java#L34), [SurveillanceConfigManager.kt:17](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfigManager.kt#L17), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
-- APIs, IPC, notifications, and deterrents: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30), [TelegramApiHandler.java:28](../app/src/main/java/com/loabletech/bladewatch/server/TelegramApiHandler.java#L28), [BydCloudDeterrent.java:33](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDeterrent.java#L33).
+- APIs, IPC, and notifications: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30).
 - Storage and cleanup: [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1685](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1685), [StorageManager.java:1958](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1958).

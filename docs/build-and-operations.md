@@ -36,8 +36,7 @@ Key dependency families:
 - AndroidX core, appcompat, lifecycle, navigation, WorkManager.
 - Material Components.
 - Dadb.
-- OkHttp.
-- Eclipse Paho MQTT v3 and v5.
+- OkHttp (used by the OTA updater).
 - TensorFlow Lite and GPU delegate.
 - WebSocket support.
 - Android security crypto.
@@ -59,20 +58,20 @@ Native source areas:
 - `app/src/main/cpp/surveillance/`.
 - `app/src/main/cpp/CMakeLists.txt`.
 
+The Zrok tunnel binary is packaged as `libzrok.so` in `jniLibs/` and extracted at runtime.
+
 ## Embedded Assets
 
 Important asset groups:
 
 - Web UI under `app/src/main/assets/web/`.
 - AI models under `app/src/main/assets/models/`.
-- Tunnel/proxy native binaries packaged as libraries.
-- Bangcle tables used by BYD cloud crypto.
+- Zrok native binary packaged as a library in `jniLibs/`.
 
 Runtime extraction paths:
 
 - `/data/local/tmp/web`.
 - `/data/local/tmp/overlay`.
-- `/data/local/tmp/bangcle_tables.bin`.
 
 The Gradle task `extractWebAssets` can push web assets to `/data/local/tmp/web` for development.
 
@@ -173,9 +172,7 @@ Important runtime files:
 
 - `/data/local/tmp/bladewatch_config.json`.
 - `/data/local/tmp/bladewatch_secrets.json`.
-- `/data/local/tmp/cloudflared.log`.
 - `/data/local/tmp/zrok.log`.
-- `/data/local/tmp/singbox.log`.
 - `/storage/emulated/0/BladeWatch`.
 
 Runtime files can contain secrets, tokens, tunnel URLs, or vehicle data. Treat pulled logs and configs as sensitive.
@@ -184,21 +181,20 @@ Runtime files can contain secrets, tokens, tunnel URLs, or vehicle data. Treat p
 
 - BYD firmware APIs can vary by region, model, and OTA version.
 - Native camera and GPU behavior can vary across devices.
-- BYD cloud API behavior can change without repo changes.
-- Tunnel and proxy credentials are sensitive.
+- Tunnel credentials are sensitive.
 - LAN HTTP exposure is opt-in and should remain off by default.
-- Vehicle control APIs can affect the physical car and should be tested conservatively.
+- Vehicle control APIs can affect the physical car and should be tested conservatively. Cloud-backed actions (lock, unlock, flash, find-car, battery-heat, charging-schedule) are not supported and will return an error.
 
 ## Documentation Maintenance
 
-When changing route handlers, daemon ports, config paths, startup timing, tunnel behavior, BYD cloud behavior, or storage paths, update the relevant file in `docs/`.
+When changing route handlers, daemon ports, config paths, startup timing, tunnel behavior, or storage paths, update the relevant file in `docs/`.
 
 Suggested mapping:
 
 - Runtime or lifecycle change: `architecture.md` and `daemons-and-processes.md`.
 - HTTP route change: `http-api-reference.md`.
-- Tunnel/proxy/network change: `networking-and-tunnels.md`.
-- BYD local or cloud change: `byd-integrations.md`.
+- Tunnel/network change: `networking-and-tunnels.md`.
+- BYD local change: `byd-integrations.md`.
 - Storage/config/media change: `data-flow-and-storage.md`.
 - User-facing capability change: `features.md`.
 

@@ -111,31 +111,12 @@ public class AppUpdater {
         }
     }
 
-    /**
-     * Build an OkHttpClient that auto-detects sing-box proxy on port 8119.
-     */
     private static OkHttpClient buildClient(long connectTimeout, long readTimeout) {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder()
+        return new OkHttpClient.Builder()
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(readTimeout, TimeUnit.SECONDS)
-                .followRedirects(true);
-
-        // Probe for sing-box proxy
-        boolean proxyAvailable = false;
-        try {
-            java.net.Socket probe = new java.net.Socket();
-            probe.connect(new java.net.InetSocketAddress("127.0.0.1", 8119), 200);
-            probe.close();
-            proxyAvailable = true;
-        } catch (Exception ignored) {}
-
-        if (proxyAvailable) {
-            builder.proxy(new java.net.Proxy(java.net.Proxy.Type.HTTP,
-                    new java.net.InetSocketAddress("127.0.0.1", 8119)));
-            Log.d(TAG, "Using sing-box proxy for update check");
-        }
-
-        return builder.build();
+                .followRedirects(true)
+                .build();
     }
 
     public interface UpdateCallback {
@@ -880,23 +861,14 @@ public class AppUpdater {
         script.append("pkill -9 -f 'byd_cam_daemon' 2>/dev/null\n");
         script.append("killall -9 byd_cam_daemon 2>/dev/null\n");
         script.append("pkill -9 -f 'sentry_daemon' 2>/dev/null\n");
-        script.append("pkill -9 -f 'telegram_bot_daemon' 2>/dev/null\n");
-        script.append("pkill -9 -f 'sentry_proxy' 2>/dev/null\n");
-        script.append("pkill -9 -f 'cloudflared' 2>/dev/null\n");
-        script.append("killall -9 cloudflared 2>/dev/null\n");
         script.append("pkill -9 -f 'zrok' 2>/dev/null\n");
         script.append("killall -9 zrok 2>/dev/null\n");
-        script.append("pkill -9 -f 'sing-box' 2>/dev/null\n");
-        script.append("killall -9 sing-box 2>/dev/null\n");
-        script.append("pkill -9 -f 'tailscaled' 2>/dev/null\n");
-        script.append("killall -9 tailscaled 2>/dev/null\n");
 
         // Per-daemon lock files (mirrors DaemonLauncher's killDaemonViaAdb
         // cleanup) so the relaunched MainActivity's daemon supervisor doesn't
         // refuse to start because a stale lock looks alive.
         script.append("rm -f /data/local/tmp/camera_daemon.lock 2>/dev/null\n");
         script.append("rm -f /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null\n");
-        script.append("rm -f /data/local/tmp/telegram_bot_daemon.lock 2>/dev/null\n");
         script.append("rm -f /data/local/tmp/*_daemon.lock 2>/dev/null\n");
         script.append("rm -f /data/local/tmp/cam_watchdog.pid 2>/dev/null\n");
         // Clear the camera disable sentinel — we needed it set above so
@@ -1068,9 +1040,7 @@ public class AppUpdater {
         
         // Step 2: Kill all daemon processes.
         // Watchdogs are already dead so nothing will respawn these.
-        String[] daemons = {"acc_sentry_daemon", "byd_cam_daemon", "sentry_daemon",
-                "telegram_bot_daemon", "sentry_proxy", "cloudflared", "zrok", "sing-box",
-                "tailscaled"};
+        String[] daemons = {"acc_sentry_daemon", "byd_cam_daemon", "sentry_daemon", "zrok"};
         
         for (String daemon : daemons) {
             final boolean[] done = {false};
@@ -1108,16 +1078,8 @@ public class AppUpdater {
                 "pkill -9 -f 'cam_daemon' 2>/dev/null; " +
                 "pkill -9 -f 'acc_sentry_daemon' 2>/dev/null; " +
                 "pkill -9 -f 'sentry_daemon' 2>/dev/null; " +
-                "pkill -9 -f 'telegram_bot_daemon' 2>/dev/null; " +
-                "pkill -9 -f 'sentry_proxy' 2>/dev/null; " +
-                "pkill -9 -f 'cloudflared' 2>/dev/null; " +
                 "pkill -9 -f 'zrok' 2>/dev/null; " +
-                "pkill -9 -f 'sing-box' 2>/dev/null; " +
-                "pkill -9 -f 'tailscaled' 2>/dev/null; " +
-                "killall -9 cloudflared 2>/dev/null; " +
                 "killall -9 zrok 2>/dev/null; " +
-                "killall -9 tailscaled 2>/dev/null; " +
-                "killall -9 sing-box 2>/dev/null; " +
                 "rm -f /data/local/tmp/*_daemon.lock 2>/dev/null; " +
                 "rm -f /data/local/tmp/cam_watchdog.pid 2>/dev/null; " +
                 "rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/start_acc_sentry.sh 2>/dev/null; " +

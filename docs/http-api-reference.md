@@ -29,12 +29,8 @@ Primary page routes include:
 - `GET /surveillance`.
 - `GET /events`.
 - `GET /performance`.
-- `GET /abrp`.
-- `GET /mqtt`.
 - `GET /trips`.
 - `GET /vehicle-control`.
-- `GET /telegram`.
-- `GET /byd-cloud`.
 - `GET /notifications`.
 - `GET /about`.
 
@@ -109,7 +105,6 @@ Handled by `QualitySettingsApiHandler`:
 - `POST /api/settings/telemetry-overlay`.
 - `GET /api/settings/appearance`.
 - `POST /api/settings/appearance`.
-- `GET /api/settings/telegram-status`.
 
 ## External Storage
 
@@ -120,34 +115,6 @@ Handled by `ExternalStorageApiHandler`:
 - `POST /api/storage/external/cleanup`.
 - `GET /api/storage/external/preview`.
 - `POST /api/storage/external/refresh`.
-
-## ABRP
-
-Handled by `AbrpApiHandler`:
-
-- `GET /api/abrp/config`.
-- `POST /api/abrp/config`.
-- `GET /api/abrp/status`.
-- `DELETE /api/abrp/token`.
-
-## MQTT
-
-Handled by `MqttApiHandler`:
-
-- `GET /api/mqtt/connections`.
-- `POST /api/mqtt/connections`.
-- `PUT /api/mqtt/connections/{id}`.
-- `DELETE /api/mqtt/connections/{id}`.
-- `GET /api/mqtt/status`.
-- `GET /api/mqtt/telemetry`.
-
-## Telegram
-
-Handled by `TelegramApiHandler`:
-
-- `/api/telegram/*`.
-
-Telegram also interacts with daemon IPC for commands and notifications.
 
 ## Trips
 
@@ -180,37 +147,28 @@ Handled by `VehicleControlApiHandler`:
 - `GET /api/vehicle/state`.
 - `GET /api/vehicle/ac-diagnostics`.
 - `GET /api/vehicle/seat-diagnostics`.
-- `GET /api/vehicle/cloud-status`.
-- `GET /api/vehicle/cloud-lock`.
-- `POST /api/vehicle/lock`.
-- `POST /api/vehicle/unlock`.
 - `POST /api/vehicle/trunk`.
 - `POST /api/vehicle/window`.
-- `POST /api/vehicle/flash`.
-- `POST /api/vehicle/find-car`.
 - `POST /api/vehicle/climate`.
 - `POST /api/vehicle/seat`.
 - `POST /api/vehicle/lights`.
 - `POST /api/vehicle/adas`.
-- `POST /api/vehicle/battery-heat`.
-- `GET /api/vehicle/charging-schedule`.
-- `POST /api/vehicle/charging-schedule`.
 - `GET /api/vehicle/charge-cap`.
 - `POST /api/vehicle/charge-cap`.
 
-Vehicle actions are implemented with cloud-first, cloud-only, or SDK-only strategies depending on action support.
+The following endpoints existed previously but are no longer supported. They return `NOT_SUPPORTED` or have been removed:
 
-## BYD Cloud
+- `GET /api/vehicle/cloud-status` — removed (required BYD cloud).
+- `GET /api/vehicle/cloud-lock` — removed (required BYD cloud MQTT lock source).
+- `POST /api/vehicle/lock` — not supported (cloud-only action).
+- `POST /api/vehicle/unlock` — not supported (cloud-only action).
+- `POST /api/vehicle/flash` — not supported (cloud-only action).
+- `POST /api/vehicle/find-car` — not supported (cloud-only action).
+- `POST /api/vehicle/battery-heat` — not supported (cloud-only action).
+- `GET /api/vehicle/charging-schedule` — not supported (cloud-only action).
+- `POST /api/vehicle/charging-schedule` — not supported (cloud-only action).
 
-Handled by `BydCloudApiHandler`:
-
-- `GET /api/bydcloud/status`.
-- `POST /api/bydcloud/setup`.
-- `POST /api/bydcloud/settings`.
-- `POST /api/bydcloud/test`.
-- `POST /api/bydcloud/clear`.
-
-Setup validates region and country mapping, credentials, optional control PIN, Bangcle table loading, login, vehicle list retrieval, and PIN verification.
+All supported vehicle actions use local SDK paths only.
 
 ## Performance
 
@@ -230,9 +188,9 @@ Handled by `PerformanceApiHandler`:
 - `GET /api/performance/last-charge`.
 - SOC-related endpoints under `/api/performance/soc`.
 - Battery-related endpoints under `/api/performance/battery`.
-- `GET /api/performance/soh`.
-- `POST /api/performance/soh/reset`.
-- `GET /api/performance/soh/nominal`.
+- `GET /api/performance/soh` — returns "not available"; SoH estimation has been removed.
+- `POST /api/performance/soh/reset` — returns "not available".
+- `GET /api/performance/soh/nominal` — returns BYD-local nominal capacity only.
 - `POST /api/performance/soh/nominal`.
 - `POST /api/performance/reset`.
 
@@ -280,7 +238,7 @@ Additional command behavior may be implemented by the TCP command server rather 
 ## Client Guidance
 
 - Always authenticate before calling protected APIs.
-- Use the local base URL from the Android app or tunnel URL from the tunnel launcher.
+- Use the local base URL from the Android app or tunnel URL from the Zrok launcher.
 - Avoid assuming response schemas from this list alone.
 - Do not send mutating calls from WebView through a proxy path; use the injected bridge pattern already implemented by the app.
 - Prefer WebSocket streaming routes for live video rather than polling snapshots.
@@ -292,6 +250,6 @@ Additional command behavior may be implemented by the TCP command server rather 
 - Recording and event APIs: [RecordingsApiHandler.java:41](../app/src/main/java/com/loabletech/bladewatch/server/RecordingsApiHandler.java#L41), [RecordingsApiHandler.java:484](../app/src/main/java/com/loabletech/bladewatch/server/RecordingsApiHandler.java#L484), [CameraDaemon.java:677](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L677).
 - Surveillance APIs and IPC crossover: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceApiHandler.java:855](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L855), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [CameraDaemon.java:1439](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1439).
 - Streaming APIs: [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19), [GpuSurveillancePipeline.java:30](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L30), [HttpServer.java:538](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L538).
-- GPS, quality/settings, storage, ABRP, MQTT, Telegram: [GpsApiHandler.java:18](../app/src/main/java/com/loabletech/bladewatch/server/GpsApiHandler.java#L18), [ExternalStorageApiHandler.java:27](../app/src/main/java/com/loabletech/bladewatch/server/ExternalStorageApiHandler.java#L27), [AbrpApiHandler.java:23](../app/src/main/java/com/loabletech/bladewatch/server/AbrpApiHandler.java#L23), [MqttApiHandler.java:25](../app/src/main/java/com/loabletech/bladewatch/server/MqttApiHandler.java#L25), [TelegramApiHandler.java:28](../app/src/main/java/com/loabletech/bladewatch/server/TelegramApiHandler.java#L28), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
+- GPS, quality/settings, storage: [GpsApiHandler.java:18](../app/src/main/java/com/loabletech/bladewatch/server/GpsApiHandler.java#L18), [ExternalStorageApiHandler.java:27](../app/src/main/java/com/loabletech/bladewatch/server/ExternalStorageApiHandler.java#L27), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
 - Trips, performance, models, updates, notifications: [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [PerformanceApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/PerformanceApiHandler.java#L30), [ModelsApiHandler.java:42](../app/src/main/java/com/loabletech/bladewatch/server/ModelsApiHandler.java#L42), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30).
-- Vehicle control and BYD cloud APIs: [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleControlApiHandler.java:488](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L488), [VehicleControlApiHandler.java:627](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L627), [VehicleControlApiHandler.java:796](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L796), [BydCloudApiHandler.java:26](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L26), [BydCloudApiHandler.java:307](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L307).
+- Vehicle control APIs: [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleControlApiHandler.java:488](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L488), [VehicleControlApiHandler.java:627](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L627), [VehicleControlApiHandler.java:796](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L796).

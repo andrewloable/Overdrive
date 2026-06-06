@@ -862,7 +862,7 @@ button.vc-pill:active { -webkit-transform: scale(.95); transform: scale(.95); }
 }
 
 @media (max-width: 480px) {
-    /* Phone viewports cannot fit lock + swatches + model + cloud beside the
+    /* Phone viewports cannot fit lock + swatches + model beside the
        hamburger. Wrap into two stable rows instead of relying on horizontal
        overflow, which causes iOS Safari to paint pills on top of each other. */
     .vc-status-bar {

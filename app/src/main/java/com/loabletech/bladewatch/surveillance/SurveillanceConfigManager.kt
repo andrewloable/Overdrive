@@ -54,8 +54,7 @@ class SurveillanceConfigManager(
         private const val KEY_DETECT_BIKE = "detectBike"
         private const val KEY_PRE_RECORD_SECONDS = "preRecordSeconds"
         private const val KEY_POST_RECORD_SECONDS = "postRecordSeconds"
-        private const val KEY_TG_SEND_START_PING = "telegramSendStartPing"
-        
+
         // V2 Pipeline keys
         private const val KEY_ENVIRONMENT_PRESET = "environmentPreset"
         private const val KEY_SENSITIVITY_LEVEL = "sensitivityLevel"
@@ -169,8 +168,7 @@ class SurveillanceConfigManager(
             put(KEY_DETECT_BIKE, config.isDetectBike)
             put(KEY_PRE_RECORD_SECONDS, config.preRecordSeconds)
             put(KEY_POST_RECORD_SECONDS, config.postRecordSeconds)
-            put(KEY_TG_SEND_START_PING, config.isTelegramSendStartPing)
-            
+
             // V2 Pipeline settings
             put(KEY_ENVIRONMENT_PRESET, config.environmentPreset)
             put(KEY_SENSITIVITY_LEVEL, config.sensitivityLevel)
@@ -257,9 +255,7 @@ class SurveillanceConfigManager(
         if (json.has(KEY_DETECT_BIKE)) config.setDetectBike(json.optBoolean(KEY_DETECT_BIKE, false))
         if (json.has(KEY_PRE_RECORD_SECONDS)) config.setPreRecordSeconds(json.optInt(KEY_PRE_RECORD_SECONDS, 5))
         if (json.has(KEY_POST_RECORD_SECONDS)) config.setPostRecordSeconds(json.optInt(KEY_POST_RECORD_SECONDS, 10))
-        if (json.has(KEY_TG_SEND_START_PING))
-            config.setTelegramSendStartPing(json.optBoolean(KEY_TG_SEND_START_PING, false))
-        
+
         // V2 Pipeline settings
         if (json.has(KEY_ENVIRONMENT_PRESET)) config.setEnvironmentPreset(json.optString(KEY_ENVIRONMENT_PRESET, "outdoor"))
         if (json.has(KEY_SENSITIVITY_LEVEL)) config.setSensitivityLevel(json.optInt(KEY_SENSITIVITY_LEVEL, 3))

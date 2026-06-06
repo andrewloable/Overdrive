@@ -693,7 +693,7 @@ public class BydDataCollector {
      * 
      * Hard-throttled: will not poll devices if called within 5 seconds of the last poll.
      * 
-     * Only polls CORE devices (used by ABRP, MQTT, trips, SOC history).
+     * Only polls CORE devices (used by trips, SOC history).
      * When ACC is off, skips speed/engine/gearbox (always 0 when parked).
      * Display-only devices are NOT polled — updated via listeners or on-demand.
      */

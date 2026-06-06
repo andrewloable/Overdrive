@@ -10,14 +10,14 @@ Android launcher UI
   -> foreground services and boot receivers
   -> DaemonStartupManager
   -> ADB shell / app_process launchers
-  -> CameraDaemon, SentryDaemon, AccSentryDaemon, Telegram daemon, tunnel daemons
+  -> CameraDaemon, SentryDaemon, AccSentryDaemon, Zrok tunnel daemon
 
 CameraDaemon
   -> local TCP command server on 127.0.0.1:19876
   -> local HTTP/WebSocket server on 127.0.0.1:8080
   -> surveillance IPC server on 127.0.0.1:19877
   -> GPU camera and surveillance pipeline
-  -> recording, streaming, telemetry, trips, notifications, MQTT, BYD cloud
+  -> recording, streaming, telemetry, trips, Web Push notifications
 
 Embedded web UI
   -> served from extracted APK assets under /data/local/tmp/web
@@ -26,8 +26,7 @@ Embedded web UI
 
 BYD integrations
   -> local BYD framework reflection and listeners
-  -> BYD cloud HTTPS and MQTT v5
-  -> vehicle state, diagnostics, control, and deterrent commands
+  -> vehicle state, diagnostics, and local SDK controls
 ```
 
 ## Build Modules
@@ -43,7 +42,7 @@ The repository is a single Android Gradle project:
 - Native ABI split: `arm64-v8a`.
 - Java and Kotlin target: 11.
 
-The app uses AndroidX, Material, Navigation, lifecycle, WorkManager, Dadb, OkHttp, Eclipse Paho MQTT, TensorFlow Lite, H2, WebSocket support, and native CMake builds.
+The app uses AndroidX, Material, Navigation, lifecycle, WorkManager, Dadb, OkHttp, TensorFlow Lite, H2, WebSocket support, and native CMake builds.
 
 ## Runtime Boundaries
 
@@ -65,12 +64,10 @@ The daemon processes are launched with Android `app_process` or extracted native
 
 Core daemon roles:
 
-- Camera daemon: camera, recording, streaming, HTTP API, WebSocket, telemetry, storage, notifications, BYD cloud, MQTT, trips.
+- Camera daemon: camera, recording, streaming, HTTP API, WebSocket, telemetry, storage, Web Push notifications, trips.
 - Sentry daemon: surveillance mode orchestration.
 - ACC sentry daemon: ACC-aware sentry behavior.
-- Telegram daemon: bot integration and remote commands.
-- Tunnel daemons: Cloudflared, Zrok, Tailscale.
-- Proxy daemon: sing-box/VLESS proxy support.
+- Zrok tunnel daemon: optional remote access tunnel.
 
 ### Native Libraries
 
@@ -82,6 +79,7 @@ Important native areas:
 - `app/src/main/cpp/surveillance/`.
 - `app/src/main/cpp/CMakeLists.txt`.
 - Downloaded OpenH264 and opencv-mobile artifacts handled by Gradle tasks.
+- `libzrok.so` packaged in `jniLibs/` for the Zrok tunnel.
 
 ## Startup Lifecycle
 
@@ -90,8 +88,8 @@ Important native areas:
 3. `MainActivity` initializes device identity, storage, BYD whitelist behavior, daemon startup management, WebView pages, and update checks.
 4. `BootReceiver` handles boot, package replacement, screen, power, network, and BYD ACC events.
 5. `DaemonKeepaliveService` runs as a sticky foreground service, holds a partial wake lock, and schedules process revival.
-6. `DaemonStartupManager` delays launch to let the vehicle head unit settle, then starts core daemons and optional daemons.
-7. `AdbDaemonLauncher` and lower launchers execute shell commands that start Java daemons or native tunnel binaries.
+6. `DaemonStartupManager` delays launch to let the vehicle head unit settle, then starts core daemons and the optional Zrok tunnel.
+7. `AdbDaemonLauncher` and lower launchers execute shell commands that start Java daemons or the native Zrok binary.
 
 Core daemon timing is intentionally staggered:
 
@@ -129,11 +127,11 @@ Owns the Android shell:
 
 ### `DaemonStartupManager`
 
-Coordinates daemon launch, optional tunnel/proxy launch, health checks, and user-stopped daemon state. It treats camera, sentry, and ACC sentry as core daemons and treats sing-box, Cloudflared, Zrok, Tailscale, and Telegram as optional daemons.
+Coordinates daemon launch, optional Zrok tunnel launch, health checks, and user-stopped daemon state. It treats camera, sentry, and ACC sentry as core daemons and treats Zrok as the optional tunnel daemon.
 
 ### `AdbDaemonLauncher`
 
-Facade over daemon and tunnel launchers. It starts camera, sentry, ACC sentry, Telegram, sing-box, Cloudflared, and related services through shell execution.
+Facade over daemon and tunnel launchers. It starts camera, sentry, ACC sentry, and Zrok through shell execution.
 
 ### `DaemonBootstrap`
 
@@ -141,7 +139,7 @@ The bootstrap entrypoint used by shell-launched Java daemons. It creates an Andr
 
 ### `CameraDaemon`
 
-The central long-running daemon. It starts local command and web servers, initializes the camera/GPU pipeline, config, auth, storage, telemetry, trip analytics, BYD collection, cloud integration, MQTT, ABRP, notifications, and surveillance IPC.
+The central long-running daemon. It starts local command and web servers, initializes the camera/GPU pipeline, config, auth, storage, telemetry, trip analytics, BYD collection, Web Push notifications, and surveillance IPC.
 
 ### `HttpServer`
 
@@ -155,17 +153,13 @@ Coordinates panoramic camera input, GPU scaling, recording, AI lane processing, 
 
 The main local BYD telemetry collector. It discovers BYD framework devices through reflection, reads initial values, registers listeners, and maintains a thread-safe vehicle snapshot.
 
-### `BydCloudClient` and `BydCloudMqttSubscriber`
-
-Cloud integration layer for BYD account login, vehicle discovery, control commands, real-time state request/polling, MQTT credential discovery, MQTT subscription, payload decryption, and snapshot merging.
-
 ## Design Patterns
 
 - Reflection is used heavily for BYD local APIs so the app can compile with stubs but run against the vehicle firmware classes.
 - Shared JSON files under `/data/local/tmp` are used for cross-process config and secrets.
 - Daemons expose local TCP/HTTP IPC rather than relying on Activity-bound Android services.
 - The Android WebView bypasses proxy issues by injecting a bridge for mutating API calls while allowing normal GET navigation.
-- Optional remote access is layered over the local web server through tunnels instead of exposing internet-facing server code directly.
+- Optional remote access is layered over the local web server through the Zrok tunnel instead of exposing internet-facing server code directly.
 - Surveillance and camera paths prioritize long-running stability over tight coupling with Android UI lifecycle.
 
 ## Major Risk Areas
@@ -174,7 +168,6 @@ Cloud integration layer for BYD account login, vehicle discovery, control comman
 - `/data/local/tmp` config must be protected carefully because multiple processes use it.
 - LAN mode exposes the embedded web server on all interfaces and must remain opt-in.
 - Tunnel URLs are only safe when paired with token auth.
-- BYD cloud APIs and Bangcle encryption behavior can change outside this repository.
 - BYD local API listener behavior can crash certain firmware paths, so some listeners are intentionally skipped or isolated.
 
 ## Source References
@@ -184,5 +177,5 @@ Cloud integration layer for BYD account login, vehicle discovery, control comman
 - Daemon orchestration and shell launch: [DaemonStartupManager.kt:15](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L15), [AdbDaemonLauncher.kt:17](../app/src/main/java/com/loabletech/bladewatch/launcher/AdbDaemonLauncher.kt#L17), [DaemonBootstrap.java:22](../app/src/main/java/com/loabletech/bladewatch/daemon/DaemonBootstrap.java#L22).
 - Camera daemon and local servers: [CameraDaemon.java:35](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L35), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22).
 - GPU surveillance and recording stack: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L58).
-- BYD local and cloud integration: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [BydCloudClient.java:22](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudClient.java#L22), [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudMqttSubscriber.java#L31).
+- BYD local integration: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20).
 - Build and native boundaries: [build.gradle.kts:276](../app/build.gradle.kts#L276), [build.gradle.kts:413](../app/build.gradle.kts#L413), [CMakeLists.txt:50](../app/src/main/cpp/CMakeLists.txt#L50).

@@ -1,11 +1,6 @@
 # BYD Integrations
 
-BladeWatch integrates with BYD vehicles through two main paths:
-
-- Local BYD Android framework APIs available on the head unit.
-- BYD cloud HTTPS and MQTT APIs.
-
-The local path is used for low-latency telemetry and some SDK controls. The cloud path is used for account-backed state, remote controls, and deterrent actions where local APIs are unavailable or unreliable.
+BladeWatch integrates with BYD vehicles through local BYD Android framework APIs available on the head unit. There is no cloud integration path; all vehicle data and controls use the local SDK only.
 
 ## Android Manifest Permissions
 
@@ -112,143 +107,42 @@ The code contains an important conversion note:
 
 Do not change door lock mapping without checking both local SDK behavior and web client expectations.
 
-## BYD Cloud Setup
+## Vehicle Control
 
-`BydCloudApiHandler` exposes setup and status APIs.
+`VehicleControlApiHandler` exposes vehicle-control HTTP endpoints. All controls go through `VehicleCommandRouter` using the local BYD SDK only.
 
-Setup flow:
+Actions supported via local SDK include:
 
-1. Validate region and country mapping.
-2. Validate username.
-3. Validate password and optional control PIN.
-4. Derive encrypted credentials.
-5. Load Bangcle tables.
-6. Log in through `BydCloudClient`.
-7. Fetch vehicle list.
-8. Verify control PIN when provided.
-9. Store cloud settings and secrets.
-
-Clear flow wipes credentials and disables cloud state.
-
-## Cloud Transport
-
-`BydCloudTransport` uses OkHttp and a Bangcle request envelope.
-
-Responsibilities:
-
-- Build target URL from configured region base URL and endpoint.
-- Encode encrypted request envelope.
-- Send JSON body containing the envelope.
-- Keep cookies in memory for the session.
-- Use the sing-box proxy when available.
-- Decode encrypted response envelope.
-
-## Cloud Client
-
-`BydCloudClient` is the high-level cloud API client.
-
-Capabilities:
-
-- Login.
-- Vehicle list retrieval.
-- Control password verification.
-- Remote control command execution.
-- Real-time state request and polling.
-- MQTT broker, credential, topic, and decrypt-key discovery.
-- Synchronized session handling.
-- Retry behavior for transient cloud responses.
-
-The implementation is informed by pyBYD/Niek behavior but is implemented locally in this app.
-
-## Cloud MQTT Subscriber
-
-`BydCloudMqttSubscriber` subscribes to BYD cloud vehicle updates.
-
-Key properties:
-
-- Uses Eclipse Paho MQTT v5.
-- Connects over SSL.
-- Uses BYD-discovered credentials and topics.
-- Supports proxy socket factories when sing-box is available.
-- Refreshes sessions periodically.
-- Uses reconnect backoff.
-- Decrypts vehicle info payloads before publishing snapshots.
-
-Paho MQTT v5 is used because MQTT v3 can connect in this environment but does not receive expected vehicle info pushes.
-
-## Cloud Data Provider
-
-`BydCloudDataProvider` and `VehicleCloudSnapshot` provide cloud-derived state to the rest of the app.
-
-Cloud data can supplement local data for values such as:
-
-- Lock state.
-- Window state.
-- State of charge.
-- Cloud-only vehicle state.
-
-Merging behavior is controlled by BYD cloud config.
-
-## Vehicle Control API
-
-`VehicleControlApiHandler` exposes vehicle-control HTTP endpoints.
-
-Action strategy categories:
-
-- Cloud-first: try cloud path when available, with local fallback where appropriate.
-- Cloud-only: actions only supported by BYD cloud.
-- SDK-only: actions controlled only through local BYD SDK paths.
-
-Endpoint areas include:
-
-- Lock and unlock.
-- Trunk.
-- Windows.
-- Flash lights.
-- Find car.
 - Climate.
+- Windows.
 - Seats.
+- Trunk.
 - Lights.
 - ADAS.
-- Battery heat.
-- Charging schedule.
 - Charge cap.
 - Diagnostics and state reads.
 
-## Deterrent Commands
+The following actions were previously supported through a cloud path that no longer exists. They now return `NOT_SUPPORTED`:
 
-`BydCloudDeterrent` can trigger cloud commands from surveillance events.
+- Lock and unlock.
+- Flash lights.
+- Find car.
+- Battery heat.
+- Charging schedule.
+- Smart charging.
 
-Behavior:
+`VehicleCommandRouter` routes all requests through SDK-only paths. Cloud-first and cloud-only strategies are no longer present.
 
-- Fire-and-forget commands.
-- Supported actions include flash lights and find car.
-- Cooldown and in-flight command suppression.
-- Shared cloud client fallback.
+## Lock Detection for Surveillance
 
-This avoids blocking the surveillance pipeline on cloud command latency.
-
-## Bangcle Crypto Assets
-
-BYD cloud requests use Bangcle-related crypto code and tables:
-
-- `BangcleCodec`.
-- `BangcleTables`.
-- `BangcleBlockCipher`.
-- `BydCryptoUtils`.
-- `CredentialCipher`.
-- Runtime table path: `/data/local/tmp/bangcle_tables.bin`.
-
-The HTTP daemon extracts Bangcle tables from app assets at startup.
+`CameraDaemon` waits for the vehicle to be locked before arming surveillance after ACC turns off. Lock state is determined using the local BYD device SDK door-lock listener and periodic local door-lock polling only. A force-arm timeout fires after roughly 60 seconds if no lock event arrives.
 
 ## Safety and Maintenance Notes
 
 - Local BYD APIs are firmware-dependent and must be treated as unstable.
 - Reflection calls should keep per-device isolation.
 - Avoid listener registration on known-crashing BYD APIs.
-- Do not log credentials, PINs, cloud session tokens, MQTT credentials, decrypt keys, or Bangcle-derived secrets.
-- Do not assume cloud APIs are stable.
-- Test vehicle controls carefully; cloud commands can affect the physical car.
+- Do not log credentials or BYD-derived secrets.
 - Keep local SDK stubs compile-only.
 
 ## Source References
@@ -258,7 +152,4 @@ The HTTP daemon extracts Bangcle tables from app assets at startup.
 - Local telemetry collector and reflection-based device access: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [BydDataCollector.java:247](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L247), [BydDataCollector.java:3907](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L3907).
 - ACC, gear, and event plumbing: [BydConstants.java:10](../app/src/main/java/com/loabletech/bladewatch/byd/BydConstants.java#L10), [GearMonitor.java:132](../app/src/main/java/com/loabletech/bladewatch/monitor/GearMonitor.java#L132), [CameraDaemon.java:1905](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1905), [CameraDaemon.java:2206](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L2206).
 - Door lock and surveillance gating: [CameraDaemon.java:1764](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1764), [CameraDaemon.java:1439](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1439), [AccSentryDaemon.java:1900](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L1900).
-- BYD cloud config, setup, and client: [BydCloudConfig.java:13](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudConfig.java#L13), [BydCloudApiHandler.java:26](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L26), [BydCloudApiHandler.java:174](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L174), [BydCloudClient.java:22](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudClient.java#L22).
-- BYD cloud MQTT and snapshot merge: [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudMqttSubscriber.java#L31), [BydCloudDataProvider.java:14](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDataProvider.java#L14).
 - Vehicle control routing and handlers: [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleCommandRouter.java:37](../app/src/main/java/com/loabletech/bladewatch/byd/routing/VehicleCommandRouter.java#L37), [VehicleControlApiHandler.java:488](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L488), [VehicleControlApiHandler.java:627](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L627), [VehicleControlApiHandler.java:796](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L796).
-- Deterrent commands and crypto assets: [BydCloudDeterrent.java:33](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDeterrent.java#L33), [BydCryptoUtils.java:23](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/crypto/BydCryptoUtils.java#L23), [BydCloudApiHandler.java:389](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L389).

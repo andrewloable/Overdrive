@@ -71,7 +71,7 @@ Command:
 ```bash
 adb shell ls -l /data/local/tmp/bladewatch_secrets.json
 adb shell cat /data/local/tmp/bladewatch_config.json
-adb shell "cat /data/local/tmp/bladewatch_config.json | grep -E 'deviceSecret|botToken|loginKey|signPassword|commandPwd|rawPassword|user_token|api_key|enableToken|reservedToken|mqttPassword|password' || true"
+adb shell "cat /data/local/tmp/bladewatch_config.json | grep -E 'deviceSecret|loginKey|signPassword|commandPwd|rawPassword|user_token|api_key|enableToken|reservedToken|password' || true"
 adb logcat -d | grep -E 'New token|Using reserved token|byd_jwt|byd_session'
 ```
 
@@ -107,20 +107,8 @@ Expected:
 Failure interpretation:
 If backups are enabled without full exclusions, Android backup can leak sensitive device data off the head unit.
 
-## 8. Verify MQTT secrets are hidden and insecure TLS is not the default
+## 8. Verify OTA update packages with a bad checksum are rejected
 
-Command:
-```bash
-adb shell "cat /data/local/tmp/bladewatch_config.json | grep -E 'mqtt|trustAllCerts|tcp://' || true"
-```
-
-Expected:
-The public config should not print an MQTT password. `trustAllCerts` should be `false` unless you intentionally enabled it for a trusted test broker. `tcp://` should only appear if you explicitly chose plain MQTT for a trusted local network.
-
-Failure interpretation:
-If a password is visible in the public config, or if insecure TLS is enabled by default, the MQTT hardening has regressed.
-
-## 9. Verify OTA update packages with a bad checksum are rejected
 
 Command:
 ```bash
@@ -170,4 +158,4 @@ If the update state files are missing when the updater says an install happened,
 - HTTP auth enforcement and protected routes: [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [HttpServer.java:650](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L650).
 - LAN binding and loopback defaults: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [UnifiedConfigManager.kt:559](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L559), [UnifiedConfigManager.kt:567](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L567).
 - Secret storage and redaction: [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [AuthManager.java:530](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L530), [SecretRedactor.java:14](../app/src/main/java/com/loabletech/bladewatch/logging/SecretRedactor.java#L14).
-- MQTT, update checksum, and OTA behavior: [MqttApiHandler.java:25](../app/src/main/java/com/loabletech/bladewatch/server/MqttApiHandler.java#L25), [build.gradle.kts:8](../app/build.gradle.kts#L8), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43).
+- Update checksum and OTA behavior: [build.gradle.kts:8](../app/build.gradle.kts#L8), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43).

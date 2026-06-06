@@ -923,9 +923,9 @@ public class AccSentryDaemon {
                 
                 // 7. Register door lock listener and wait for lock before arming surveillance.
                 // When ACC goes OFF and you exit the car, motion detection would pick you up
-                // Door lock gate is now handled by CameraDaemon (which has the cloud MQTT
-                // subscriber running in-process). CameraDaemon arms/disarms surveillance
-                // based on lock/unlock events after receiving the ACC OFF notification above.
+                // Door lock gate is handled by CameraDaemon (it has the BydDataCollector
+                // typed HAL listener). CameraDaemon arms/disarms surveillance based on
+                // lock/unlock events after receiving the ACC OFF notification above.
                 // AccSentryDaemon no longer needs to manage lock detection or surveillance IPC.
                 log("Door lock gate delegated to CameraDaemon");
                 
@@ -2035,9 +2035,9 @@ public class AccSentryDaemon {
      */
     
     // ==================== DOOR LOCK GATED SURVEILLANCE — DELETED ====================
-    // Door-lock gating is owned by CameraDaemon (it has the cloud MQTT subscriber
-    // in-process and BydDataCollector's typed HAL listener). AccSentryDaemon
-    // delegates by calling notifyAccState() — see enterSentryMode() / exitSentryMode().
+    // Door-lock gating is owned by CameraDaemon (it has BydDataCollector's typed
+    // HAL listener). AccSentryDaemon delegates by calling notifyAccState() — see
+    // enterSentryMode() / exitSentryMode().
     
     /**
      * Notify CameraDaemon of ACC state change.

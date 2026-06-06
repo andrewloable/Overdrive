@@ -800,7 +800,7 @@ public class CameraDaemon {
     
     /**
      * Sentinel file that signals the shell watchdog wrapper to NOT restart the daemon.
-     * Written by shutdown() when the daemon is intentionally disabled (UI/Telegram).
+     * Written by shutdown() when the daemon is intentionally disabled (UI).
      * The watchdog script checks for this file before each restart attempt.
      * To re-enable, delete this file and start the watchdog script again.
      */

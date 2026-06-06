@@ -162,28 +162,6 @@ public class SurveillanceConfig {
     private boolean pushAlerts   = true;
     private boolean pushCritical = true;
 
-    /**
-     * Telegram-specific: when true, send a "Recording in progress…" text
-     * message at the moment recording starts, in addition to the rich photo +
-     * caption sent when it closes. When false, only the close-stage photo is
-     * sent — recommended default because the start-stage text is redundant
-     * for users who also have the PWA push (the PWA banner replaces itself
-     * via the same notification tag, but Telegram has no equivalent and the
-     * user sees two messages back-to-back). Telegram-only users may want
-     * this on for low-latency awareness.
-     */
-    private boolean telegramSendStartPing = false;
-
-    /**
-     * Telegram per-tier mute. Mirrors the push tier toggles so a
-     * Telegram-only user can choose to receive only the actually-important
-     * alerts. Defaults match push (NOTICE off, ALERT on, CRITICAL on) so a
-     * fresh install behaves the same way under both transports.
-     */
-    private boolean telegramNotices  = false;
-    private boolean telegramAlerts   = true;
-    private boolean telegramCritical = true;
-    
     // ========================================================================
     // UNIFIED SENSITIVITY (0-100%)
     // ========================================================================
@@ -651,16 +629,6 @@ public class SurveillanceConfig {
     public void setPushAlerts(boolean v)   { this.pushAlerts = v; }
     public void setPushCritical(boolean v) { this.pushCritical = v; }
 
-    public boolean isTelegramSendStartPing() { return telegramSendStartPing; }
-    public void setTelegramSendStartPing(boolean v) { this.telegramSendStartPing = v; }
-
-    public boolean isTelegramNotices()  { return telegramNotices; }
-    public boolean isTelegramAlerts()   { return telegramAlerts; }
-    public boolean isTelegramCritical() { return telegramCritical; }
-    public void setTelegramNotices(boolean v)  { this.telegramNotices = v; }
-    public void setTelegramAlerts(boolean v)   { this.telegramAlerts = v; }
-    public void setTelegramCritical(boolean v) { this.telegramCritical = v; }
-    
     // Object detection setters
     public void setAiConfidence(float confidence) {
         this.aiConfidence = Math.max(0.1f, Math.min(0.9f, confidence));

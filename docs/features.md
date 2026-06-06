@@ -38,7 +38,6 @@ Default camera-related values found in code:
 - Loitering and sustained-motion logic.
 - Surveillance heatmap and snapshots.
 - Safe locations.
-- Deterrent actions through BYD cloud commands.
 - Filter logging.
 
 Default surveillance config includes:
@@ -74,11 +73,7 @@ Pages and areas include:
 - Surveillance.
 - Events.
 - Performance.
-- ABRP.
-- MQTT.
 - Trips.
-- Telegram.
-- BYD cloud.
 - Notifications.
 - Vehicle control.
 - About and credits.
@@ -131,22 +126,29 @@ Telemetry areas include:
 
 The collector isolates failures by device type so one unavailable BYD API does not disable all telemetry.
 
-## BYD Cloud
+## Local Vehicle Control
 
-Cloud support includes:
+Vehicle control uses the local BYD SDK through `VehicleCommandRouter`. There is no cloud control path.
 
-- Region and country mapping.
-- BYD account login.
-- Credential encryption.
-- Bangcle table loading.
-- Vehicle discovery.
-- Control PIN verification.
-- Remote real-time state request and polling.
-- Remote control commands.
-- MQTT v5 subscription to vehicle updates.
-- Payload decryption and cloud snapshot merging.
+Local SDK controls include:
 
-Remote vehicle controls include lock, unlock, trunk/window actions, flash/find-car actions, climate, seats, lights, ADAS, battery heating, charging schedule, and charge cap APIs.
+- Climate.
+- Windows.
+- Seats.
+- Trunk.
+- Lights.
+- ADAS.
+- Charge cap.
+- Diagnostics and state reads.
+
+The following actions are not supported because they required a cloud backend that has been removed:
+
+- Lock and unlock.
+- Flash lights.
+- Find car.
+- Battery heat.
+- Charging schedule.
+- Smart charging.
 
 ## Trips and Analytics
 
@@ -170,40 +172,23 @@ Performance features include:
 - Historical performance views.
 - Connection and heartbeat APIs.
 - Battery and SOC data.
-- State-of-health tracking.
 - Parking delta.
 - Charge session and last-charge tracking.
 - Telemetry overlay config.
+
+Battery state-of-health estimation is not available. The nominal battery capacity value from BYD local telemetry is accessible through the SOC nominal endpoint, but no SoH estimator runs.
 
 ## Notifications and Push
 
 Notification features include:
 
 - Notification category APIs.
-- Push subscription management.
+- Web Push subscription management (PWA push).
 - Push preference updates.
 - Test push endpoint.
 - Android notification channels and foreground service notifications.
 
-## Telegram
-
-Telegram integration is an optional daemon and web/API feature area. It can receive daemon state and tunnel URL notifications and can drive selected surveillance and app commands through IPC.
-
-## MQTT and ABRP
-
-MQTT support includes:
-
-- Multiple connection definitions.
-- Connection create, update, delete, and status APIs.
-- Telemetry publishing surfaces.
-- Proxy-aware connections through sing-box where needed.
-
-ABRP support includes:
-
-- Config APIs.
-- Status APIs.
-- Token deletion.
-- Proxy-aware outbound connections.
+Surveillance and proximity events deliver notifications through Web Push. There is no Telegram notification path.
 
 ## Remote Access
 
@@ -211,15 +196,9 @@ Remote access options include:
 
 - Local loopback web server.
 - Opt-in LAN HTTP.
-- Cloudflared quick tunnel.
 - Zrok public or reserved share.
-- Tailscale userspace networking.
 
-LAN HTTP is disabled by default. Tunnels are designed to front the authenticated local web server.
-
-## Proxy and Network Bypass
-
-sing-box support provides a local mixed proxy for outbound traffic that may otherwise be blocked on the vehicle head unit. The code supports using this proxy for Cloudflared, Zrok, Tailscale setup paths, MQTT, ABRP, and BYD cloud traffic.
+LAN HTTP is disabled by default. Zrok is designed to front the authenticated local web server directly with no intermediate proxy.
 
 ## Updates
 
@@ -243,6 +222,5 @@ Diagnostics exist across native Android UI, daemon state, HTTP APIs, and log fil
 - Live streaming: [GpuSurveillancePipeline.java:30](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L30), [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19), [HttpServer.java:538](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L538).
 - Embedded web UI and Android WebView: [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [WebViewFragment.kt:28](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L28), [app/src/main/assets/web/shared/core.js:537](../app/src/main/assets/web/shared/core.js#L537).
 - BYD telemetry and vehicle control: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleCommandRouter.java:37](../app/src/main/java/com/loabletech/bladewatch/byd/routing/VehicleCommandRouter.java#L37).
-- BYD cloud: [BydCloudApiHandler.java:26](../app/src/main/java/com/loabletech/bladewatch/server/BydCloudApiHandler.java#L26), [BydCloudClient.java:22](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudClient.java#L22), [BydCloudDataProvider.java:14](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudDataProvider.java#L14), [BydCloudMqttSubscriber.java:31](../app/src/main/java/com/loabletech/bladewatch/byd/cloud/BydCloudMqttSubscriber.java#L31).
-- Trips, notifications, MQTT, ABRP, updates, and diagnostics: [TripAnalyticsManager.java:23](../app/src/main/java/com/loabletech/bladewatch/trips/TripAnalyticsManager.java#L23), [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30), [MqttApiHandler.java:25](../app/src/main/java/com/loabletech/bladewatch/server/MqttApiHandler.java#L25), [AbrpApiHandler.java:23](../app/src/main/java/com/loabletech/bladewatch/server/AbrpApiHandler.java#L23), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43), [PerformanceApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/PerformanceApiHandler.java#L30).
-- Remote access and proxy features: [TunnelLauncher.kt:12](../app/src/main/java/com/loabletech/bladewatch/launcher/TunnelLauncher.kt#L12), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [TailscaleLauncher.kt:11](../app/src/main/java/com/loabletech/bladewatch/launcher/TailscaleLauncher.kt#L11), [GlobalProxyDaemon.java:15](../app/src/main/java/com/loabletech/bladewatch/daemon/GlobalProxyDaemon.java#L15), [ProxyConfiguration.kt:29](../app/src/main/java/com/loabletech/bladewatch/daemon/proxy/ProxyConfiguration.kt#L29).
+- Trips, notifications, updates, and diagnostics: [TripAnalyticsManager.java:23](../app/src/main/java/com/loabletech/bladewatch/trips/TripAnalyticsManager.java#L23), [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30), [UpdateApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/UpdateApiHandler.java#L43), [PerformanceApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/PerformanceApiHandler.java#L30).
+- Remote access: [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27).

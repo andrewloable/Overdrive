@@ -68,11 +68,7 @@ Core daemons:
 
 Optional daemons:
 
-- `SINGBOX_PROXY`.
-- `CLOUDFLARED_TUNNEL`.
 - `ZROK_TUNNEL`.
-- `TAILSCALE_TUNNEL`.
-- `TELEGRAM_DAEMON`.
 
 Startup timing:
 
@@ -98,11 +94,7 @@ It can start:
 - Camera daemon.
 - Sentry daemon.
 - ACC sentry daemon.
-- Telegram bot daemon.
-- Cloudflared tunnel.
 - Zrok tunnel.
-- Tailscale tunnel.
-- sing-box proxy.
 - Android sidecar services.
 
 It also applies selected power, location, ACC whitelist, and Wi-Fi settings.
@@ -135,12 +127,9 @@ Responsibilities:
 - Web asset extraction.
 - Native libraries.
 - BYD data collector.
-- BYD cloud subscriber.
-- MQTT.
-- ABRP.
 - Trip analytics.
 - Telemetry collector.
-- Notifications.
+- Web Push notifications.
 
 The daemon uses an Android Looper and defensive retry handling around BYD listener paths because some firmware listeners can fail or crash unexpectedly.
 
@@ -175,13 +164,11 @@ It accepts JSON commands for local control. Known command areas include:
 127.0.0.1:19877
 ```
 
-It accepts local JSON commands used by the app, Telegram daemon, location sidecar, update flows, and surveillance controllers. Known command areas include:
+It accepts local JSON commands used by the app, location sidecar, update flows, and surveillance controllers. Known command areas include:
 
 - Start, stop, and status.
 - Enable and disable surveillance.
 - GPS update.
-- ABRP actions.
-- MQTT actions.
 - Update install actions.
 
 The server uses a thread pool for concurrent local requests.
@@ -221,80 +208,20 @@ Responsibilities:
 - Uses the `UPDATE_GPS` surveillance IPC command.
 - Sends updates roughly every two seconds while active.
 
-## Tunnel and Proxy Processes
+## Zrok Tunnel Process
 
-### Cloudflared
+Zrok is the sole remote-access tunnel. It is extracted from the packaged `libzrok.so` native library and run as a subprocess.
 
-Extracted binary:
-
-```text
-/data/local/tmp/cloudflared
-```
-
-Runs a tunnel to:
-
-```text
-http://127.0.0.1:8080
-```
-
-Cloudflared log:
-
-```text
-/data/local/tmp/cloudflared.log
-```
-
-### Zrok
-
-Extracted binary:
+Runtime paths:
 
 ```text
 /data/local/tmp/zrok
-```
-
-Supports public and reserved shares. It uses:
-
-```text
+/data/local/tmp/zrok.log
 /data/local/tmp/.zrok/environment.json
 /data/local/tmp/.zrok/unique_name
-/data/local/tmp/zrok.log
 ```
 
-### Tailscale
-
-Runtime directory:
-
-```text
-/data/local/tmp/.tailscale
-```
-
-Userspace socket:
-
-```text
-127.0.0.1:8532
-```
-
-Optional SOCKS5 proxy:
-
-```text
-127.0.0.1:8539
-```
-
-### sing-box
-
-Binary and config:
-
-```text
-/data/local/tmp/sing-box
-/data/local/tmp/singbox_config.json
-```
-
-Local mixed proxy:
-
-```text
-127.0.0.1:8119
-```
-
-The generated config may include VLESS Reality outbound settings. Do not publish actual proxy credentials.
+Zrok fronts the local HTTP server at `http://127.0.0.1:8080` and supports public ephemeral shares or reserved shares with a stable `https://<name>.share.zrok.io` URL. It runs directly with no intermediate proxy layer.
 
 ## Process Interaction Summary
 
@@ -303,19 +230,19 @@ BootReceiver / MainActivity
   -> DaemonKeepaliveService
   -> DaemonStartupManager
   -> AdbDaemonLauncher
-  -> app_process Java daemons and extracted native binaries
+  -> app_process Java daemons and extracted Zrok native binary
 
 Android UI
   -> TCP 19876 and WebView HTTP 8080
 
-Location sidecar / Telegram / app helpers
+Location sidecar / app helpers
   -> TCP 19877 surveillance IPC
 
 Browser or tunnel client
   -> HTTP/WebSocket 8080
 
 Camera daemon
-  -> BYD local APIs, BYD cloud HTTPS/MQTT, storage, notifications, trips
+  -> BYD local APIs, storage, Web Push notifications, trips
 ```
 
 ## Source References
@@ -326,4 +253,4 @@ Camera daemon
 - Camera daemon ports and server setup: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49).
 - TCP and surveillance IPC commands: [CameraDaemonClient.java:169](../app/src/main/java/com/loabletech/bladewatch/client/CameraDaemonClient.java#L169), [TcpCommandServer.java:125](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L125), [TcpCommandServer.java:262](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L262), [SurveillanceIpcServer.java:136](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L136), [SurveillanceIpcServer.java:540](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L540).
 - Location sidecar IPC: [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32), [AccSentryDaemon.java:2078](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L2078).
-- Tunnel and proxy processes: [TunnelLauncher.kt:12](../app/src/main/java/com/loabletech/bladewatch/launcher/TunnelLauncher.kt#L12), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [ZrokLauncher.kt:1079](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L1079), [TailscaleLauncher.kt:11](../app/src/main/java/com/loabletech/bladewatch/launcher/TailscaleLauncher.kt#L11), [GlobalProxyDaemon.java:15](../app/src/main/java/com/loabletech/bladewatch/daemon/GlobalProxyDaemon.java#L15), [ProxyConfiguration.kt:29](../app/src/main/java/com/loabletech/bladewatch/daemon/proxy/ProxyConfiguration.kt#L29).
+- Zrok tunnel process: [TunnelLauncher.kt:12](../app/src/main/java/com/loabletech/bladewatch/launcher/TunnelLauncher.kt#L12), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [ZrokLauncher.kt:1079](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L1079).
