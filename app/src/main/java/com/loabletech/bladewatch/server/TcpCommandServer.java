@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.config.SecretConfigStore;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.config.SecretConfigStore;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -160,7 +160,7 @@ public class TcpCommandServer {
             case "getFrame":
                 int frameViewId = cmd.optInt("camera", 1);
                 // GPU pipeline: get frame from GPU camera extractor
-                com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline gpuPipeline = CameraDaemon.getGpuPipeline();
+                net.bladewatch.app.surveillance.GpuSurveillancePipeline gpuPipeline = CameraDaemon.getGpuPipeline();
                 if (gpuPipeline != null && gpuPipeline.getCamera() != null) {
                     byte[] jpegFrame = gpuPipeline.getCamera().getLatestJpegFrame(frameViewId);
                     if (jpegFrame != null) {
@@ -213,8 +213,8 @@ public class TcpCommandServer {
             // ==================== SURVEILLANCE COMMANDS ====================
             
             case "enableSurveillance":
-                com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(true);
-                if (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+                net.bladewatch.app.config.UnifiedConfigManager.setSurveillanceEnabled(true);
+                if (!net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                     CameraDaemon.enableSurveillance();
                 }
                 response.put("status", "ok");
@@ -223,7 +223,7 @@ public class TcpCommandServer {
 
             case "disableSurveillance":
                 CameraDaemon.disableSurveillance();
-                com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(false);
+                net.bladewatch.app.config.UnifiedConfigManager.setSurveillanceEnabled(false);
                 response.put("status", "ok");
                 response.put("surveillance", CameraDaemon.getSurveillanceStatus());
                 break;
@@ -307,12 +307,12 @@ public class TcpCommandServer {
                 // Set recordings storage type: INTERNAL or SD_CARD
                 String recStorageTypeValue = cmd.optString("value", "").toUpperCase();
                 if (recStorageTypeValue.equals("INTERNAL") || recStorageTypeValue.equals("SD_CARD")) {
-                    com.loabletech.bladewatch.storage.StorageManager storageManager =
-                        com.loabletech.bladewatch.storage.StorageManager.getInstance();
-                    com.loabletech.bladewatch.storage.StorageManager.StorageType recType =
+                    net.bladewatch.app.storage.StorageManager storageManager =
+                        net.bladewatch.app.storage.StorageManager.getInstance();
+                    net.bladewatch.app.storage.StorageManager.StorageType recType =
                         "SD_CARD".equals(recStorageTypeValue) ?
-                            com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD :
-                            com.loabletech.bladewatch.storage.StorageManager.StorageType.INTERNAL;
+                            net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD :
+                            net.bladewatch.app.storage.StorageManager.StorageType.INTERNAL;
                     boolean recSuccess = storageManager.setRecordingsStorageType(recType);
                     if (recSuccess) {
                         response.put("status", "ok");
@@ -334,8 +334,8 @@ public class TcpCommandServer {
                 // Set recordings storage limit in MB
                 long recLimitMb = cmd.optLong("value", -1);
                 if (recLimitMb > 0) {
-                    com.loabletech.bladewatch.storage.StorageManager recLimitStorage =
-                        com.loabletech.bladewatch.storage.StorageManager.getInstance();
+                    net.bladewatch.app.storage.StorageManager recLimitStorage =
+                        net.bladewatch.app.storage.StorageManager.getInstance();
                     recLimitStorage.setRecordingsLimitMb(recLimitMb);
                     response.put("status", "ok");
                     response.put("limitMb", recLimitStorage.getRecordingsLimitMb());
@@ -395,7 +395,7 @@ public class TcpCommandServer {
             case "auth_invalidate":
                 // Invalidate cached auth state - called when app regenerates token
                 // This forces daemon to reload auth state from file on next JWT validation
-                com.loabletech.bladewatch.auth.AuthManager.invalidateCache();
+                net.bladewatch.app.auth.AuthManager.invalidateCache();
                 CameraDaemon.log("Auth cache invalidated via IPC");
                 response.put("status", "ok");
                 response.put("message", "Auth cache invalidated");
@@ -502,7 +502,7 @@ public class TcpCommandServer {
     public static JSONArray getRecordingCameras() {
         JSONArray arr = new JSONArray();
         // GPU pipeline: Only show as recording if in recording mode AND actually recording
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
         if (pipeline != null && pipeline.isRecordingMode() && pipeline.isRecording()) {
             // Mosaic recording = all 4 cameras
             arr.put(1);
@@ -516,7 +516,7 @@ public class TcpCommandServer {
     public static JSONArray getViewOnlyCameras() {
         JSONArray arr = new JSONArray();
         // GPU pipeline: Show as viewing if running but not in recording mode
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
         if (pipeline != null && pipeline.isRunning() && !pipeline.isRecordingMode()) {
             // Viewing all 4 cameras
             arr.put(1);

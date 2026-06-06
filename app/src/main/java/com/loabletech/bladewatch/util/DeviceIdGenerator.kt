@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
-import com.loabletech.bladewatch.launcher.AdbShellExecutor
+import net.bladewatch.app.launcher.AdbShellExecutor
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -18,7 +18,7 @@ import java.io.FileReader
 object DeviceIdGenerator {
     
     private const val TAG = "DeviceIdGenerator"
-    private const val ID_FILE = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/.bladewatch_device_id"
+    private const val ID_FILE = "/storage/emulated/0/Android/data/net.bladewatch.app/files/.bladewatch_device_id"
     private const val LEGACY_ID_FILE = "/data/local/tmp/.bladewatch_device_id"
     private const val LEGACY_CAMERA_ID_FILE = "/data/local/tmp/.byd_device_id"
     private const val ID_PREFIX = "byd-"
@@ -184,7 +184,7 @@ object DeviceIdGenerator {
         }
         
         executor.execute(
-            command = "mkdir -p /storage/emulated/0/Android/data/com.loabletech.bladewatch/files; echo '$id' > $ID_FILE; echo '$id' > $LEGACY_ID_FILE; echo '$id' > $LEGACY_CAMERA_ID_FILE",
+            command = "mkdir -p /storage/emulated/0/Android/data/net.bladewatch.app/files; echo '$id' > $ID_FILE; echo '$id' > $LEGACY_ID_FILE; echo '$id' > $LEGACY_CAMERA_ID_FILE",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
                     Log.d(TAG, "Device ID saved to file via ADB: $id")
@@ -211,7 +211,7 @@ object DeviceIdGenerator {
         
         val id = generateDeviceId(context)
         return try {
-            val result = executor.executeSync("mkdir -p /storage/emulated/0/Android/data/com.loabletech.bladewatch/files; echo '$id' > $ID_FILE; echo '$id' > $LEGACY_ID_FILE; echo '$id' > $LEGACY_CAMERA_ID_FILE")
+            val result = executor.executeSync("mkdir -p /storage/emulated/0/Android/data/net.bladewatch.app/files; echo '$id' > $ID_FILE; echo '$id' > $LEGACY_ID_FILE; echo '$id' > $LEGACY_CAMERA_ID_FILE")
             if (result.exitCode == 0) {
                 Log.i(TAG, "Device ID synced to file (sync): $id")
                 true

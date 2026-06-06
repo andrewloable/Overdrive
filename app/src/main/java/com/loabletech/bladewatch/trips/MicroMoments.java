@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

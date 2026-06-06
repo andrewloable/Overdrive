@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import android.content.Context
 import android.content.Intent
@@ -6,7 +6,7 @@ import android.hardware.bydauto.power.BYDAutoPowerDevice
 import android.os.IBinder
 import android.os.Parcel
 import android.os.PowerManager
-import com.loabletech.bladewatch.logging.DaemonLogger
+import net.bladewatch.app.logging.DaemonLogger
 
 /**
  * Helper to keep the BYD MCU from cutting power to WiFi.
@@ -188,7 +188,7 @@ object PowerHelper {
                 Int::class.javaPrimitiveType,
                 String::class.java
             )
-            wakeUpMethod.invoke(pm, System.currentTimeMillis(), 0, "com.loabletech.bladewatch:KEEP_ALIVE")
+            wakeUpMethod.invoke(pm, System.currentTimeMillis(), 0, "net.bladewatch.app:KEEP_ALIVE")
             true
         } catch (e: NoSuchMethodException) {
             try {

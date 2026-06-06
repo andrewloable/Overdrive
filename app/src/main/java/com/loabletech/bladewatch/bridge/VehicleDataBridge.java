@@ -1,12 +1,12 @@
-package com.loabletech.bladewatch.bridge;
+package net.bladewatch.app.bridge;
 
 import android.webkit.JavascriptInterface;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.BatteryPowerData;
-import com.loabletech.bladewatch.monitor.BatteryVoltageData;
-import com.loabletech.bladewatch.monitor.ChargingStateData;
-import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.BatteryPowerData;
+import net.bladewatch.app.monitor.BatteryVoltageData;
+import net.bladewatch.app.monitor.ChargingStateData;
+import net.bladewatch.app.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 

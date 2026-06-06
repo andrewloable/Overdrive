@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -16,21 +16,21 @@ import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.loabletech.bladewatch.BuildConfig
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.config.UnifiedConfigManager
-import com.loabletech.bladewatch.ui.MainActivity
+import net.bladewatch.app.BuildConfig
+import net.bladewatch.app.R
+import net.bladewatch.app.config.UnifiedConfigManager
+import net.bladewatch.app.ui.MainActivity
 import org.json.JSONObject
-import com.loabletech.bladewatch.updater.AppUpdater
-import com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsAppearanceFragment
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsDaemonsFragment
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsOverlayFragment
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsPrivacyFragment
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsRecordingFragment
-import com.loabletech.bladewatch.ui.fragment.settings.SettingsSurveillanceFragment
-import com.loabletech.bladewatch.ui.util.PreferencesManager
-import com.loabletech.bladewatch.ui.util.navigateDrillDown
+import net.bladewatch.app.updater.AppUpdater
+import net.bladewatch.app.ui.dialog.LanguagePickerDialog
+import net.bladewatch.app.ui.fragment.settings.SettingsAppearanceFragment
+import net.bladewatch.app.ui.fragment.settings.SettingsDaemonsFragment
+import net.bladewatch.app.ui.fragment.settings.SettingsOverlayFragment
+import net.bladewatch.app.ui.fragment.settings.SettingsPrivacyFragment
+import net.bladewatch.app.ui.fragment.settings.SettingsRecordingFragment
+import net.bladewatch.app.ui.fragment.settings.SettingsSurveillanceFragment
+import net.bladewatch.app.ui.util.PreferencesManager
+import net.bladewatch.app.ui.util.navigateDrillDown
 import java.util.Locale
 
 /**
@@ -327,7 +327,7 @@ class SettingsFragment : Fragment() {
      */
     private fun kickOverlayRefresh() {
         val ctx = context ?: return
-        com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(ctx)
+        net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(ctx)
     }
 
     private fun setupResetRow(view: View) {
@@ -338,7 +338,7 @@ class SettingsFragment : Fragment() {
 
     /**
      * Footer line at the bottom of the portrait hub. Read-only. Shows
-     * "BladeWatch vX.Y · com.loabletech.bladewatch" so power users can confirm
+     * "BladeWatch vX.Y · net.bladewatch.app" so power users can confirm
      * the running version + package id without diving into About.
      */
     private fun setupFooter(view: View) {

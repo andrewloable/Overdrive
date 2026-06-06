@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.logging;
+package net.bladewatch.app.logging;
 
 import java.util.HashSet;
 import java.util.Set;

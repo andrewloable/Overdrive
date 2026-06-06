@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.byd.BydDataCollector;
-import com.loabletech.bladewatch.byd.BydVehicleData;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.byd.BydDataCollector;
+import net.bladewatch.app.byd.BydVehicleData;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import org.json.JSONObject;
 

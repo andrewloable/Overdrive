@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.launcher
+package net.bladewatch.app.launcher
 
 import android.content.Context
 import android.provider.Settings
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Launches daemon processes via ADB shell using app_process.
@@ -192,7 +192,7 @@ class DaemonLauncher(
                 "-Djava.library.path=$nativeLibDir:/system/lib64:/vendor/lib64:/product/lib64:/odm/lib64 " +
                 "${proxyArgs}/system/bin " +
                 "--nice-name=$CAMERA_DAEMON_PROCESS " +
-                "com.loabletech.bladewatch.daemon.CameraDaemon " +
+                "net.bladewatch.app.daemon.CameraDaemon " +
                 "$outputDir $nativeLibDir >> \"\$LOG_FILE\" 2>&1",
             "",
             "  EXIT_CODE=\$?",
@@ -303,7 +303,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$CAMERA_DAEMON_PROCESS ")
-            append("com.loabletech.bladewatch.daemon.CameraDaemon ")
+            append("net.bladewatch.app.daemon.CameraDaemon ")
             append("$outputDir ")
             append("$nativeLibDir")
         }
@@ -371,7 +371,7 @@ class DaemonLauncher(
                 append(proxyArgs)
                 append("/system/bin ")
                 append("--nice-name=$SENTRY_DAEMON_PROCESS ")
-                append("com.loabletech.bladewatch.daemon.SentryDaemon")
+                append("net.bladewatch.app.daemon.SentryDaemon")
             }
             
             logManager.debug(TAG, "SentryDaemon command: $innerCmd")
@@ -657,7 +657,7 @@ class DaemonLauncher(
             "#!/system/bin/sh",
             "# AccSentryDaemon Watchdog Script",
             "APK_PATH=\"$apkPath\"",
-            "CLS=\"com.loabletech.bladewatch.daemon.AccSentryDaemon\"",
+            "CLS=\"net.bladewatch.app.daemon.AccSentryDaemon\"",
             "PROCESS_NAME=\"$ACC_SENTRY_DAEMON_PROCESS\"",
             "LOG_FILE=\"$ACC_SENTRY_DAEMON_LOG\"",
             "LOCK_FILE=\"$lockFile\"",
@@ -784,7 +784,7 @@ class DaemonLauncher(
             append(proxyArgs)
             append("/system/bin ")
             append("--nice-name=$ACC_SENTRY_DAEMON_PROCESS ")
-            append("com.loabletech.bladewatch.daemon.AccSentryDaemon")
+            append("net.bladewatch.app.daemon.AccSentryDaemon")
         }
         
         val cmd = "nohup sh -c '$innerCmd' > $ACC_SENTRY_DAEMON_LOG 2>&1 &"
@@ -1306,7 +1306,7 @@ class DaemonLauncher(
     }
     
     private fun grantBodyworkPermissions(callback: LaunchCallback, onComplete: () -> Unit) {
-        val packageName = "com.loabletech.bladewatch"
+        val packageName = "net.bladewatch.app"
         val permissions = listOf(
             "android.permission.BYDAUTO_BODYWORK_COMMON",
             "android.permission.BYDAUTO_BODYWORK_GET",

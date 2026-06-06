@@ -1,12 +1,12 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.GearMonitor;
-import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
-import com.loabletech.bladewatch.storage.StorageManager;
-import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.GearMonitor;
+import net.bladewatch.app.monitor.VehicleDataMonitor;
+import net.bladewatch.app.storage.StorageManager;
+import net.bladewatch.app.telemetry.TelemetryDataCollector;
 
 import java.io.File;
 import java.util.List;

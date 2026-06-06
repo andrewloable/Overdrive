@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.media.MediaPlayer
 import android.net.Uri
@@ -14,8 +14,8 @@ import android.widget.TextView
 import android.widget.VideoView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.view.EventTimelineView
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.view.EventTimelineView
 import org.json.JSONObject
 import java.io.File
 

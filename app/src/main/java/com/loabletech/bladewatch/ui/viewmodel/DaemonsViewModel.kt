@@ -1,17 +1,17 @@
-package com.loabletech.bladewatch.ui.viewmodel
+package net.bladewatch.app.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
-import com.loabletech.bladewatch.logging.LogManager
-import com.loabletech.bladewatch.ui.daemon.*
-import com.loabletech.bladewatch.ui.model.DaemonState
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.model.SubprocessInfo
-import com.loabletech.bladewatch.ui.model.parseUptimeToMillis
+import net.bladewatch.app.launcher.AdbDaemonLauncher
+import net.bladewatch.app.logging.LogManager
+import net.bladewatch.app.ui.daemon.*
+import net.bladewatch.app.ui.model.DaemonState
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.model.SubprocessInfo
+import net.bladewatch.app.ui.model.parseUptimeToMillis
 
 /**
  * ViewModel for managing daemon states.

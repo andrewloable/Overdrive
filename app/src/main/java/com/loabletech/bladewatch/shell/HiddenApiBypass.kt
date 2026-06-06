@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.shell
+package net.bladewatch.app.shell
 
 import android.util.Log
 import java.lang.reflect.Method

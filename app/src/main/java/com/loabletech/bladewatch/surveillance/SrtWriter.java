@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -36,7 +36,7 @@ import java.util.Locale;
  * public entry point swallows exceptions internally and routes them to the
  * daemon log. An empty buffer skips the write entirely (no zero-byte .srt).
  *
- * <p>i18n: text is resolved through {@code com.loabletech.bladewatch.server.Messages}
+ * <p>i18n: text is resolved through {@code net.bladewatch.app.server.Messages}
  * if present (loaded reflectively to avoid a hard build dependency on a class
  * that may be authored by a parallel agent). When the catalog is unavailable
  * we fall back to the i18n key itself with simple {@link MessageFormat}
@@ -212,7 +212,7 @@ public final class SrtWriter {
 
     /**
      * Resolve an i18n key against the locale catalog and apply MessageFormat
-     * substitution. The catalog ({@code com.loabletech.bladewatch.server.Messages})
+     * substitution. The catalog ({@code net.bladewatch.app.server.Messages})
      * is looked up reflectively so this class compiles even if Messages
      * doesn't exist yet (a parallel agent ships it).
      */
@@ -236,7 +236,7 @@ public final class SrtWriter {
     /** Reflectively call {@code Messages.get(locale, key)} or {@code Messages.get(key)}. */
     private static String lookupCatalog(String key, String locale) {
         try {
-            Class<?> cls = Class.forName("com.loabletech.bladewatch.server.Messages");
+            Class<?> cls = Class.forName("net.bladewatch.app.server.Messages");
             // Try (locale, key) first
             try {
                 Method m = cls.getMethod("get", String.class, String.class);
@@ -264,7 +264,7 @@ public final class SrtWriter {
 
     private static String resolveCurrentLocale() {
         try {
-            Class<?> cls = Class.forName("com.loabletech.bladewatch.server.LocaleManager");
+            Class<?> cls = Class.forName("net.bladewatch.app.server.LocaleManager");
             Method m = cls.getMethod("get");
             Object out = m.invoke(null);
             if (out instanceof String) return (String) out;

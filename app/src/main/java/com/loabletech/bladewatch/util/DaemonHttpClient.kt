@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
-import com.loabletech.bladewatch.auth.AuthManager
-import com.loabletech.bladewatch.daemon.CameraDaemon
+import net.bladewatch.app.auth.AuthManager
+import net.bladewatch.app.daemon.CameraDaemon
 import java.net.HttpURLConnection
 import java.net.Proxy
 import java.net.URL

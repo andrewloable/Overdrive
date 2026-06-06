@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.surveillance
+package net.bladewatch.app.surveillance
 
 import android.os.Process
 import android.util.Log
-import com.loabletech.bladewatch.config.UnifiedConfigManager
+import net.bladewatch.app.config.UnifiedConfigManager
 import org.json.JSONObject
 import java.io.File
 

@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.byd.bodywork;
+package net.bladewatch.app.byd.bodywork;
 
 import android.content.Context;
 import android.hardware.bydauto.bodywork.AbsBYDAutoBodyworkListener;
 
-import com.loabletech.bladewatch.byd.EventCallback;
-import com.loabletech.bladewatch.byd.LogCallback;
+import net.bladewatch.app.byd.EventCallback;
+import net.bladewatch.app.byd.LogCallback;
 
 import org.json.JSONObject;
 

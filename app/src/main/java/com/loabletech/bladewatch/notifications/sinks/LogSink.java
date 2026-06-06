@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.notifications.sinks;
+package net.bladewatch.app.notifications.sinks;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.notifications.NotificationBus;
-import com.loabletech.bladewatch.notifications.NotificationEvent;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.notifications.NotificationBus;
+import net.bladewatch.app.notifications.NotificationEvent;
 
 /**
  * Diagnostic sink — writes every notification to the daemon log so we can

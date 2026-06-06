@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.overlay;
+package net.bladewatch.app.overlay;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -22,7 +22,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.loabletech.bladewatch.R;
+import net.bladewatch.app.R;
 
 import org.json.JSONObject;
 
@@ -456,7 +456,7 @@ public class StatusOverlayService extends Service {
     private JSONObject fetchStatus() {
         HttpURLConnection conn = null;
         try {
-            conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+            conn = net.bladewatch.app.util.DaemonHttpClient.open(
                 "/status", "GET", 2000, 2000);
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(
@@ -562,7 +562,7 @@ public class StatusOverlayService extends Service {
         boolean tripOverlayEnabled = true;
         try {
             JSONObject statusOverlayCfg =
-                com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
+                net.bladewatch.app.config.UnifiedConfigManager.loadConfig()
                     .optJSONObject("statusOverlay");
             if (statusOverlayCfg != null) {
                 cameraOverlayEnabled = statusOverlayCfg.optBoolean("cameraVisible", true);
@@ -809,7 +809,7 @@ public class StatusOverlayService extends Service {
     private void postTripConfig(boolean enabled) {
         HttpURLConnection conn = null;
         try {
-            conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+            conn = net.bladewatch.app.util.DaemonHttpClient.open(
                 "/api/trips/config", "POST", 2000, 2000);
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
@@ -895,5 +895,5 @@ public class StatusOverlayService extends Service {
     }
 
     public static final String ACTION_REFRESH_THEME =
-            "com.loabletech.bladewatch.overlay.REFRESH_THEME";
+            "net.bladewatch.app.overlay.REFRESH_THEME";
 }

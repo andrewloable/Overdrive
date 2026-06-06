@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.dashboard
+package net.bladewatch.app.ui.dashboard
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -14,10 +14,10 @@ import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.WorkerThread
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.model.RecordingFile
-import com.loabletech.bladewatch.ui.util.RecordingScanner
-import com.loabletech.bladewatch.util.DaemonHttpClient
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.model.RecordingFile
+import net.bladewatch.app.ui.util.RecordingScanner
+import net.bladewatch.app.util.DaemonHttpClient
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.util.Calendar

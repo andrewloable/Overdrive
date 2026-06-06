@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.byd.radar;
+package net.bladewatch.app.byd.radar;
 
 /**
  * Constants for BYD Radar SDK

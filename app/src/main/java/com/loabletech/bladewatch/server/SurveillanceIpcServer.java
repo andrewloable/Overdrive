@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -97,7 +97,7 @@ public class SurveillanceIpcServer implements Runnable {
                 
                 case "ENABLE_SURVEILLANCE":
                     // Persist preference only — surveillance will auto-start on next ACC OFF
-                    com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(true);
+                    net.bladewatch.app.config.UnifiedConfigManager.setSurveillanceEnabled(true);
                     logger.info("Surveillance preference set to ENABLED (will activate on ACC OFF)");
                     response.put("success", true);
                     response.put("enabled", true);
@@ -105,7 +105,7 @@ public class SurveillanceIpcServer implements Runnable {
                     
                 case "DISABLE_SURVEILLANCE":
                     // Persist preference and stop if currently running
-                    com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(false);
+                    net.bladewatch.app.config.UnifiedConfigManager.setSurveillanceEnabled(false);
                     CameraDaemon.disableSurveillance();
                     logger.info("Surveillance preference set to DISABLED and stopped");
                     response.put("success", true);
@@ -186,15 +186,15 @@ public class SurveillanceIpcServer implements Runnable {
                 // ==================== SAFE LOCATION COMMANDS ====================
                 
                 case "GET_SAFE_LOCATIONS":
-                    response = com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance().getStatusJson();
+                    response = net.bladewatch.app.surveillance.SafeLocationManager.getInstance().getStatusJson();
                     response.put("success", true);
                     break;
                     
                 case "ADD_SAFE_LOCATION": {
                     JSONObject zoneData = request.optJSONObject("zone");
                     if (zoneData != null) {
-                        com.loabletech.bladewatch.surveillance.SafeLocation zone =
-                            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance().addZone(
+                        net.bladewatch.app.surveillance.SafeLocation zone =
+                            net.bladewatch.app.surveillance.SafeLocationManager.getInstance().addZone(
                                 zoneData.optString("name", "Unnamed"),
                                 zoneData.optDouble("lat", 0),
                                 zoneData.optDouble("lng", 0),
@@ -213,7 +213,7 @@ public class SurveillanceIpcServer implements Runnable {
                     String zoneId = request.optString("id", null);
                     JSONObject updates = request.optJSONObject("updates");
                     if (zoneId != null && updates != null) {
-                        boolean updated = com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance()
+                        boolean updated = net.bladewatch.app.surveillance.SafeLocationManager.getInstance()
                             .updateZone(zoneId, updates);
                         response.put("success", updated);
                     } else {
@@ -226,7 +226,7 @@ public class SurveillanceIpcServer implements Runnable {
                 case "DELETE_SAFE_LOCATION": {
                     String zoneId = request.optString("id", null);
                     if (zoneId != null) {
-                        boolean removed = com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance()
+                        boolean removed = net.bladewatch.app.surveillance.SafeLocationManager.getInstance()
                             .removeZone(zoneId);
                         response.put("success", removed);
                     } else {
@@ -238,7 +238,7 @@ public class SurveillanceIpcServer implements Runnable {
                     
                 case "TOGGLE_SAFE_LOCATIONS": {
                     boolean enabled = request.optBoolean("enabled", true);
-                    com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance().setFeatureEnabled(enabled);
+                    net.bladewatch.app.surveillance.SafeLocationManager.getInstance().setFeatureEnabled(enabled);
                     response.put("success", true);
                     response.put("enabled", enabled);
                     break;
@@ -258,9 +258,9 @@ public class SurveillanceIpcServer implements Runnable {
                     boolean enabled = request.optBoolean("enabled", false);
                     JSONObject overlayConfig = new JSONObject();
                     overlayConfig.put("enabled", enabled);
-                    com.loabletech.bladewatch.config.UnifiedConfigManager.setTelemetryOverlay(overlayConfig);
+                    net.bladewatch.app.config.UnifiedConfigManager.setTelemetryOverlay(overlayConfig);
                     // Notify pipeline
-                    com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+                    net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
                     if (pipeline != null) {
                         pipeline.setOverlayEnabled(enabled);
                     }
@@ -270,7 +270,7 @@ public class SurveillanceIpcServer implements Runnable {
                 }
 
                 case "GET_TELEMETRY_OVERLAY": {
-                    JSONObject overlayConfig = com.loabletech.bladewatch.config.UnifiedConfigManager.getTelemetryOverlay();
+                    JSONObject overlayConfig = net.bladewatch.app.config.UnifiedConfigManager.getTelemetryOverlay();
                     response.put("success", true);
                     response.put("enabled", overlayConfig.optBoolean("enabled", false));
                     break;
@@ -321,35 +321,35 @@ public class SurveillanceIpcServer implements Runnable {
 
     private void applyConfigLocked(JSONObject config) {
         try {
-            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
                 CameraDaemon.getGpuPipeline();
             
             // Sentry may be null if surveillance is not running - that's OK
-            com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu sentry = null;
+            net.bladewatch.app.surveillance.SurveillanceEngineGpu sentry = null;
             if (pipeline != null) {
                 sentry = pipeline.getSentry();
             }
             
             // Get or create SurveillanceConfig for persistence
             // Even if sentry is null, we still want to persist the config
-            com.loabletech.bladewatch.surveillance.SurveillanceConfig sentryConfig = null;
+            net.bladewatch.app.surveillance.SurveillanceConfig sentryConfig = null;
             if (sentry != null) {
                 sentryConfig = sentry.getConfig();
             }
             if (sentryConfig == null) {
                 // Load from file or create new
                 try {
-                    com.loabletech.bladewatch.surveillance.SurveillanceConfigManager configManager =
-                        new com.loabletech.bladewatch.surveillance.SurveillanceConfigManager();
+                    net.bladewatch.app.surveillance.SurveillanceConfigManager configManager =
+                        new net.bladewatch.app.surveillance.SurveillanceConfigManager();
                     if (configManager.configExists()) {
                         sentryConfig = configManager.loadConfig();
                         logger.info("Loaded existing config from file for update");
                     } else {
-                        sentryConfig = new com.loabletech.bladewatch.surveillance.SurveillanceConfig();
+                        sentryConfig = new net.bladewatch.app.surveillance.SurveillanceConfig();
                         logger.info("Created new config for persistence");
                     }
                 } catch (Exception e) {
-                    sentryConfig = new com.loabletech.bladewatch.surveillance.SurveillanceConfig();
+                    sentryConfig = new net.bladewatch.app.surveillance.SurveillanceConfig();
                     logger.error("Failed to load config, using defaults", e);
                 }
             }
@@ -359,12 +359,12 @@ public class SurveillanceIpcServer implements Runnable {
             // Handle surveillance storage type change (INTERNAL or SD_CARD)
             if (config.has("surveillanceStorageType")) {
                 String typeStr = config.getString("surveillanceStorageType").toUpperCase();
-                com.loabletech.bladewatch.storage.StorageManager storageManager =
-                    com.loabletech.bladewatch.storage.StorageManager.getInstance();
-                com.loabletech.bladewatch.storage.StorageManager.StorageType type =
+                net.bladewatch.app.storage.StorageManager storageManager =
+                    net.bladewatch.app.storage.StorageManager.getInstance();
+                net.bladewatch.app.storage.StorageManager.StorageType type =
                     "SD_CARD".equals(typeStr) ?
-                        com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD :
-                        com.loabletech.bladewatch.storage.StorageManager.StorageType.INTERNAL;
+                        net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD :
+                        net.bladewatch.app.storage.StorageManager.StorageType.INTERNAL;
                 boolean success = storageManager.setSurveillanceStorageType(type);
                 if (success) {
                     logger.info("Surveillance storage type set to " + type + " via IPC");
@@ -381,8 +381,8 @@ public class SurveillanceIpcServer implements Runnable {
             // Handle surveillance storage limit change
             if (config.has("surveillanceLimitMb")) {
                 long limitMb = config.getLong("surveillanceLimitMb");
-                com.loabletech.bladewatch.storage.StorageManager storageManager =
-                    com.loabletech.bladewatch.storage.StorageManager.getInstance();
+                net.bladewatch.app.storage.StorageManager storageManager =
+                    net.bladewatch.app.storage.StorageManager.getInstance();
                 storageManager.setSurveillanceLimitMb(limitMb);
                 logger.info("Surveillance limit set to " + storageManager.getSurveillanceLimitMb() + " MB via IPC");
                 // Trigger async cleanup
@@ -393,11 +393,11 @@ public class SurveillanceIpcServer implements Runnable {
             if (config.has("enabled")) {
                 boolean enabled = config.getBoolean("enabled");
                 // Persist to unified config so ACC OFF respects user preference
-                com.loabletech.bladewatch.config.UnifiedConfigManager.setSurveillanceEnabled(enabled);
+                net.bladewatch.app.config.UnifiedConfigManager.setSurveillanceEnabled(enabled);
                 if (enabled) {
                     // RACE CONDITION FIX: Only enable surveillance if ACC is actually OFF.
                     // AccSentryDaemon's retry loop may send this IPC after ACC turned ON.
-                    if (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+                    if (!net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                         CameraDaemon.enableSurveillance();
                         logger.info("Surveillance enabled via IPC");
                     } else {
@@ -426,7 +426,7 @@ public class SurveillanceIpcServer implements Runnable {
             if (config.has("gear")) {
                 int gear = config.getInt("gear");
                 CameraDaemon.onGearChanged(gear);
-                logger.info("Gear changed via IPC: " + com.loabletech.bladewatch.recording.RecordingModeManager.gearToString(gear));
+                logger.info("Gear changed via IPC: " + net.bladewatch.app.recording.RecordingModeManager.gearToString(gear));
             }
             
             // Handle sensitivity setting (maps to minObjectSize)
@@ -699,8 +699,8 @@ public class SurveillanceIpcServer implements Runnable {
                 
                 // ALWAYS persist to file - this is critical for config to survive restarts
                 try {
-                    com.loabletech.bladewatch.surveillance.SurveillanceConfigManager configManager =
-                        new com.loabletech.bladewatch.surveillance.SurveillanceConfigManager();
+                    net.bladewatch.app.surveillance.SurveillanceConfigManager configManager =
+                        new net.bladewatch.app.surveillance.SurveillanceConfigManager();
                     configManager.saveConfig(sentryConfig);
                     logger.info("Surveillance config persisted to file (sentry " + 
                         (sentry != null ? "running" : "not running") + ")");
@@ -819,7 +819,7 @@ public class SurveillanceIpcServer implements Runnable {
      */
     private void applyRoi(JSONObject roiData) {
         try {
-            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
                 CameraDaemon.getGpuPipeline();
             
             if (pipeline == null || pipeline.getSentry() == null) {
@@ -872,7 +872,7 @@ public class SurveillanceIpcServer implements Runnable {
         JSONObject config = new JSONObject();
         
         // Read persisted preference (not runtime state) for the UI toggle
-        boolean enabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
+        boolean enabled = net.bladewatch.app.config.UnifiedConfigManager.isSurveillanceEnabled();
         
         config.put("enabled", enabled);
         config.put("noiseThreshold", 0.0001);
@@ -883,21 +883,21 @@ public class SurveillanceIpcServer implements Runnable {
         config.put("codec", CameraDaemon.getRecordingCodec());
         
         // Get actual values from sentry config if available
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
             CameraDaemon.getGpuPipeline();
         
-        com.loabletech.bladewatch.surveillance.SurveillanceConfig sentryConfig = null;
+        net.bladewatch.app.surveillance.SurveillanceConfig sentryConfig = null;
         
         if (pipeline != null && pipeline.getSentry() != null) {
-            com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu sentry = pipeline.getSentry();
+            net.bladewatch.app.surveillance.SurveillanceEngineGpu sentry = pipeline.getSentry();
             sentryConfig = sentry.getConfig();
         }
         
         // If sentry not running, try to load from file
         if (sentryConfig == null) {
             try {
-                com.loabletech.bladewatch.surveillance.SurveillanceConfigManager configManager =
-                    new com.loabletech.bladewatch.surveillance.SurveillanceConfigManager();
+                net.bladewatch.app.surveillance.SurveillanceConfigManager configManager =
+                    new net.bladewatch.app.surveillance.SurveillanceConfigManager();
                 if (configManager.configExists()) {
                     sentryConfig = configManager.loadConfig();
                     logger.info("Loaded config from file for GET_CONFIG (sentry not running)");
@@ -967,7 +967,7 @@ public class SurveillanceIpcServer implements Runnable {
         }
         
         // SOTA: Add lastModified timestamp for web UI sync detection
-        config.put("lastModified", com.loabletech.bladewatch.config.UnifiedConfigManager.getLastModified());
+        config.put("lastModified", net.bladewatch.app.config.UnifiedConfigManager.getLastModified());
         
         return config;
     }
@@ -976,7 +976,7 @@ public class SurveillanceIpcServer implements Runnable {
         JSONObject status = new JSONObject();
         
         // Read from persisted config (not in-memory flag)
-        boolean enabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
+        boolean enabled = net.bladewatch.app.config.UnifiedConfigManager.isSurveillanceEnabled();
         boolean active = CameraDaemon.isSurveillanceActive();
         
         status.put("enabled", enabled);
@@ -989,15 +989,15 @@ public class SurveillanceIpcServer implements Runnable {
     // ==================== VEHICLE DATA HELPERS ====================
     
     private JSONObject getVehicleData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
         return monitor.getAllData();
     }
     
     private JSONObject getBatteryVoltageData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.BatteryVoltageData data = monitor.getBatteryVoltage();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.BatteryVoltageData data = monitor.getBatteryVoltage();
         
         if (data == null) throw new Exception("Battery voltage data not available");
         
@@ -1010,9 +1010,9 @@ public class SurveillanceIpcServer implements Runnable {
     }
     
     private JSONObject getBatteryPowerData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.BatteryPowerData data = monitor.getBatteryPower();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.BatteryPowerData data = monitor.getBatteryPower();
         
         if (data == null) throw new Exception("Battery power data not available");
         
@@ -1026,9 +1026,9 @@ public class SurveillanceIpcServer implements Runnable {
     }
     
     private JSONObject getBatterySocData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.BatterySocData data = monitor.getBatterySoc();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.BatterySocData data = monitor.getBatterySoc();
         
         if (data == null) throw new Exception("Battery SOC data not available");
         
@@ -1042,9 +1042,9 @@ public class SurveillanceIpcServer implements Runnable {
     }
     
     private JSONObject getChargingStateData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.ChargingStateData data = monitor.getChargingState();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.ChargingStateData data = monitor.getChargingState();
         
         if (data == null) throw new Exception("Charging state data not available");
         
@@ -1061,9 +1061,9 @@ public class SurveillanceIpcServer implements Runnable {
     }
     
     private JSONObject getChargingPowerData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.ChargingStateData data = monitor.getChargingState();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.ChargingStateData data = monitor.getChargingState();
         
         if (data == null) throw new Exception("Charging power data not available");
         
@@ -1075,9 +1075,9 @@ public class SurveillanceIpcServer implements Runnable {
     }
     
     private JSONObject getDrivingRangeData() throws Exception {
-        com.loabletech.bladewatch.monitor.VehicleDataMonitor monitor =
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
-        com.loabletech.bladewatch.monitor.DrivingRangeData data = monitor.getDrivingRange();
+        net.bladewatch.app.monitor.VehicleDataMonitor monitor =
+            net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
+        net.bladewatch.app.monitor.DrivingRangeData data = monitor.getDrivingRange();
         
         if (data == null) throw new Exception("Driving range data not available");
         
@@ -1113,7 +1113,7 @@ public class SurveillanceIpcServer implements Runnable {
             long time = request.optLong("time", System.currentTimeMillis());
             
             // Directly update GpsMonitor
-            com.loabletech.bladewatch.monitor.GpsMonitor.getInstance()
+            net.bladewatch.app.monitor.GpsMonitor.getInstance()
                 .updateFromIpc(lat, lng, speed, heading, accuracy, time, altitude);
             
         } catch (Exception e) {
@@ -1133,12 +1133,12 @@ public class SurveillanceIpcServer implements Runnable {
             response.put("error", "App context not ready");
             return;
         }
-        com.loabletech.bladewatch.updater.AppUpdater updater =
-                new com.loabletech.bladewatch.updater.AppUpdater(ctx);
+        net.bladewatch.app.updater.AppUpdater updater =
+                new net.bladewatch.app.updater.AppUpdater(ctx);
         final Object lock = new Object();
         final boolean[] done = {false};
         final JSONObject[] resultRef = {null};
-        updater.checkForUpdate(new com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback() {
+        updater.checkForUpdate(new net.bladewatch.app.updater.AppUpdater.UpdateCallback() {
             @Override public void onUpdateAvailable(String currentVersion, String newVersion, String releaseNotes) {
                 JSONObject r = new JSONObject();
                 try {
@@ -1165,7 +1165,7 @@ public class SurveillanceIpcServer implements Runnable {
                 try {
                     r.put("available", false);
                     r.put("error", error != null ? error : "unknown");
-                    r.put("currentVersion", com.loabletech.bladewatch.updater.AppUpdater.getDisplayVersionFromFile());
+                    r.put("currentVersion", net.bladewatch.app.updater.AppUpdater.getDisplayVersionFromFile());
                 } catch (Exception ignored) {}
                 resultRef[0] = r;
                 synchronized (lock) { done[0] = true; lock.notify(); }
@@ -1222,8 +1222,8 @@ public class SurveillanceIpcServer implements Runnable {
             return;
         }
 
-        com.loabletech.bladewatch.updater.AppUpdater updater =
-                new com.loabletech.bladewatch.updater.AppUpdater(ctx);
+        net.bladewatch.app.updater.AppUpdater updater =
+                new net.bladewatch.app.updater.AppUpdater(ctx);
 
         final Object lock = new Object();
         final boolean[] done = {false};
@@ -1231,7 +1231,7 @@ public class SurveillanceIpcServer implements Runnable {
         final String[] err = {null};
         final String[] versionRef = {null};
 
-        updater.checkForUpdate(new com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback() {
+        updater.checkForUpdate(new net.bladewatch.app.updater.AppUpdater.UpdateCallback() {
             @Override public void onUpdateAvailable(String c, String n, String rn) {
                 available[0] = true;
                 versionRef[0] = n;
@@ -1270,7 +1270,7 @@ public class SurveillanceIpcServer implements Runnable {
         new Thread(() -> {
             try {
                 writeInstallProgress("queued", 0, "Update queued", null);
-                updater.downloadAndInstall(new com.loabletech.bladewatch.updater.AppUpdater.InstallCallback() {
+                updater.downloadAndInstall(new net.bladewatch.app.updater.AppUpdater.InstallCallback() {
                     @Override public void onProgress(String message) {
                         String m = message == null ? "" : message;
                         String phase = "downloading";

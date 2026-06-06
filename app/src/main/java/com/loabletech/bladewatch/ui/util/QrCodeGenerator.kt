@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.util
+package net.bladewatch.app.ui.util
 
 import android.graphics.Bitmap
 import android.graphics.Color

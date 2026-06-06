@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import android.content.Context
 import android.widget.Toast

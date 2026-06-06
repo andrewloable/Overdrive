@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.PerformanceMonitor;
-import com.loabletech.bladewatch.monitor.SocHistoryDatabase;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.PerformanceMonitor;
+import net.bladewatch.app.monitor.SocHistoryDatabase;
 
 import org.json.JSONObject;
 
@@ -604,8 +604,8 @@ public class PerformanceApiHandler {
                 try {
                     switch (cat) {
                         case "trips": {
-                            com.loabletech.bladewatch.trips.TripAnalyticsManager mgr =
-                                com.loabletech.bladewatch.daemon.CameraDaemon.getTripAnalyticsManager();
+                            net.bladewatch.app.trips.TripAnalyticsManager mgr =
+                                net.bladewatch.app.daemon.CameraDaemon.getTripAnalyticsManager();
                             // Refuse if a trip is being recorded right now —
                             // wiping mid-trip would leave the in-memory
                             // TripBuilder writing to a freshly-empty DB and
@@ -616,7 +616,7 @@ public class PerformanceApiHandler {
                                 r.put("error", Messages.get("errors.reset_trip_in_progress"));
                                 break;
                             }
-                            com.loabletech.bladewatch.trips.TripDatabase db =
+                            net.bladewatch.app.trips.TripDatabase db =
                                 (mgr != null) ? mgr.getDatabase() : null;
                             long n = (db != null) ? db.resetAll() : -1;
                             r.put("success", n >= 0);
@@ -635,8 +635,8 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "mediaRecordings": {
-                            com.loabletech.bladewatch.storage.StorageManager sm =
-                                com.loabletech.bladewatch.storage.StorageManager.getInstance();
+                            net.bladewatch.app.storage.StorageManager sm =
+                                net.bladewatch.app.storage.StorageManager.getInstance();
                             // Don't wipe the dir while the encoder is writing
                             // to it — at best you'd delete the still-open file
                             // descriptor; at worst, corrupt the active MP4.
@@ -651,8 +651,8 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "mediaSurveillance": {
-                            com.loabletech.bladewatch.storage.StorageManager sm =
-                                com.loabletech.bladewatch.storage.StorageManager.getInstance();
+                            net.bladewatch.app.storage.StorageManager sm =
+                                net.bladewatch.app.storage.StorageManager.getInstance();
                             if (sm.isSurveillanceActive()) {
                                 r.put("success", false);
                                 r.put("error", Messages.get("errors.reset_surveillance_in_progress"));
@@ -664,14 +664,14 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "mediaProximity": {
-                            long n = com.loabletech.bladewatch.storage.StorageManager.getInstance()
+                            long n = net.bladewatch.app.storage.StorageManager.getInstance()
                                 .wipeMediaCategory("proximity");
                             r.put("success", n >= 0);
                             r.put("filesDeleted", n);
                             break;
                         }
                         case "mediaTrips": {
-                            long n = com.loabletech.bladewatch.storage.StorageManager.getInstance()
+                            long n = net.bladewatch.app.storage.StorageManager.getInstance()
                                 .wipeMediaCategory("trips");
                             r.put("success", n >= 0);
                             r.put("filesDeleted", n);

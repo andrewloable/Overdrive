@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment.settings
+package net.bladewatch.app.ui.fragment.settings
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,15 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.config.UnifiedConfigManager
+import net.bladewatch.app.R
+import net.bladewatch.app.config.UnifiedConfigManager
 import org.json.JSONObject
 
 /**
  * Settings → Status overlay pane.
  *
  * Two switches that gate the segments of the floating status pill
- * ([com.loabletech.bladewatch.overlay.StatusOverlayService]):
+ * ([net.bladewatch.app.overlay.StatusOverlayService]):
  *  - Camera/recording indicator (REC / PROX)
  *  - Trip indicator (TRIP)
  *
@@ -64,6 +64,6 @@ class SettingsOverlayFragment : Fragment() {
      */
     private fun persist(key: String, value: Boolean) {
         UnifiedConfigManager.setStatusOverlay(JSONObject().put(key, value))
-        context?.let { com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(it) }
+        context?.let { net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(it) }
     }
 }

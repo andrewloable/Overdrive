@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
 import android.graphics.ImageFormat;
 import android.hardware.HardwareBuffer;
@@ -9,7 +9,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.Surface;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.io.File;
 import java.lang.reflect.Constructor;

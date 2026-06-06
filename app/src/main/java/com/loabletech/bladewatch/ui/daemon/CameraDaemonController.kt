@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.ui.daemon
+package net.bladewatch.app.ui.daemon
 
 import android.content.Context
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
+import net.bladewatch.app.launcher.AdbDaemonLauncher
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.Socket

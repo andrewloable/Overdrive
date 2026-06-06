@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.launcher
+package net.bladewatch.app.launcher
 
 import android.content.Context
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Facade for launching daemons and services via ADB shell.

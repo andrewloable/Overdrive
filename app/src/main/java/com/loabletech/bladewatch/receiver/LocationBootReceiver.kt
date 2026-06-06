@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.receiver
+package net.bladewatch.app.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import com.loabletech.bladewatch.services.LocationSidecarService
+import net.bladewatch.app.services.LocationSidecarService
 
 /**
  * Boot receiver to auto-start LocationSidecarService after device reboot.

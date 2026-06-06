@@ -124,7 +124,7 @@
                 android:layout_gravity="center_vertical"
                 android:background="#33FFFFFF" />
 
-            <com.loabletech.bladewatch.ui.view.EventTimelineView
+            <net.bladewatch.app.ui.view.EventTimelineView
                 android:id="@+id/eventTimeline"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />

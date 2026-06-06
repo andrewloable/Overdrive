@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.launcher
+package net.bladewatch.app.launcher
 
 import android.content.Context
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Launches Android services and configures permissions via ADB shell.
@@ -20,7 +20,7 @@ class ServiceLauncher(
 ) {
     companion object {
         private const val TAG = "ServiceLauncher"
-        private const val PACKAGE_NAME = "com.loabletech.bladewatch"
+        private const val PACKAGE_NAME = "net.bladewatch.app"
     }
     
     interface LaunchCallback {

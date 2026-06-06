@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.util
+package net.bladewatch.app.ui.util
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -6,9 +6,9 @@ import android.os.Build
 import android.os.UserManager
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
-import com.loabletech.bladewatch.BuildConfig
-import com.loabletech.bladewatch.config.SecretConfigBridge
-import com.loabletech.bladewatch.ui.model.DaemonType
+import net.bladewatch.app.BuildConfig
+import net.bladewatch.app.config.SecretConfigBridge
+import net.bladewatch.app.ui.model.DaemonType
 
 /**
  * Manages SharedPreferences for app settings persistence.
@@ -111,7 +111,7 @@ object PreferencesManager {
         // wouldn't notice the flip otherwise.
         appContextRef?.let { ctx ->
             try {
-                com.loabletech.bladewatch.overlay.StatusOverlayService.refreshTheme(ctx)
+                net.bladewatch.app.overlay.StatusOverlayService.refreshTheme(ctx)
             } catch (e: Throwable) {
                 Log.w(TAG, "overlay theme refresh failed: ${e.message}")
             }

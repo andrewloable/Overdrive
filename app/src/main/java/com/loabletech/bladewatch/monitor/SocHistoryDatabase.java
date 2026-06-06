@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -410,9 +410,9 @@ public class SocHistoryDatabase {
             double hvTempHigh = -999, hvTempLow = -999, hvTempAvg = -999;
             double cellVoltHigh = -999, cellVoltLow = -999;
             try {
-                com.loabletech.bladewatch.byd.BydDataCollector collector = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+                net.bladewatch.app.byd.BydDataCollector collector = net.bladewatch.app.byd.BydDataCollector.getInstance();
                 if (collector.isInitialized()) {
-                    com.loabletech.bladewatch.byd.BydVehicleData vd = collector.getData();
+                    net.bladewatch.app.byd.BydVehicleData vd = collector.getData();
                     if (vd != null) {
                         if (!Double.isNaN(vd.highCellTempC)) hvTempHigh = vd.highCellTempC;
                         if (!Double.isNaN(vd.lowCellTempC)) hvTempLow = vd.lowCellTempC;
@@ -884,11 +884,11 @@ public class SocHistoryDatabase {
      */
     private boolean isVehicleAtRest() {
         try {
-            com.loabletech.bladewatch.byd.BydDataCollector col =
-                com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+            net.bladewatch.app.byd.BydDataCollector col =
+                net.bladewatch.app.byd.BydDataCollector.getInstance();
             if (col == null || !col.isInitialized()) return false;
 
-            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
+            net.bladewatch.app.byd.BydVehicleData vd = col.getData();
             if (vd == null) return false;
 
             // Speed must be reported and effectively zero.
@@ -1233,7 +1233,7 @@ public class SocHistoryDatabase {
      *
      * Best-effort: any exception is caught and logged; never propagates.
      */
-    public void recordAccEvent(String eventType, com.loabletech.bladewatch.byd.BydVehicleData data) {
+    public void recordAccEvent(String eventType, net.bladewatch.app.byd.BydVehicleData data) {
         try {
             if (eventType == null) return;
             String type = eventType.trim().toUpperCase();
@@ -1262,7 +1262,7 @@ public class SocHistoryDatabase {
                 if (!Double.isNaN(data.voltage12v) && data.voltage12v > 0) {
                     voltageV = data.voltage12v;
                 }
-                if (data.elecRangeKm != com.loabletech.bladewatch.byd.BydVehicleData.UNAVAILABLE
+                if (data.elecRangeKm != net.bladewatch.app.byd.BydVehicleData.UNAVAILABLE
                         && data.elecRangeKm >= 0) {
                     rangeKm = data.elecRangeKm;
                 }

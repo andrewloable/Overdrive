@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.GpsMonitor;
-import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
-import com.loabletech.bladewatch.storage.StorageManager;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.GpsMonitor;
+import net.bladewatch.app.monitor.VehicleDataMonitor;
+import net.bladewatch.app.storage.StorageManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -368,7 +368,7 @@ public class TripApiHandler {
             // Read current conditions from existing monitors
             double currentSoc = 0;
             try {
-                com.loabletech.bladewatch.monitor.BatterySocData socData =
+                net.bladewatch.app.monitor.BatterySocData socData =
                         VehicleDataMonitor.getInstance().getBatterySoc();
                 if (socData != null) {
                     currentSoc = socData.socPercent;
@@ -413,7 +413,7 @@ public class TripApiHandler {
             if (estimate != null) {
                 // Add built-in range for comparison
                 try {
-                    com.loabletech.bladewatch.monitor.DrivingRangeData rangeData =
+                    net.bladewatch.app.monitor.DrivingRangeData rangeData =
                             VehicleDataMonitor.getInstance().getDrivingRange();
                     if (rangeData != null) {
                         estimate.builtInRangeKm = rangeData.elecRangeKm;
@@ -490,8 +490,8 @@ public class TripApiHandler {
                     config.setDistanceUnit(unit);
                     // Propagate to BydDataCollector so the conversion factor updates immediately
                     try {
-                        com.loabletech.bladewatch.byd.BydDataCollector collector =
-                                com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+                        net.bladewatch.app.byd.BydDataCollector collector =
+                                net.bladewatch.app.byd.BydDataCollector.getInstance();
                         if (collector != null) {
                             collector.setDistanceUnitOverride("mi".equals(unit) ? "mi" : "km");
                         }
@@ -772,7 +772,7 @@ public class TripApiHandler {
         if (trip.socStart <= 0 || trip.socEnd <= 0 || trip.socStart <= trip.socEnd) return;
 
         try {
-            double nominal = com.loabletech.bladewatch.monitor.VehicleDataMonitor
+            double nominal = net.bladewatch.app.monitor.VehicleDataMonitor
                     .getInstance().getNominalCapacityKwh();
             if (nominal > 0) {
                 double usableKwh = nominal;

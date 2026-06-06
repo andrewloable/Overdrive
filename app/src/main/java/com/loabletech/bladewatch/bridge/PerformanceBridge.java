@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.bridge;
+package net.bladewatch.app.bridge;
 
 import android.webkit.JavascriptInterface;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.PerformanceMonitor;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.PerformanceMonitor;
 
 import org.json.JSONObject;
 

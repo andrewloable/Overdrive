@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.util
+package net.bladewatch.app.ui.util
 
 import android.content.Context
 import android.graphics.Canvas
@@ -10,8 +10,8 @@ import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.model.RecordingFile
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.model.RecordingFile
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.auth;
+package net.bladewatch.app.auth;
 
 import org.junit.After;
 import org.junit.Assert;

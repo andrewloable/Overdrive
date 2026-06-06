@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
 /**
  * Actor — A persistent moving subject around the vehicle.

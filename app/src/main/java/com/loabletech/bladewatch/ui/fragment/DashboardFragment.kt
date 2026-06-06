@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -21,17 +21,17 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.auth.AuthManager
-import com.loabletech.bladewatch.client.CameraDaemonClient
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.util.QrCodeGenerator
-import com.loabletech.bladewatch.ui.util.RecordingScanner
-import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
-import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
-import com.loabletech.bladewatch.ui.viewmodel.RecordingViewModel
-import com.loabletech.bladewatch.util.DeviceIdGenerator
+import net.bladewatch.app.R
+import net.bladewatch.app.auth.AuthManager
+import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.util.QrCodeGenerator
+import net.bladewatch.app.ui.util.RecordingScanner
+import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
+import net.bladewatch.app.ui.viewmodel.MainViewModel
+import net.bladewatch.app.ui.viewmodel.RecordingViewModel
+import net.bladewatch.app.util.DeviceIdGenerator
 import java.util.Calendar
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -206,7 +206,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun wireClicks() {
-        val fadeThrough = com.loabletech.bladewatch.ui.util.NavOptionsExt.m3FadeThrough()
+        val fadeThrough = net.bladewatch.app.ui.util.NavOptionsExt.m3FadeThrough()
         btnViewAllTrips?.setOnClickListener {
             findNavController().navigate(R.id.tripsFragment, null, fadeThrough)
         }
@@ -690,7 +690,7 @@ class DashboardFragment : Fragment() {
             var nominalKwh = 0.0
             var modelId: String? = null
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -702,7 +702,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) { /* keep defaults */ }
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/models/selected", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -746,7 +746,7 @@ class DashboardFragment : Fragment() {
             var dataAvailable = false
 
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/trips/summary?days=7", "GET", 3000, 5000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -869,7 +869,7 @@ class DashboardFragment : Fragment() {
             var calTs = 0L
 
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -879,7 +879,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -902,7 +902,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/models/manifest", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -934,7 +934,7 @@ class DashboardFragment : Fragment() {
                 conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/models/selected", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1059,7 +1059,7 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "POST", 3000, 5000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1077,7 +1077,7 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh/nominal", "POST", 3000, 5000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1088,7 +1088,7 @@ class DashboardFragment : Fragment() {
 
             if (!modelId.isNullOrEmpty()) {
                 try {
-                    val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                    val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                         "/api/models/selected", "POST", 3000, 5000)
                     conn.doOutput = true
                     conn.setRequestProperty("Content-Type", "application/json")

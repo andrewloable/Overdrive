@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.notifications;
+package net.bladewatch.app.notifications;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;

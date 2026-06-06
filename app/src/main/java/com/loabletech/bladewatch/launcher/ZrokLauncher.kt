@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.launcher
+package net.bladewatch.app.launcher
 
 import android.content.Context
-import com.loabletech.bladewatch.config.SecretConfigBridge
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.config.SecretConfigBridge
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Launches Zrok tunnel processes via ADB shell for remote access.

@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.storage.StorageManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.storage.StorageManager;
 
 import org.json.JSONObject;
 
@@ -101,7 +101,7 @@ public class QualitySettingsApiHandler {
      * picking Hindi on the tunnel from also flipping the in-car app.
      */
     private static void sendAppearance(OutputStream out) throws Exception {
-        JSONObject app = com.loabletech.bladewatch.config.UnifiedConfigManager.getAppearance();
+        JSONObject app = net.bladewatch.app.config.UnifiedConfigManager.getAppearance();
         JSONObject response = new JSONObject();
         response.put("success", true);
         response.put("theme", app.optString("theme", "dark"));
@@ -134,7 +134,7 @@ public class QualitySettingsApiHandler {
             }
             String locale = req.optString("locale", null);
             if (locale != null) {
-                if (!"auto".equals(locale) && !com.loabletech.bladewatch.server.LocaleManager.isSupported(locale)) {
+                if (!"auto".equals(locale) && !net.bladewatch.app.server.LocaleManager.isSupported(locale)) {
                     response.put("success", false);
                     response.put("error", "locale must be 'auto' or one of the supported tags");
                     HttpResponse.sendJson(out, response.toString());
@@ -142,7 +142,7 @@ public class QualitySettingsApiHandler {
                 }
                 app.put("locale", locale);
             }
-            boolean ok = com.loabletech.bladewatch.config.UnifiedConfigManager.setAppearance(app);
+            boolean ok = net.bladewatch.app.config.UnifiedConfigManager.setAppearance(app);
             response.put("success", ok);
             if (theme != null)  response.put("theme", theme);
             if (locale != null) response.put("locale", locale);
@@ -237,7 +237,7 @@ public class QualitySettingsApiHandler {
                     
                     // Update running sentry engine's output directory to match new storage
                     try {
-                        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+                        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
                             CameraDaemon.getGpuPipeline();
                         if (pipeline != null && pipeline.getSentry() != null) {
                             pipeline.getSentry().setEventOutputDir(storage.getSurveillanceDir());
@@ -548,14 +548,14 @@ public class QualitySettingsApiHandler {
         // Migrate any legacy LOW/REDUCED/NORMAL value silently to STANDARD.
         String tierFromConfig;
         try {
-            org.json.JSONObject recCfg = com.loabletech.bladewatch.config.UnifiedConfigManager
+            org.json.JSONObject recCfg = net.bladewatch.app.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("recording");
             tierFromConfig = recCfg != null ? recCfg.optString("recordingQuality", null) : null;
         } catch (Exception e) {
             tierFromConfig = null;
         }
-        com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality activeTier =
-            com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality.fromString(tierFromConfig);
+        net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality activeTier =
+            net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(tierFromConfig);
 
         response.put("recordingQuality", activeTier.name());
         response.put("streamingQuality", currentStreamQuality);
@@ -565,7 +565,7 @@ public class QualitySettingsApiHandler {
         // Camera FPS setting
         int currentFps = 15;
         try {
-            org.json.JSONObject cameraConfig = com.loabletech.bladewatch.config.UnifiedConfigManager
+            org.json.JSONObject cameraConfig = net.bladewatch.app.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("camera");
             if (cameraConfig != null) {
                 currentFps = cameraConfig.optInt("targetFps", 15);
@@ -578,7 +578,7 @@ public class QualitySettingsApiHandler {
         // this device). 0 means "not measured yet" — the renderLoop only
         // updates this every 2 minutes.
         try {
-            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
+            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
                 CameraDaemon.getGpuPipeline();
             float measured = (pipeline != null && pipeline.getCamera() != null)
                 ? pipeline.getCamera().getMeasuredFps() : 0f;
@@ -598,14 +598,14 @@ public class QualitySettingsApiHandler {
         // Note: bitrate is bandwidth-per-second, FPS does not change file
         // size at fixed bitrate (higher fps just spreads bits over more
         // frames, reducing per-frame detail).
-        com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec codecForEstimate =
+        net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec codecForEstimate =
             "H265".equalsIgnoreCase(currentCodec)
-                ? com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H265
-                : com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H264;
+                ? net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H265
+                : net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H264;
 
         JSONObject qualityInfo = new JSONObject();
-        for (com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality q :
-                com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality.values()) {
+        for (net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality q :
+                net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality.values()) {
             JSONObject entry = new JSONObject();
             int br = q.getBitrateForCodec(codecForEstimate);
             entry.put("displayName", q.displayName);
@@ -725,18 +725,18 @@ public class QualitySettingsApiHandler {
                     // applyFpsChange persists to UnifiedConfig, propagates to
                     // the camera, and reinitializes the encoder so KEY_FRAME_RATE
                     // matches. No restart required — change is live.
-                    com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+                    net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
                     if (pipeline != null) {
                         pipeline.applyFpsChange(fps);
                         CameraDaemon.log("Camera FPS applied: " + fps);
                     } else {
                         // Pipeline not yet created — persist so init() picks it up.
                         try {
-                            org.json.JSONObject camCfg = com.loabletech.bladewatch.config.UnifiedConfigManager
+                            org.json.JSONObject camCfg = net.bladewatch.app.config.UnifiedConfigManager
                                 .loadConfig().optJSONObject("camera");
                             if (camCfg == null) camCfg = new org.json.JSONObject();
                             camCfg.put("targetFps", fps);
-                            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", camCfg);
+                            net.bladewatch.app.config.UnifiedConfigManager.updateSection("camera", camCfg);
                             CameraDaemon.log("Camera FPS saved (pipeline not ready): " + fps);
                         } catch (Exception e) {
                             CameraDaemon.log("Failed to save camera FPS: " + e.getMessage());
@@ -906,11 +906,11 @@ public class QualitySettingsApiHandler {
             recording.put("recordingQuality", recordingQuality);
             recording.put("quality", recordingQuality);
             recording.put("codec", recordingCodec);
-            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("recording", recording);
+            net.bladewatch.app.config.UnifiedConfigManager.updateSection("recording", recording);
 
             org.json.JSONObject streaming = new org.json.JSONObject();
             streaming.put("quality", StreamingApiHandler.getStreamingQuality());
-            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("streaming", streaming);
+            net.bladewatch.app.config.UnifiedConfigManager.updateSection("streaming", streaming);
 
             CameraDaemon.log("Settings persisted via UnifiedConfigManager");
         } catch (Exception e) {
@@ -1009,7 +1009,7 @@ public class QualitySettingsApiHandler {
      * Send telemetry overlay settings.
      */
     private static void sendTelemetryOverlaySettings(OutputStream out) throws Exception {
-        JSONObject overlayConfig = com.loabletech.bladewatch.config.UnifiedConfigManager.getTelemetryOverlay();
+        JSONObject overlayConfig = net.bladewatch.app.config.UnifiedConfigManager.getTelemetryOverlay();
         JSONObject response = new JSONObject();
         response.put("success", true);
         response.put("enabled", overlayConfig.optBoolean("enabled", false));
@@ -1026,10 +1026,10 @@ public class QualitySettingsApiHandler {
 
             JSONObject overlayConfig = new JSONObject();
             overlayConfig.put("enabled", enabled);
-            com.loabletech.bladewatch.config.UnifiedConfigManager.setTelemetryOverlay(overlayConfig);
+            net.bladewatch.app.config.UnifiedConfigManager.setTelemetryOverlay(overlayConfig);
 
             // Notify pipeline
-            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
             if (pipeline != null) {
                 pipeline.setOverlayEnabled(enabled);
             }

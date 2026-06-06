@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.byd.bodywork;
+package net.bladewatch.app.byd.bodywork;
 
 /**
  * Constants for BYD Bodywork SDK

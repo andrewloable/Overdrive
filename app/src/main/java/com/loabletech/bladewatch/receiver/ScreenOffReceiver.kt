@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.receiver
+package net.bladewatch.app.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context

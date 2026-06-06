@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.surveillance.GpuPipelineConfig;
-import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.surveillance.GpuPipelineConfig;
+import net.bladewatch.app.surveillance.GpuSurveillancePipeline;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

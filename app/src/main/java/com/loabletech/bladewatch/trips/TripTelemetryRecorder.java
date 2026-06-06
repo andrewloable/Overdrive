@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.GearMonitor;
-import com.loabletech.bladewatch.monitor.GpsMonitor;
-import com.loabletech.bladewatch.storage.StorageManager;
-import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
-import com.loabletech.bladewatch.telemetry.TelemetrySnapshot;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.GearMonitor;
+import net.bladewatch.app.monitor.GpsMonitor;
+import net.bladewatch.app.storage.StorageManager;
+import net.bladewatch.app.telemetry.TelemetryDataCollector;
+import net.bladewatch.app.telemetry.TelemetrySnapshot;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;

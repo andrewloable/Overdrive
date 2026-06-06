@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/dashboardFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.DashboardFragment"
+        android:name="net.bladewatch.app.ui.fragment.DashboardFragment"
         android:label="@string/rail_dashboard"
         tools:layout="@layout/fragment_dashboard" />
 
@@ -15,7 +15,7 @@
          WebCodecs to JMuxer on Chrome 58 / Android 7.1 head unit. -->
     <fragment
         android:id="@+id/liveViewFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/rail_live"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -27,14 +27,14 @@
     <!-- Recordings: native two-pane (library + player) with M3 segmented Dashcam/Surveillance -->
     <fragment
         android:id="@+id/recordingsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.RecordingsFragment"
+        android:name="net.bladewatch.app.ui.fragment.RecordingsFragment"
         android:label="@string/rail_recordings"
         tools:layout="@layout/fragment_recordings" />
 
     <!-- Surveillance settings (web) — kept reachable from Recordings → Settings ↗ button -->
     <fragment
         android:id="@+id/surveillanceSettingsWebFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/settings_section_surveillance"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -46,7 +46,7 @@
     <!-- Recording settings (web) — same path -->
     <fragment
         android:id="@+id/recordingSettingsWebFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/settings_section_recording"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -58,7 +58,7 @@
     <!-- Vehicle (web canonical) -->
     <fragment
         android:id="@+id/vehicleControlFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/rail_vehicle"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -70,7 +70,7 @@
     <!-- Trips (web canonical) -->
     <fragment
         android:id="@+id/tripsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/rail_trips"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -82,7 +82,7 @@
     <!-- Diagnostics: logs + ADB console + utilities -->
     <fragment
         android:id="@+id/diagnosticsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.DiagnosticsFragment"
+        android:name="net.bladewatch.app.ui.fragment.DiagnosticsFragment"
         android:label="@string/rail_diagnostics"
         tools:layout="@layout/fragment_diagnostics" />
 
@@ -91,7 +91,7 @@
          Diagnostics instead of highlighting Live. -->
     <fragment
         android:id="@+id/performanceFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
+        android:name="net.bladewatch.app.ui.fragment.WebViewFragment"
         android:label="@string/diagnostics_section_performance"
         tools:layout="@layout/fragment_webview">
         <argument
@@ -102,21 +102,21 @@
 
     <fragment
         android:id="@+id/adbConsoleFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.AdbConsoleFragment"
+        android:name="net.bladewatch.app.ui.fragment.AdbConsoleFragment"
         android:label="@string/diagnostics_section_adb_console"
         tools:layout="@layout/fragment_adb_console" />
 
     <!-- Settings: native, with sub-rail of sections -->
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.SettingsFragment"
+        android:name="net.bladewatch.app.ui.fragment.SettingsFragment"
         android:label="@string/rail_settings"
         tools:layout="@layout/fragment_settings" />
 
     <!-- Daemons (used to be its own rail item, now lives under Settings) -->
     <fragment
         android:id="@+id/daemonsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.DaemonsFragment"
+        android:name="net.bladewatch.app.ui.fragment.DaemonsFragment"
         android:label="@string/settings_section_daemons"
         tools:layout="@layout/fragment_daemons" />
 
@@ -125,14 +125,14 @@
          source link, support links, and the Check for Updates action. -->
     <fragment
         android:id="@+id/settingsAboutFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.settings.SettingsAboutFragment"
+        android:name="net.bladewatch.app.ui.fragment.settings.SettingsAboutFragment"
         android:label="@string/settings_section_about"
         tools:layout="@layout/fragment_settings_about" />
 
     <!-- Native video player (entered from Recordings) -->
     <fragment
         android:id="@+id/videoPlayerFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.VideoPlayerFragment"
+        android:name="net.bladewatch.app.ui.fragment.VideoPlayerFragment"
         android:label="@string/nav_page_video_player"
         tools:layout="@layout/fragment_video_player">
         <argument

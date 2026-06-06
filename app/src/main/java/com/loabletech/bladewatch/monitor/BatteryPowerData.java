@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 /**
  * Data model for 12V battery power voltage.

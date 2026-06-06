@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.storage;
+package net.bladewatch.app.storage;
 
 import android.os.StatFs;
 import android.util.Log;
@@ -54,14 +54,14 @@ public class StorageManager {
     
     // Hybrid logger - uses DaemonLogger when running as daemon, android.util.Log otherwise
     private static boolean useDaemonLogger = false;
-    private static com.loabletech.bladewatch.logging.DaemonLogger daemonLogger = null;
+    private static net.bladewatch.app.logging.DaemonLogger daemonLogger = null;
     
     /**
      * Enable daemon logging mode (call from daemon process).
      */
     public static void enableDaemonLogging() {
         useDaemonLogger = true;
-        daemonLogger = com.loabletech.bladewatch.logging.DaemonLogger.getInstance(TAG);
+        daemonLogger = net.bladewatch.app.logging.DaemonLogger.getInstance(TAG);
     }
     
     private static void logInfo(String msg) {
@@ -102,7 +102,7 @@ public class StorageManager {
     // Legacy paths from older app versions. Files here aren't written anymore
     // but they still count toward the user's configured limit and must be
     // reaped — otherwise a 500 MB limit can show 800 MB used in the UI.
-    private static final String LEGACY_APP_FILES_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files";
+    private static final String LEGACY_APP_FILES_DIR = "/storage/emulated/0/Android/data/net.bladewatch.app/files";
     private static final String LEGACY_SURVEILLANCE_DIR = LEGACY_APP_FILES_DIR + "/sentry_events";
 
     // Known SD card mount paths (BYD and common Android paths)
@@ -1817,7 +1817,7 @@ public class StorageManager {
 
                 // Drop any cached entry the recordings API might still hold.
                 try {
-                    com.loabletech.bladewatch.server.RecordingsApiHandler
+                    net.bladewatch.app.server.RecordingsApiHandler
                         .invalidateRecordingCache(file.getAbsolutePath());
                 } catch (Throwable ignored) {
                     // RecordingsApiHandler may not be loaded in every process.
@@ -2321,8 +2321,8 @@ public class StorageManager {
 
                         // Update running sentry engine's output directory
                         try {
-                            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline =
-                                com.loabletech.bladewatch.daemon.CameraDaemon.getGpuPipeline();
+                            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline =
+                                net.bladewatch.app.daemon.CameraDaemon.getGpuPipeline();
                             if (pipeline != null && pipeline.getSentry() != null) {
                                 pipeline.getSentry().setEventOutputDir(getSurveillanceDir());
                                 logInfo("SD card watchdog: updated sentry output dir to " + 

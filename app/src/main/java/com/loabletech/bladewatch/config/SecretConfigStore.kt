@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,7 +23,7 @@ class SecretConfigStore @JvmOverloads constructor(
     private val file: File = File(DEFAULT_PATH)
 ) {
     companion object {
-        const val DEFAULT_PATH = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/bladewatch_secrets.json"
+        const val DEFAULT_PATH = "/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_secrets.json"
         private const val LEGACY_PATH = "/data/local/tmp/bladewatch_secrets.json"
     }
 

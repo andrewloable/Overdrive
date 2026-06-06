@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.notifications.push;
+package net.bladewatch.app.notifications.push;
 
-import com.loabletech.bladewatch.notifications.NotificationEvent;
+import net.bladewatch.app.notifications.NotificationEvent;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

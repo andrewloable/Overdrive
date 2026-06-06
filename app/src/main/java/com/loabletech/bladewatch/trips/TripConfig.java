@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.logging.DaemonLogger;
 import org.json.JSONObject;
 
 /**

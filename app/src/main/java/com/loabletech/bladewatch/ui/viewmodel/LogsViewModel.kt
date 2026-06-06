@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.ui.viewmodel
+package net.bladewatch.app.ui.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.loabletech.bladewatch.ui.model.LogEntry
-import com.loabletech.bladewatch.ui.model.LogLevel
+import net.bladewatch.app.ui.model.LogEntry
+import net.bladewatch.app.ui.model.LogLevel
 
 /**
  * ViewModel for logs panel state.

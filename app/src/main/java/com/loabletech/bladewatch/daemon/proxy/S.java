@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon.proxy;
+package net.bladewatch.app.daemon.proxy;
 
 /**
  * Short alias for string decryption.

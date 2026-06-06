@@ -1,12 +1,12 @@
-package com.loabletech.bladewatch.ui.daemon
+package net.bladewatch.app.ui.daemon
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
-import com.loabletech.bladewatch.launcher.ZrokLauncher
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.launcher.AdbDaemonLauncher
+import net.bladewatch.app.launcher.ZrokLauncher
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.util.PreferencesManager
 import android.content.Context
 
 /**
@@ -37,8 +37,8 @@ class ZrokController(
     private val zrokLauncher by lazy {
         ZrokLauncher(
             context,
-            com.loabletech.bladewatch.launcher.AdbShellExecutor(context),
-            com.loabletech.bladewatch.logging.LogManager.getInstance()
+            net.bladewatch.app.launcher.AdbShellExecutor(context),
+            net.bladewatch.app.logging.LogManager.getInstance()
         )
     }
     

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 /**
  * Listener interface for vehicle data updates.

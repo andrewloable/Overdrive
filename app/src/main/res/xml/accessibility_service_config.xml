@@ -5,4 +5,4 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="5000"
     android:canRetrieveWindowContent="false"
-    android:settingsActivity="com.loabletech.bladewatch.ui.MainActivity" />
+    android:settingsActivity="net.bladewatch.app.ui.MainActivity" />

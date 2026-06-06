@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
-import com.loabletech.bladewatch.logging.LogConfig
+import net.bladewatch.app.logging.LogConfig
 
 /**
  * Alias for LogConfig to keep it in config package.

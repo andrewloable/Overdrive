@@ -1,15 +1,15 @@
-package com.loabletech.bladewatch.notifications.sinks;
+package net.bladewatch.app.notifications.sinks;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.notifications.CategoryRegistry;
-import com.loabletech.bladewatch.notifications.NotificationBus;
-import com.loabletech.bladewatch.notifications.NotificationEvent;
-import com.loabletech.bladewatch.notifications.push.PushPayloadEncoder;
-import com.loabletech.bladewatch.notifications.push.PushSubscription;
-import com.loabletech.bladewatch.notifications.push.PushTransport;
-import com.loabletech.bladewatch.notifications.push.SubscriptionStore;
-import com.loabletech.bladewatch.notifications.push.VapidKeyStore;
-import com.loabletech.bladewatch.notifications.push.VapidSigner;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.notifications.CategoryRegistry;
+import net.bladewatch.app.notifications.NotificationBus;
+import net.bladewatch.app.notifications.NotificationEvent;
+import net.bladewatch.app.notifications.push.PushPayloadEncoder;
+import net.bladewatch.app.notifications.push.PushSubscription;
+import net.bladewatch.app.notifications.push.PushTransport;
+import net.bladewatch.app.notifications.push.SubscriptionStore;
+import net.bladewatch.app.notifications.push.VapidKeyStore;
+import net.bladewatch.app.notifications.push.VapidSigner;
 
 import org.json.JSONObject;
 

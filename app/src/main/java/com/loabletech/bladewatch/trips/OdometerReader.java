@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 import java.lang.reflect.Method;
 
 /**
@@ -67,7 +67,7 @@ public class OdometerReader {
             }
             
             // Convert miles to km if the instrument cluster is set to miles
-            double factor = com.loabletech.bladewatch.byd.BydDataCollector.getInstance().getDistanceToKmFactor();
+            double factor = net.bladewatch.app.byd.BydDataCollector.getInstance().getDistanceToKmFactor();
             return value * factor;
         } catch (Exception e) {
             logger.debug("Failed to read odometer: " + e.getMessage());

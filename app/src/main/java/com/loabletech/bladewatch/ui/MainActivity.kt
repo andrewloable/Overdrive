@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui
+package net.bladewatch.app.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -16,23 +16,23 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
-import com.loabletech.bladewatch.logging.LogLevel
-import com.loabletech.bladewatch.logging.LogManager
-// import com.loabletech.bladewatch.shell.PrivilegedShellSetup
-import com.loabletech.bladewatch.storage.StorageSetup
-import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.util.PreferencesManager
-import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
-import com.loabletech.bladewatch.ui.viewmodel.LogsViewModel
-import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
+import net.bladewatch.app.logging.LogLevel
+import net.bladewatch.app.logging.LogManager
+// import net.bladewatch.app.shell.PrivilegedShellSetup
+import net.bladewatch.app.storage.StorageSetup
+import net.bladewatch.app.ui.daemon.DaemonStartupManager
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.util.PreferencesManager
+import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
+import net.bladewatch.app.ui.viewmodel.LogsViewModel
+import net.bladewatch.app.ui.viewmodel.MainViewModel
+import net.bladewatch.app.launcher.AdbDaemonLauncher
 import com.google.android.material.appbar.MaterialToolbar
 import android.widget.ImageView
 import android.widget.LinearLayout
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.util.BydDataCacheWhitelist
+import net.bladewatch.app.R
+import net.bladewatch.app.util.BydDataCacheWhitelist
 
 /**
  * Main activity hosting the M3 navigation-rail shell.
@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val daemonsViewModel: DaemonsViewModel by viewModels()
     private val logsViewModel: LogsViewModel by viewModels()
-    private var appUpdater: com.loabletech.bladewatch.updater.AppUpdater? = null
+    private var appUpdater: net.bladewatch.app.updater.AppUpdater? = null
 
     // Daemon startup manager
     private lateinit var daemonStartupManager: DaemonStartupManager
@@ -89,12 +89,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize DeviceIdGenerator with ADB executor for file sync
-        val adbExecutor = com.loabletech.bladewatch.launcher.AdbShellExecutor(this)
-        com.loabletech.bladewatch.util.DeviceIdGenerator.init(adbExecutor)
+        val adbExecutor = net.bladewatch.app.launcher.AdbShellExecutor(this)
+        net.bladewatch.app.util.DeviceIdGenerator.init(adbExecutor)
         
         // Generate device ID early - this syncs to file for daemon compatibility
         // Must happen BEFORE any daemon starts
-        val deviceId = com.loabletech.bladewatch.util.DeviceIdGenerator.generateDeviceId(this)
+        val deviceId = net.bladewatch.app.util.DeviceIdGenerator.generateDeviceId(this)
         android.util.Log.i("MainActivity", "Device ID initialized: $deviceId")
         
         // Apply BYD whitelist (ACC + data cache) to prevent background killing
@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         // Seed out-of-process revival watchdog so the process gets resurrected
         // if it ever gets force-stopped or OOM-killed without an external event.
         try {
-            com.loabletech.bladewatch.receiver.ProcessRevivalReceiver.schedule(applicationContext)
+            net.bladewatch.app.receiver.ProcessRevivalReceiver.schedule(applicationContext)
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "ProcessRevivalReceiver.schedule failed: ${e.message}")
         }
@@ -148,13 +148,13 @@ class MainActivity : AppCompatActivity() {
         // FIRST so any zombie daemons / watchdogs from the previous install are
         // dead before the new daemon launcher starts. See UpdateLifecycle for
         // the sentinel handshake details.
-        val isPostUpdate = com.loabletech.bladewatch.updater.UpdateLifecycle
+        val isPostUpdate = net.bladewatch.app.updater.UpdateLifecycle
             .isPostUpdateLaunch(this, intent)
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             // Sync device ID to file synchronously before daemon startup
             Thread {
                 try {
-                    val synced = com.loabletech.bladewatch.util.DeviceIdGenerator.syncDeviceIdToFileSync(this)
+                    val synced = net.bladewatch.app.util.DeviceIdGenerator.syncDeviceIdToFileSync(this)
                     android.util.Log.i("MainActivity", "Device ID sync result: $synced")
                 } catch (e: Exception) {
                     android.util.Log.e("MainActivity", "Device ID sync error: ${e.message}")
@@ -171,12 +171,12 @@ class MainActivity : AppCompatActivity() {
 
                 if (isPostUpdate) {
                     logsViewModel.info("Update", "Post-update launch — hard-resetting daemons before startup")
-                    com.loabletech.bladewatch.updater.UpdateLifecycle.hardResetDaemons(this) {
+                    net.bladewatch.app.updater.UpdateLifecycle.hardResetDaemons(this) {
                         // Surface failed-install errors first. consumeJustUpdatedVersion
                         // returns null when a failure marker is present, so the success
                         // toast never fires on a failed install. consumeFailedUpdateError
                         // also clears the marker so it's a one-shot.
-                        val installError = com.loabletech.bladewatch.updater.AppUpdater
+                        val installError = net.bladewatch.app.updater.AppUpdater
                             .consumeFailedUpdateError(this)
                         if (installError != null) {
                             runOnUiThread {
@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity() {
                         // Consume the just-updated marker only after the cleanup
                         // completes. A crash mid-reset will leave the sentinel
                         // in place so the next launch retries.
-                        val updatedVersion = com.loabletech.bladewatch.updater.AppUpdater
+                        val updatedVersion = net.bladewatch.app.updater.AppUpdater
                             .consumeJustUpdatedVersion(this)
                         if (updatedVersion != null) {
                             runOnUiThread {
@@ -212,8 +212,8 @@ class MainActivity : AppCompatActivity() {
         // Check for app updates (delayed to not block startup)
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             // Clean up any leftover update APK from previous install
-            val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
-            adb.executeShellCommand("rm -f /data/local/tmp/bladewatch_update.apk", object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
+            val adb = net.bladewatch.app.launcher.AdbDaemonLauncher(this)
+            adb.executeShellCommand("rm -f /data/local/tmp/bladewatch_update.apk", object : net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback {
                 override fun onLog(message: String) {}
                 override fun onLaunched() {}
                 override fun onError(error: String) {}
@@ -222,14 +222,14 @@ class MainActivity : AppCompatActivity() {
             // Surface failed-install errors first (consumeJustUpdatedVersion
             // returns null when a failure marker is present, so the success
             // toast never fires on a failed install).
-            val installError = com.loabletech.bladewatch.updater.AppUpdater.consumeFailedUpdateError(this)
+            val installError = net.bladewatch.app.updater.AppUpdater.consumeFailedUpdateError(this)
             if (installError != null) {
                 Toast.makeText(this, getString(R.string.toast_update_install_failed, installError), Toast.LENGTH_LONG).show()
                 logsViewModel.warn("Update", "Install failed: $installError")
             }
 
             // Show post-update message if app was just updated
-            val updatedVersion = com.loabletech.bladewatch.updater.AppUpdater.consumeJustUpdatedVersion(this)
+            val updatedVersion = net.bladewatch.app.updater.AppUpdater.consumeJustUpdatedVersion(this)
             if (updatedVersion != null) {
                 Toast.makeText(this, getString(R.string.toast_updated_to, updatedVersion), Toast.LENGTH_LONG).show()
                 logsViewModel.info("Update", "App updated to $updatedVersion")
@@ -260,19 +260,19 @@ class MainActivity : AppCompatActivity() {
      * autostart whitelist on each install.
      */
     private fun startStatusOverlay() {
-        val hasPermission = com.loabletech.bladewatch.overlay.StatusOverlayService.hasOverlayPermission(this)
+        val hasPermission = net.bladewatch.app.overlay.StatusOverlayService.hasOverlayPermission(this)
         android.util.Log.i("MainActivity", "Overlay permission: $hasPermission")
         logsViewModel.info("Overlay", "Overlay permission: $hasPermission")
 
         if (hasPermission) {
-            com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(this)
+            net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(this)
             logsViewModel.info("Overlay", "Status overlay service started")
         }
 
         // showIfNeeded is no-op when the seen install-time matches the current
         // PackageInfo.lastUpdateTime, so it's safe to call on every launch.
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            com.loabletech.bladewatch.overlay.SetupGuideDialog.showIfNeeded(this)
+            net.bladewatch.app.overlay.SetupGuideDialog.showIfNeeded(this)
         }, 2000)
     }
     
@@ -284,7 +284,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // Try to start overlay if permission was just granted (user returned from settings)
-        com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(this)
+        net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(this)
     }
     
     /**
@@ -292,7 +292,7 @@ class MainActivity : AppCompatActivity() {
      * This handles the case where user grants ADB auth after the initial connection attempt failed.
      */
     private fun setupAdbAuthCallback() {
-        com.loabletech.bladewatch.launcher.AdbShellExecutor.setAuthCallback(object : com.loabletech.bladewatch.launcher.AdbShellExecutor.AdbAuthCallback {
+        net.bladewatch.app.launcher.AdbShellExecutor.setAuthCallback(object : net.bladewatch.app.launcher.AdbShellExecutor.AdbAuthCallback {
             override fun onAuthPending() {
                 runOnUiThread {
                     logsViewModel.info("ADB", "⏳ Waiting for ADB authorization...")
@@ -337,11 +337,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         logsViewModel.info("Update", "Checking for updates...")
-        val updater = com.loabletech.bladewatch.updater.AppUpdater(this)
+        val updater = net.bladewatch.app.updater.AppUpdater(this)
         appUpdater = updater
-        updater.checkForUpdate(object : com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback {
+        updater.checkForUpdate(object : net.bladewatch.app.updater.AppUpdater.UpdateCallback {
             override fun onUpdateAvailable(currentVersion: String, newVersion: String, releaseNotes: String) {
-                com.loabletech.bladewatch.updater.UpdateDialog.showUpdateAvailable(
+                net.bladewatch.app.updater.UpdateDialog.showUpdateAvailable(
                     this@MainActivity, currentVersion, newVersion, releaseNotes,
                     { performAppUpdate(updater) },
                     null
@@ -367,11 +367,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         Toast.makeText(this, getString(R.string.toast_checking_for_updates), Toast.LENGTH_SHORT).show()
-        val updater = com.loabletech.bladewatch.updater.AppUpdater(this)
+        val updater = net.bladewatch.app.updater.AppUpdater(this)
         appUpdater = updater
-        updater.checkForUpdate(object : com.loabletech.bladewatch.updater.AppUpdater.UpdateCallback {
+        updater.checkForUpdate(object : net.bladewatch.app.updater.AppUpdater.UpdateCallback {
             override fun onUpdateAvailable(currentVersion: String, newVersion: String, releaseNotes: String) {
-                com.loabletech.bladewatch.updater.UpdateDialog.showUpdateAvailable(
+                net.bladewatch.app.updater.UpdateDialog.showUpdateAvailable(
                     this@MainActivity, currentVersion, newVersion, releaseNotes,
                     { performAppUpdate(updater) },
                     null
@@ -405,12 +405,12 @@ class MainActivity : AppCompatActivity() {
         mainHandler.postDelayed(runnable, sixHoursMs)
     }
 
-    private fun performAppUpdate(updater: com.loabletech.bladewatch.updater.AppUpdater) {
-        val progress = com.loabletech.bladewatch.updater.UpdateDialog.showProgress(this) {
+    private fun performAppUpdate(updater: net.bladewatch.app.updater.AppUpdater) {
+        val progress = net.bladewatch.app.updater.UpdateDialog.showProgress(this) {
             updater.cancel()
         }
 
-        updater.downloadAndInstall(object : com.loabletech.bladewatch.updater.AppUpdater.InstallCallback {
+        updater.downloadAndInstall(object : net.bladewatch.app.updater.AppUpdater.InstallCallback {
             override fun onProgress(message: String) {
                 runOnUiThread {
                     when {
@@ -488,7 +488,7 @@ class MainActivity : AppCompatActivity() {
         // opened if the app-ops grant fails to land.
         android.util.Log.i("MainActivity", "MES missing - attempting silent app-ops grant via ADB")
         try {
-            val adb = com.loabletech.bladewatch.launcher.AdbShellExecutor(this)
+            val adb = net.bladewatch.app.launcher.AdbShellExecutor(this)
             StorageSetup.tryGrantViaAppOps(this, adb) { granted ->
                 runOnUiThread { onAppOpsGrantResult(granted) }
             }
@@ -601,14 +601,14 @@ class MainActivity : AppCompatActivity() {
         val action = intent.action
         val startLocation = intent.getBooleanExtra("start_location", false)
         
-        if (action == "com.loabletech.bladewatch.START_LOCATION_ACTIVITY" || startLocation) {
+        if (action == "net.bladewatch.app.START_LOCATION_ACTIVITY" || startLocation) {
             logsViewModel.info("Location", "Received Location start intent from SentryDaemon")
             
             // Start LocationSidecarService directly
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 logsViewModel.info("Location", "Auto-starting Location service...")
                 try {
-                    val serviceIntent = android.content.Intent(this, com.loabletech.bladewatch.services.LocationSidecarService::class.java)
+                    val serviceIntent = android.content.Intent(this, net.bladewatch.app.services.LocationSidecarService::class.java)
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                         startForegroundService(serviceIntent)
                     } else {
@@ -760,7 +760,7 @@ class MainActivity : AppCompatActivity() {
         // to the legacy rail-header button if a downstream layout ever
         // restores it; the dialog itself is the same.
         val languageClick = View.OnClickListener {
-            com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog.show(this) {
+            net.bladewatch.app.ui.dialog.LanguagePickerDialog.show(this) {
                 recreate()
             }
         }
@@ -816,10 +816,10 @@ class MainActivity : AppCompatActivity() {
             override fun onLog(tag: String, message: String, level: LogLevel) {
                 // Convert LogManager.LogLevel to UI LogLevel
                 val uiLevel = when (level) {
-                    LogLevel.DEBUG -> com.loabletech.bladewatch.ui.model.LogLevel.DEBUG
-                    LogLevel.INFO -> com.loabletech.bladewatch.ui.model.LogLevel.INFO
-                    LogLevel.WARN -> com.loabletech.bladewatch.ui.model.LogLevel.WARN
-                    LogLevel.ERROR -> com.loabletech.bladewatch.ui.model.LogLevel.ERROR
+                    LogLevel.DEBUG -> net.bladewatch.app.ui.model.LogLevel.DEBUG
+                    LogLevel.INFO -> net.bladewatch.app.ui.model.LogLevel.INFO
+                    LogLevel.WARN -> net.bladewatch.app.ui.model.LogLevel.WARN
+                    LogLevel.ERROR -> net.bladewatch.app.ui.model.LogLevel.ERROR
                 }
                 logsViewModel.addLog(tag, message, uiLevel)
             }
@@ -953,7 +953,7 @@ class MainActivity : AppCompatActivity() {
         var currentId = -1
         var isManual = false
         try {
-            val config = com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
+            val config = net.bladewatch.app.config.UnifiedConfigManager.loadConfig()
             val cameraConfig = config.optJSONObject("camera")
             if (cameraConfig != null) {
                 currentId = cameraConfig.optInt("probedCameraId", -1)
@@ -997,7 +997,7 @@ class MainActivity : AppCompatActivity() {
                 // Auto mode
                 Thread {
                     try {
-                        val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                        val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                             "/api/surveillance/config", "POST", 3000, 3000)
                         conn.setRequestProperty("Content-Type", "application/json")
                         conn.doOutput = true
@@ -1023,7 +1023,7 @@ class MainActivity : AppCompatActivity() {
                 val selectedCamId = selectedIndex - 1
                 Thread {
                     try {
-                        val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                        val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                             "/api/surveillance/config", "POST", 3000, 3000)
                         conn.setRequestProperty("Content-Type", "application/json")
                         conn.doOutput = true
@@ -1063,7 +1063,7 @@ class MainActivity : AppCompatActivity() {
                 val emptyCameraConfig = org.json.JSONObject()
                 emptyCameraConfig.put("probedCameraId", -1)
                 emptyCameraConfig.put("probedSurfaceMode", -1)
-                com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", emptyCameraConfig)
+                net.bladewatch.app.config.UnifiedConfigManager.updateSection("camera", emptyCameraConfig)
                 
                 runOnUiThread {
                     logsViewModel.info("Camera", "Camera config cleared — restarting daemon")
@@ -1071,8 +1071,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 
                 // Kill the camera daemon — DaemonLauncher's watchdog will auto-restart it
-                val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
-                adb.killDaemon(object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
+                val adb = net.bladewatch.app.launcher.AdbDaemonLauncher(this)
+                adb.killDaemon(object : net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback {
                     override fun onLog(message: String) {
                         logsViewModel.debug("Camera", message)
                     }
@@ -1178,7 +1178,7 @@ class MainActivity : AppCompatActivity() {
             // Fetch full SOH status (modelId, calibration anchor, estimated capacity) —
             // properties file alone doesn't carry modelId or live calibration shape.
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -1378,7 +1378,7 @@ class MainActivity : AppCompatActivity() {
         executor.execute {
             try {
                 // Use daemon API (daemon owns the file, has write permissions)
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh/reset", "POST", 3000, 3000)
                 conn.doOutput = true
                 conn.outputStream.use { it.write("{}".toByteArray()) }
@@ -1494,7 +1494,7 @@ class MainActivity : AppCompatActivity() {
                 val payload = org.json.JSONObject().apply {
                     put("categories", org.json.JSONArray(categories))
                 }
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/reset", "POST", 5000, 15000)
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json")
@@ -1701,7 +1701,7 @@ class MainActivity : AppCompatActivity() {
         // Remove log listener
         LogManager.setLogListener(null)
         // Remove ADB auth callback
-        com.loabletech.bladewatch.launcher.AdbShellExecutor.setAuthCallback(null)
+        net.bladewatch.app.launcher.AdbShellExecutor.setAuthCallback(null)
         // Cancel the periodic update check so the Runnable doesn't leak the
         // activity reference after recreate.
         updateCheckRunnable?.let { mainHandler.removeCallbacks(it) }

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.model
+package net.bladewatch.app.ui.model
 
 /**
  * Types of background daemons managed by the app.

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 /**
  * Immutable data class for HV battery thermal readings.

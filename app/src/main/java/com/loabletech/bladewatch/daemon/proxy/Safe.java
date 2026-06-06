@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon.proxy;
+package net.bladewatch.app.daemon.proxy;
 
 import android.util.Base64;
 

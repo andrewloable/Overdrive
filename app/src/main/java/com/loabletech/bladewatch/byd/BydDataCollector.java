@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.byd;
+package net.bladewatch.app.byd;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -293,7 +293,7 @@ public class BydDataCollector {
         // If auto-detection failed, fall back to user's persisted preference
         if (!unitDetected) {
             try {
-                com.loabletech.bladewatch.trips.TripConfig tripConfig = new com.loabletech.bladewatch.trips.TripConfig();
+                net.bladewatch.app.trips.TripConfig tripConfig = new net.bladewatch.app.trips.TripConfig();
                 tripConfig.load();
                 String savedUnit = tripConfig.getDistanceUnit();
                 if ("mi".equals(savedUnit)) {
@@ -330,8 +330,8 @@ public class BydDataCollector {
         // here — the door listener is only invoked once the bodywork HAL
         // fires onDoorStateChanged, which requires registerAllListeners to
         // have run first.
-        com.loabletech.bladewatch.notifications.DoorEventNotifier.start();
-        com.loabletech.bladewatch.notifications.ChargingEventNotifier.start();
+        net.bladewatch.app.notifications.DoorEventNotifier.start();
+        net.bladewatch.app.notifications.ChargingEventNotifier.start();
 
         // Start periodic polling to keep data fresh (listeners may not fire for all values)
         startPolling();
@@ -472,8 +472,8 @@ public class BydDataCollector {
             @Override
             public void onReceive(android.content.Context ctx, android.content.Intent intent) {
                 if (intent == null || intent.getAction() == null) return;
-                com.loabletech.bladewatch.monitor.ChargingDetector det =
-                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance();
+                net.bladewatch.app.monitor.ChargingDetector det =
+                    net.bladewatch.app.monitor.ChargingDetector.getInstance();
                 switch (intent.getAction()) {
                     case android.content.Intent.ACTION_POWER_CONNECTED:
                         det.onPowerConnected();
@@ -529,18 +529,18 @@ public class BydDataCollector {
             return device;
         }
 
-        // Strategy 2: Try with a proper app context for com.loabletech.bladewatch
+        // Strategy 2: Try with a proper app context for net.bladewatch.app
         // The daemon runs via app_process with a synthetic context. But the actual app
         // is installed — createPackageContext gives us a real app context with proper
         // service bindings that the multimedia device might need.
         try {
             android.content.Context appPkgCtx = context.createPackageContext(
-                "com.loabletech.bladewatch",
+                "net.bladewatch.app",
                 android.content.Context.CONTEXT_INCLUDE_CODE | android.content.Context.CONTEXT_IGNORE_SECURITY);
             if (appPkgCtx != null) {
                 device = BydDeviceHelper.getDevice(className, appPkgCtx);
                 if (device != null) {
-                    logger.info("Multimedia device OK via com.loabletech.bladewatch package context");
+                    logger.info("Multimedia device OK via net.bladewatch.app package context");
                     availableDevices.add("Multimedia");
                     return device;
                 }
@@ -636,7 +636,7 @@ public class BydDataCollector {
         // Notify the fused charging detector first so it can invalidate
         // ACC-dependent signals (enginePowerKw goes stale once ACC is off
         // and must not be reused as charging evidence).
-        com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().updateAccState(isOn);
+        net.bladewatch.app.monitor.ChargingDetector.getInstance().updateAccState(isOn);
 
         // ACC just transitioned OFF: also clear the snapshot's enginePowerKw
         // so any consumer reading the snapshot directly (not through the
@@ -817,17 +817,17 @@ public class BydDataCollector {
         // that's always P. The detector uses gear==P as an L3 guard.
         int gearNow;
         try {
-            com.loabletech.bladewatch.monitor.GearMonitor gm =
-                com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gm =
+                net.bladewatch.app.monitor.GearMonitor.getInstance();
             gearNow = gm.getCurrentGear();
         } catch (Exception e) {
             gearNow = (built.gearMode != BydVehicleData.UNAVAILABLE)
                 ? built.gearMode
-                : com.loabletech.bladewatch.monitor.GearMonitor.GEAR_P;
+                : net.bladewatch.app.monitor.GearMonitor.GEAR_P;
         }
-        com.loabletech.bladewatch.monitor.ChargingDetector.getInstance()
+        net.bladewatch.app.monitor.ChargingDetector.getInstance()
             .updatePollEvidence(built, gearNow,
-                com.loabletech.bladewatch.monitor.GearMonitor.GEAR_P);
+                net.bladewatch.app.monitor.GearMonitor.GEAR_P);
     }
 
     private void collectBodywork(BydVehicleData.Builder b) {
@@ -1356,7 +1356,7 @@ public class BydDataCollector {
                     logger.debug("collectCharging Power.isCharging error: " + e.getMessage());
                 }
             }
-            com.loabletech.bladewatch.monitor.ChargingDetector.getInstance()
+            net.bladewatch.app.monitor.ChargingDetector.getInstance()
                 .updatePowerIsCharging(powerIsCharging);
 
             // Feature ID for battery device state, fallback to named getter
@@ -2010,10 +2010,10 @@ public class BydDataCollector {
                         data.put("wheel", i);
                         data.put("kPa", pressuresKpa[i]);
                         data.put("state", curP);
-                        com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                                new com.loabletech.bladewatch.notifications.NotificationEvent(
+                        net.bladewatch.app.notifications.NotificationBus.get().publish(
+                                new net.bladewatch.app.notifications.NotificationEvent(
                                         "vehicle.health.tyre.pressure",
-                                        com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
+                                        net.bladewatch.app.notifications.NotificationEvent.Severity.WARN,
                                         curP == 1 ? "Underpressure" : "Overpressure",
                                         wheelLabels[i] + " — " + pressuresKpa[i] + " kPa",
                                         "tyre-pressure-" + i,
@@ -2032,12 +2032,12 @@ public class BydDataCollector {
                         data.put("wheel", i);
                         data.put("leakState", curL);
                         data.put("kPa", pressuresKpa[i]);
-                        com.loabletech.bladewatch.notifications.NotificationEvent.Severity sev =
+                        net.bladewatch.app.notifications.NotificationEvent.Severity sev =
                                 curL == 2
-                                        ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
-                                        : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN;
-                        com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                                new com.loabletech.bladewatch.notifications.NotificationEvent(
+                                        ? net.bladewatch.app.notifications.NotificationEvent.Severity.CRITICAL
+                                        : net.bladewatch.app.notifications.NotificationEvent.Severity.WARN;
+                        net.bladewatch.app.notifications.NotificationBus.get().publish(
+                                new net.bladewatch.app.notifications.NotificationEvent(
                                         "vehicle.health.tyre.leak",
                                         sev,
                                         curL == 2 ? "Fast leak detected" : "Slow leak detected",
@@ -3376,7 +3376,7 @@ public class BydDataCollector {
                     }
                     // Push edge into fused detector regardless of whether the
                     // snapshot value moved (it may already match from a poll).
-                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().updateBmsState(state);
+                    net.bladewatch.app.monitor.ChargingDetector.getInstance().updateBmsState(state);
                 }
             } catch (Exception e) { /* ignore */ }
             return;

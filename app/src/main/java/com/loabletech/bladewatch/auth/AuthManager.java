@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.auth;
+package net.bladewatch.app.auth;
 
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.config.SecretConfigBridge;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.config.SecretConfigBridge;
+import net.bladewatch.app.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 
@@ -63,7 +63,7 @@ public class AuthManager {
     // Device ID file — written via ADB shell from MainActivity, survives
     // app reinstall. Consulted only when the unified config has no
     // deviceId yet (cold-start before MainActivity has synced).
-    private static final String DEVICE_ID_FILE = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/.bladewatch_device_id";
+    private static final String DEVICE_ID_FILE = "/storage/emulated/0/Android/data/net.bladewatch.app/files/.bladewatch_device_id";
     private static final String LEGACY_DEVICE_ID_FILE = "/data/local/tmp/.bladewatch_device_id";
     private static final String LEGACY_CAMERA_DEVICE_ID_FILE = "/data/local/tmp/.byd_device_id";
 

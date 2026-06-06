@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.byd;
+package net.bladewatch.app.byd;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -486,7 +486,7 @@ public final class BydDeviceHelper {
             boolean twoArgRegistered = false;
             if (registerWithIds != null) {
                 try {
-                    int[] tyreFeatureIds = com.loabletech.bladewatch.byd.BydFeatureIds.INSTRUMENT_TYRE_TEMP_IDS;
+                    int[] tyreFeatureIds = net.bladewatch.app.byd.BydFeatureIds.INSTRUMENT_TYRE_TEMP_IDS;
                     registerWithIds.invoke(device, listener, tyreFeatureIds);
                     logger.info("Tyre listener registered via 2-arg overload with LF/RF/LB/RB feature IDs");
                     twoArgRegistered = true;

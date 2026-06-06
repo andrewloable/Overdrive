@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.byd.radar;
+package net.bladewatch.app.byd.radar;
 
 import android.content.Context;
 import android.hardware.bydauto.radar.AbsBYDAutoRadarListener;
 
-import com.loabletech.bladewatch.byd.EventCallback;
-import com.loabletech.bladewatch.byd.LogCallback;
+import net.bladewatch.app.byd.EventCallback;
+import net.bladewatch.app.byd.LogCallback;
 
 import org.json.JSONObject;
 

@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.ui.viewmodel
+package net.bladewatch.app.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.ui.util.PreferencesManager
 
 /**
  * ViewModel for main app state shared across screens.

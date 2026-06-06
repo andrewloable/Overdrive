@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.notifications;
+package net.bladewatch.app.notifications;
 
-import com.loabletech.bladewatch.byd.BydDataCollector;
-import com.loabletech.bladewatch.byd.BydVehicleData;
-import com.loabletech.bladewatch.byd.bodywork.BodyworkConstants;
-import com.loabletech.bladewatch.server.Messages;
+import net.bladewatch.app.byd.BydDataCollector;
+import net.bladewatch.app.byd.BydVehicleData;
+import net.bladewatch.app.byd.bodywork.BodyworkConstants;
+import net.bladewatch.app.server.Messages;
 
 import org.json.JSONObject;
 
@@ -77,7 +77,7 @@ public final class DoorEventNotifier {
         // never make up a location.
         String body = Messages.get("notifications.while_parked");
         try {
-            String zone = com.loabletech.bladewatch.surveillance.SafeLocationManager
+            String zone = net.bladewatch.app.surveillance.SafeLocationManager
                     .getInstance().getCurrentZoneName();
             if (zone != null && !zone.isEmpty()) {
                 body = Messages.get("notifications.while_parked_at", zone);

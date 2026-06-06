@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.byd
+package net.bladewatch.app.byd
 
-import com.loabletech.bladewatch.byd.radar.RadarConstants
-import com.loabletech.bladewatch.client.CameraDaemonClient
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.byd.radar.RadarConstants
+import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.logging.LogManager
 import org.json.JSONObject
 
 /**

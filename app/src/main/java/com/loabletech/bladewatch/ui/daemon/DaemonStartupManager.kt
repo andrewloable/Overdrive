@@ -1,15 +1,15 @@
-package com.loabletech.bladewatch.ui.daemon
+package net.bladewatch.app.ui.daemon
 
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
-import com.loabletech.bladewatch.launcher.AdbShellExecutor
-import com.loabletech.bladewatch.launcher.ZrokLauncher
-import com.loabletech.bladewatch.logging.LogManager
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.util.PreferencesManager
-import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
+import net.bladewatch.app.launcher.AdbDaemonLauncher
+import net.bladewatch.app.launcher.AdbShellExecutor
+import net.bladewatch.app.launcher.ZrokLauncher
+import net.bladewatch.app.logging.LogManager
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.util.PreferencesManager
+import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
 
 class DaemonStartupManager(
     private val context: Context,
@@ -327,18 +327,18 @@ class DaemonStartupManager(
      */
     private fun enableAccessibilityKeepAlive() {
         // Check if already running in-process first
-        if (com.loabletech.bladewatch.services.KeepAliveAccessibilityService.isRunning()) {
+        if (net.bladewatch.app.services.KeepAliveAccessibilityService.isRunning()) {
             log.info(TAG, "AccessibilityService already running")
             return
         }
 
         log.info(TAG, "Enabling AccessibilityService keep-alive via ADB...")
-        val serviceLauncher = com.loabletech.bladewatch.launcher.ServiceLauncher(
+        val serviceLauncher = net.bladewatch.app.launcher.ServiceLauncher(
             context,
-            com.loabletech.bladewatch.launcher.AdbShellExecutor(context),
+            net.bladewatch.app.launcher.AdbShellExecutor(context),
             log
         )
-        serviceLauncher.enableAccessibilityKeepAlive(object : com.loabletech.bladewatch.launcher.ServiceLauncher.LaunchCallback {
+        serviceLauncher.enableAccessibilityKeepAlive(object : net.bladewatch.app.launcher.ServiceLauncher.LaunchCallback {
             override fun onLog(message: String) { log.debug(TAG, "[A11y] $message") }
             override fun onLaunched() { log.info(TAG, "AccessibilityService keep-alive enabled") }
             override fun onError(error: String) { log.warn(TAG, "AccessibilityService enable failed: $error (non-fatal)") }

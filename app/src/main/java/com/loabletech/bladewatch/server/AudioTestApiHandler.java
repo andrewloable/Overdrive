@@ -1,12 +1,12 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.speech.tts.TextToSpeech;
 
-import com.loabletech.bladewatch.byd.BydDataCollector;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.byd.BydDataCollector;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import org.json.JSONObject;
 

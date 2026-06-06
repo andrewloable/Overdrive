@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.logging
+package net.bladewatch.app.logging
 
 import android.content.Context
 import java.io.File

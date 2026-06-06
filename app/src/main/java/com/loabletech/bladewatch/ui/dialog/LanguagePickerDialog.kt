@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.dialog
+package net.bladewatch.app.ui.dialog
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -13,8 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.server.LocaleManager
+import net.bladewatch.app.R
+import net.bladewatch.app.server.LocaleManager
 
 /**
  * Language picker rendered as a real M3 [BottomSheetDialog].
@@ -145,10 +145,10 @@ object LanguagePickerDialog {
 
     private fun collectWebViewFragments(
         fm: androidx.fragment.app.FragmentManager
-    ): List<com.loabletech.bladewatch.ui.fragment.WebViewFragment> {
-        val out = mutableListOf<com.loabletech.bladewatch.ui.fragment.WebViewFragment>()
+    ): List<net.bladewatch.app.ui.fragment.WebViewFragment> {
+        val out = mutableListOf<net.bladewatch.app.ui.fragment.WebViewFragment>()
         for (f in fm.fragments) {
-            if (f is com.loabletech.bladewatch.ui.fragment.WebViewFragment) out.add(f)
+            if (f is net.bladewatch.app.ui.fragment.WebViewFragment) out.add(f)
             if (f.isAdded) out.addAll(collectWebViewFragments(f.childFragmentManager))
         }
         return out

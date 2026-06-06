@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.PowerManager
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Manages wake locks and WiFi locks to keep the device active.

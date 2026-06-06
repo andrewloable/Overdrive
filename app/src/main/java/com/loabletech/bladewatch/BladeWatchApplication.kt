@@ -1,15 +1,15 @@
-package com.loabletech.bladewatch
+package net.bladewatch.app
 
 import android.app.Application
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
-import com.loabletech.bladewatch.logging.LogConfig
-import com.loabletech.bladewatch.logging.LogManager
-import com.loabletech.bladewatch.server.LocaleManager
-import com.loabletech.bladewatch.services.DaemonKeepaliveService
-// import com.loabletech.bladewatch.shell.PrivilegedShellSetup
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.logging.LogConfig
+import net.bladewatch.app.logging.LogManager
+import net.bladewatch.app.server.LocaleManager
+import net.bladewatch.app.services.DaemonKeepaliveService
+// import net.bladewatch.app.shell.PrivilegedShellSetup
+import net.bladewatch.app.ui.util.PreferencesManager
 
 /**
  * Application class for BladeWatch.

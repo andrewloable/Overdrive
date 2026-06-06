@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.telemetry;
+package net.bladewatch.app.telemetry;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Executors;

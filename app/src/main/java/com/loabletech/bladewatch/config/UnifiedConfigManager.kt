@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
 import android.util.Log
 import org.json.JSONObject
@@ -32,7 +32,7 @@ object UnifiedConfigManager {
     
     // Single source of truth. /data/local/tmp can be recreated across BYD
     // head-unit restarts, so persistent config lives under app external files.
-    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/bladewatch_config.json"
+    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_config.json"
     private const val LEGACY_CONFIG_PATH = "/data/local/tmp/bladewatch_config.json"
     
     // Legacy paths for migration
@@ -412,8 +412,8 @@ object UnifiedConfigManager {
      * Returns a SurveillanceSchedule loaded from the surveillance section.
      */
     @JvmStatic
-    fun getSurveillanceSchedule(): com.loabletech.bladewatch.surveillance.SurveillanceSchedule {
-        val schedule = com.loabletech.bladewatch.surveillance.SurveillanceSchedule()
+    fun getSurveillanceSchedule(): net.bladewatch.app.surveillance.SurveillanceSchedule {
+        val schedule = net.bladewatch.app.surveillance.SurveillanceSchedule()
         schedule.loadFromJson(getSurveillance())
         return schedule
     }

@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.ai
+package net.bladewatch.app.ai
 
 import android.content.Context
-import com.loabletech.bladewatch.logging.DaemonLogger
+import net.bladewatch.app.logging.DaemonLogger
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.gpu.GpuDelegate

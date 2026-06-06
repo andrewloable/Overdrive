@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
-import com.loabletech.bladewatch.client.CameraDaemonClient
+import net.bladewatch.app.client.CameraDaemonClient
 import android.os.Looper
 import android.util.Log
 import org.json.JSONObject

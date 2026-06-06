@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.updater.AppUpdater;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.updater.AppUpdater;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

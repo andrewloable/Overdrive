@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon.sentry
+package net.bladewatch.app.daemon.sentry
 
 /**
  * Sentry daemon configuration constants.
@@ -18,7 +18,7 @@ object SentryConfiguration {
     const val LOG_FILE_SHELL = "/data/local/tmp/sentry_daemon.log"
     
     // Package name
-    const val PACKAGE_NAME = "com.loabletech.bladewatch"
+    const val PACKAGE_NAME = "net.bladewatch.app"
     
     // BYD permissions
     val BYD_PERMISSIONS = listOf(

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.byd;
+package net.bladewatch.app.byd;
 
 import org.json.JSONObject;
 

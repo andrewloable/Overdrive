@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
 import android.opengl.EGL14;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;

@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.proximity;
+package net.bladewatch.app.proximity;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Proximity Guard Configuration POJO

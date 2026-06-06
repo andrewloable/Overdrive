@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 
@@ -43,7 +43,7 @@ public class GearMonitor {
     
     // TelemetryDataCollector reference — when set, read gear from its cached snapshot
     // instead of polling the BYD device directly (avoids duplicate CAN bus reads)
-    private volatile com.loabletech.bladewatch.telemetry.TelemetryDataCollector telemetrySource = null;
+    private volatile net.bladewatch.app.telemetry.TelemetryDataCollector telemetrySource = null;
     
     private GearMonitor() {}
     
@@ -68,7 +68,7 @@ public class GearMonitor {
      * snapshot instead of polling the BYD device directly — eliminating duplicate
      * CAN bus reads.
      */
-    public void setTelemetrySource(com.loabletech.bladewatch.telemetry.TelemetryDataCollector source) {
+    public void setTelemetrySource(net.bladewatch.app.telemetry.TelemetryDataCollector source) {
         this.telemetrySource = source;
     }
     
@@ -114,8 +114,8 @@ public class GearMonitor {
                         int gear;
                         // Prefer TelemetryDataCollector's cached snapshot to avoid
                         // duplicate CAN bus reads when the overlay poller is running
-                        com.loabletech.bladewatch.telemetry.TelemetryDataCollector src = telemetrySource;
-                        com.loabletech.bladewatch.telemetry.TelemetrySnapshot snap = 
+                        net.bladewatch.app.telemetry.TelemetryDataCollector src = telemetrySource;
+                        net.bladewatch.app.telemetry.TelemetrySnapshot snap = 
                             (src != null) ? src.getLatestSnapshot() : null;
                         if (snap != null && (System.currentTimeMillis() - snap.timestampMs) < 1000) {
                             // Snapshot is fresh (< 1 second old) — use its gear value

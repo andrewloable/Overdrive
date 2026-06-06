@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.updater;
+package net.bladewatch.app.updater;
 
 import android.animation.ObjectAnimator;
 import androidx.appcompat.app.AlertDialog;
@@ -15,7 +15,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.loabletech.bladewatch.R;
+import net.bladewatch.app.R;
 
 public class UpdateDialog {
 

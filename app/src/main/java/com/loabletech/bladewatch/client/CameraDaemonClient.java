@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.client;
+package net.bladewatch.app.client;
 
 import android.util.Log;
 

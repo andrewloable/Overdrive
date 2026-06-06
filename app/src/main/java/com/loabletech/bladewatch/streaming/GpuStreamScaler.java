@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.streaming;
+package net.bladewatch.app.streaming;
 
 import android.opengl.GLES20;
-import com.loabletech.bladewatch.camera.EGLCore;
-import com.loabletech.bladewatch.camera.GlUtil;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu;
+import net.bladewatch.app.camera.EGLCore;
+import net.bladewatch.app.camera.GlUtil;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.surveillance.HardwareEventRecorderGpu;
 import android.opengl.GLES11Ext;
 import android.opengl.EGLSurface;
 import android.view.Surface;

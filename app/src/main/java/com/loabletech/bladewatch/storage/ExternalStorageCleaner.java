@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.storage;
+package net.bladewatch.app.storage;
 
 import android.os.StatFs;
 import android.util.Log;
@@ -39,11 +39,11 @@ public class ExternalStorageCleaner {
     
     // Hybrid logger
     private static boolean useDaemonLogger = false;
-    private static com.loabletech.bladewatch.logging.DaemonLogger daemonLogger = null;
+    private static net.bladewatch.app.logging.DaemonLogger daemonLogger = null;
     
     public static void enableDaemonLogging() {
         useDaemonLogger = true;
-        daemonLogger = com.loabletech.bladewatch.logging.DaemonLogger.getInstance(TAG);
+        daemonLogger = net.bladewatch.app.logging.DaemonLogger.getInstance(TAG);
     }
     
     private static void logInfo(String msg) {

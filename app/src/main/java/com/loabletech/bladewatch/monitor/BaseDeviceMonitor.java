@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;

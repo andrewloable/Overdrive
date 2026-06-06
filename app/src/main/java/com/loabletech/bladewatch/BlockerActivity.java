@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch;
+package net.bladewatch.app;
 
 import android.app.Activity;
 import android.os.Bundle;

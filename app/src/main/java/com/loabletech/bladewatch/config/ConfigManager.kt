@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.loabletech.bladewatch.logging.LogConfig
+import net.bladewatch.app.logging.LogConfig
 import org.json.JSONObject
 
 /**

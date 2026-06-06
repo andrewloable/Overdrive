@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.surveillance;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.storage.StorageManager;
-import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
+package net.bladewatch.app.surveillance;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.storage.StorageManager;
+import net.bladewatch.app.telemetry.TelemetryDataCollector;
 
-import com.loabletech.bladewatch.camera.CameraFirmwareInfo;
-import com.loabletech.bladewatch.camera.PanoCameraDiscovery;
-import com.loabletech.bladewatch.camera.PanoramicCameraGpu;
+import net.bladewatch.app.camera.CameraFirmwareInfo;
+import net.bladewatch.app.camera.PanoCameraDiscovery;
+import net.bladewatch.app.camera.PanoramicCameraGpu;
 
 import java.io.File;
 
@@ -34,9 +34,9 @@ public class GpuSurveillancePipeline {
     private AdaptiveBitrateController bitrateController;
     
     // Streaming components (separate encoder - always available)
-    private com.loabletech.bladewatch.streaming.GpuStreamScaler streamScaler;
+    private net.bladewatch.app.streaming.GpuStreamScaler streamScaler;
     private HardwareEventRecorderGpu streamEncoder;
-    private com.loabletech.bladewatch.streaming.WebSocketStreamServer wsStreamServer;
+    private net.bladewatch.app.streaming.WebSocketStreamServer wsStreamServer;
     private boolean streamingEnabled = false;
     
     // Telemetry overlay
@@ -97,7 +97,7 @@ public class GpuSurveillancePipeline {
 
     private static org.json.JSONObject loadCameraConfigSection() {
         try {
-            return com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig().optJSONObject("camera");
+            return net.bladewatch.app.config.UnifiedConfigManager.loadConfig().optJSONObject("camera");
         } catch (Exception e) {
             logger.warn("Unable to load camera config: " + e.getMessage());
             return null;
@@ -267,7 +267,7 @@ public class GpuSurveillancePipeline {
         }
 
         if (allowDiscovery) {
-            PanoCameraDiscovery discovery = com.loabletech.bladewatch.camera.AvmCameraHelper.discoverPanoCamera();
+            PanoCameraDiscovery discovery = net.bladewatch.app.camera.AvmCameraHelper.discoverPanoCamera();
             if (discovery != null) {
                 logger.info("Using BMM discovered camera tuple during " + phase + ": " + discovery);
                 configureCameraFromDiscovery(discovery, currentFirmware);
@@ -450,11 +450,11 @@ public class GpuSurveillancePipeline {
 
         // Persist to config first so reinitializeEncoder picks it up via loadTargetFps().
         try {
-            org.json.JSONObject cameraCfg = com.loabletech.bladewatch.config.UnifiedConfigManager
+            org.json.JSONObject cameraCfg = net.bladewatch.app.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("camera");
             if (cameraCfg == null) cameraCfg = new org.json.JSONObject();
             cameraCfg.put("targetFps", clamped);
-            com.loabletech.bladewatch.config.UnifiedConfigManager.updateSection("camera", cameraCfg);
+            net.bladewatch.app.config.UnifiedConfigManager.updateSection("camera", cameraCfg);
         } catch (Exception e) {
             logger.warn("Failed to persist targetFps: " + e.getMessage());
         }
@@ -607,7 +607,7 @@ public class GpuSurveillancePipeline {
      */
     private static int loadTargetFps() {
         try {
-            org.json.JSONObject cameraConfig = com.loabletech.bladewatch.config.UnifiedConfigManager
+            org.json.JSONObject cameraConfig = net.bladewatch.app.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("camera");
             if (cameraConfig != null) {
                 return cameraConfig.optInt("targetFps", 15);
@@ -958,7 +958,7 @@ public class GpuSurveillancePipeline {
             // Re-read camera config before starting — user may have changed camera ID
             // via the app UI menu since the pipeline was initialized.
             try {
-                org.json.JSONObject cameraConfig = com.loabletech.bladewatch.config.UnifiedConfigManager
+                org.json.JSONObject cameraConfig = net.bladewatch.app.config.UnifiedConfigManager
                     .loadConfig().optJSONObject("camera");
                 if (cameraConfig != null) {
                     int savedId = cameraConfig.optInt("probedCameraId", -1);
@@ -1460,7 +1460,7 @@ public class GpuSurveillancePipeline {
         
         // Create stream scaler
         logger.info("Creating stream scaler...");
-        streamScaler = new com.loabletech.bladewatch.streaming.GpuStreamScaler(streamWidth, streamHeight);
+        streamScaler = new net.bladewatch.app.streaming.GpuStreamScaler(streamWidth, streamHeight);
         
         // Always 4-camera mosaic for streaming
         streamScaler.setCameraLayout(camera != null ? camera.getCameraLayout() : 0);
@@ -1508,7 +1508,7 @@ public class GpuSurveillancePipeline {
         // Create WebSocket stream server (port 8887)
         // WebSocket has zero buffering delay vs HTTP Chunked (64KB+ buffer)
         logger.info("Starting WebSocket stream server...");
-        wsStreamServer = new com.loabletech.bladewatch.streaming.WebSocketStreamServer();
+        wsStreamServer = new net.bladewatch.app.streaming.WebSocketStreamServer();
         
         // Set idle shutdown callback - auto-stop pipeline when no clients for 15 seconds
         final GpuSurveillancePipeline self = this;
@@ -1596,7 +1596,7 @@ public class GpuSurveillancePipeline {
     /**
      * Gets the stream scaler component.
      */
-    public com.loabletech.bladewatch.streaming.GpuStreamScaler getStreamScaler() {
+    public net.bladewatch.app.streaming.GpuStreamScaler getStreamScaler() {
         return streamScaler;
     }
     
@@ -1610,7 +1610,7 @@ public class GpuSurveillancePipeline {
     /**
      * Gets the WebSocket stream server.
      */
-    public com.loabletech.bladewatch.streaming.WebSocketStreamServer getWebSocketServer() {
+    public net.bladewatch.app.streaming.WebSocketStreamServer getWebSocketServer() {
         return wsStreamServer;
     }
     

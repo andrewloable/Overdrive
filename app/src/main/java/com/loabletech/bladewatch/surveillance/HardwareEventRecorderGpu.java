@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
 import android.media.MediaCodec;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
@@ -1052,7 +1052,7 @@ public class HardwareEventRecorderGpu {
 
                     // Make file visible to events page and UI app
                     try {
-                        com.loabletech.bladewatch.storage.StorageManager.getInstance().onFileSaved(finalFile);
+                        net.bladewatch.app.storage.StorageManager.getInstance().onFileSaved(finalFile);
                     } catch (Exception e) {
                         logger.warn("onFileSaved error: " + e.getMessage());
                     }
@@ -1720,7 +1720,7 @@ public class HardwareEventRecorderGpu {
                             oldSegmentNumber, finalFile.getName(), oldRecordedFrames,
                             durationSec, finalFile.length() / 1024));
                     try {
-                        com.loabletech.bladewatch.storage.StorageManager.getInstance().onFileSaved(finalFile);
+                        net.bladewatch.app.storage.StorageManager.getInstance().onFileSaved(finalFile);
                     } catch (Exception e) {
                         logger.warn("onFileSaved error: " + e.getMessage());
                     }
@@ -2054,7 +2054,7 @@ public class HardwareEventRecorderGpu {
         // Drop the API-handler cache entry for this segment so /api/recordings
         // doesn't keep returning a phantom row for a file that's been rotated.
         try {
-            com.loabletech.bladewatch.server.RecordingsApiHandler.invalidateRecordingCache(
+            net.bladewatch.app.server.RecordingsApiHandler.invalidateRecordingCache(
                     mp4File.getAbsolutePath());
         } catch (Throwable ignored) {}
 

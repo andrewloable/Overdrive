@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

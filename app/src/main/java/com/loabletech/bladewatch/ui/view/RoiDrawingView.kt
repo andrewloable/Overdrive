@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.view
+package net.bladewatch.app.ui.view
 
 import android.content.Context
 import android.graphics.*

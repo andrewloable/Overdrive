@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.surveillance;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.ai.YoloDetector;
+package net.bladewatch.app.surveillance;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.ai.YoloDetector;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -313,7 +313,7 @@ public class SurveillanceEngineGpu {
     // stopRecording() (recorder drainer thread) and reset by enable() / disable().
     // Plain array slot publication wasn't safe-published across threads. Readers
     // must tolerate null (they already do — null check before deref).
-    private final java.util.concurrent.atomic.AtomicReferenceArray<java.util.List<com.loabletech.bladewatch.ai.Detection>> lastYoloDetections =
+    private final java.util.concurrent.atomic.AtomicReferenceArray<java.util.List<net.bladewatch.app.ai.Detection>> lastYoloDetections =
             new java.util.concurrent.atomic.AtomicReferenceArray<>(MotionPipelineV2.NUM_QUADRANTS);
     // Track which quadrant had the last event (for event-end baseline update)
     private int lastEventQuadrant = -1;
@@ -432,7 +432,7 @@ public class SurveillanceEngineGpu {
                 // Daemon mode: Create minimal context from AssetManager
                 try {
                     logger.info("Creating AssetContext for TFLite (daemon mode)...");
-                    android.content.Context assetContext = new com.loabletech.bladewatch.ai.AssetContext(assetManager);
+                    android.content.Context assetContext = new net.bladewatch.app.ai.AssetContext(assetManager);
                     
                     yoloDetector = new YoloDetector(assetContext);
                     boolean yoloLoaded = yoloDetector.init();
@@ -636,7 +636,7 @@ public class SurveillanceEngineGpu {
         // RACE CONDITION FIX (belt-and-suspenders): If somehow active=true but ACC is ON,
         // auto-disable. This catches the case where enable() raced with ACC ON and the
         // disable path hasn't run yet.
-        if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+        if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
             logger.warn("processFrame: ACC is ON but surveillance is active — auto-disabling");
             disable();
             if (downscaler != null) {
@@ -710,7 +710,7 @@ public class SurveillanceEngineGpu {
         
         // DIAGNOSTIC: Every 100 frames, check frame validity and inter-frame diff.
         // Only in debug builds — this is pure development tooling.
-        if (com.loabletech.bladewatch.BuildConfig.DEBUG && frameCount % 100 == 0) {
+        if (net.bladewatch.app.BuildConfig.DEBUG && frameCount % 100 == 0) {
             // Sample 16 pixels spread across the frame
             int[] currentSamples = new int[16];
             int[][] sampleCoords = {
@@ -838,7 +838,7 @@ public class SurveillanceEngineGpu {
                     try {
                         byte[] quadCrop = cropFromMosaic(seedFrame, q, qW, qH);
                         if (quadCrop != null) {
-                            java.util.List<com.loabletech.bladewatch.ai.Detection> dets =
+                            java.util.List<net.bladewatch.app.ai.Detection> dets =
                                     detectorSnap.detect(quadCrop, qW, qH, aiConfidence, true, true, false, true, minObjectSize);
                             detectionBaseline.seedFromDetections(q, dets, qW, qH);
                         }
@@ -1534,7 +1534,7 @@ public class SurveillanceEngineGpu {
                                 try {
                                     byte[] quadCrop = cropFromMosaic(frameSnapshot, qr, qW, qH);
                                     if (quadCrop != null) {
-                                        java.util.List<com.loabletech.bladewatch.ai.Detection> dets =
+                                        java.util.List<net.bladewatch.app.ai.Detection> dets =
                                                 detectorSnap.detect(quadCrop, qW, qH, aiConfidence, true, true, false, true, minObjectSize);
                                         detectionBaseline.refreshQuadrant(qr, dets, qW, qH);
                                     }
@@ -1600,7 +1600,7 @@ public class SurveillanceEngineGpu {
                                         int qH = THUMBNAIL_HEIGHT / 2;
                                         byte[] quadCrop = cropFromMosaic(frameSnapshot, qToRefresh, qW, qH);
                                         if (quadCrop != null) {
-                                            java.util.List<com.loabletech.bladewatch.ai.Detection> dets =
+                                            java.util.List<net.bladewatch.app.ai.Detection> dets =
                                                     detectorSnap.detect(quadCrop, qW, qH, aiConfidence, true, true, false, true, minObjectSize);
                                             detectionBaseline.refreshQuadrant(qToRefresh, dets, qW, qH);
                                             logger.debug("Post-suppression baseline refresh Q" + qToRefresh +
@@ -1783,7 +1783,7 @@ public class SurveillanceEngineGpu {
                     }
                 }
                 
-                java.util.List<com.loabletech.bladewatch.ai.Detection> detections = detectorSnap.detect(
+                java.util.List<net.bladewatch.app.ai.Detection> detections = detectorSnap.detect(
                         cropData, qW, qH, aiConfidence, detectPerson, detectCar, false, detectBike, minObjectSize);
                 
                 // Track how many motion-filtered detections we found (accessible outside the block
@@ -1798,8 +1798,8 @@ public class SurveillanceEngineGpu {
                     // FIX: Use the snapshot taken on the main thread, NOT the live pipeline results.
                     // The live results have been mutated by 2-3 frames by now.
                     
-                    java.util.List<com.loabletech.bladewatch.ai.Detection> motionFiltered = new java.util.ArrayList<>();
-                    for (com.loabletech.bladewatch.ai.Detection det : detections) {
+                    java.util.List<net.bladewatch.app.ai.Detection> motionFiltered = new java.util.ArrayList<>();
+                    for (net.bladewatch.app.ai.Detection det : detections) {
                         int classId = det.getClassId();
                         
                         // Respect user's class filter settings.
@@ -1882,7 +1882,7 @@ public class SurveillanceEngineGpu {
                         // are available for the spatial veto check during event-end update.
                         int qWNorm = usedFoveated ? FoveatedCropper.CROP_SIZE : (THUMBNAIL_WIDTH / 2);
                         int qHNorm = usedFoveated ? FoveatedCropper.CROP_SIZE : (THUMBNAIL_HEIGHT / 2);
-                        for (com.loabletech.bladewatch.ai.Detection det : motionFiltered) {
+                        for (net.bladewatch.app.ai.Detection det : motionFiltered) {
                             if (det.getClassId() == 0) {  // person
                                 detectionBaseline.recordPersonDetection(qIdx, det, qWNorm, qHNorm);
                             }
@@ -1893,9 +1893,9 @@ public class SurveillanceEngineGpu {
                         // from shadows/headlights that trigger motion near parked cars or trash cans.
                         // Skip baseline filtering for person detections (class 0) — a person is
                         // never a legitimate static background object for a sentry system.
-                        java.util.List<com.loabletech.bladewatch.ai.Detection> baselineFiltered = new java.util.ArrayList<>();
+                        java.util.List<net.bladewatch.app.ai.Detection> baselineFiltered = new java.util.ArrayList<>();
                         int baselineSuppressed = 0;
-                        for (com.loabletech.bladewatch.ai.Detection det : motionFiltered) {
+                        for (net.bladewatch.app.ai.Detection det : motionFiltered) {
                             if (det.getClassId() == 0) {
                                 // Person — always pass through, never check baseline
                                 baselineFiltered.add(det);
@@ -1979,12 +1979,12 @@ public class SurveillanceEngineGpu {
                         // (CrossQuadrantTracker.java:59-60). When foveated, rescale a
                         // separate copy for CQT only; the tracker needs centroids, not
                         // bboxes, and rescaling distorts that minimally.
-                        java.util.List<com.loabletech.bladewatch.ai.Detection> cqtDetections;
+                        java.util.List<net.bladewatch.app.ai.Detection> cqtDetections;
                         if (usedFoveated) {
                             cqtDetections = new java.util.ArrayList<>(motionFiltered.size());
                             float scaleToQuad = 320.0f / FoveatedCropper.CROP_SIZE;  // 0.5
-                            for (com.loabletech.bladewatch.ai.Detection det : motionFiltered) {
-                                cqtDetections.add(new com.loabletech.bladewatch.ai.Detection(
+                            for (net.bladewatch.app.ai.Detection det : motionFiltered) {
+                                cqtDetections.add(new net.bladewatch.app.ai.Detection(
                                         det.getClassId(),
                                         det.getConfidence(),
                                         (int)(det.getX() * scaleToQuad),
@@ -2007,7 +2007,7 @@ public class SurveillanceEngineGpu {
                         // in mosaic mode, 320×240 (also motionFiltered's native space).
                         // Either way, motionFiltered is what we want — NOT cqtDetections,
                         // which is forced to 320 for CQT's hardcoded thresholds.
-                        java.util.List<com.loabletech.bladewatch.ai.Detection> trackableDetections = motionFiltered;
+                        java.util.List<net.bladewatch.app.ai.Detection> trackableDetections = motionFiltered;
 
                         // Build a parallel array of cross-quadrant track IDs to
                         // hand to ActorTracker. This binds the per-quadrant
@@ -2101,8 +2101,8 @@ public class SurveillanceEngineGpu {
                         // YOLO's job is done — the NCC tracker takes over frame-by-frame
                         // tracking. YOLO only wakes up again on heartbeat or NCC score drop.
                         if (!trackableDetections.isEmpty() && mosaicQuadCrop != null) {
-                            com.loabletech.bladewatch.ai.Detection best = trackableDetections.get(0);
-                            for (com.loabletech.bladewatch.ai.Detection d : trackableDetections) {
+                            net.bladewatch.app.ai.Detection best = trackableDetections.get(0);
+                            for (net.bladewatch.app.ai.Detection d : trackableDetections) {
                                 if (d.getConfidence() > best.getConfidence()) best = d;
                             }
                             try {
@@ -2682,7 +2682,7 @@ public class SurveillanceEngineGpu {
             if (yoloContext != null) {
                 yoloDetector = new YoloDetector(yoloContext);
             } else if (yoloAssetManager != null) {
-                yoloDetector = new YoloDetector(new com.loabletech.bladewatch.ai.AssetContext(yoloAssetManager));
+                yoloDetector = new YoloDetector(new net.bladewatch.app.ai.AssetContext(yoloAssetManager));
             } else {
                 logger.warn("Cannot reload YOLO: no context/assetManager retained");
                 return;
@@ -2884,10 +2884,10 @@ public class SurveillanceEngineGpu {
             String title = (camHint != null) ? "Motion at " + camHint : "Motion detected";
             String body = "Recording in progress";
 
-            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                    new com.loabletech.bladewatch.notifications.NotificationEvent(
+            net.bladewatch.app.notifications.NotificationBus.get().publish(
+                    new net.bladewatch.app.notifications.NotificationEvent(
                             "surveillance.motion.notice",
-                            com.loabletech.bladewatch.notifications.NotificationEvent.Severity.INFO,
+                            net.bladewatch.app.notifications.NotificationEvent.Severity.INFO,
                             title,
                             body,
                             notificationTagFor(videoFilename),
@@ -2912,12 +2912,12 @@ public class SurveillanceEngineGpu {
             // Snapshot the current Actor view — at this point the recording has
             // closed so lastActors holds the final state.
             java.util.List<Actor> snap = lastActors;
-            Actor.Severity peakSev = com.loabletech.bladewatch.notifications.NotificationGate.maxSeverity(snap);
+            Actor.Severity peakSev = net.bladewatch.app.notifications.NotificationGate.maxSeverity(snap);
             // Per-tier gate (config-level): if the user has unchecked the push
             // toggle for this tier in surveillance.html, suppress the publish
             // entirely. Per-device subcategory muting still happens downstream
             // in PushSink for users who want to silence individual devices.
-            if (!com.loabletech.bladewatch.notifications.NotificationGate.shouldPush(peakSev, config)) {
+            if (!net.bladewatch.app.notifications.NotificationGate.shouldPush(peakSev, config)) {
                 logger.debug("publishMotionFinal suppressed by per-tier toggle (sev=" + peakSev + ")");
                 return;
             }
@@ -3017,7 +3017,7 @@ public class SurveillanceEngineGpu {
                 // workers / OS notification banners can fetch the thumbnail
                 // without an Authorization header. 10 min TTL is plenty for
                 // a banner that the user dismisses or taps within seconds.
-                String thumbTok = com.loabletech.bladewatch.auth.AuthManager
+                String thumbTok = net.bladewatch.app.auth.AuthManager
                         .signThumbToken(snapshotName, 600L);
                 String snapUrl = "/thumb/" + encSnap;
                 if (thumbTok != null) snapUrl += "?t=" + thumbTok;
@@ -3038,13 +3038,13 @@ public class SurveillanceEngineGpu {
             }
             if (camHint != null) data.put("camera", camHint);
 
-            com.loabletech.bladewatch.notifications.NotificationEvent.Severity nsev;
+            net.bladewatch.app.notifications.NotificationEvent.Severity nsev;
             if (peakSev == Actor.Severity.CRITICAL) {
-                nsev = com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL;
+                nsev = net.bladewatch.app.notifications.NotificationEvent.Severity.CRITICAL;
             } else if (peakSev == Actor.Severity.ALERT) {
-                nsev = com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN;
+                nsev = net.bladewatch.app.notifications.NotificationEvent.Severity.WARN;
             } else {
-                nsev = com.loabletech.bladewatch.notifications.NotificationEvent.Severity.INFO;
+                nsev = net.bladewatch.app.notifications.NotificationEvent.Severity.INFO;
             }
 
             // Route to severity-specific subcategory so per-tier muting works
@@ -3055,8 +3055,8 @@ public class SurveillanceEngineGpu {
             else if (peakSev == Actor.Severity.ALERT) subCategory = "surveillance.motion.alert";
             else subCategory = "surveillance.motion.notice";
 
-            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                    new com.loabletech.bladewatch.notifications.NotificationEvent(
+            net.bladewatch.app.notifications.NotificationBus.get().publish(
+                    new net.bladewatch.app.notifications.NotificationEvent(
                             subCategory,
                             nsev,
                             title,
@@ -3098,11 +3098,11 @@ public class SurveillanceEngineGpu {
         //      already under the limit, and worst case it runs in parallel
         //      with the recording itself. New recordings still write; old
         //      ones get pruned a beat later.
-        com.loabletech.bladewatch.storage.StorageManager storageManager;
+        net.bladewatch.app.storage.StorageManager storageManager;
         try {
-            storageManager = com.loabletech.bladewatch.storage.StorageManager.getInstance();
+            storageManager = net.bladewatch.app.storage.StorageManager.getInstance();
             if (storageManager.getSurveillanceStorageType() ==
-                    com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD &&
+                    net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD &&
                     !storageManager.isSdCardMounted()) {
                 logger.warn("SD card unmounted before recording - attempting remount");
                 if (!storageManager.ensureSdCardMounted(true)) {
@@ -3113,7 +3113,7 @@ public class SurveillanceEngineGpu {
             logger.warn("Storage mount check failed: " + e.getMessage());
             storageManager = null;
         }
-        final com.loabletech.bladewatch.storage.StorageManager smRef = storageManager;
+        final net.bladewatch.app.storage.StorageManager smRef = storageManager;
         if (smRef != null) {
             aiExecutor.execute(() -> {
                 try { smRef.ensureSurveillanceSpace(50 * 1024 * 1024); }
@@ -3211,7 +3211,7 @@ public class SurveillanceEngineGpu {
         // P1 #13: snapshot the slot once via getAndSet() so a late aiExecutor
         // lambda writing the same slot can't corrupt the value mid-read.
         if (lastEventQuadrant >= 0) {
-            java.util.List<com.loabletech.bladewatch.ai.Detection> snap =
+            java.util.List<net.bladewatch.app.ai.Detection> snap =
                     lastYoloDetections.getAndSet(lastEventQuadrant, null);
             if (snap != null) {
                 int qW = THUMBNAIL_WIDTH / 2;
@@ -3395,7 +3395,7 @@ public class SurveillanceEngineGpu {
         // RACE CONDITION FIX (defense in depth): Final guard at the engine level.
         // If ACC is ON, refuse to enable. This catches any edge case where the
         // higher-level guards in CameraDaemon/AccSentryDaemon were bypassed.
-        if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+        if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
             logger.warn(">>> Surveillance enable REJECTED at engine level — ACC is ON");
             return;
         }
@@ -3433,7 +3433,7 @@ public class SurveillanceEngineGpu {
         
         // SOTA: Notify StorageManager that surveillance is active (for periodic cleanup)
         try {
-            com.loabletech.bladewatch.storage.StorageManager.getInstance().setSurveillanceActive(true);
+            net.bladewatch.app.storage.StorageManager.getInstance().setSurveillanceActive(true);
         } catch (Exception e) {
             logger.warn("Could not set surveillance active state: " + e.getMessage());
         }
@@ -3471,7 +3471,7 @@ public class SurveillanceEngineGpu {
                 } else {
                     // Also check for direct block masks in unified config
                     try {
-                        org.json.JSONObject survCfg = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
+                        org.json.JSONObject survCfg = net.bladewatch.app.config.UnifiedConfigManager.getSurveillance();
                         String[] qKeys = {"Q0", "Q1", "Q2", "Q3"};
                         boolean roiEnabled = survCfg.optBoolean("roiEnabled_" + qKeys[q], false);
                         org.json.JSONArray blockArr = survCfg.optJSONArray("roiBlocks_" + qKeys[q]);
@@ -3535,7 +3535,7 @@ public class SurveillanceEngineGpu {
 
         // SOTA: Notify StorageManager that surveillance is inactive
         try {
-            com.loabletech.bladewatch.storage.StorageManager.getInstance().setSurveillanceActive(false);
+            net.bladewatch.app.storage.StorageManager.getInstance().setSurveillanceActive(false);
         } catch (Exception e) {
             logger.warn("Could not set surveillance inactive state: " + e.getMessage());
         }

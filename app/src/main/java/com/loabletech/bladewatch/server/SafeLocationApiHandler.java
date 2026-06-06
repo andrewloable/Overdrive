@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.surveillance.SafeLocation;
-import com.loabletech.bladewatch.surveillance.SafeLocationManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.surveillance.SafeLocation;
+import net.bladewatch.app.surveillance.SafeLocationManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

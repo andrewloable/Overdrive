@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.services;
+package net.bladewatch.app.services;
 
 import android.Manifest;
 import android.app.Notification;
@@ -27,7 +27,7 @@ import org.json.JSONObject;
  * It sends GPS data via TCP to port 19877 (SurveillanceIpcServer).
  * Sends periodically (every 2s) so daemon gets data even after restart.
  * 
- * Start via: am start-foreground-service -n com.loabletech.bladewatch/.services.LocationSidecarService
+ * Start via: am start-foreground-service -n net.bladewatch.app/.services.LocationSidecarService
  */
 public class LocationSidecarService extends Service implements LocationListener {
 
@@ -293,7 +293,7 @@ public class LocationSidecarService extends Service implements LocationListener 
     /**
      * Save GPS to app's local cache file.
      * This file persists across reboots and can be read by the daemon.
-     * The daemon (UID 2000) can read from /data/data/com.loabletech.bladewatch/files/ but cannot write to it.
+     * The daemon (UID 2000) can read from /data/data/net.bladewatch.app/files/ but cannot write to it.
      */
     private void saveToLocalCache() {
         if (latitude == 0.0 && longitude == 0.0) return;

@@ -205,7 +205,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
-        android:name="com.loabletech.bladewatch.BladeWatchApplication"
+        android:name="net.bladewatch.app.BladeWatchApplication"
         android:allowBackup="false"
         android:label="@string/app_name"
         android:theme="@style/Theme.BladeWatch.M3"
@@ -216,7 +216,7 @@
 
         <!-- Launcher activity: must remain exported so the system can start the app from the home screen. -->
         <activity 
-            android:name="com.loabletech.bladewatch.ui.MainActivity"
+            android:name="net.bladewatch.app.ui.MainActivity"
             android:exported="true"
             android:screenOrientation="unspecified"
             android:configChanges="orientation|screenSize|keyboardHidden"
@@ -231,7 +231,7 @@
 
         <!-- Internal blocker screen only; not exported because no external app should launch it. -->
         <activity
-            android:name="com.loabletech.bladewatch.BlockerActivity"
+            android:name="net.bladewatch.app.BlockerActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:excludeFromRecents="true"
@@ -241,7 +241,7 @@
 
         <!-- Internal location bootstrap helper; only the app/daemon should start it explicitly. -->
         <activity
-            android:name="com.loabletech.bladewatch.ui.LocationStarterActivity"
+            android:name="net.bladewatch.app.ui.LocationStarterActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
@@ -252,7 +252,7 @@
 
         <!-- Exported for system boot and power/network broadcasts that Android delivers to apps. -->
         <receiver
-            android:name="com.loabletech.bladewatch.receiver.BootReceiver"
+            android:name="net.bladewatch.app.receiver.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:directBootAware="true">
@@ -285,7 +285,7 @@
              the process if it has been killed (force-stop, OOM, OEM cleanup).
              No intent-filter: only invoked via explicit PendingIntent. -->
         <receiver
-            android:name="com.loabletech.bladewatch.receiver.ProcessRevivalReceiver"
+            android:name="net.bladewatch.app.receiver.ProcessRevivalReceiver"
             android:enabled="true"
             android:exported="false"
             android:directBootAware="true" />
@@ -293,7 +293,7 @@
         <!-- Location Boot Receiver - Auto-start Location service after device reboot -->
         <!-- Exported only for BOOT_COMPLETED so the system can restart the location sidecar after reboot. -->
         <receiver
-            android:name="com.loabletech.bladewatch.receiver.LocationBootReceiver"
+            android:name="net.bladewatch.app.receiver.LocationBootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -303,28 +303,28 @@
 
         <!-- Location Sidecar Service - Writes GPS to shared file for daemon -->
         <service
-            android:name="com.loabletech.bladewatch.services.LocationSidecarService"
+            android:name="net.bladewatch.app.services.LocationSidecarService"
             android:foregroundServiceType="location|dataSync"
             android:exported="false" />
 
         <!-- Daemon Keepalive Service - Keeps app alive and monitors SCREEN_OFF -->
         <service
-            android:name="com.loabletech.bladewatch.services.DaemonKeepaliveService"
+            android:name="net.bladewatch.app.services.DaemonKeepaliveService"
             android:foregroundServiceType="specialUse|dataSync"
             android:exported="false" />
 
         <!-- Status Overlay Service - Floating recording/trip status indicator -->
         <service
-            android:name="com.loabletech.bladewatch.overlay.StatusOverlayService"
+            android:name="net.bladewatch.app.overlay.StatusOverlayService"
             android:foregroundServiceType="specialUse|dataSync"
             android:exported="false" />
 
         <!-- AccessibilityService Keep-Alive - Highest process priority protection.
              Prevents BYD firmware from killing the app after 24 hours.
-             Enable via: settings put secure enabled_accessibility_services com.loabletech.bladewatch/com.loabletech.bladewatch.services.KeepAliveAccessibilityService
+             Enable via: settings put secure enabled_accessibility_services net.bladewatch.app/net.bladewatch.app.services.KeepAliveAccessibilityService
                          settings put secure accessibility_enabled 1 -->
         <service
-            android:name="com.loabletech.bladewatch.services.KeepAliveAccessibilityService"
+            android:name="net.bladewatch.app.services.KeepAliveAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>

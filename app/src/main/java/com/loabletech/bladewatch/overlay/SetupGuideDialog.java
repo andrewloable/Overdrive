@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.overlay;
+package net.bladewatch.app.overlay;
 
 import androidx.appcompat.app.AlertDialog;
 import android.content.ComponentName;
@@ -13,7 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
-import com.loabletech.bladewatch.R;
+import net.bladewatch.app.R;
 
 /**
  * First-launch and post-update setup guide.
@@ -68,7 +68,7 @@ public class SetupGuideDialog {
         if (tvVersionBanner != null) {
             if (isUpdate) {
                 tvVersionBanner.setText(context.getString(R.string.setup_version_banner,
-                        com.loabletech.bladewatch.updater.AppUpdater.getDisplayVersion(context)));
+                        net.bladewatch.app.updater.AppUpdater.getDisplayVersion(context)));
                 tvVersionBanner.setVisibility(View.VISIBLE);
             } else {
                 tvVersionBanner.setVisibility(View.GONE);
@@ -81,7 +81,7 @@ public class SetupGuideDialog {
         TextView btnLanguage = view.findViewById(R.id.btnOpenLanguage);
         if (btnLanguage != null) {
             btnLanguage.setOnClickListener(v ->
-                com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog.show(context, picked -> {
+                net.bladewatch.app.ui.dialog.LanguagePickerDialog.show(context, picked -> {
                     // After a pick, recreate the host activity so AppCompat
                     // re-applies the locale and the setup dialog re-inflates
                     // in the new language. Cheaper than juggling two dialogs.

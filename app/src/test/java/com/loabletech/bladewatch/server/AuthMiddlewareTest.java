@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import org.junit.After;
 import org.junit.Assert;

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon;
+package net.bladewatch.app.daemon;
 
 import android.content.Context;
 import android.hardware.bydauto.bodywork.AbsBYDAutoBodyworkListener;
@@ -7,13 +7,13 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
-import com.loabletech.bladewatch.daemon.proxy.Safe;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.BatteryPowerData;
-import com.loabletech.bladewatch.monitor.BatteryVoltageData;
-import com.loabletech.bladewatch.monitor.ChargingStateData;
-import com.loabletech.bladewatch.monitor.VehicleDataListener;
-import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
+import net.bladewatch.app.daemon.proxy.Safe;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.BatteryPowerData;
+import net.bladewatch.app.monitor.BatteryVoltageData;
+import net.bladewatch.app.monitor.ChargingStateData;
+import net.bladewatch.app.monitor.VehicleDataListener;
+import net.bladewatch.app.monitor.VehicleDataMonitor;
 
 import org.json.JSONObject;
 
@@ -43,7 +43,7 @@ public class AccSentryDaemon {
 
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
-    /** com.loabletech.bladewatch */
+    /** net.bladewatch.app */
     private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
     /** accmodemanager */
     private static String SERVICE_ACCMODEMANAGER() { return Safe.s("tr877WU3+MV4zFtCjanWUw=="); }
@@ -363,7 +363,7 @@ public class AccSentryDaemon {
         // migration if needed) when AccSentryDaemon starts before CameraDaemon.
         // Idempotent — CameraDaemon also calls this.
         try {
-            com.loabletech.bladewatch.config.UnifiedConfigManager.init();
+            net.bladewatch.app.config.UnifiedConfigManager.init();
         } catch (Exception e) {
             log("UnifiedConfigManager.init() failed: " + e.getMessage());
         }
@@ -1899,7 +1899,7 @@ public class AccSentryDaemon {
         // Check if user has enabled surveillance in config
         // If not enabled, skip — don't auto-start on ACC OFF
         try {
-            boolean userEnabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
+            boolean userEnabled = net.bladewatch.app.config.UnifiedConfigManager.isSurveillanceEnabled();
             if (!userEnabled) {
                 log("Surveillance NOT enabled in config — skipping auto-start on ACC OFF");
                 return;
@@ -1914,8 +1914,8 @@ public class AccSentryDaemon {
         // Check safe zone — don't start surveillance if parked in a safe zone.
         // Mark as suppressed so onLeftSafeZone() can re-arm if the car is towed out.
         try {
-            com.loabletech.bladewatch.surveillance.SafeLocationManager safeLocMgr = 
-                com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
+            net.bladewatch.app.surveillance.SafeLocationManager safeLocMgr = 
+                net.bladewatch.app.surveillance.SafeLocationManager.getInstance();
             if (safeLocMgr.isFeatureEnabled() && safeLocMgr.isInSafeZone()) {
                 log("In safe zone '" + safeLocMgr.getCurrentZoneName() + "' — skipping surveillance");
                 CameraDaemon.setSafeZoneSuppressed(true);
@@ -1927,8 +1927,8 @@ public class AccSentryDaemon {
 
         // Check schedule — don't start surveillance outside configured time windows
         try {
-            com.loabletech.bladewatch.surveillance.SurveillanceSchedule schedule =
-                com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillanceSchedule();
+            net.bladewatch.app.surveillance.SurveillanceSchedule schedule =
+                net.bladewatch.app.config.UnifiedConfigManager.getSurveillanceSchedule();
             if (schedule != null && schedule.isEnabled() && !schedule.isActiveNow()) {
                 log("SCHEDULE: Outside time window (" + schedule.getSummary() + ") — skipping surveillance");
                 return;

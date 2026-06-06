@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
-import com.loabletech.bladewatch.byd.BydVehicleData;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.byd.BydVehicleData;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Fused charging-state detector.

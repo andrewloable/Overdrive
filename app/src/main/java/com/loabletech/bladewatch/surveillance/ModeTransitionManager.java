@@ -1,5 +1,5 @@
-package com.loabletech.bladewatch.surveillance;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+package net.bladewatch.app.surveillance;
+import net.bladewatch.app.logging.DaemonLogger;
 
 
 /**

@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.storage.StorageManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.storage.StorageManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -58,7 +58,7 @@ public class RecordingsApiHandler {
     }
     
     // Legacy paths for backward compatibility (migration)
-    private static final String LEGACY_RECORDINGS_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files";
+    private static final String LEGACY_RECORDINGS_DIR = "/storage/emulated/0/Android/data/net.bladewatch.app/files";
     private static final String LEGACY_SENTRY_DIR = LEGACY_RECORDINGS_DIR + "/sentry_events";
     
     // Filename patterns (support optional _N segment suffix for multi-segment recordings)

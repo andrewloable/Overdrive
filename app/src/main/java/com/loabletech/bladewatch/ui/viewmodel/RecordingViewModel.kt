@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.viewmodel
+package net.bladewatch.app.ui.viewmodel
 
 import android.app.Application
 import android.os.Handler
@@ -7,9 +7,9 @@ import android.os.StatFs
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.loabletech.bladewatch.client.CameraDaemonClient
-import com.loabletech.bladewatch.logging.LogManager
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.logging.LogManager
+import net.bladewatch.app.ui.util.PreferencesManager
 import org.json.JSONObject
 
 /**
@@ -160,7 +160,7 @@ class RecordingViewModel(app: Application) : AndroidViewModel(app) {
     fun updateStorageInfo() {
         try {
             // SOTA: Use StorageManager to get actual recordings storage info
-            val storageManager = com.loabletech.bladewatch.storage.StorageManager.getInstance()
+            val storageManager = net.bladewatch.app.storage.StorageManager.getInstance()
             val used = storageManager.recordingsSize
             
             // Get available space from the actual storage location

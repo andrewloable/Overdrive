@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment.settings
+package net.bladewatch.app.ui.fragment.settings
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commitNow
-import com.loabletech.bladewatch.ui.fragment.DaemonsFragment
+import net.bladewatch.app.ui.fragment.DaemonsFragment
 
 /**
  * Settings → Daemons pane.

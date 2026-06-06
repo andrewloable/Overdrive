@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -22,9 +22,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import com.google.android.material.datepicker.MaterialDatePicker
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.model.RecordingFile
-import com.loabletech.bladewatch.ui.util.RecordingScanner
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.model.RecordingFile
+import net.bladewatch.app.ui.util.RecordingScanner
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -186,7 +186,7 @@ class RecordingsFragment : Fragment() {
         // behind. Without this, refreshCounts() and the library reload could
         // both serve the same cached snapshot up to 5s after returning to
         // this page — including any cache populated before a parser bug fix.
-        com.loabletech.bladewatch.ui.util.RecordingScanner.invalidateCache()
+        net.bladewatch.app.ui.util.RecordingScanner.invalidateCache()
         // Refresh counts every time the user returns to this page so the
         // header reflects any new captures since the last visit.
         refreshCounts()

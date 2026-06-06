@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import org.json.JSONObject;
 import java.io.OutputStream;

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.telemetry;
+package net.bladewatch.app.telemetry;
 
 /**
  * Immutable value object holding a single point-in-time telemetry reading.

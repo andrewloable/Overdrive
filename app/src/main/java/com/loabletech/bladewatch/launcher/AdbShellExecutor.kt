@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.launcher
+package net.bladewatch.app.launcher
 
 import android.content.Context
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.logging.LogManager
 import dadb.AdbKeyPair
 import dadb.Dadb
 import java.io.File

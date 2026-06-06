@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.byd;
+package net.bladewatch.app.byd;
 
 import android.content.Context;
 import android.os.Looper;
 
-import com.loabletech.bladewatch.byd.bodywork.BodyworkManager;
-import com.loabletech.bladewatch.byd.radar.RadarManager;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.byd.bodywork.BodyworkManager;
+import net.bladewatch.app.byd.radar.RadarManager;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import org.json.JSONObject;
 
@@ -293,7 +293,7 @@ public class BydEventDaemon {
             Method getSystemContext = activityThreadClass.getMethod("getSystemContext");
             Context systemContext = (Context) getSystemContext.invoke(activityThread);
             
-            return systemContext.createPackageContext("com.loabletech.bladewatch",
+            return systemContext.createPackageContext("net.bladewatch.app",
                 Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
             
         } catch (Exception e) {

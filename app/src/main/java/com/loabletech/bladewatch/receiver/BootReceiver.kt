@@ -1,13 +1,13 @@
-package com.loabletech.bladewatch.receiver
+package net.bladewatch.app.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
 import android.util.Log
-import com.loabletech.bladewatch.services.DaemonKeepaliveService
-import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.services.DaemonKeepaliveService
+import net.bladewatch.app.ui.daemon.DaemonStartupManager
+import net.bladewatch.app.ui.util.PreferencesManager
 
 /**
  * Handles boot and system events to start daemons.
@@ -44,14 +44,14 @@ class BootReceiver : BroadcastReceiver() {
         when (action) {
             Intent.ACTION_POWER_CONNECTED -> {
                 try {
-                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().onPowerConnected()
+                    net.bladewatch.app.monitor.ChargingDetector.getInstance().onPowerConnected()
                 } catch (e: Exception) {
                     Log.w(TAG, "ChargingDetector connect notify failed: ${e.message}")
                 }
             }
             Intent.ACTION_POWER_DISCONNECTED -> {
                 try {
-                    com.loabletech.bladewatch.monitor.ChargingDetector.getInstance().onPowerDisconnected()
+                    net.bladewatch.app.monitor.ChargingDetector.getInstance().onPowerDisconnected()
                 } catch (e: Exception) {
                     Log.w(TAG, "ChargingDetector disconnect notify failed: ${e.message}")
                 }
@@ -88,7 +88,7 @@ class BootReceiver : BroadcastReceiver() {
             "com.htc.intent.action.QUICKBOOT_POWERON" -> {
                 startDaemons(context, action)
                 try {
-                    val launchIntent = Intent(context, com.loabletech.bladewatch.ui.MainActivity::class.java)
+                    val launchIntent = Intent(context, net.bladewatch.app.ui.MainActivity::class.java)
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     launchIntent.putExtra("minimize_on_start", true)
                     context.startActivity(launchIntent)
@@ -107,10 +107,10 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 lastStartTime = System.currentTimeMillis()
                 try {
-                    val launchIntent = Intent(context, com.loabletech.bladewatch.ui.MainActivity::class.java)
+                    val launchIntent = Intent(context, net.bladewatch.app.ui.MainActivity::class.java)
                     launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     launchIntent.putExtra(
-                        com.loabletech.bladewatch.updater.UpdateLifecycle.EXTRA_POST_UPDATE,
+                        net.bladewatch.app.updater.UpdateLifecycle.EXTRA_POST_UPDATE,
                         true,
                     )
                     context.startActivity(launchIntent)

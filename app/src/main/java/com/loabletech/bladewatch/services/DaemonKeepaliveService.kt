@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.services
+package net.bladewatch.app.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,11 +12,11 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.receiver.ProcessRevivalReceiver
-import com.loabletech.bladewatch.receiver.ScreenOffReceiver
-import com.loabletech.bladewatch.ui.MainActivity
-import com.loabletech.bladewatch.ui.daemon.DaemonStartupManager
+import net.bladewatch.app.R
+import net.bladewatch.app.receiver.ProcessRevivalReceiver
+import net.bladewatch.app.receiver.ScreenOffReceiver
+import net.bladewatch.app.ui.MainActivity
+import net.bladewatch.app.ui.daemon.DaemonStartupManager
 
 /**
  * Foreground service that keeps the app alive and monitors SCREEN_OFF events.
@@ -83,7 +83,7 @@ class DaemonKeepaliveService : Service() {
         //   2. Daemons launched here would be killed seconds later by the
         //      hardReset sweep, then restarted again — pointless thrash and
         //      a real risk of overlapping camera handles on the AVMCamera HAL.
-        val postUpdate = com.loabletech.bladewatch.updater.UpdateLifecycle
+        val postUpdate = net.bladewatch.app.updater.UpdateLifecycle
             .isPostUpdateLaunch(applicationContext, null)
         if (postUpdate) {
             Log.i(TAG, "Post-update launch — deferring daemon startup to MainActivity")
@@ -99,7 +99,7 @@ class DaemonKeepaliveService : Service() {
         // Activity running (e.g. system killed the process, then Android
         // respawned this keepalive service via START_STICKY).
         try {
-            com.loabletech.bladewatch.overlay.StatusOverlayService.startIfPermitted(applicationContext)
+            net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(applicationContext)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to kick status overlay: ${e.message}")
         }

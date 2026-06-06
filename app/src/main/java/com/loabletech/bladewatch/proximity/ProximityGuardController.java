@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.proximity;
+package net.bladewatch.app.proximity;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.surveillance.GpuSurveillancePipeline;
 
 import org.json.JSONObject;
 

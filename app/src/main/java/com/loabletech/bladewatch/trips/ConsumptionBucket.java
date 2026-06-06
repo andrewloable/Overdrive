@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
 /**
  * Aggregated consumption data for a specific condition combination.

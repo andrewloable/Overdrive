@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
 import android.os.IBinder;
 import android.os.Parcel;
 import android.view.Surface;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.lang.reflect.Method;
 

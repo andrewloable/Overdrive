@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.updater;
+package net.bladewatch.app.updater;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -10,9 +10,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.loabletech.bladewatch.BuildConfig;
-import com.loabletech.bladewatch.launcher.AdbShellExecutor;
-import com.loabletech.bladewatch.ui.util.PreferencesManager;
+import net.bladewatch.app.BuildConfig;
+import net.bladewatch.app.launcher.AdbShellExecutor;
+import net.bladewatch.app.ui.util.PreferencesManager;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -76,7 +76,7 @@ public class AppUpdater {
         else r.run();
     }
     private AdbShellExecutor adb; // Lazy — only created when install is triggered
-    private com.loabletech.bladewatch.launcher.AdbDaemonLauncher adbLauncher; // For daemon management
+    private net.bladewatch.app.launcher.AdbDaemonLauncher adbLauncher; // For daemon management
 
     private String latestDownloadUrl;
     private String releaseNotes;
@@ -84,7 +84,7 @@ public class AppUpdater {
     private String remoteUpdatedAt;
     private ReleaseManifest releaseManifest;
 
-    private static final String EXPECTED_PACKAGE_NAME = "com.loabletech.bladewatch";
+    private static final String EXPECTED_PACKAGE_NAME = "net.bladewatch.app";
     private static final String RELEASE_MANIFEST_ASSET = "bladewatch-update.json";
 
     private static final class ReleaseManifest {
@@ -145,9 +145,9 @@ public class AppUpdater {
         return adb;
     }
 
-    private com.loabletech.bladewatch.launcher.AdbDaemonLauncher getAdbLauncher() {
+    private net.bladewatch.app.launcher.AdbDaemonLauncher getAdbLauncher() {
         if (adbLauncher == null) {
-            adbLauncher = new com.loabletech.bladewatch.launcher.AdbDaemonLauncher(context);
+            adbLauncher = new net.bladewatch.app.launcher.AdbDaemonLauncher(context);
         }
         return adbLauncher;
     }
@@ -157,27 +157,27 @@ public class AppUpdater {
      *
      * The app process (UID 10xxx) needs to elevate to UID 2000 to write
      * /data/local/tmp and call `pm install`, so it goes through the ADB-shell
-     * tunnel ({@link com.loabletech.bladewatch.launcher.AdbDaemonLauncher}).
+     * tunnel ({@link net.bladewatch.app.launcher.AdbDaemonLauncher}).
      *
      * The daemon process is ALREADY UID 2000 (it was launched via app_process
      * by the same ADB tunnel at startup), so it can — and must — execute
      * shell commands directly. Routing daemon-side calls through the ADB
      * tunnel fails on every BYD head unit because dadb tries to read the
-     * app's adbkey at /data/user/0/com.loabletech.bladewatch/files/adbkey, and that
+     * app's adbkey at /data/user/0/net.bladewatch.app/files/adbkey, and that
      * directory is mode 0700 owned by the app UID — UID 2000 can't open it
      * (EACCES). The user reported this as
      * "Install failed: Download failed: ERROR: Execution failed:
-     *  /data/user/0/com.loabletech.bladewatch/files/adbkey: open failed:
+     *  /data/user/0/net.bladewatch.app/files/adbkey: open failed:
      *  EACCES (Permission denied)".
      *
      * Direct exec is also faster (no socket round-trip per command).
      *
-     * Callback semantics match {@link com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback}:
+     * Callback semantics match {@link net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback}:
      * onLog gets the combined stdout/stderr, then onLaunched fires on success
      * (exit 0) or onError on a non-zero exit / spawn failure.
      */
     private void runShell(String command,
-                          com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback callback) {
+                          net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback callback) {
         if (android.os.Process.myUid() != 2000) {
             getAdbLauncher().executeShellCommand(command, callback);
             return;
@@ -232,7 +232,7 @@ public class AppUpdater {
     private void cleanupLeftoverApk() {
         try {
             String cmd = "rm -f " + APK_PATH + "; echo done";
-            runShell(cmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+            runShell(cmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() { Log.i(TAG, "Cleaned up leftover APK"); }
                 @Override public void onError(String e) {}
@@ -435,7 +435,7 @@ public class AppUpdater {
                 final boolean[] dlDone = {false};
                 final String[] dlResult = {null};
 
-                runShell(downloadCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                runShell(downloadCmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) {
                         dlResult[0] = message;
                     }
@@ -456,7 +456,7 @@ public class AppUpdater {
                 }
 
                 if (cancelled) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -476,7 +476,7 @@ public class AppUpdater {
                 // Step 2: Verify APK size via shell
                 postProgress(callback, "Verifying download...");
                 if (releaseManifest == null) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -488,7 +488,7 @@ public class AppUpdater {
                 final boolean[] szDone = {false};
                 final String[] szResult = {null};
                 runShell("stat -c%s " + APK_PATH + " 2>/dev/null || echo 0",
-                        new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                        new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) { szResult[0] = message.trim(); }
                     @Override public void onLaunched() {
                         szDone[0] = true;
@@ -507,7 +507,7 @@ public class AppUpdater {
                 long fileSize = 0;
                 try { fileSize = Long.parseLong(szResult[0].trim()); } catch (Exception ignored) {}
                 if (fileSize <= 0) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -517,7 +517,7 @@ public class AppUpdater {
                 }
 
                 if (releaseManifest.apkSize > 0 && fileSize != releaseManifest.apkSize) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -528,7 +528,7 @@ public class AppUpdater {
 
                 String downloadedSha256 = sha256Hex(new File(APK_PATH));
                 if (downloadedSha256 == null || !downloadedSha256.equalsIgnoreCase(releaseManifest.apkSha256)) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -538,7 +538,7 @@ public class AppUpdater {
                 }
 
                 if (!verifyArchiveMetadata(new File(APK_PATH), releaseManifest)) {
-                    runShell("rm -f " + APK_PATH, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
                         @Override public void onLaunched() {}
                         @Override public void onError(String e) {}
@@ -589,10 +589,10 @@ public class AppUpdater {
 
                 String installCmd = "pm install -r " + APK_PATH +
                     "; rm -f " + APK_PATH +
-                    "; sleep 2; am start -n com.loabletech.bladewatch/.ui.MainActivity" +
+                    "; sleep 2; am start -n net.bladewatch.app/.ui.MainActivity" +
                     " --ez " + UpdateLifecycle.EXTRA_POST_UPDATE + " true";
 
-                runShell(installCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                runShell(installCmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                     @Override public void onLog(String message) {
                         Log.i(TAG, "Install: " + message);
                         result[0] = message;
@@ -624,7 +624,7 @@ public class AppUpdater {
                     // there's nothing for the next launch to recover from.
                     runShell(
                             "rm -f " + UPDATE_IN_PROGRESS_FILE + " " + POST_UPDATE_FILE,
-                            new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                            new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                                 @Override public void onLog(String m) {}
                                 @Override public void onLaunched() {}
                                 @Override public void onError(String e) {}
@@ -923,7 +923,7 @@ public class AppUpdater {
         // gets the app back either way (with the new APK on success, or with
         // the old APK + an error toast on failure).
         script.append("sleep 2\n");
-        script.append("am start -n com.loabletech.bladewatch/.ui.MainActivity --ez ");
+        script.append("am start -n net.bladewatch.app/.ui.MainActivity --ez ");
         script.append(UpdateLifecycle.EXTRA_POST_UPDATE).append(" true\n");
         script.append("echo \"[install] done rc=$INSTALL_RC at $(date)\"\n");
 
@@ -960,7 +960,7 @@ public class AppUpdater {
 
     private void cleanup(String path) {
         try {
-            runShell("rm -f " + path, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+            runShell("rm -f " + path, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String e) {}
@@ -971,7 +971,7 @@ public class AppUpdater {
     private void stopAllDaemons() {
         Log.i(TAG, "Stopping all daemons...");
 
-        com.loabletech.bladewatch.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
+        net.bladewatch.app.launcher.AdbDaemonLauncher launcher = getAdbLauncher();
 
         // Step 0: Plant the post-update sentinels so the new process knows to
         // run a hard-reset before starting daemons (see UpdateLifecycle). The
@@ -982,7 +982,7 @@ public class AppUpdater {
                 "echo 'update at $(date)' > " + UPDATE_IN_PROGRESS_FILE + "; " +
                 "echo 'update at $(date)' > " + POST_UPDATE_FILE + "; " +
                 "echo done";
-        runShell(markerCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(markerCmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 markerDone[0] = true;
@@ -1016,7 +1016,7 @@ public class AppUpdater {
                 "echo done";
         
         final boolean[] wdDone = {false};
-        runShell(killWatchdogsCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(killWatchdogsCmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 Log.i(TAG, "Watchdog scripts killed");
@@ -1044,7 +1044,7 @@ public class AppUpdater {
         
         for (String daemon : daemons) {
             final boolean[] done = {false};
-            launcher.killDaemon(daemon, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+            launcher.killDaemon(daemon, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {
                     Log.i(TAG, "Stopped: " + daemon);
@@ -1089,7 +1089,7 @@ public class AppUpdater {
                 "echo done";
         
         final boolean[] sweepDone = {false};
-        runShell(finalSweepCmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+        runShell(finalSweepCmd, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
             @Override public void onLog(String m) {}
             @Override public void onLaunched() {
                 sweepDone[0] = true;
@@ -1161,7 +1161,7 @@ public class AppUpdater {
         // Also save to filesystem via ADB shell (survives reinstall, app can't write /data/local/tmp directly)
         try {
             runShell("echo '" + timestamp + "' > " + UPDATE_TIMESTAMP_FILE,
-                    new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String error) {
@@ -1179,7 +1179,7 @@ public class AppUpdater {
         if (version == null || version.isEmpty()) return;
         try {
             runShell("echo '" + version + "' > " + VERSION_FILE,
-                    new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
+                    new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() {}
                 @Override public void onError(String error) {
@@ -1379,7 +1379,7 @@ public class AppUpdater {
      * explicit; once the user runs check-for-updates the real channel-
      * versioned string takes over.
      */
-    public static final String DISPLAY_VERSION_FALLBACK = "v17-seal5-0001";
+    public static final String DISPLAY_VERSION_FALLBACK = "1.0.0.0";
 
     /**
      * Get the display version string (channel + version from APK name).

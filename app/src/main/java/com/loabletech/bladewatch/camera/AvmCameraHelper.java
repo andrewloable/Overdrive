@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Utility methods for AVMCamera capabilities that aren't used elsewhere in the codebase.

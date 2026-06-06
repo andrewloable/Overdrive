@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.notifications.push;
+package net.bladewatch.app.notifications.push;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;

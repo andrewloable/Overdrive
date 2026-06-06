@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.ui.util
+package net.bladewatch.app.ui.util
 
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
-import com.loabletech.bladewatch.R
+import net.bladewatch.app.R
 
 /**
  * Shared NavOptions presets so every navigation call across the app uses

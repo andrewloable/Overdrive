@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.ui.daemon
+package net.bladewatch.app.ui.daemon
 
-import com.loabletech.bladewatch.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonStatus
 
 /**
  * Callback interface for daemon operations.

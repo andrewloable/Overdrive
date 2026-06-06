@@ -1,15 +1,15 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
 import android.content.res.AssetManager;
 import android.util.Base64;
 
-import com.loabletech.bladewatch.auth.AuthManager;
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.monitor.AccMonitor;
-import com.loabletech.bladewatch.monitor.BatteryMonitor;
-import com.loabletech.bladewatch.surveillance.GpuPipelineConfig;
-import com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu;
+import net.bladewatch.app.auth.AuthManager;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.monitor.AccMonitor;
+import net.bladewatch.app.monitor.BatteryMonitor;
+import net.bladewatch.app.surveillance.GpuPipelineConfig;
+import net.bladewatch.app.surveillance.HardwareEventRecorderGpu;
 
 import org.json.JSONObject;
 
@@ -582,9 +582,9 @@ public class HttpServer {
         
         // Trip Analytics API
         if (path.startsWith("/api/trips")) {
-            com.loabletech.bladewatch.trips.TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
+            net.bladewatch.app.trips.TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
             if (tam != null) {
-                com.loabletech.bladewatch.trips.TripApiHandler handler = new com.loabletech.bladewatch.trips.TripApiHandler(tam);
+                net.bladewatch.app.trips.TripApiHandler handler = new net.bladewatch.app.trips.TripApiHandler(tam);
                 org.json.JSONObject result = handler.handleRequest(path, method, null, body);
                 if (result != null) {
                     int status = result.optInt("_status", 200);
@@ -641,7 +641,7 @@ public class HttpServer {
     }
     
     private void sendSnapshot(OutputStream out, int viewId) throws Exception {
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline gpuPipeline = CameraDaemon.getGpuPipeline();
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline gpuPipeline = CameraDaemon.getGpuPipeline();
         if (gpuPipeline == null || gpuPipeline.getCamera() == null) {
             HttpResponse.sendError(out, 404, "GPU pipeline not available for view " + viewId);
             return;
@@ -689,7 +689,7 @@ public class HttpServer {
         // AppUpdater after a successful install. Falls back to
         // "Manually Installed" when the file is missing (fresh sideload
         // before any check-for-update has run).
-        status.put("appVersion", com.loabletech.bladewatch.updater.AppUpdater.getDisplayVersionFromFile());
+        status.put("appVersion", net.bladewatch.app.updater.AppUpdater.getDisplayVersionFromFile());
         status.put("recording", TcpCommandServer.getRecordingCameras());
         status.put("viewing", TcpCommandServer.getViewOnlyCameras());
         status.put("active", TcpCommandServer.getActiveCameras());
@@ -698,8 +698,8 @@ public class HttpServer {
         status.put("acc", AccMonitor.isAccOn());
         
         // Safe zone status (so UI can show suppressed state)
-        com.loabletech.bladewatch.surveillance.SafeLocationManager safeMgr =
-            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
+        net.bladewatch.app.surveillance.SafeLocationManager safeMgr =
+            net.bladewatch.app.surveillance.SafeLocationManager.getInstance();
         status.put("safeZoneSuppressed", CameraDaemon.isSafeZoneSuppressed());
         status.put("inSafeZone", safeMgr.isInSafeZone());
         if (safeMgr.getCurrentZoneName() != null) {
@@ -712,10 +712,10 @@ public class HttpServer {
         // here is logged so customers reporting "blank data" produce evidence
         // we can act on, instead of silent emptiness.
         try {
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor vehicleMonitor =
-                com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
+            net.bladewatch.app.monitor.VehicleDataMonitor vehicleMonitor =
+                net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
 
-            com.loabletech.bladewatch.monitor.ChargingStateData chargingState = vehicleMonitor.getChargingState();
+            net.bladewatch.app.monitor.ChargingStateData chargingState = vehicleMonitor.getChargingState();
             if (chargingState != null) {
                 JSONObject charging = new JSONObject();
                 charging.put("stateName", chargingState.stateName);
@@ -729,7 +729,7 @@ public class HttpServer {
                 status.put("charging", charging);
             }
             
-            com.loabletech.bladewatch.monitor.BatterySocData socData = vehicleMonitor.getBatterySoc();
+            net.bladewatch.app.monitor.BatterySocData socData = vehicleMonitor.getBatterySoc();
             if (socData != null) {
                 JSONObject soc = new JSONObject();
                 soc.put("percent", socData.socPercent);
@@ -739,7 +739,7 @@ public class HttpServer {
                 status.put("soc", soc);
             }
             
-            com.loabletech.bladewatch.monitor.DrivingRangeData rangeData = vehicleMonitor.getDrivingRange();
+            net.bladewatch.app.monitor.DrivingRangeData rangeData = vehicleMonitor.getDrivingRange();
             if (rangeData != null) {
                 JSONObject range = new JSONObject();
                 range.put("elecRangeKm", rangeData.elecRangeKm);
@@ -761,8 +761,8 @@ public class HttpServer {
             // (TripConfig.distanceUnit) which overrides auto-detection. The web UI
             // uses this to convert km values for display and pick the right label.
             try {
-                com.loabletech.bladewatch.byd.BydDataCollector collector =
-                        com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+                net.bladewatch.app.byd.BydDataCollector collector =
+                        net.bladewatch.app.byd.BydDataCollector.getInstance();
                 status.put("distanceUnit", (collector != null && collector.isMilesMode()) ? "mi" : "km");
             } catch (Exception ignored) {
                 status.put("distanceUnit", "km");
@@ -812,18 +812,18 @@ public class HttpServer {
         
         // GPU surveillance status — only true when actually in sentry/surveillance mode,
         // not when pipeline is running for normal recording (CONTINUOUS, PROXIMITY_GUARD)
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
         status.put("gpuSurveillance", pipeline != null && pipeline.isSurveillanceMode());
         
         // Recording mode details (for status overlay)
         try {
             JSONObject recordingStatus = new JSONObject();
-            com.loabletech.bladewatch.recording.RecordingModeManager rmm = CameraDaemon.getRecordingModeManager();
+            net.bladewatch.app.recording.RecordingModeManager rmm = CameraDaemon.getRecordingModeManager();
             if (rmm != null) {
                 recordingStatus.put("configuredMode", rmm.getCurrentMode().name());
                 recordingStatus.put("isRecording", pipeline != null && pipeline.isRecording());
                 recordingStatus.put("pipelineRunning", pipeline != null && pipeline.isRunning());
-                recordingStatus.put("gear", com.loabletech.bladewatch.recording.RecordingModeManager.gearToString(rmm.getCurrentGear()));
+                recordingStatus.put("gear", net.bladewatch.app.recording.RecordingModeManager.gearToString(rmm.getCurrentGear()));
                 recordingStatus.put("accOn", rmm.isAccOn());
             } else {
                 recordingStatus.put("configuredMode", "UNKNOWN");
@@ -838,11 +838,11 @@ public class HttpServer {
         // Trip analytics status (for status overlay)
         try {
             JSONObject tripStatus = new JSONObject();
-            com.loabletech.bladewatch.trips.TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
+            net.bladewatch.app.trips.TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
             if (tam != null) {
                 tripStatus.put("enabled", tam.isEnabled());
                 tripStatus.put("tripActive", tam.isTripActive());
-                com.loabletech.bladewatch.trips.TripRecord activeTrip = tam.getActiveTrip();
+                net.bladewatch.app.trips.TripRecord activeTrip = tam.getActiveTrip();
                 if (activeTrip != null) {
                     tripStatus.put("tripStartTime", activeTrip.startTime);
                     tripStatus.put("tripDurationSec", (System.currentTimeMillis() - activeTrip.startTime) / 1000);
@@ -857,11 +857,11 @@ public class HttpServer {
         }
         
         // GPS location
-        com.loabletech.bladewatch.monitor.GpsMonitor gps = com.loabletech.bladewatch.monitor.GpsMonitor.getInstance();
+        net.bladewatch.app.monitor.GpsMonitor gps = net.bladewatch.app.monitor.GpsMonitor.getInstance();
         status.put("gps", gps.getLocationJson());
         
         // Network info (WiFi SSID + IP or Mobile Data)
-        JSONObject network = com.loabletech.bladewatch.monitor.NetworkMonitor.getNetworkInfo();
+        JSONObject network = net.bladewatch.app.monitor.NetworkMonitor.getNetworkInfo();
         if (UnifiedConfigManager.isLanHttpEnabled()) {
             network.put("lanHttpEnabled", true);
             network.put("httpBind", "0.0.0.0");
@@ -888,8 +888,8 @@ public class HttpServer {
      */
     private boolean waitForVehicleDataReady(long maxWaitMs) {
         try {
-            com.loabletech.bladewatch.byd.BydDataCollector collector =
-                com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+            net.bladewatch.app.byd.BydDataCollector collector =
+                net.bladewatch.app.byd.BydDataCollector.getInstance();
             if (collector.isInitialized()) {
                 return true;
             }
@@ -1062,7 +1062,7 @@ public class HttpServer {
             final OutputStream out = new java.io.BufferedOutputStream(
                 client.getOutputStream(), 128 * 1024);
             
-            com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+            net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
             if (pipeline == null) {
                 CameraDaemon.log("WS: Pipeline not available");
                 sendWebSocketClose(out, 1011, "Pipeline not available");
@@ -1091,7 +1091,7 @@ public class HttpServer {
                 HardwareEventRecorderGpu existingEncoder = pipeline.getStreamEncoder();
                 if (existingEncoder != null) {
                     // Compare current encoder resolution with requested quality
-                    com.loabletech.bladewatch.streaming.GpuStreamScaler scaler = pipeline.getStreamScaler();
+                    net.bladewatch.app.streaming.GpuStreamScaler scaler = pipeline.getStreamScaler();
                     if (scaler != null) {
                         int currentWidth = scaler.getWidth();
                         int currentHeight = scaler.getHeight();
@@ -1128,7 +1128,7 @@ public class HttpServer {
             
             // SOTA: Send cached SPS/PPS immediately from WebSocketStreamServer
             // so the client decoder can initialize before the first frame arrives.
-            com.loabletech.bladewatch.streaming.WebSocketStreamServer wsServer = pipeline.getWebSocketServer();
+            net.bladewatch.app.streaming.WebSocketStreamServer wsServer = pipeline.getWebSocketServer();
             boolean spsPpsSent = false;
             if (wsServer != null) {
                 byte[] cachedSpsPps = wsServer.getCachedSpsPps();

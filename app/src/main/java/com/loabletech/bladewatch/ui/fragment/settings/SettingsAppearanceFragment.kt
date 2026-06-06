@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment.settings
+package net.bladewatch.app.ui.fragment.settings
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -9,12 +9,12 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.server.LocaleManager
-import com.loabletech.bladewatch.ui.MainActivity
-import com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog
-import com.loabletech.bladewatch.ui.fragment.WebViewFragment
-import com.loabletech.bladewatch.ui.util.PreferencesManager
+import net.bladewatch.app.R
+import net.bladewatch.app.server.LocaleManager
+import net.bladewatch.app.ui.MainActivity
+import net.bladewatch.app.ui.dialog.LanguagePickerDialog
+import net.bladewatch.app.ui.fragment.WebViewFragment
+import net.bladewatch.app.ui.util.PreferencesManager
 import java.util.Locale
 
 /**

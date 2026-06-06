@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.auth.AuthManager;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
+import net.bladewatch.app.auth.AuthManager;
+import net.bladewatch.app.daemon.CameraDaemon;
 
 import org.json.JSONObject;
 

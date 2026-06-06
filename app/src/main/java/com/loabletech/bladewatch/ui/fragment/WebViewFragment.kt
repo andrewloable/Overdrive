@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
@@ -19,8 +19,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.daemon.CameraDaemon
+import net.bladewatch.app.R
+import net.bladewatch.app.daemon.CameraDaemon
 
 /**
  * WebView fragment that loads pages from the daemon's HTTP server.
@@ -797,7 +797,7 @@ class WebViewFragment : Fragment() {
         @android.webkit.JavascriptInterface
         fun getAppLocale(): String {
             return try {
-                com.loabletech.bladewatch.server.LocaleManager.get()
+                net.bladewatch.app.server.LocaleManager.get()
             } catch (e: Exception) {
                 "en"
             }
@@ -820,7 +820,7 @@ class WebViewFragment : Fragment() {
             // in the app left this returning "dark" until the OS itself
             // flipped, which is exactly the bug the user reported.
             try {
-                val pref = com.loabletech.bladewatch.ui.util.PreferencesManager.getThemeMode()
+                val pref = net.bladewatch.app.ui.util.PreferencesManager.getThemeMode()
                 when (pref) {
                     androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> return "light"
                     androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> return "dark"
@@ -918,28 +918,28 @@ class WebViewFragment : Fragment() {
     private fun getAuthJwt(): String? {
         // Cache JWT for 5 minutes to avoid spamming auth state saves
         val now = System.currentTimeMillis()
-        val curVersion = com.loabletech.bladewatch.auth.AuthManager.getStateVersion()
+        val curVersion = net.bladewatch.app.auth.AuthManager.getStateVersion()
         if (cachedJwt != null && now < jwtExpiry && cachedJwtStateVersion == curVersion) return cachedJwt
         
         return try {
             // Try to initialize AuthManager if not already done
-            if (com.loabletech.bladewatch.auth.AuthManager.getState() == null) {
-                com.loabletech.bladewatch.auth.AuthManager.initialize()
+            if (net.bladewatch.app.auth.AuthManager.getState() == null) {
+                net.bladewatch.app.auth.AuthManager.initialize()
             }
             
-            var jwt = com.loabletech.bladewatch.auth.AuthManager.generateJwt()
+            var jwt = net.bladewatch.app.auth.AuthManager.generateJwt()
             
             // If JWT generation failed, try reading auth state directly from daemon's file
             if (jwt == null) {
                 android.util.Log.w("WebView", "JWT generation failed, retrying with fresh init...")
-                com.loabletech.bladewatch.auth.AuthManager.initialize()
-                jwt = com.loabletech.bladewatch.auth.AuthManager.generateJwt()
+                net.bladewatch.app.auth.AuthManager.initialize()
+                jwt = net.bladewatch.app.auth.AuthManager.generateJwt()
             }
             
             if (jwt != null) {
                 cachedJwt = jwt
                 jwtExpiry = now + 5 * 60 * 1000  // 5 min cache
-                cachedJwtStateVersion = com.loabletech.bladewatch.auth.AuthManager.getStateVersion()
+                cachedJwtStateVersion = net.bladewatch.app.auth.AuthManager.getStateVersion()
                 android.util.Log.d("WebView", "JWT generated successfully")
             } else {
                 android.util.Log.e("WebView", "JWT generation failed after retry")
@@ -1080,7 +1080,7 @@ class WebViewFragment : Fragment() {
 
     private fun resolveActiveTheme(): String {
         try {
-            val pref = com.loabletech.bladewatch.ui.util.PreferencesManager.getThemeMode()
+            val pref = net.bladewatch.app.ui.util.PreferencesManager.getThemeMode()
             when (pref) {
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO -> return "light"
                 androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES -> return "dark"

@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.notifications.CategoryRegistry;
-import com.loabletech.bladewatch.notifications.NotificationBus;
-import com.loabletech.bladewatch.notifications.NotificationEvent;
-import com.loabletech.bladewatch.notifications.push.PushSubscription;
-import com.loabletech.bladewatch.notifications.push.SubscriptionStore;
-import com.loabletech.bladewatch.notifications.push.VapidKeyStore;
+import net.bladewatch.app.notifications.CategoryRegistry;
+import net.bladewatch.app.notifications.NotificationBus;
+import net.bladewatch.app.notifications.NotificationEvent;
+import net.bladewatch.app.notifications.push.PushSubscription;
+import net.bladewatch.app.notifications.push.SubscriptionStore;
+import net.bladewatch.app.notifications.push.VapidKeyStore;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

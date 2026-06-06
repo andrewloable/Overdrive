@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 /**
  * Shared constants for the BYD Champ application.
@@ -11,7 +11,7 @@ object Constants {
     
     // Directories
     const val STREAM_DIR = "/data/local/tmp/cam_stream"
-    const val APP_STREAM_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/stream"
+    const val APP_STREAM_DIR = "/storage/emulated/0/Android/data/net.bladewatch.app/files/stream"
     const val DEFAULT_OUTPUT_DIR = "/sdcard/DCIM/BYDCam"
     const val LOG_DIR = "/data/local/tmp"
     

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.content.Intent
 import android.os.Bundle
@@ -13,10 +13,10 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.loabletech.bladewatch.ui.adapter.RecordingAdapter
-import com.loabletech.bladewatch.ui.model.RecordingFile
-import com.loabletech.bladewatch.ui.util.RecordingScanner
-import com.loabletech.bladewatch.ui.util.RecordingSectionHeaderDecoration
+import net.bladewatch.app.ui.adapter.RecordingAdapter
+import net.bladewatch.app.ui.model.RecordingFile
+import net.bladewatch.app.ui.util.RecordingScanner
+import net.bladewatch.app.ui.util.RecordingSectionHeaderDecoration
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -26,7 +26,7 @@ import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.loabletech.bladewatch.R
+import net.bladewatch.app.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -320,7 +320,7 @@ class RecordingLibraryFragment : Fragment() {
         dateNarrowed = narrowToDate
 
         if (view != null && ::recordingAdapter.isInitialized) {
-            com.loabletech.bladewatch.ui.util.RecordingScanner.invalidateCache()
+            net.bladewatch.app.ui.util.RecordingScanner.invalidateCache()
             updateDateHeader()
             renderActiveFilters()
             loadRecordingsForSelectedDate()
@@ -804,7 +804,7 @@ class RecordingLibraryFragment : Fragment() {
                 .navigate(
                     R.id.action_global_videoPlayer,
                     bundle,
-                    com.loabletech.bladewatch.ui.util.NavOptionsExt.m3SharedAxisZ()
+                    net.bladewatch.app.ui.util.NavOptionsExt.m3SharedAxisZ()
                 )
         } catch (e: Exception) {
             try {

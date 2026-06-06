@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.monitor.GpsMonitor;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.monitor.GpsMonitor;
 
 import org.json.JSONObject;
 

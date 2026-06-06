@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.notifications;
+package net.bladewatch.app.notifications;
 
-import com.loabletech.bladewatch.byd.BydDataCollector;
-import com.loabletech.bladewatch.byd.BydVehicleData;
-import com.loabletech.bladewatch.monitor.ChargingStateData;
-import com.loabletech.bladewatch.server.Messages;
+import net.bladewatch.app.byd.BydDataCollector;
+import net.bladewatch.app.byd.BydVehicleData;
+import net.bladewatch.app.monitor.ChargingStateData;
+import net.bladewatch.app.server.Messages;
 
 import org.json.JSONObject;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  * Publishes vehicle.charging.* notifications:
  * <ul>
  *   <li>{@code vehicle.charging.started} / {@code .stopped} — driven directly
- *       by {@link com.loabletech.bladewatch.monitor.ChargingDetector} fused-state
+ *       by {@link net.bladewatch.app.monitor.ChargingDetector} fused-state
  *       edges. The detector already fuses BMS + Power.isCharging() + L3
  *       inference + plug edges with hysteresis (30s plug bias, 10s L1↔L2
  *       disagreement, 15s unplug override, 3-sample L3), so re-debouncing
@@ -62,7 +62,7 @@ public final class ChargingEventNotifier {
 
     private static volatile ChargingEventNotifier instance;
 
-    private final com.loabletech.bladewatch.monitor.ChargingDetector.FusedStateListener fusedListener =
+    private final net.bladewatch.app.monitor.ChargingDetector.FusedStateListener fusedListener =
             (isCharging, source) -> onFusedEdge(isCharging, source);
 
     /**
@@ -98,8 +98,8 @@ public final class ChargingEventNotifier {
         ChargingEventNotifier n = new ChargingEventNotifier();
         // Single source of truth for session edges. Detector is already
         // fused and debounced; trust its verdict directly.
-        com.loabletech.bladewatch.monitor.ChargingDetector detector =
-                com.loabletech.bladewatch.monitor.ChargingDetector.getInstance();
+        net.bladewatch.app.monitor.ChargingDetector detector =
+                net.bladewatch.app.monitor.ChargingDetector.getInstance();
         detector.addFusedStateListener(n.fusedListener);
         // Faults are independent — wire to raw BMS edges.
         BydDataCollector.getInstance().addChargingStateListener(n.faultListener);

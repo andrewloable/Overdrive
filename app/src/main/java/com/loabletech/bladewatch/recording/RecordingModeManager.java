@@ -1,12 +1,12 @@
-package com.loabletech.bladewatch.recording;
+package net.bladewatch.app.recording;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.config.UnifiedConfigManager;
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.proximity.ProximityGuardController;
-import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.proximity.ProximityGuardController;
+import net.bladewatch.app.surveillance.GpuSurveillancePipeline;
 
 import org.json.JSONObject;
 
@@ -95,8 +95,8 @@ public class RecordingModeManager {
         // returns GEAR_P regardless — that's fine; onGearChanged() will
         // activate the mode when GearMonitor delivers its first real gear.)
         try {
-            com.loabletech.bladewatch.monitor.GearMonitor gm =
-                com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gm =
+                net.bladewatch.app.monitor.GearMonitor.getInstance();
             if (gm.isRunning()) {
                 int gearNow = gm.getCurrentGear();
                 if (gearNow != currentGear) {
@@ -166,8 +166,8 @@ public class RecordingModeManager {
         boolean hwAcc = queryAccStateFromHardware();
         int hwGear = currentGear;
         try {
-            com.loabletech.bladewatch.monitor.GearMonitor gm =
-                com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gm =
+                net.bladewatch.app.monitor.GearMonitor.getInstance();
             if (gm.isRunning()) {
                 hwGear = gm.getCurrentGear();
             }
@@ -285,7 +285,7 @@ public class RecordingModeManager {
         
         // Sync gear state from GearMonitor (authoritative source)
         try {
-            com.loabletech.bladewatch.monitor.GearMonitor gearMonitor = com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gearMonitor = net.bladewatch.app.monitor.GearMonitor.getInstance();
             if (gearMonitor.isRunning()) {
                 int actualGear = gearMonitor.getCurrentGear();
                 if (actualGear != currentGear) {
@@ -727,7 +727,7 @@ public class RecordingModeManager {
         }
         
         // Fallback to AccMonitor
-        return com.loabletech.bladewatch.monitor.AccMonitor.isAccOn();
+        return net.bladewatch.app.monitor.AccMonitor.isAccOn();
     }
 
     private void loadPersistedMode() {

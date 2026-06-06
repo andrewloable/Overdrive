@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon;
+package net.bladewatch.app.daemon;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

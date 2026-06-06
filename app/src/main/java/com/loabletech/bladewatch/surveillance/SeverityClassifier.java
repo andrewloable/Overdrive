@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
-import com.loabletech.bladewatch.surveillance.Actor.ClassGroup;
-import com.loabletech.bladewatch.surveillance.Actor.Proximity;
-import com.loabletech.bladewatch.surveillance.Actor.Severity;
-import com.loabletech.bladewatch.surveillance.Actor.Trend;
+import net.bladewatch.app.surveillance.Actor.ClassGroup;
+import net.bladewatch.app.surveillance.Actor.Proximity;
+import net.bladewatch.app.surveillance.Actor.Severity;
+import net.bladewatch.app.surveillance.Actor.Trend;
 
 /**
  * SeverityClassifier — Single source of truth for NOTICE / ALERT / CRITICAL.

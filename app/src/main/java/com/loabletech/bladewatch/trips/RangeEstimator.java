@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.trips;
+package net.bladewatch.app.trips;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.VehicleDataMonitor;
 
 /**
  * Personalized range prediction using a bucketed consumption model with

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
 import android.graphics.PixelFormat;
 import android.media.Image;
@@ -13,8 +13,8 @@ import android.opengl.GLES20;
 import android.os.Handler;
 import android.os.HandlerThread;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.camera.GlUtil;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.camera.GlUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;

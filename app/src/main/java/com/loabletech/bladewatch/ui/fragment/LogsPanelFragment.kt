@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,10 +12,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.loabletech.bladewatch.ui.adapter.LogsAdapter
-import com.loabletech.bladewatch.ui.viewmodel.LogsViewModel
-import com.loabletech.bladewatch.ui.viewmodel.MainViewModel
-import com.loabletech.bladewatch.R
+import net.bladewatch.app.ui.adapter.LogsAdapter
+import net.bladewatch.app.ui.viewmodel.LogsViewModel
+import net.bladewatch.app.ui.viewmodel.MainViewModel
+import net.bladewatch.app.R
 
 /**
  * Persistent logs panel fragment that appears at the bottom (portrait) or left (landscape).

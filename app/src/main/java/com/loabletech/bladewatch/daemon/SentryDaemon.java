@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon;
+package net.bladewatch.app.daemon;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -7,8 +7,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
-import com.loabletech.bladewatch.daemon.proxy.Safe;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.daemon.proxy.Safe;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -35,7 +35,7 @@ public class SentryDaemon {
 
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
-    /** com.loabletech.bladewatch */
+    /** net.bladewatch.app */
     private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
     /** accmodemanager */
     private static String SERVICE_ACCMODE() { return Safe.s("tr877WU3+MV4zFtCjanWUw=="); }
@@ -612,7 +612,7 @@ public class SentryDaemon {
     
     // ==================== LOCATION SIDECAR SERVICE MONITOR ====================
     
-    private static final String LOCATION_SERVICE_NAME = "com.loabletech.bladewatch/.services.LocationSidecarService";
+    private static final String LOCATION_SERVICE_NAME = "net.bladewatch.app/.services.LocationSidecarService";
     private static String APP_PKG() { return APP_PACKAGE_NAME(); }
     private static final long LOCATION_CHECK_INTERVAL_MS = 15000; // 15 seconds
     private static volatile boolean locationMonitorEnabled = false;

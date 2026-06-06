@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
 import android.opengl.GLES11Ext;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 import android.opengl.GLES20;
 
 import java.nio.ByteBuffer;

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import java.io.BufferedReader
 import java.io.InputStreamReader

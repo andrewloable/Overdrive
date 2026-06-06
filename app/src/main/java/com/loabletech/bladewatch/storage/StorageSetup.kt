@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.storage
+package net.bladewatch.app.storage
 
 import android.Manifest
 import android.app.Activity
@@ -12,7 +12,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.loabletech.bladewatch.launcher.AdbShellExecutor
+import net.bladewatch.app.launcher.AdbShellExecutor
 import java.io.File
 
 /**

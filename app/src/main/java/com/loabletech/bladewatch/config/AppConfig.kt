@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.config
+package net.bladewatch.app.config
 
 /**
  * Application-level configuration.

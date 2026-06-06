@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.surveillance.SurveillanceEngineGpu;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.surveillance.SurveillanceEngineGpu;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

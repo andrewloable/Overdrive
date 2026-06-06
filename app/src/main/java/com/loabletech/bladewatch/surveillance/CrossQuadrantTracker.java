@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
-import com.loabletech.bladewatch.ai.Detection;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.ai.Detection;
+import net.bladewatch.app.logging.DaemonLogger;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
 import android.media.MediaFormat;
 

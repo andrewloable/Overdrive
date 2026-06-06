@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.notifications;
+package net.bladewatch.app.notifications;
 
-import com.loabletech.bladewatch.surveillance.Actor;
-import com.loabletech.bladewatch.surveillance.SurveillanceConfig;
+import net.bladewatch.app.surveillance.Actor;
+import net.bladewatch.app.surveillance.SurveillanceConfig;
 
 /**
  * NotificationGate — Decides whether a recording's peak severity warrants a

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.adapter
+package net.bladewatch.app.ui.adapter
 
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
@@ -11,11 +11,11 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.loabletech.bladewatch.ui.model.DaemonState
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
+import net.bladewatch.app.ui.model.DaemonState
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.loabletech.bladewatch.R
+import net.bladewatch.app.R
 
 /**
  * Adapter for displaying daemon cards in a RecyclerView.

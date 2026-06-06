@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.util
+package net.bladewatch.app.util
 
 import android.content.Context
 import android.os.IBinder
 import android.os.Parcel
 import android.util.Log
-import com.loabletech.bladewatch.shell.HiddenApiBypass
+import net.bladewatch.app.shell.HiddenApiBypass
 
 /**
  * Helper to whitelist app for BYD ACC (Accessory) mode.

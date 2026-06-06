@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment.settings
+package net.bladewatch.app.ui.fragment.settings
 
 import android.os.Bundle
 import android.os.Handler
@@ -10,9 +10,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.MainActivity
-import com.loabletech.bladewatch.ui.util.RecordingScanner
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.MainActivity
+import net.bladewatch.app.ui.util.RecordingScanner
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

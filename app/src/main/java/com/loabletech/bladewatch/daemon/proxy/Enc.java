@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.daemon.proxy;
+package net.bladewatch.app.daemon.proxy;
 
 /**
  * Auto-generated encrypted string constants.
@@ -78,7 +78,7 @@ public final class Enc {
     public static final String INTERFACE_ACCMODE = Safe.s("8AsXgmArXEIVQTzlKJxcF6yCBHWM2MoAIE3hnqCQMWM=");
 
     // ==================== MISC ====================
-    /** com.loabletech.bladewatch */
+    /** net.bladewatch.app */
     public static final String APP_PACKAGE = Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8=");
 
     /** 127.0.0.1 */

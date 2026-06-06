@@ -71,7 +71,7 @@ val openh264HeaderSha256 = mapOf(
 // Auto-download OpenH264 from Cisco's official binary releases
 tasks.register("downloadOpenH264") {
     val openh264Dir = file("src/main/cpp/openh264")
-    
+    val proj = project
     doLast {
         // Cisco's official binary URLs - only arm64-v8a for BYD cars
         val abiMap = mapOf(
@@ -96,7 +96,7 @@ tasks.register("downloadOpenH264") {
                 val extractedFile = file("${libDir}/temp")
                 if (extractedFile.exists()) extractedFile.delete()
 
-                project.downloadVerified(url, bzFile, openh264ArchiveSha256, "OpenH264 ${abi} archive")
+                proj.downloadVerified(url, bzFile, openh264ArchiveSha256, "OpenH264 ${abi} archive")
                 ant.invokeMethod("bunzip2", mapOf("src" to bzFile.absolutePath))
                 if (!extractedFile.renameTo(soFile)) {
                     throw org.gradle.api.GradleException("Failed to install OpenH264 for ${abi}")
@@ -111,7 +111,7 @@ tasks.register("downloadOpenH264") {
         includeDir.mkdirs()
         listOf("codec_api.h", "codec_app_def.h", "codec_def.h", "codec_ver.h").forEach { h ->
             val f = file("${includeDir}/${h}")
-            project.ensureDownloadedVerified(
+            proj.ensureDownloadedVerified(
                 "https://raw.githubusercontent.com/cisco/openh264/v${openh264Version}/codec/api/wels/${h}",
                 f,
                 openh264HeaderSha256.getValue(h),
@@ -137,7 +137,7 @@ val opencvMobileStaticLibSha256 = mapOf(
 )
 tasks.register("downloadOpenCV") {
     val opencvDir = file("src/main/cpp/opencv")
-    
+    val proj = project
     doLast {
         val libDir = file("${opencvDir}/lib/arm64-v8a")
         libDir.mkdirs()
@@ -157,7 +157,7 @@ tasks.register("downloadOpenCV") {
             try {
                 // Download opencv-mobile
                 println("Downloading from: $zipUrl")
-                project.downloadVerified(zipUrl, zipFile, opencvMobileArchiveSha256, "opencv-mobile archive")
+                proj.downloadVerified(zipUrl, zipFile, opencvMobileArchiveSha256, "opencv-mobile archive")
                 
                 if (zipFile.exists() && zipFile.length() > 100000) {
                     println("Extracting opencv-mobile (${zipFile.length() / 1024 / 1024}MB)...")
@@ -232,34 +232,28 @@ tasks.register("checkSurveillanceDeps") {
 tasks.register("extractWebAssets") {
     description = "Extracts web assets from APK to /data/local/tmp/web on connected device"
     group = "deployment"
-    
     doLast {
+        fun run(vararg cmd: String) {
+            ProcessBuilder(*cmd).inheritIO().start().waitFor()
+        }
         val webSrcDir = file("src/main/assets/web")
         if (!webSrcDir.exists()) {
             println("⚠ No web assets found at ${webSrcDir}")
             return@doLast
         }
-        
+
         println("Extracting web assets to device...")
-        
-        // Create target directory
-        exec {
-            commandLine("adb", "shell", "mkdir", "-p", "/data/local/tmp/web/shared")
-        }
-        exec {
-            commandLine("adb", "shell", "mkdir", "-p", "/data/local/tmp/web/local")
-        }
-        
-        // Push files
+
+        run("adb", "shell", "mkdir", "-p", "/data/local/tmp/web/shared")
+        run("adb", "shell", "mkdir", "-p", "/data/local/tmp/web/local")
+
         webSrcDir.walkTopDown().filter { it.isFile }.forEach { file ->
             val relativePath = file.relativeTo(webSrcDir).path
             val targetPath = "/data/local/tmp/web/${relativePath}"
             println("  → ${relativePath}")
-            exec {
-                commandLine("adb", "push", file.absolutePath, targetPath)
-            }
+            run("adb", "push", file.absolutePath, targetPath)
         }
-        
+
         println("✓ Web assets extracted to /data/local/tmp/web/")
     }
 }
@@ -273,16 +267,16 @@ android {
             keyAlias = System.getenv("KEY_ALIAS") ?: "key0"
         }
     }
-    namespace = "com.loabletech.bladewatch"
+    namespace = "net.bladewatch.app"
     compileSdk = 36
     ndkVersion = "26.1.10909125"
 
     defaultConfig {
-        applicationId = "com.loabletech.bladewatch"
+        applicationId = "net.bladewatch.app"
         minSdk = 25
         targetSdk = 25
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 10000
+        versionName = "1.0.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Note: abiFilters removed - using splits.abi instead for size optimization
@@ -319,7 +313,7 @@ android {
             //   → R8 strips all log calls from bytecode
             // When ANY flag is true (debug build): exclude proguard-rules-strip-logs.pro
             //   → log calls stay in bytecode, DaemonLogConfig controls which tags write to disk
-            val logConfigFile = file("src/main/java/com/loabletech/bladewatch/logging/DaemonLogConfig.java")
+            val logConfigFile = file("src/main/java/com/loabletech/bladewatch/logging/DaemonLogConfig.java") // path unchanged — dir rename not required
             val loggingEnabled = if (logConfigFile.exists()) {
                 val content = logConfigFile.readText()
                 val enableAllMatch = Regex("""public static final boolean ENABLE_ALL\s*=\s*true""").containsMatchIn(content)

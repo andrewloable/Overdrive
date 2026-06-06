@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.notifications;
+package net.bladewatch.app.notifications;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

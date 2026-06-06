@@ -1,10 +1,10 @@
-package com.loabletech.bladewatch.updater;
+package net.bladewatch.app.updater;
 
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import com.loabletech.bladewatch.launcher.AdbDaemonLauncher;
+import net.bladewatch.app.launcher.AdbDaemonLauncher;
 
 import java.io.File;
 

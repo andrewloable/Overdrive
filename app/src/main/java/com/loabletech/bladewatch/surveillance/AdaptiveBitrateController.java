@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
 import android.animation.ValueAnimator;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * AdaptiveBitrateController - Adjusts encoder bitrate based on motion score.

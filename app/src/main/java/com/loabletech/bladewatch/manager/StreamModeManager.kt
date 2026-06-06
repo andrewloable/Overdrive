@@ -1,9 +1,9 @@
-package com.loabletech.bladewatch.manager
+package net.bladewatch.app.manager
 
-import com.loabletech.bladewatch.client.CameraDaemonClient
-import com.loabletech.bladewatch.config.ConfigManager
-import com.loabletech.bladewatch.config.StreamMode
-import com.loabletech.bladewatch.logging.LogManager
+import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.config.ConfigManager
+import net.bladewatch.app.config.StreamMode
+import net.bladewatch.app.logging.LogManager
 
 /**
  * Manages stream mode (private/public) and syncs with daemon.

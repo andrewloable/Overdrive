@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.ui.daemon
+package net.bladewatch.app.ui.daemon
 
-import com.loabletech.bladewatch.ui.model.DaemonType
+import net.bladewatch.app.ui.model.DaemonType
 
 /**
  * Interface for controlling daemon processes.

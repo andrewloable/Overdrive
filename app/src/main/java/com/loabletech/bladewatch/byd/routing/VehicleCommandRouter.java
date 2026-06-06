@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.byd.routing;
+package net.bladewatch.app.byd.routing;
 
-import com.loabletech.bladewatch.byd.BydDataCollector;
-import com.loabletech.bladewatch.logging.DaemonLogger;
+import net.bladewatch.app.byd.BydDataCollector;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Routes vehicle control commands to the local BYD SDK ({@link BydDataCollector}).
@@ -362,6 +362,6 @@ public final class VehicleCommandRouter {
     // ── i18n key resolution ─────────────────────────────────────────────
 
     private static String msg(String key) {
-        return com.loabletech.bladewatch.server.Messages.get("vehicle_control." + key);
+        return net.bladewatch.app.server.Messages.get("vehicle_control." + key);
     }
 }

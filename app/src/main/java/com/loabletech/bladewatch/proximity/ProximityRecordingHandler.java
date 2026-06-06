@@ -1,8 +1,8 @@
-package com.loabletech.bladewatch.proximity;
+package net.bladewatch.app.proximity;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.storage.StorageManager;
-import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.storage.StorageManager;
+import net.bladewatch.app.surveillance.GpuSurveillancePipeline;
 
 import java.io.File;
 
@@ -110,12 +110,12 @@ public class ProximityRecordingHandler {
                 url = "/events.html?filter=proximity";
             }
 
-            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                    new com.loabletech.bladewatch.notifications.NotificationEvent(
+            net.bladewatch.app.notifications.NotificationBus.get().publish(
+                    new net.bladewatch.app.notifications.NotificationEvent(
                             "surveillance.proximity",
                             red
-                                    ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
-                                    : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
+                                    ? net.bladewatch.app.notifications.NotificationEvent.Severity.CRITICAL
+                                    : net.bladewatch.app.notifications.NotificationEvent.Severity.WARN,
                             red ? "Object very close" : "Object nearby",
                             red ? "Within 0.5 m" : "Within 0.8 m",
                             "proximity-" + triggerLevel,
@@ -129,7 +129,7 @@ public class ProximityRecordingHandler {
     private String activeRecordingFilename() {
         try {
             if (pipeline == null) return null;
-            com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu enc = pipeline.getEncoder();
+            net.bladewatch.app.surveillance.HardwareEventRecorderGpu enc = pipeline.getEncoder();
             if (enc == null) return null;
             String path = enc.getCurrentOutputPath();
             if (path == null || path.isEmpty()) return null;
@@ -199,7 +199,7 @@ public class ProximityRecordingHandler {
             File heroFile = new File(outputDir, heroName);
             String snapshotName = heroFile.exists() ? heroName : videoFile;
             String encSnap = java.net.URLEncoder.encode(snapshotName, "UTF-8");
-            String thumbTok = com.loabletech.bladewatch.auth.AuthManager
+            String thumbTok = net.bladewatch.app.auth.AuthManager
                     .signThumbToken(snapshotName, 600L);
             String snapUrl = "/thumb/" + encSnap;
             if (thumbTok != null) snapUrl += "?t=" + thumbTok;
@@ -208,12 +208,12 @@ public class ProximityRecordingHandler {
             String enc = java.net.URLEncoder.encode(videoFile, "UTF-8");
             String url = "/events.html?filter=proximity&file=" + enc;
 
-            com.loabletech.bladewatch.notifications.NotificationBus.get().publish(
-                    new com.loabletech.bladewatch.notifications.NotificationEvent(
+            net.bladewatch.app.notifications.NotificationBus.get().publish(
+                    new net.bladewatch.app.notifications.NotificationEvent(
                             "surveillance.proximity",
                             red
-                                    ? com.loabletech.bladewatch.notifications.NotificationEvent.Severity.CRITICAL
-                                    : com.loabletech.bladewatch.notifications.NotificationEvent.Severity.WARN,
+                                    ? net.bladewatch.app.notifications.NotificationEvent.Severity.CRITICAL
+                                    : net.bladewatch.app.notifications.NotificationEvent.Severity.WARN,
                             red ? "Object very close" : "Object nearby",
                             red ? "Within 0.5 m" : "Within 0.8 m",
                             "proximity-" + triggerLevel,

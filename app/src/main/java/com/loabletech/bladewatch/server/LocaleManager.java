@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
+import net.bladewatch.app.daemon.CameraDaemon;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.model
+package net.bladewatch.app.ui.model
 
 /**
  * Information about a subprocess running under a daemon.

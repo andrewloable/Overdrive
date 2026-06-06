@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.server;
+package net.bladewatch.app.server;
 
-import com.loabletech.bladewatch.storage.ExternalStorageCleaner;
-import com.loabletech.bladewatch.storage.StorageManager;
+import net.bladewatch.app.storage.ExternalStorageCleaner;
+import net.bladewatch.app.storage.StorageManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

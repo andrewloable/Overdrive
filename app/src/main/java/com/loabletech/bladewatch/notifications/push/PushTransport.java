@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.notifications.push;
+package net.bladewatch.app.notifications.push;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;

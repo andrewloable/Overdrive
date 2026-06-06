@@ -1,7 +1,7 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
-import com.loabletech.bladewatch.monitor.GpsMonitor;
+import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.monitor.GpsMonitor;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -206,7 +206,7 @@ public class SafeLocationManager {
         // pipeline is shared with CONTINUOUS / DRIVE_MODE / PROXIMITY_GUARD
         // recording — driving home with ACC ON + CONTINUOUS recording would
         // otherwise have its recording torn down here.
-        com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
+        net.bladewatch.app.surveillance.GpuSurveillancePipeline pipeline = CameraDaemon.getGpuPipeline();
         if (pipeline != null && pipeline.isSurveillanceMode()) {
             // Don't call disableSurveillance() through CameraDaemon — that clears
             // the user's preference. Just disable the sentry component and stop
@@ -228,7 +228,7 @@ public class SafeLocationManager {
         if (CameraDaemon.isSafeZoneSuppressed()) {
             CameraDaemon.setSafeZoneSuppressed(false);
             // Check persisted config — only restart if user actually wants surveillance
-            if (com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled()) {
+            if (net.bladewatch.app.config.UnifiedConfigManager.isSurveillanceEnabled()) {
                 CameraDaemon.enableSurveillance();
             }
         }

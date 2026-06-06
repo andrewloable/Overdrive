@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import androidx.appcompat.app.AlertDialog
 import android.os.Bundle
@@ -14,11 +14,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.loabletech.bladewatch.ui.adapter.DaemonAdapter
-import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.R
+import net.bladewatch.app.ui.adapter.DaemonAdapter
+import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.R
 
 /**
  * Fragment for managing background daemons.
@@ -60,7 +60,7 @@ class DaemonsFragment : Fragment() {
         daemonAdapter = DaemonAdapter(
             onToggle = { type, enabled -> onDaemonToggled(type, enabled) },
             onConfigureClick = { type -> onDaemonConfigureClicked(type) },
-            onDownloadLog = if (com.loabletech.bladewatch.BuildConfig.DEBUG) {
+            onDownloadLog = if (net.bladewatch.app.BuildConfig.DEBUG) {
                 { type -> onDownloadLogClicked(type) }
             } else null
         )
@@ -192,8 +192,8 @@ class DaemonsFragment : Fragment() {
         daemonsViewModel.stopDaemon(DaemonType.ZROK_TUNNEL)
 
         // Then disable the environment (removes environment.json and reserved tokens)
-        daemonsViewModel.zrokController.disableEnvironment(object : com.loabletech.bladewatch.ui.daemon.DaemonCallback {
-            override fun onStatusChanged(status: com.loabletech.bladewatch.ui.model.DaemonStatus, message: String) {
+        daemonsViewModel.zrokController.disableEnvironment(object : net.bladewatch.app.ui.daemon.DaemonCallback {
+            override fun onStatusChanged(status: net.bladewatch.app.ui.model.DaemonStatus, message: String) {
                 // Environment disabled, now delete the enable token
                 daemonsViewModel.zrokController.deleteEnableToken { success ->
                     activity?.runOnUiThread {
@@ -261,10 +261,10 @@ class DaemonsFragment : Fragment() {
         Toast.makeText(ctx, getString(R.string.toast_fetching_log, type.displayName), Toast.LENGTH_SHORT).show()
         
         // Use tail to limit output — 10000 lines is ~1-2MB which is safe for ADB + String
-        val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(ctx)
+        val adb = net.bladewatch.app.launcher.AdbDaemonLauncher(ctx)
         adb.executeShellCommand(
             "wc -l < $logPath 2>/dev/null; echo '---SEPARATOR---'; tail -10000 $logPath 2>/dev/null",
-            object : com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback {
+            object : net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback {
                 override fun onLog(message: String) {
                     activity?.runOnUiThread {
                         if (message.isBlank()) {

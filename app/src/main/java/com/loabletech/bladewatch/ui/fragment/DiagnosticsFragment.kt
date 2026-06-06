@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.ui.fragment
+package net.bladewatch.app.ui.fragment
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -19,13 +19,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
-import com.loabletech.bladewatch.R
-import com.loabletech.bladewatch.ui.MainActivity
-import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.ui.util.RecordingScanner
-import com.loabletech.bladewatch.ui.util.navigateDrillDown
-import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
+import net.bladewatch.app.R
+import net.bladewatch.app.ui.MainActivity
+import net.bladewatch.app.ui.model.DaemonStatus
+import net.bladewatch.app.ui.model.DaemonType
+import net.bladewatch.app.ui.util.RecordingScanner
+import net.bladewatch.app.ui.util.navigateDrillDown
+import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -113,7 +113,7 @@ class DiagnosticsFragment : Fragment() {
             // motion so the cardSettings shortcut feels like rail navigation.
             findNavController().navigate(
                 R.id.settingsFragment, null,
-                com.loabletech.bladewatch.ui.util.NavOptionsExt.m3FadeThrough()
+                net.bladewatch.app.ui.util.NavOptionsExt.m3FadeThrough()
             )
         }
         // HEALTH tiles for Camera + Battery now act as shortcuts to the
@@ -441,7 +441,7 @@ class DiagnosticsFragment : Fragment() {
         var probedId = -1
         var manualOverride = false
         try {
-            val cfg = com.loabletech.bladewatch.config.UnifiedConfigManager.loadConfig()
+            val cfg = net.bladewatch.app.config.UnifiedConfigManager.loadConfig()
             val cam = cfg.optJSONObject("camera")
             if (cam != null) {
                 probedId = cam.optInt("probedCameraId", -1)
@@ -483,7 +483,7 @@ class DiagnosticsFragment : Fragment() {
             var sohPercent: Double? = null
             var displaySource = "unavailable"
             try {
-                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
                     "/api/performance/soh", "GET", 2000, 3000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }

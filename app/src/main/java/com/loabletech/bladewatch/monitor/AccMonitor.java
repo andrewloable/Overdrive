@@ -1,6 +1,6 @@
-package com.loabletech.bladewatch.monitor;
+package net.bladewatch.app.monitor;
 
-import com.loabletech.bladewatch.daemon.CameraDaemon;
+import net.bladewatch.app.daemon.CameraDaemon;
 
 /**
  * ACC Monitor - State holder for ACC status with direct hardware query.

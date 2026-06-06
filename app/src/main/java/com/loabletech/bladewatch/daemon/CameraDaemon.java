@@ -1,15 +1,15 @@
-package com.loabletech.bladewatch.daemon;
+package net.bladewatch.app.daemon;
 
 import android.os.Handler;
 import android.os.Looper;
 
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.monitor.AccMonitor;
-import com.loabletech.bladewatch.server.HttpServer;
-import com.loabletech.bladewatch.server.SurveillanceIpcServer;
-import com.loabletech.bladewatch.server.TcpCommandServer;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.monitor.AccMonitor;
+import net.bladewatch.app.server.HttpServer;
+import net.bladewatch.app.server.SurveillanceIpcServer;
+import net.bladewatch.app.server.TcpCommandServer;
 
-import com.loabletech.bladewatch.daemon.proxy.Safe;
+import net.bladewatch.app.daemon.proxy.Safe;
 
 import java.io.File;
 import java.util.Map;
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 
  * Runs as a standalone process via app_process:
  *   adb shell "CLASSPATH=/data/app/.../base.apk app_process / \
- *       com.loabletech.bladewatch.daemon.CameraDaemon [outputDir] [nativeLibDir]"
+ *       net.bladewatch.app.daemon.CameraDaemon [outputDir] [nativeLibDir]"
  * 
  * Components:
  * - TcpCommandServer: JSON commands on port 19876
@@ -35,7 +35,7 @@ public class CameraDaemon {
     
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
-    /** com.loabletech.bladewatch */
+    /** net.bladewatch.app */
     private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
     /** /data/local/tmp/cam_stream */
     private static String PATH_CAMERA_STREAM_DIR() { return Safe.s("ZHx6IP38aGV/Q7iMCCcxzxuq9ag7mKGoQaOvzuwMDqM="); }
@@ -50,8 +50,8 @@ public class CameraDaemon {
     public static final int TCP_PORT = 19876;
     public static final int HTTP_PORT = 8080;
     public static String STREAM_DIR() { return PATH_CAMERA_STREAM_DIR(); }
-    public static final String APP_FILES_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files";
-    public static final String APP_STREAM_DIR = "/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/stream";
+    public static final String APP_FILES_DIR = "/storage/emulated/0/Android/data/net.bladewatch.app/files";
+    public static final String APP_STREAM_DIR = "/storage/emulated/0/Android/data/net.bladewatch.app/files/stream";
     
     // Recording config (full quality)
     public static final int PANO_WIDTH = 5120;
@@ -85,7 +85,7 @@ public class CameraDaemon {
     private static AccMonitor accMonitor;
     
     // ==================== SURVEILLANCE ====================
-    private static com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline gpuPipeline;
+    private static net.bladewatch.app.surveillance.GpuSurveillancePipeline gpuPipeline;
     private static boolean surveillanceEnabled = false;
     private static volatile boolean safeZoneSuppressed = false;
     // Pending ACC OFF state: if ACC goes off before GPU pipeline is ready,
@@ -99,7 +99,7 @@ public class CameraDaemon {
     // Two parallel lock-event sources, both active simultaneously while the
     // gate is open: the device-SDK typed listener and a periodic poll. They
     // run as independent backups rather than as a fallback chain.
-    private static com.loabletech.bladewatch.byd.BydDataCollector.DoorLockListener deviceLockSubscriber = null;
+    private static net.bladewatch.app.byd.BydDataCollector.DoorLockListener deviceLockSubscriber = null;
     private static Thread unlockPollThread = null;
     // Reverse watchdog: periodically queries hardware ACC state and force-
     // disables surveillance if ACC went ON without an event reaching us.
@@ -113,13 +113,13 @@ public class CameraDaemon {
     private static final int DOOR_STATE_LOCK = 2;
     
     // ==================== RECORDING MODE MANAGER ====================
-    private static com.loabletech.bladewatch.recording.RecordingModeManager recordingModeManager;
+    private static net.bladewatch.app.recording.RecordingModeManager recordingModeManager;
     
     // ==================== AVC HAL KEEP-ALIVE ====================
     // Keeps com.byd.avc alive while ACC is ON and pipeline is running.
     // Prevents BYD system from killing the camera app, which destabilizes
     // the HAL and causes "no video signal" on the native DVR.
-    private static com.loabletech.bladewatch.camera.AvcHalWarmup avcHalWarmup;
+    private static net.bladewatch.app.camera.AvcHalWarmup avcHalWarmup;
     private static final Object avcWarmupLock = new Object();
     private static volatile boolean avcWarmupCompletedThisWindow = false;
     private static volatile String avcWarmupLastSkipReason = "";
@@ -133,10 +133,10 @@ public class CameraDaemon {
     private static String deviceId = "unknown";
     
     // ==================== TRIP ANALYTICS ====================
-    private static com.loabletech.bladewatch.trips.TripAnalyticsManager tripAnalyticsManager;
+    private static net.bladewatch.app.trips.TripAnalyticsManager tripAnalyticsManager;
     
     // ==================== TELEMETRY DATA COLLECTOR ====================
-    private static com.loabletech.bladewatch.telemetry.TelemetryDataCollector telemetryDataCollector;
+    private static net.bladewatch.app.telemetry.TelemetryDataCollector telemetryDataCollector;
     
     // ==================== SHARED APP CONTEXT ====================
     private static android.content.Context sharedAppContext = null;
@@ -171,7 +171,7 @@ public class CameraDaemon {
     private static void reinitContextDependentComponents() {
         // Re-init BydDataCollector (was 0/17 devices with broken context)
         try {
-            com.loabletech.bladewatch.byd.BydDataCollector collector = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+            net.bladewatch.app.byd.BydDataCollector collector = net.bladewatch.app.byd.BydDataCollector.getInstance();
             collector.init(sharedAppContext);
             collector.logSummary();
             log("ACC ON: BydDataCollector re-initialized (" + collector.getData().availableDevices.length + " devices)");
@@ -181,7 +181,7 @@ public class CameraDaemon {
 
         // Re-init GearMonitor with valid context
         try {
-            com.loabletech.bladewatch.monitor.GearMonitor gearMonitor = com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gearMonitor = net.bladewatch.app.monitor.GearMonitor.getInstance();
             gearMonitor.init(sharedAppContext);
             if (telemetryDataCollector != null) {
                 gearMonitor.setTelemetrySource(telemetryDataCollector);
@@ -204,7 +204,7 @@ public class CameraDaemon {
         // Re-init RecordingModeManager if it wasn't created (sharedAppContext was null at init time)
         if (recordingModeManager == null && gpuPipeline != null) {
             try {
-                recordingModeManager = new com.loabletech.bladewatch.recording.RecordingModeManager(
+                recordingModeManager = new net.bladewatch.app.recording.RecordingModeManager(
                     sharedAppContext, gpuPipeline);
                 log("ACC ON: RecordingModeManager created with valid context");
             } catch (Exception e) {
@@ -214,8 +214,8 @@ public class CameraDaemon {
         
         // Re-init VehicleDataMonitor
         try {
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor vehicleMonitor =
-                com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
+            net.bladewatch.app.monitor.VehicleDataMonitor vehicleMonitor =
+                net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
             vehicleMonitor.init(sharedAppContext);
             if (!vehicleMonitor.isRunning()) {
                 vehicleMonitor.start();
@@ -242,12 +242,12 @@ public class CameraDaemon {
         }
         
         // Enable daemon logging for StorageManager (uses DaemonLogger instead of android.util.Log)
-        com.loabletech.bladewatch.storage.StorageManager.enableDaemonLogging();
+        net.bladewatch.app.storage.StorageManager.enableDaemonLogging();
         
         // SOTA: Fix storage permissions so UI app can read recordings
         // Note: StorageManager constructor will auto-mount SD card if configured
-        com.loabletech.bladewatch.storage.StorageManager storageManager =
-            com.loabletech.bladewatch.storage.StorageManager.getInstance();
+        net.bladewatch.app.storage.StorageManager storageManager =
+            net.bladewatch.app.storage.StorageManager.getInstance();
         storageManager.fixAllPermissions();
 
         // Start the SD-card mount watchdog at daemon boot (instead of only on
@@ -264,7 +264,7 @@ public class CameraDaemon {
         // Without this the cleaner is lazy-initialized on first UI/API hit,
         // meaning a fresh boot with `enabled=true` in config never actually
         // begins reserving SD space until the user opens a settings screen.
-        com.loabletech.bladewatch.storage.ExternalStorageCleaner.getInstance();
+        net.bladewatch.app.storage.ExternalStorageCleaner.getInstance();
 
         // Periodic cleanup of our own recordings/surveillance dirs — runs
         // continuously instead of only while a recording is active. This
@@ -352,7 +352,7 @@ public class CameraDaemon {
         }, "NotificationsInit").start();
         
         // SOTA: Initialize unified config manager (handles migration from legacy configs)
-        com.loabletech.bladewatch.config.UnifiedConfigManager.init();
+        net.bladewatch.app.config.UnifiedConfigManager.init();
         
         // Load persisted quality settings BEFORE initializing surveillance
         // This ensures the encoder is created with the correct settings
@@ -380,7 +380,7 @@ public class CameraDaemon {
             if (irProbeSentinel.exists()) {
                 log("=== ImageReader probe sentinel detected — running probe ===");
                 File irProbeDir = new File("/data/local/tmp/imagereader_probe");
-                new com.loabletech.bladewatch.camera.AvmImageReaderFpsProbe(irProbeDir).run();
+                new net.bladewatch.app.camera.AvmImageReaderFpsProbe(irProbeDir).run();
                 if (!irProbeSentinel.delete()) {
                     log("WARN: Could not delete ImageReader probe sentinel " + irProbeSentinel);
                 }
@@ -402,7 +402,7 @@ public class CameraDaemon {
         // RACE CONDITION FIX: Also verify ACC is still OFF before applying.
         // If ACC turned ON during pipeline init, the pending state is stale.
         if (pendingAccOff && gpuPipeline != null) {
-            if (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+            if (!net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                 log("Applying pending ACC OFF surveillance request...");
                 pendingAccOff = false;
                 onAccStateChanged(true);
@@ -421,7 +421,7 @@ public class CameraDaemon {
         initGpsMonitor();
 
         // Initialize Safe Location Manager (geofence zones)
-        com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance().init();
+        net.bladewatch.app.surveillance.SafeLocationManager.getInstance().init();
 
         // Initialize Vehicle Data Monitor + BydDataCollector
         initVehicleDataMonitor();
@@ -429,7 +429,7 @@ public class CameraDaemon {
         // Initialize Trip Analytics
         try {
             log("Initializing Trip Analytics...");
-            tripAnalyticsManager = new com.loabletech.bladewatch.trips.TripAnalyticsManager();
+            tripAnalyticsManager = new net.bladewatch.app.trips.TripAnalyticsManager();
             tripAnalyticsManager.init(sharedAppContext, telemetryDataCollector);
             log("Trip Analytics initialized (enabled=" + tripAnalyticsManager.isEnabled() + ")");
 
@@ -442,7 +442,7 @@ public class CameraDaemon {
             // Capacity is sourced from BYD-local nominal capacity (VehicleDataMonitor).
             double nominalKwh = 0.0;
             try {
-                nominalKwh = com.loabletech.bladewatch.monitor.VehicleDataMonitor
+                nominalKwh = net.bladewatch.app.monitor.VehicleDataMonitor
                     .getInstance().getNominalCapacityKwh();
             } catch (Exception ignored) {}
             java.io.File bucketMigrationMarker = new java.io.File("/data/local/tmp/bladewatch_bucket_migration_done");
@@ -465,10 +465,10 @@ public class CameraDaemon {
             // driver has already shifted out of P.
             if (tripAnalyticsManager.isEnabled()) {
                 try {
-                    int currentGear = com.loabletech.bladewatch.monitor.GearMonitor.getInstance().getCurrentGear();
-                    if (currentGear != com.loabletech.bladewatch.monitor.GearMonitor.GEAR_P) {
+                    int currentGear = net.bladewatch.app.monitor.GearMonitor.getInstance().getCurrentGear();
+                    if (currentGear != net.bladewatch.app.monitor.GearMonitor.GEAR_P) {
                         log("Trip Analytics: non-P gear detected at startup (gear="
-                                + com.loabletech.bladewatch.monitor.GearMonitor.gearToString(currentGear)
+                                + net.bladewatch.app.monitor.GearMonitor.gearToString(currentGear)
                                 + ") — auto-starting trip recording");
                         tripAnalyticsManager.onGearChanged(currentGear);
                     }
@@ -482,7 +482,7 @@ public class CameraDaemon {
 
         // Initialize OdometerReader for trip distance
         try {
-            com.loabletech.bladewatch.trips.OdometerReader.getInstance().init(sharedAppContext);
+            net.bladewatch.app.trips.OdometerReader.getInstance().init(sharedAppContext);
         } catch (Exception e) {
             log("OdometerReader init error: " + e.getMessage());
         }
@@ -495,7 +495,7 @@ public class CameraDaemon {
         // AccSentryDaemon won't re-send the ACC OFF command. Reading the hardware
         // directly has zero dependency on AccSentryDaemon.
         try {
-            boolean accIsOff = com.loabletech.bladewatch.monitor.AccMonitor.probeAccState(sharedAppContext);
+            boolean accIsOff = net.bladewatch.app.monitor.AccMonitor.probeAccState(sharedAppContext);
             if (accIsOff) {
                 log("RECOVERY: Hardware probe shows ACC OFF — entering sentry mode");
                 onAccStateChanged(true);  // true = accIsOff
@@ -548,16 +548,16 @@ public class CameraDaemon {
             String codec = HttpServer.getRecordingCodec();
             if (codec != null) {
                 // Just update the config, don't reinitialize encoder
-                com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
+                net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
                 switch (codec.toUpperCase()) {
                     case "H265":
                     case "HEVC":
-                        videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H265;
+                        videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H265;
                         break;
                     case "H264":
                     case "AVC":
                     default:
-                        videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H264;
+                        videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H264;
                         break;
                 }
                 gpuPipeline.getConfig().setVideoCodec(videoCodec);
@@ -701,7 +701,7 @@ public class CameraDaemon {
      */
     public static void startAvcKeepAliveIfNeeded() {
         if (avcHalWarmup == null) {
-            avcHalWarmup = new com.loabletech.bladewatch.camera.AvcHalWarmup();
+            avcHalWarmup = new net.bladewatch.app.camera.AvcHalWarmup();
         }
         if (gpuPipeline != null && gpuPipeline.isRunning()) {
             if (!avcHalWarmup.isActive()) {
@@ -719,7 +719,7 @@ public class CameraDaemon {
     public static boolean ensureAvcWarmupStarted(String reason) {
         synchronized (avcWarmupLock) {
             if (avcHalWarmup == null) {
-                avcHalWarmup = new com.loabletech.bladewatch.camera.AvcHalWarmup();
+                avcHalWarmup = new net.bladewatch.app.camera.AvcHalWarmup();
             }
 
             if (gpuPipeline != null && gpuPipeline.isRunning()) {
@@ -828,11 +828,11 @@ public class CameraDaemon {
         }
         
         // Stop all monitors
-        try { com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { com.loabletech.bladewatch.monitor.GpsMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { com.loabletech.bladewatch.monitor.GearMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { com.loabletech.bladewatch.monitor.PerformanceMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().stop(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.monitor.VehicleDataMonitor.getInstance().stop(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.monitor.GpsMonitor.getInstance().stop(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.monitor.GearMonitor.getInstance().stop(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.monitor.PerformanceMonitor.getInstance().stop(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop(); } catch (Exception ignored) {}
         
         // Stop services
         if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
@@ -841,7 +841,7 @@ public class CameraDaemon {
         if (ipcServer != null) ipcServer.stop();
         
         // Shutdown StorageManager (schedulers, executors)
-        try { com.loabletech.bladewatch.storage.StorageManager.getInstance().shutdown(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.storage.StorageManager.getInstance().shutdown(); } catch (Exception ignored) {}
         
         // Release singleton lock
         releaseSingletonLock();
@@ -1017,21 +1017,21 @@ public class CameraDaemon {
                 // 3. Stop all monitors (VehicleDataMonitor, GpsMonitor, GearMonitor,
                 //    PerformanceMonitor) — these hold BYD device listeners and schedulers
                 try {
-                    com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance().stop();
+                    net.bladewatch.app.monitor.VehicleDataMonitor.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 try {
-                    com.loabletech.bladewatch.monitor.GpsMonitor.getInstance().stop();
+                    net.bladewatch.app.monitor.GpsMonitor.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 try {
-                    com.loabletech.bladewatch.monitor.GearMonitor.getInstance().stop();
+                    net.bladewatch.app.monitor.GearMonitor.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 try {
-                    com.loabletech.bladewatch.monitor.PerformanceMonitor.getInstance().stop();
+                    net.bladewatch.app.monitor.PerformanceMonitor.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 
                 // 4. Close SOC History Database (H2 JDBC connection + scheduler)
                 try {
-                    com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().stop();
+                    net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 
                 // 5. Stop services (Trip Analytics)
@@ -1052,7 +1052,7 @@ public class CameraDaemon {
                 
                 // 7. Shutdown StorageManager (schedulers, executors, SD card watchdog)
                 try {
-                    com.loabletech.bladewatch.storage.StorageManager.getInstance().shutdown();
+                    net.bladewatch.app.storage.StorageManager.getInstance().shutdown();
                 } catch (Exception e) { /* ignore */ }
                 
                 // 8. Release singleton lock (must be last)
@@ -1121,7 +1121,7 @@ public class CameraDaemon {
         return deviceId;
     }
     
-    public static com.loabletech.bladewatch.trips.TripAnalyticsManager getTripAnalyticsManager() {
+    public static net.bladewatch.app.trips.TripAnalyticsManager getTripAnalyticsManager() {
         return tripAnalyticsManager;
     }
     
@@ -1136,12 +1136,12 @@ public class CameraDaemon {
             log("Initializing GPU Surveillance Pipeline...");
             
             // SOTA: Use StorageManager for surveillance output directory
-            com.loabletech.bladewatch.storage.StorageManager storageManager =
-                com.loabletech.bladewatch.storage.StorageManager.getInstance();
+            net.bladewatch.app.storage.StorageManager storageManager =
+                net.bladewatch.app.storage.StorageManager.getInstance();
             File eventDir = storageManager.getSurveillanceDir();
             
             // Create GPU pipeline
-            gpuPipeline = new com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline(
+            gpuPipeline = new net.bladewatch.app.surveillance.GpuSurveillancePipeline(
                 PANO_WIDTH, PANO_HEIGHT, eventDir);
             
             // Get AssetManager from the app's APK
@@ -1157,7 +1157,7 @@ public class CameraDaemon {
                 if (classpath != null) {
                     String[] paths = classpath.split(":");
                     for (String path : paths) {
-                        if (path.contains("com.loabletech.bladewatch") && path.endsWith(".apk")) {
+                        if (path.contains("net.bladewatch.app") && path.endsWith(".apk")) {
                             apkPath = path;
                             break;
                         }
@@ -1193,16 +1193,16 @@ public class CameraDaemon {
             // IMPORTANT: Set codec FIRST, then bitrate (so bitrate is calculated for correct codec)
             String persistedCodec = HttpServer.getRecordingCodec();
             if (persistedCodec != null) {
-                com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
+                net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
                 switch (persistedCodec.toUpperCase()) {
                     case "H265":
                     case "HEVC":
-                        videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H265;
+                        videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H265;
                         break;
                     case "H264":
                     case "AVC":
                     default:
-                        videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H264;
+                        videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H264;
                         break;
                 }
                 gpuPipeline.getConfig().setVideoCodec(videoCodec);
@@ -1214,24 +1214,24 @@ public class CameraDaemon {
                 // RecordingQuality is the canonical quality knob. It replaces
                 // the old LOW/MEDIUM/HIGH BitratePreset alias and lets newer
                 // tiers share one path during pre-init and runtime changes.
-                com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality quality =
-                    com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality.fromString(persistedQuality);
+                net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality quality =
+                    net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(persistedQuality);
                 gpuPipeline.getConfig().setRecordingQuality(quality);
                 int effectiveBitrate = gpuPipeline.getConfig().getEffectiveBitrate();
                 log("Pre-init: Set recording quality to " + quality + " (" + effectiveBitrate / 1_000_000 + " Mbps for " +
                     gpuPipeline.getConfig().getVideoCodec() + ")");
             }
             
-            gpuPipeline.init(assetManager, com.loabletech.bladewatch.daemon.DaemonBootstrap.getContext());
+            gpuPipeline.init(assetManager, net.bladewatch.app.daemon.DaemonBootstrap.getContext());
             
             log("GPU Surveillance initialized: " + PANO_WIDTH + "x" + PANO_HEIGHT + 
                 " -> 2560x1920 (mosaic)");
             
             // Clean up orphaned .tmp files from previous crashed recordings
             try {
-                com.loabletech.bladewatch.storage.StorageManager sm = com.loabletech.bladewatch.storage.StorageManager.getInstance();
-                com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu.cleanupOrphanedTmpFiles(sm.getRecordingsDir());
-                com.loabletech.bladewatch.surveillance.HardwareEventRecorderGpu.cleanupOrphanedTmpFiles(sm.getSurveillanceDir());
+                net.bladewatch.app.storage.StorageManager sm = net.bladewatch.app.storage.StorageManager.getInstance();
+                net.bladewatch.app.surveillance.HardwareEventRecorderGpu.cleanupOrphanedTmpFiles(sm.getRecordingsDir());
+                net.bladewatch.app.surveillance.HardwareEventRecorderGpu.cleanupOrphanedTmpFiles(sm.getSurveillanceDir());
             } catch (Exception e) {
                 log("Tmp cleanup error: " + e.getMessage());
             }
@@ -1244,23 +1244,23 @@ public class CameraDaemon {
                 sharedAppContext = createAppContext();
             }
             if (sharedAppContext != null) {
-                recordingModeManager = new com.loabletech.bladewatch.recording.RecordingModeManager(
+                recordingModeManager = new net.bladewatch.app.recording.RecordingModeManager(
                     sharedAppContext, gpuPipeline);
                 log("RecordingModeManager initialized");
                 
                 // Create AVC HAL warmup instance (shared with RecordingModeManager)
-                avcHalWarmup = new com.loabletech.bladewatch.camera.AvcHalWarmup();
+                avcHalWarmup = new net.bladewatch.app.camera.AvcHalWarmup();
                 log("AvcHalWarmup initialized");
                 
                 // Now initialize TelemetryDataCollector (context is guaranteed available)
                 try {
                     telemetryDataCollector =
-                        new com.loabletech.bladewatch.telemetry.TelemetryDataCollector();
+                        new net.bladewatch.app.telemetry.TelemetryDataCollector();
                     telemetryDataCollector.init(sharedAppContext);
                     gpuPipeline.setTelemetryCollector(telemetryDataCollector);
                     
                     // Apply persisted overlay enabled state
-                    boolean overlayEnabled = com.loabletech.bladewatch.config.UnifiedConfigManager
+                    boolean overlayEnabled = net.bladewatch.app.config.UnifiedConfigManager
                         .getTelemetryOverlay().optBoolean("enabled", false);
                     gpuPipeline.setOverlayEnabled(overlayEnabled);
                     log("TelemetryDataCollector initialized, overlay=" + overlayEnabled);
@@ -1299,7 +1299,7 @@ public class CameraDaemon {
         // enableSurveillance() retry loop or the 45-second fallback timer fires
         // AFTER ACC has already turned ON. AccMonitor is the source of truth
         // because it's updated synchronously by onAccStateChanged() on the IPC thread.
-        if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+        if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
             log("enableSurveillance() REJECTED — ACC is ON (race condition guard)");
             return;
         }
@@ -1311,8 +1311,8 @@ public class CameraDaemon {
         }
         
         // SOTA: Safe Location check — don't start camera if parked at safe zone
-        com.loabletech.bladewatch.surveillance.SafeLocationManager safeMgr =
-            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
+        net.bladewatch.app.surveillance.SafeLocationManager safeMgr =
+            net.bladewatch.app.surveillance.SafeLocationManager.getInstance();
         if (safeMgr.isInSafeZone()) {
             log("SAFE ZONE: Surveillance suppressed — " + safeMgr.getCurrentZoneName()
                 + " (dist=" + Math.round(safeMgr.getDistanceToNearestZone()) + "m)");
@@ -1410,7 +1410,7 @@ public class CameraDaemon {
         new Thread(() -> {
             try {
                 Thread.sleep(DOOR_LOCK_ARM_TIMEOUT_MS);
-                if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+                if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                     log("LOCK GATE TIMEOUT: ACC is ON — not arming");
                     return;
                 }
@@ -1434,7 +1434,7 @@ public class CameraDaemon {
      * are no-ops. Every lock-event source flows through here.
      */
     private static synchronized void applyLockEvent(boolean locked, String source) {
-        if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+        if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
             log("LOCK GATE [" + source + "]: " + (locked ? "LOCKED" : "UNLOCKED")
                 + " but ACC is ON — ignoring");
             return;
@@ -1460,7 +1460,7 @@ public class CameraDaemon {
             return;
         }
         try {
-            Object doorLockDevice = com.loabletech.bladewatch.byd.BydDeviceHelper.getDevice(
+            Object doorLockDevice = net.bladewatch.app.byd.BydDeviceHelper.getDevice(
                 "android.hardware.bydauto.doorlock.BYDAutoDoorLockDevice", sharedAppContext);
             if (doorLockDevice == null) {
                 log("LOCK GATE: BYDAutoDoorLockDevice unavailable — relying on poll + timeout");
@@ -1477,7 +1477,7 @@ public class CameraDaemon {
     private static Boolean currentDeviceLockState() {
         if (sharedAppContext == null) return null;
         try {
-            Object doorLockDevice = com.loabletech.bladewatch.byd.BydDeviceHelper.getDevice(
+            Object doorLockDevice = net.bladewatch.app.byd.BydDeviceHelper.getDevice(
                 "android.hardware.bydauto.doorlock.BYDAutoDoorLockDevice", sharedAppContext);
             if (doorLockDevice == null) return null;
             int s = readDoorLockStatus(doorLockDevice);
@@ -1504,7 +1504,7 @@ public class CameraDaemon {
                 } catch (InterruptedException ie) {
                     return;
                 }
-                if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+                if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                     log("ACC-ON disarm watchdog exiting (AccMonitor=ON)");
                     return;
                 }
@@ -1512,7 +1512,7 @@ public class CameraDaemon {
                 try {
                     // probeAccState: returns true if ACC is OFF, false if ON
                     // or unknown. As a side effect updates AccMonitor.
-                    boolean hwSaysAccOff = com.loabletech.bladewatch.monitor.AccMonitor
+                    boolean hwSaysAccOff = net.bladewatch.app.monitor.AccMonitor
                         .probeAccState(sharedAppContext);
                     if (!hwSaysAccOff && surveillanceEnabled) {
                         log("ACC-ON DISARM WATCHDOG: hardware says ACC ON but "
@@ -1604,7 +1604,7 @@ public class CameraDaemon {
         };
 
         try {
-            com.loabletech.bladewatch.byd.BydDataCollector.getInstance()
+            net.bladewatch.app.byd.BydDataCollector.getInstance()
                 .addDoorLockListener(deviceLockSubscriber);
             log("LOCK GATE: Device-SDK lock subscriber attached to BydDataCollector");
         } catch (Exception e) {
@@ -1616,7 +1616,7 @@ public class CameraDaemon {
     private static void unsubscribeDeviceLockListener() {
         if (deviceLockSubscriber == null) return;
         try {
-            com.loabletech.bladewatch.byd.BydDataCollector.getInstance()
+            net.bladewatch.app.byd.BydDataCollector.getInstance()
                 .removeDoorLockListener(deviceLockSubscriber);
         } catch (Exception ignored) {}
         deviceLockSubscriber = null;
@@ -1633,19 +1633,19 @@ public class CameraDaemon {
         unlockPollThread = new Thread(() -> {
             log("Unlock poll thread started (5s polling getDoorLockStatus)");
 
-            while (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
+            while (!net.bladewatch.app.monitor.AccMonitor.isAccOn()) {
                 try {
                     Thread.sleep(UNLOCK_POLL_INTERVAL_MS);
                 } catch (InterruptedException e) {
                     return;
                 }
-                if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) return;
+                if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) return;
 
                 // SDK device poll. Returns INVALID(0) on firmwares that don't
                 // expose getDoorLockStatus(area) to user UID, but still works
                 // on most cars and gives us a fast (5s) signal.
                 try {
-                    Object doorLockDevice = com.loabletech.bladewatch.byd.BydDeviceHelper.getDevice(
+                    Object doorLockDevice = net.bladewatch.app.byd.BydDeviceHelper.getDevice(
                         "android.hardware.bydauto.doorlock.BYDAutoDoorLockDevice", sharedAppContext);
                     if (doorLockDevice != null) {
                         int state = readDoorLockStatus(doorLockDevice);
@@ -1694,7 +1694,7 @@ public class CameraDaemon {
      */
     public static void onAccStateChanged(boolean accIsOff) {
         // Update AccMonitor state for HTTP API responses
-        com.loabletech.bladewatch.monitor.AccMonitor.setAccState(!accIsOff);
+        net.bladewatch.app.monitor.AccMonitor.setAccState(!accIsOff);
 
         // CRITICAL: Capture the BydVehicleData snapshot and record the ACC
         // transition BEFORE any pipeline/teardown work. The OFF event must
@@ -1708,10 +1708,10 @@ public class CameraDaemon {
         // Wrapped in try/catch — must NEVER throw out of onAccStateChanged
         // because that would break the daemon's state machine.
         try {
-            com.loabletech.bladewatch.byd.BydVehicleData accSnapshot = null;
+            net.bladewatch.app.byd.BydVehicleData accSnapshot = null;
             try {
-                com.loabletech.bladewatch.byd.BydDataCollector collector =
-                    com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+                net.bladewatch.app.byd.BydDataCollector collector =
+                    net.bladewatch.app.byd.BydDataCollector.getInstance();
                 if (collector != null && collector.isInitialized()) {
                     accSnapshot = collector.getData();
                 }
@@ -1720,7 +1720,7 @@ public class CameraDaemon {
                 // null snapshot, the row will still be recorded with the
                 // event type so future correlation is possible.
             }
-            com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance()
+            net.bladewatch.app.monitor.SocHistoryDatabase.getInstance()
                 .recordAccEvent(accIsOff ? "OFF" : "ON", accSnapshot);
         } catch (Throwable t) {
             log("recordAccEvent failed (non-fatal): " + t.getMessage());
@@ -1777,22 +1777,22 @@ public class CameraDaemon {
                 
                 // Stop GearMonitor polling — gear is always P when ACC is off.
                 // It will be restarted on ACC ON.
-                com.loabletech.bladewatch.monitor.GearMonitor.getInstance().stop();
+                net.bladewatch.app.monitor.GearMonitor.getInstance().stop();
                 log("GearMonitor stopped (ACC OFF)");
                 
                 // Tell BydDataCollector to skip speed/engine/gearbox polling (always 0 when parked)
-                com.loabletech.bladewatch.byd.BydDataCollector.getInstance().setAccState(false);
+                net.bladewatch.app.byd.BydDataCollector.getInstance().setAccState(false);
                 
                 // CRITICAL: FORCE remount SD card when ACC goes off — BEFORE any early returns.
                 // Even if surveillance is disabled or suppressed by safe zone, the SD card must stay
                 // mounted so the HTTP server can serve existing recordings/events/trips.
                 // Android/BYD system unmounts SD card when ACC is off, so we MUST force remount.
-                com.loabletech.bladewatch.storage.StorageManager storage = 
-                    com.loabletech.bladewatch.storage.StorageManager.getInstance();
+                net.bladewatch.app.storage.StorageManager storage = 
+                    net.bladewatch.app.storage.StorageManager.getInstance();
                 boolean anyStorageOnSd = 
-                    storage.getSurveillanceStorageType() == com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD ||
-                    storage.getRecordingsStorageType() == com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD ||
-                    storage.getTripsStorageType() == com.loabletech.bladewatch.storage.StorageManager.StorageType.SD_CARD;
+                    storage.getSurveillanceStorageType() == net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD ||
+                    storage.getRecordingsStorageType() == net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD ||
+                    storage.getTripsStorageType() == net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD;
                 if (anyStorageOnSd) {
                     log("FORCE mounting SD card (ACC OFF, SD card configured for storage)...");
                     if (storage.ensureSdCardMounted(true)) {
@@ -1808,15 +1808,15 @@ public class CameraDaemon {
                 }
                 
                 // Check if user has enabled surveillance in config
-                boolean userEnabled = com.loabletech.bladewatch.config.UnifiedConfigManager.isSurveillanceEnabled();
+                boolean userEnabled = net.bladewatch.app.config.UnifiedConfigManager.isSurveillanceEnabled();
                 if (!userEnabled) {
                     log("Surveillance NOT enabled in config — skipping auto-start on ACC OFF");
                     return;  // SD card is mounted + watchdog running
                 }
                 
                 // Safe zone check — don't start surveillance if parked at home/work
-                com.loabletech.bladewatch.surveillance.SafeLocationManager safeMgr =
-                    com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
+                net.bladewatch.app.surveillance.SafeLocationManager safeMgr =
+                    net.bladewatch.app.surveillance.SafeLocationManager.getInstance();
                 if (safeMgr.isInSafeZone()) {
                     log("SAFE ZONE: Surveillance suppressed on ACC OFF — " + safeMgr.getCurrentZoneName()
                         + " (dist=" + Math.round(safeMgr.getDistanceToNearestZone()) + "m)");
@@ -1827,8 +1827,8 @@ public class CameraDaemon {
                 
                 // Schedule check — don't start surveillance outside configured time windows
                 try {
-                    com.loabletech.bladewatch.surveillance.SurveillanceSchedule schedule = 
-                        com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillanceSchedule();
+                    net.bladewatch.app.surveillance.SurveillanceSchedule schedule = 
+                        net.bladewatch.app.config.UnifiedConfigManager.getSurveillanceSchedule();
                     if (schedule != null && schedule.isEnabled() && !schedule.isActiveNow()) {
                         log("SCHEDULE: Surveillance suppressed on ACC OFF — outside time window (" +
                             schedule.getSummary() + ")");
@@ -1844,7 +1844,7 @@ public class CameraDaemon {
                     gpuPipeline.start();
                 }
                 gpuPipeline.setRecordingMode(
-                    com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingMode.SENTRY);
+                    net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingMode.SENTRY);
                 // AVC keep-alive intentionally NOT started for the sentry/ACC-OFF
                 // surveillance flow — see CameraDaemon.enableSurveillance() for
                 // the full reasoning. Recording-mode and streaming flows still
@@ -1917,7 +1917,7 @@ public class CameraDaemon {
                         reinitContextDependentComponents();
                         
                         // Now start GearMonitor if it still isn't running
-                        com.loabletech.bladewatch.monitor.GearMonitor gm = com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+                        net.bladewatch.app.monitor.GearMonitor gm = net.bladewatch.app.monitor.GearMonitor.getInstance();
                         if (!gm.isRunning()) {
                             try {
                                 gm.start();
@@ -1938,7 +1938,7 @@ public class CameraDaemon {
             }
             
             // Restart GearMonitor (stopped on ACC OFF)
-            com.loabletech.bladewatch.monitor.GearMonitor gearMonitor = com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gearMonitor = net.bladewatch.app.monitor.GearMonitor.getInstance();
             if (!gearMonitor.isRunning()) {
                 try {
                     gearMonitor.start();
@@ -1949,7 +1949,7 @@ public class CameraDaemon {
             }
             
             // Tell BydDataCollector to resume full polling (speed/engine/gearbox)
-            com.loabletech.bladewatch.byd.BydDataCollector.getInstance().setAccState(true);
+            net.bladewatch.app.byd.BydDataCollector.getInstance().setAccState(true);
             
             // If pipeline is currently in SURVEILLANCE mode, gracefully exit it:
             // finalize any in-progress sentry recording, flush the encoder, drop
@@ -1994,7 +1994,7 @@ public class CameraDaemon {
     private static volatile int lastNotifiedGear = Integer.MIN_VALUE;
 
     public static void onGearChanged(int gear) {
-        String gearName = com.loabletech.bladewatch.recording.RecordingModeManager.gearToString(gear);
+        String gearName = net.bladewatch.app.recording.RecordingModeManager.gearToString(gear);
 
         // GearMonitor primes the system with one initial notification on
         // start(); subsequent rapid duplicates can also slip through during
@@ -2053,11 +2053,11 @@ public class CameraDaemon {
                     }
                     
                     // Only check when ACC is off
-                    if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) continue;
+                    if (net.bladewatch.app.monitor.AccMonitor.isAccOn()) continue;
                     
                     try {
-                        com.loabletech.bladewatch.surveillance.SurveillanceSchedule schedule =
-                            com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillanceSchedule();
+                        net.bladewatch.app.surveillance.SurveillanceSchedule schedule =
+                            net.bladewatch.app.config.UnifiedConfigManager.getSurveillanceSchedule();
                         
                         // Schedule disabled = always active, nothing to check
                         if (schedule == null || !schedule.isEnabled()) continue;
@@ -2073,7 +2073,7 @@ public class CameraDaemon {
                             disableSurveillance();
                         } else if (withinWindow && !currentlyActive && !safeZoneSuppressed) {
                             // Schedule window started — enable surveillance if other conditions met
-                            boolean userEnabled = com.loabletech.bladewatch.config.UnifiedConfigManager
+                            boolean userEnabled = net.bladewatch.app.config.UnifiedConfigManager
                                 .isSurveillanceEnabled();
                             if (userEnabled) {
                                 log("SCHEDULE: Time window started (" + schedule.getSummary() + 
@@ -2122,8 +2122,8 @@ public class CameraDaemon {
             return;
         }
 
-        com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality tier =
-            com.loabletech.bladewatch.surveillance.GpuPipelineConfig.RecordingQuality.fromString(quality);
+        net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality tier =
+            net.bladewatch.app.surveillance.GpuPipelineConfig.RecordingQuality.fromString(quality);
 
         gpuPipeline.getConfig().setRecordingQuality(tier);
         int effectiveBitrate = gpuPipeline.getConfig().getEffectiveBitrate();
@@ -2139,8 +2139,8 @@ public class CameraDaemon {
     public static void setStreamingQuality(String quality) {
         if (gpuPipeline == null) return;
         
-        com.loabletech.bladewatch.surveillance.GpuPipelineConfig.StreamingQuality streamQuality =
-            com.loabletech.bladewatch.surveillance.GpuPipelineConfig.StreamingQuality.fromString(quality);
+        net.bladewatch.app.surveillance.GpuPipelineConfig.StreamingQuality streamQuality =
+            net.bladewatch.app.surveillance.GpuPipelineConfig.StreamingQuality.fromString(quality);
         
         gpuPipeline.setStreamingQuality(streamQuality);
         log("Streaming quality set to: " + streamQuality.displayName);
@@ -2176,16 +2176,16 @@ public class CameraDaemon {
         }
         
         try {
-            com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
+            net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec videoCodec;
             switch (codec.toUpperCase()) {
                 case "H265":
                 case "HEVC":
-                    videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H265;
+                    videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H265;
                     break;
                 case "H264":
                 case "AVC":
                 default:
-                    videoCodec = com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H264;
+                    videoCodec = net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H264;
                     break;
             }
             
@@ -2228,13 +2228,13 @@ public class CameraDaemon {
     public static String getRecordingCodec() {
         if (gpuPipeline == null) return "H264";
         return gpuPipeline.getConfig().getVideoCodec() == 
-            com.loabletech.bladewatch.surveillance.GpuPipelineConfig.VideoCodec.H265 ? "H265" : "H264";
+            net.bladewatch.app.surveillance.GpuPipelineConfig.VideoCodec.H265 ? "H265" : "H264";
     }
     
     /**
      * Get GPU pipeline instance.
      */
-    public static com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline getGpuPipeline() {
+    public static net.bladewatch.app.surveillance.GpuSurveillancePipeline getGpuPipeline() {
         return gpuPipeline;
     }
     
@@ -2250,8 +2250,8 @@ public class CameraDaemon {
         }
         
         try {
-            com.loabletech.bladewatch.recording.RecordingModeManager.Mode modeEnum =
-                com.loabletech.bladewatch.recording.RecordingModeManager.Mode.valueOf(mode.toUpperCase());
+            net.bladewatch.app.recording.RecordingModeManager.Mode modeEnum =
+                net.bladewatch.app.recording.RecordingModeManager.Mode.valueOf(mode.toUpperCase());
             recordingModeManager.setMode(modeEnum);
             log("Recording mode set to: " + mode);
         } catch (IllegalArgumentException e) {
@@ -2272,7 +2272,7 @@ public class CameraDaemon {
     /**
      * Get recording mode manager instance.
      */
-    public static com.loabletech.bladewatch.recording.RecordingModeManager getRecordingModeManager() {
+    public static net.bladewatch.app.recording.RecordingModeManager getRecordingModeManager() {
         return recordingModeManager;
     }
     
@@ -2322,8 +2322,8 @@ public class CameraDaemon {
         }
         
         // SOTA: Safe Location status
-        com.loabletech.bladewatch.surveillance.SafeLocationManager safeMgr =
-            com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance();
+        net.bladewatch.app.surveillance.SafeLocationManager safeMgr =
+            net.bladewatch.app.surveillance.SafeLocationManager.getInstance();
         status.put("safeZoneSuppressed", safeZoneSuppressed);
         status.put("inSafeZone", safeMgr.isInSafeZone());
         status.put("safeZoneName", safeMgr.getCurrentZoneName());
@@ -2334,7 +2334,7 @@ public class CameraDaemon {
             // nested cameraDiagnostics payload so field testers can export one
             // complete JSON object without reading logs.
             java.util.Map<String, Object> cameraDiagnostics = new java.util.HashMap<>();
-            com.loabletech.bladewatch.camera.BydCameraCoordinator coordinator = 
+            net.bladewatch.app.camera.BydCameraCoordinator coordinator = 
                 gpuPipeline.getCamera().getCameraCoordinator();
             if (coordinator != null) {
                 status.put("cameraServiceRegistered", coordinator.isRegistered());
@@ -2356,7 +2356,7 @@ public class CameraDaemon {
             }
             
             // SOTA: Camera probe status
-            com.loabletech.bladewatch.camera.PanoramicCameraGpu cam = gpuPipeline.getCamera();
+            net.bladewatch.app.camera.PanoramicCameraGpu cam = gpuPipeline.getCamera();
             status.put("cameraId", cam.getCameraId());
             status.put("surfaceMode", cam.getCameraSurfaceMode());
             status.put("probeComplete", cam.isProbeComplete());
@@ -2425,7 +2425,7 @@ public class CameraDaemon {
         }
 
         try {
-            org.json.JSONObject camCfg = com.loabletech.bladewatch.config.UnifiedConfigManager
+            org.json.JSONObject camCfg = net.bladewatch.app.config.UnifiedConfigManager
                 .loadConfig().optJSONObject("camera");
             if (camCfg != null) {
                 status.put("cameraReprobeOnNextRestart", camCfg.optBoolean("reprobeOnNextRestart", false));
@@ -2462,8 +2462,8 @@ public class CameraDaemon {
             String todayPrefix = "event_" + new java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(new java.util.Date()) + "_";
             
             // SOTA: Use StorageManager for surveillance directory
-            com.loabletech.bladewatch.storage.StorageManager storageManager =
-                com.loabletech.bladewatch.storage.StorageManager.getInstance();
+            net.bladewatch.app.storage.StorageManager storageManager =
+                net.bladewatch.app.storage.StorageManager.getInstance();
             java.io.File sentryDir = storageManager.getSurveillanceDir();
             java.io.File[] files = null;
             
@@ -2482,7 +2482,7 @@ public class CameraDaemon {
             }
             
             if (files == null || files.length == 0) {
-                sentryDir = new java.io.File("/storage/emulated/0/Android/data/com.loabletech.bladewatch/files/sentry_events");
+                sentryDir = new java.io.File("/storage/emulated/0/Android/data/net.bladewatch.app/files/sentry_events");
                 if (sentryDir.exists() && sentryDir.isDirectory()) {
                     files = sentryDir.listFiles((dir, name) -> 
                         name.startsWith(todayPrefix) && name.endsWith(".mp4"));
@@ -2747,10 +2747,10 @@ public class CameraDaemon {
         }
         
         // Load surveillance library - try default path first
-        if (!com.loabletech.bladewatch.surveillance.NativeMotion.isLibraryLoaded()) {
+        if (!net.bladewatch.app.surveillance.NativeMotion.isLibraryLoaded()) {
             // Try explicit path using nativeLibDir
             if (nativeLibDir != null) {
-                if (com.loabletech.bladewatch.surveillance.NativeMotion.tryLoadLibrary(nativeLibDir)) {
+                if (net.bladewatch.app.surveillance.NativeMotion.tryLoadLibrary(nativeLibDir)) {
                     log("Surveillance library loaded from: " + nativeLibDir);
                 } else {
                     // Try alternate paths
@@ -2759,11 +2759,11 @@ public class CameraDaemon {
             }
             
             // Final check
-            if (com.loabletech.bladewatch.surveillance.NativeMotion.isLibraryLoaded()) {
+            if (net.bladewatch.app.surveillance.NativeMotion.isLibraryLoaded()) {
                 log("Surveillance library loaded successfully");
             } else {
                 log("WARN: Surveillance library NOT available: " + 
-                    com.loabletech.bladewatch.surveillance.NativeMotion.getLoadError());
+                    net.bladewatch.app.surveillance.NativeMotion.getLoadError());
             }
         } else {
             log("Surveillance library already loaded");
@@ -2879,7 +2879,7 @@ public class CameraDaemon {
     public static synchronized void initNotifications() throws Exception {
         if (notificationsInitialized) return;
 
-        com.loabletech.bladewatch.notifications.CategoryRegistry registry = null;
+        net.bladewatch.app.notifications.CategoryRegistry registry = null;
 
         // The registry JSON ships in the APK assets. Use the cached
         // sharedAppContext if already populated; Do not create one
@@ -2887,7 +2887,7 @@ public class CameraDaemon {
         android.content.Context appContext = getAppContext();
         if (appContext != null) {
             try {
-                registry = com.loabletech.bladewatch.notifications.CategoryRegistry.loadFromAssets(appContext);
+                registry = net.bladewatch.app.notifications.CategoryRegistry.loadFromAssets(appContext);
             } catch (Exception e) {
                 log("Failed to load notifications-categories.json: " + e.getMessage());
             }
@@ -2900,27 +2900,27 @@ public class CameraDaemon {
         java.io.File pushDir = new java.io.File("/data/local/tmp/.push");
         if (!pushDir.exists()) pushDir.mkdirs();
 
-        com.loabletech.bladewatch.notifications.push.VapidKeyStore keyStore =
-                new com.loabletech.bladewatch.notifications.push.VapidKeyStore(
+        net.bladewatch.app.notifications.push.VapidKeyStore keyStore =
+                new net.bladewatch.app.notifications.push.VapidKeyStore(
                         new java.io.File(pushDir, "vapid.json"));
         // Touch the keystore so we generate / cache the keypair eagerly.
         keyStore.publicKeyB64Url();
 
-        com.loabletech.bladewatch.notifications.push.SubscriptionStore subStore =
-                new com.loabletech.bladewatch.notifications.push.SubscriptionStore(
+        net.bladewatch.app.notifications.push.SubscriptionStore subStore =
+                new net.bladewatch.app.notifications.push.SubscriptionStore(
                         new java.io.File(pushDir, "subscriptions.json"));
         subStore.load();
 
-        com.loabletech.bladewatch.notifications.push.VapidSigner signer =
-                new com.loabletech.bladewatch.notifications.push.VapidSigner(keyStore, "");
+        net.bladewatch.app.notifications.push.VapidSigner signer =
+                new net.bladewatch.app.notifications.push.VapidSigner(keyStore, "");
 
-        com.loabletech.bladewatch.notifications.NotificationBus.get()
-                .subscribe(new com.loabletech.bladewatch.notifications.sinks.LogSink());
-        com.loabletech.bladewatch.notifications.NotificationBus.get()
-                .subscribe(new com.loabletech.bladewatch.notifications.sinks.PushSink(
+        net.bladewatch.app.notifications.NotificationBus.get()
+                .subscribe(new net.bladewatch.app.notifications.sinks.LogSink());
+        net.bladewatch.app.notifications.NotificationBus.get()
+                .subscribe(new net.bladewatch.app.notifications.sinks.PushSink(
                         subStore, registry, keyStore, signer));
 
-        com.loabletech.bladewatch.server.NotificationApiHandler.init(registry, subStore, keyStore);
+        net.bladewatch.app.server.NotificationApiHandler.init(registry, subStore, keyStore);
 
         notificationsInitialized = true;
         log("Notifications initialized: " + registry.all().size() + " categories, "
@@ -2949,7 +2949,7 @@ public class CameraDaemon {
             
             if (sharedAppContext == null) {
                 log("WARNING: Could not create app context for GpsMonitor, falling back to daemon mode");
-                com.loabletech.bladewatch.monitor.GpsMonitor.getInstance().init(null);
+                net.bladewatch.app.monitor.GpsMonitor.getInstance().init(null);
                 return;
             }
             
@@ -2959,13 +2959,13 @@ public class CameraDaemon {
             Object locMgr = sharedAppContext.getSystemService(android.content.Context.LOCATION_SERVICE);
             if (locMgr == null) {
                 log("WARNING: LocationManager not available, falling back to daemon mode");
-                com.loabletech.bladewatch.monitor.GpsMonitor.getInstance().init(null);
+                net.bladewatch.app.monitor.GpsMonitor.getInstance().init(null);
                 return;
             }
             log("LocationManager available: " + locMgr.getClass().getName());
             
-            com.loabletech.bladewatch.monitor.GpsMonitor gpsMonitor =
-                com.loabletech.bladewatch.monitor.GpsMonitor.getInstance();
+            net.bladewatch.app.monitor.GpsMonitor gpsMonitor =
+                net.bladewatch.app.monitor.GpsMonitor.getInstance();
             
             gpsMonitor.init(sharedAppContext);
             gpsMonitor.start();  // Start GPS tracking immediately
@@ -2973,13 +2973,13 @@ public class CameraDaemon {
             log("GPS Monitor initialized with Context mode");
             
             // Initialize NetworkMonitor for WiFi/Mobile Data status in sidebar
-            com.loabletech.bladewatch.monitor.NetworkMonitor.init(sharedAppContext);
+            net.bladewatch.app.monitor.NetworkMonitor.init(sharedAppContext);
             log("Network Monitor initialized");
             
         } catch (Exception e) {
             log("Failed to initialize GPS Monitor with context: " + e.getMessage());
             log("Falling back to daemon mode (shell commands)");
-            com.loabletech.bladewatch.monitor.GpsMonitor.getInstance().init(null);
+            net.bladewatch.app.monitor.GpsMonitor.getInstance().init(null);
         }
     }
     
@@ -2999,7 +2999,7 @@ public class CameraDaemon {
         for (String perm : permissions) {
             try {
                 Process process = Runtime.getRuntime().exec(
-                    "pm grant com.loabletech.bladewatch " + perm);
+                    "pm grant net.bladewatch.app " + perm);
                 int exitCode = process.waitFor();
                 if (exitCode == 0) {
                     log("Granted: " + perm);
@@ -3032,8 +3032,8 @@ public class CameraDaemon {
                 return;
             }
             
-            com.loabletech.bladewatch.monitor.VehicleDataMonitor vehicleMonitor =
-                com.loabletech.bladewatch.monitor.VehicleDataMonitor.getInstance();
+            net.bladewatch.app.monitor.VehicleDataMonitor vehicleMonitor =
+                net.bladewatch.app.monitor.VehicleDataMonitor.getInstance();
             
             vehicleMonitor.init(sharedAppContext);
             vehicleMonitor.start();
@@ -3042,7 +3042,7 @@ public class CameraDaemon {
             
             // Initialize Universal BYD Data Collector (runs alongside existing monitors)
             try {
-                com.loabletech.bladewatch.byd.BydDataCollector collector = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
+                net.bladewatch.app.byd.BydDataCollector collector = net.bladewatch.app.byd.BydDataCollector.getInstance();
                 collector.init(sharedAppContext);
                 collector.logSummary();
                 log("BYD Data Collector initialized (" + collector.getData().availableDevices.length + " devices)");
@@ -3051,8 +3051,8 @@ public class CameraDaemon {
             }
             
             // Initialize Gear Monitor for PROXIMITY_GUARD mode
-            com.loabletech.bladewatch.monitor.GearMonitor gearMonitor =
-                com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
+            net.bladewatch.app.monitor.GearMonitor gearMonitor =
+                net.bladewatch.app.monitor.GearMonitor.getInstance();
             gearMonitor.init(sharedAppContext);
             // Wire GearMonitor to read gear from TelemetryDataCollector's cached snapshot
             // when the overlay poller is running, avoiding duplicate CAN bus reads
@@ -3068,16 +3068,16 @@ public class CameraDaemon {
             log("Gear Monitor initialized successfully");
             
             // Initialize Performance Monitor for system instrumentation
-            com.loabletech.bladewatch.monitor.PerformanceMonitor perfMonitor =
-                com.loabletech.bladewatch.monitor.PerformanceMonitor.getInstance();
+            net.bladewatch.app.monitor.PerformanceMonitor perfMonitor =
+                net.bladewatch.app.monitor.PerformanceMonitor.getInstance();
             perfMonitor.init(sharedAppContext);
             perfMonitor.start();
             
             log("Performance Monitor initialized successfully");
             
             // Initialize SOC History Database for persistent battery tracking
-            com.loabletech.bladewatch.monitor.SocHistoryDatabase socDb =
-                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance();
+            net.bladewatch.app.monitor.SocHistoryDatabase socDb =
+                net.bladewatch.app.monitor.SocHistoryDatabase.getInstance();
             socDb.init();
             socDb.start();
 

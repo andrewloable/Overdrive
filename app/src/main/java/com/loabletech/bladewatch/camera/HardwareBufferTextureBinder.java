@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.camera;
+package net.bladewatch.app.camera;
 
 import android.hardware.HardwareBuffer;
 

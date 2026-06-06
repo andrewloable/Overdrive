@@ -1,11 +1,11 @@
-package com.loabletech.bladewatch.surveillance;
+package net.bladewatch.app.surveillance;
 
-import com.loabletech.bladewatch.ai.Detection;
-import com.loabletech.bladewatch.logging.DaemonLogger;
-import com.loabletech.bladewatch.surveillance.Actor.ClassGroup;
-import com.loabletech.bladewatch.surveillance.Actor.Proximity;
-import com.loabletech.bladewatch.surveillance.Actor.Severity;
-import com.loabletech.bladewatch.surveillance.Actor.Trend;
+import net.bladewatch.app.ai.Detection;
+import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.surveillance.Actor.ClassGroup;
+import net.bladewatch.app.surveillance.Actor.Proximity;
+import net.bladewatch.app.surveillance.Actor.Severity;
+import net.bladewatch.app.surveillance.Actor.Trend;
 
 import java.util.ArrayList;
 import java.util.Iterator;

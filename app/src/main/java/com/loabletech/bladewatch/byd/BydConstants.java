@@ -1,4 +1,4 @@
-package com.loabletech.bladewatch.byd;
+package net.bladewatch.app.byd;
 
 /**
  * Common constants for BYD SDK integration
