@@ -31,40 +31,6 @@ public class SurveillanceIpcServer implements Runnable {
     // IPC server typically has fewer connections than HTTP, so 8 threads is sufficient
     private final ExecutorService threadPool = Executors.newFixedThreadPool(8);
 
-    // ABRP integration references (set by CameraDaemon)
-    private static volatile com.loabletech.bladewatch.abrp.AbrpConfig abrpConfig;
-    private static volatile com.loabletech.bladewatch.abrp.AbrpTelemetryService abrpService;
-
-    public static void setAbrpReferences(com.loabletech.bladewatch.abrp.AbrpConfig config, com.loabletech.bladewatch.abrp.AbrpTelemetryService service) {
-        abrpConfig = config;
-        abrpService = service;
-    }
-
-    /**
-     * Reset path used by the bulk Reset Data feature: deletes the ABRP token,
-     * persists the change, and stops the running telemetry service so cached
-     * RAM credentials don't keep uploading after the user wiped them.
-     * Mirrors the proven sequence in {@link #handleDeleteAbrpToken}.
-     *
-     * @return true if the reset ran (token cleared + persisted)
-     */
-    public static boolean resetAbrpForBulkWipe() {
-        if (abrpConfig == null) return false;
-        abrpConfig.deleteToken();
-        abrpConfig.save();
-        if (abrpService != null && abrpService.isRunning()) {
-            abrpService.stop();
-        }
-        return true;
-    }
-
-    // MQTT integration reference (set by CameraDaemon)
-    private static volatile com.loabletech.bladewatch.mqtt.MqttConnectionManager mqttManager;
-
-    public static void setMqttManager(com.loabletech.bladewatch.mqtt.MqttConnectionManager manager) {
-        mqttManager = manager;
-    }
-    
     public SurveillanceIpcServer(int port) {
         this.port = port;
     }
@@ -324,48 +290,6 @@ public class SurveillanceIpcServer implements Runnable {
                 case "UPDATE_GPS":
                     handleGpsUpdate(request);
                     response.put("success", true);
-                    break;
-
-                // ==================== ABRP COMMANDS ====================
-                case "SET_ABRP_CONFIG":
-                    handleSetAbrpConfig(request, response);
-                    break;
-
-                case "GET_ABRP_CONFIG":
-                    handleGetAbrpConfig(response);
-                    break;
-
-                case "GET_ABRP_STATUS":
-                    handleGetAbrpStatus(response);
-                    break;
-
-                case "DELETE_ABRP_TOKEN":
-                    handleDeleteAbrpToken(response);
-                    break;
-
-                // ==================== MQTT COMMANDS ====================
-                case "GET_MQTT_CONNECTIONS":
-                    handleGetMqttConnections(response);
-                    break;
-
-                case "ADD_MQTT_CONNECTION":
-                    handleAddMqttConnection(request, response);
-                    break;
-
-                case "UPDATE_MQTT_CONNECTION":
-                    handleUpdateMqttConnection(request, response);
-                    break;
-
-                case "DELETE_MQTT_CONNECTION":
-                    handleDeleteMqttConnection(request, response);
-                    break;
-
-                case "GET_MQTT_STATUS":
-                    handleGetMqttStatus(response);
-                    break;
-
-                case "GET_MQTT_TELEMETRY":
-                    handleGetMqttTelemetry(response);
                     break;
 
                 // ==================== TELEMETRY OVERLAY COMMANDS ====================
@@ -1261,193 +1185,6 @@ public class SurveillanceIpcServer implements Runnable {
         }
     }
 
-    // ==================== ABRP COMMAND HANDLERS ====================
-
-    private void handleSetAbrpConfig(JSONObject request, JSONObject response) throws Exception {
-        if (abrpConfig == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.abrp_not_initialized"));
-            return;
-        }
-
-        String token = request.optString("token", null);
-        if (token != null && !token.isEmpty()) {
-            abrpConfig.setUserToken(token);
-        }
-
-        if (request.has("car_model")) {
-            abrpConfig.setCarModel(request.optString("car_model", null));
-        }
-
-        boolean wasEnabled = abrpConfig.isEnabled();
-        if (request.has("enabled")) {
-            abrpConfig.setEnabled(request.optBoolean("enabled", false));
-        }
-
-        abrpConfig.save();
-
-        // Start or stop service if enabled state changed
-        boolean nowEnabled = abrpConfig.isEnabled();
-        if (abrpService != null && wasEnabled != nowEnabled) {
-            if (nowEnabled && abrpConfig.isConfigured()) {
-                abrpService.start();
-                logger.info("ABRP service started via IPC");
-            } else {
-                abrpService.stop();
-                logger.info("ABRP service stopped via IPC");
-            }
-        }
-
-        response.put("success", true);
-        response.put("message", "ABRP config updated");
-    }
-
-    private void handleGetAbrpConfig(JSONObject response) throws Exception {
-        if (abrpConfig == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.abrp_not_initialized"));
-            return;
-        }
-
-        response.put("success", true);
-        response.put("config", abrpConfig.toJson());
-    }
-
-    private void handleGetAbrpStatus(JSONObject response) throws Exception {
-        if (abrpService == null) {
-            // Return basic status when service is not initialized
-            JSONObject status = new JSONObject();
-            status.put("running", false);
-            status.put("totalUploads", 0);
-            status.put("failedUploads", 0);
-            status.put("lastUploadTime", 0);
-            status.put("consecutiveFailures", 0);
-            status.put("currentInterval", 0);
-            response.put("success", true);
-            response.put("status", status);
-            return;
-        }
-
-        response.put("success", true);
-        response.put("status", abrpService.getStatus());
-    }
-
-    private void handleDeleteAbrpToken(JSONObject response) throws Exception {
-        if (abrpConfig == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.abrp_not_initialized"));
-            return;
-        }
-
-        abrpConfig.deleteToken();
-        abrpConfig.save();
-
-        if (abrpService != null && abrpService.isRunning()) {
-            abrpService.stop();
-            logger.info("ABRP service stopped after token deletion");
-        }
-
-        response.put("success", true);
-        response.put("message", "ABRP token deleted");
-    }
-
-    // ==================== MQTT HANDLER METHODS ====================
-
-    private void handleGetMqttConnections(JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-        response.put("success", true);
-        response.put("connections", mqttManager.getAllStatus());
-        response.put("maxConnections", com.loabletech.bladewatch.mqtt.MqttConnectionStore.MAX_CONNECTIONS);
-    }
-
-    private void handleAddMqttConnection(JSONObject request, JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-
-        com.loabletech.bladewatch.mqtt.MqttConnectionConfig added = mqttManager.addConnection(request);
-        if (added != null) {
-            response.put("success", true);
-            response.put("connection", added.toSafeJson());
-            response.put("message", "MQTT connection added");
-        } else {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.max_connections_reached", com.loabletech.bladewatch.mqtt.MqttConnectionStore.MAX_CONNECTIONS));
-        }
-    }
-
-    private void handleUpdateMqttConnection(JSONObject request, JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-
-        String id = request.optString("id", null);
-        if (id == null || id.isEmpty()) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.missing_connection_id"));
-            return;
-        }
-
-        boolean updated = mqttManager.updateConnection(id, request);
-        response.put("success", updated);
-        if (updated) {
-            response.put("message", "MQTT connection updated");
-        } else {
-            response.put("error", Messages.get("errors.connection_not_found", id));
-        }
-    }
-
-    private void handleDeleteMqttConnection(JSONObject request, JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-
-        String id = request.optString("id", null);
-        if (id == null || id.isEmpty()) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.missing_connection_id"));
-            return;
-        }
-
-        boolean deleted = mqttManager.deleteConnection(id);
-        response.put("success", deleted);
-        if (deleted) {
-            response.put("message", "MQTT connection deleted");
-        } else {
-            response.put("error", Messages.get("errors.connection_not_found", id));
-        }
-    }
-
-    private void handleGetMqttStatus(JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-        response.put("success", true);
-        response.put("connections", mqttManager.getAllStatus());
-    }
-
-    private void handleGetMqttTelemetry(JSONObject response) throws Exception {
-        if (mqttManager == null) {
-            response.put("success", false);
-            response.put("error", Messages.get("errors.mqtt_not_initialized"));
-            return;
-        }
-        response.put("success", true);
-        response.put("telemetry", mqttManager.getLatestTelemetry());
-    }
-
     // ==================== UPDATE HANDLERS ====================
     // Mirror UpdateApiHandler.handleCheck/handleInstall but invoked over IPC
     // (port 19877) so other-process daemons can drive an update without going
@@ -1594,27 +1331,10 @@ public class SurveillanceIpcServer implements Runnable {
             return;
         }
 
-        // Plant the Telegram post-update hint so the new process's first
-        // notifyTunnel handler frames the message as "BladeWatch updated to X".
-        // Best-effort: failure here just falls back to the generic "URL
-        // changed" copy. We're already in the daemon process (UID 2000), and
-        // /data/local/tmp/ is world-writable for shell, so a direct
-        // FileWriter is both simpler and avoids the AdbDaemonLauncher path
-        // (which would EACCES on the app's adbkey when called from here).
-        try {
-            String hintVersion = versionRef[0] != null ? versionRef[0] : "unknown";
-            try (java.io.FileWriter fw = new java.io.FileWriter(
-                    com.loabletech.bladewatch.updater.UpdateLifecycle.TELEGRAM_POST_UPDATE_HINT_FILE)) {
-                fw.write(hintVersion);
-                fw.write('\n');
-            }
-        } catch (Exception ignored) {}
-
         // Start install on a background thread. The IPC reply returns now
-        // because the daemon dies mid-install; Telegram polls progress via a
-        // separate IPC request (CHECK_UPDATE-style polling isn't needed —
-        // /data/local/tmp/bladewatch_update_progress.json is already tailed by
-        // the webapp; the Telegram bot reads it on demand instead).
+        // because the daemon dies mid-install; progress is reported via
+        // /data/local/tmp/bladewatch_update_progress.json, which the webapp
+        // tails.
         new Thread(() -> {
             try {
                 writeInstallProgress("queued", 0, "Update queued", null);

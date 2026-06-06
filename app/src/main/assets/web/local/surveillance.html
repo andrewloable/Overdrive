@@ -14,13 +14,11 @@
     <script src="../shared/app-shell.js"></script>
     <!--
       Per-page bottom-tab manifest. Five tabs grouped by user task:
-        General   — mode toggle + schedule + deterrent (when/how surveillance runs)
+        General   — mode toggle + schedule (when/how surveillance runs)
         Detection — detection settings, ROI zones, safe locations (what + where)
         Recording — pre/post buffer, codec, fps (how events are captured)
         Storage   — limit, location, BYD dashcam cleanup (where files live)
         Advanced  — developer / debug switches
-      BYD Cloud account is its own page (byd-cloud.html) — accessed from the
-      sidebar Integrations group, since it belongs with ABRP and MQTT.
       Cards are tagged via `data-tab` attributes on each <div class="card">.
     -->
     <script>
@@ -380,11 +378,6 @@
                             <label class="checkbox-item"><input type="checkbox" id="detectBike" onchange="SurvSettings.updateDetection()"><span data-i18n="surveillance.detect_bike">Bike</span></label>
                         </div>
                         <div class="setting-hint" data-i18n="surveillance.detect_objects_hint">Select which objects YOLO AI should identify. Motion detection triggers regardless — AI classifies what was detected.</div>
-
-                        <!-- Telegram delivery moved to notifications.html (Telegram tab).
-                             Same input IDs (v2TelegramSendStartPing, v2TelegramTierGroup,
-                             v2TelegramNotices/Alerts/Critical) are preserved over there
-                             so SurvSettings bindings keep firing without any glue. -->
                     </div>
                 </div>
 
@@ -517,39 +510,6 @@
                             </div>
                             
                             <div style="margin-top:8px; font-size:12px; color:var(--text-muted);" id="scheduleSummary"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Deterrent Action -->
-                <div class="card" data-tab="general">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            <span data-i18n="surveillance.deterrent_title">Deterrent Action</span>
-                        </div>
-                        <span class="status-badge inactive" id="deterrentBadge" data-i18n="surveillance.deterrent_silent_badge">SILENT</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <div class="setting-name" data-i18n="surveillance.deterrent_on_motion">On Motion Detected</div>
-                                <div class="setting-desc" data-i18n="surveillance.deterrent_on_motion_desc">What should BladeWatch do when a threat is confirmed</div>
-                            </div>
-                            <div class="setting-control">
-                                <select class="select-control" id="deterrentAction" onchange="SurvSettings.updateDeterrent(this.value)">
-                                    <option value="silent" data-i18n="surveillance.deterrent_silent_option">Silent (record only)</option>
-                                    <option value="flash_lights" data-i18n="surveillance.deterrent_flash_option">Flash lights</option>
-                                    <option value="find_car" data-i18n="surveillance.deterrent_horn_option">Horn + lights</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="setting-hint" data-i18n="surveillance.deterrent_hint_v2">Flash Lights and Horn + Lights use BYD's cloud API. Set up your BYD Cloud account on the BYD Cloud page (sidebar → Integrations → BYD Cloud) to enable these.</div>
-                        <div id="deterrentWarning" class="info-box" style="display:none; border-color:var(--warning); background:rgba(245,158,11,0.08); margin-top:8px;">
-                            <div style="display:flex; align-items:center; gap:8px; color:var(--warning);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span style="font-size:13px;"><span data-i18n="surveillance.deterrent_warning_v2">BYD Cloud account not configured.</span> <a href="byd-cloud.html" style="color:var(--warning); text-decoration:underline;" data-i18n="surveillance.deterrent_warning_link">Open BYD Cloud →</a></span>
-                            </div>
                         </div>
                     </div>
                 </div>

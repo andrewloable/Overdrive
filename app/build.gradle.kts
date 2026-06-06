@@ -387,12 +387,6 @@ android {
                 "META-INF/INDEX.LIST",
                 "META-INF/*.kotlin_module"
             )
-            // Both paho.mqttv3 and paho.mqttv5 jars ship the same i18n
-            // bundle.properties — pick first to silence the merge conflict.
-            // The file is OSGi metadata, never read at runtime in our setup.
-            pickFirsts += listOf(
-                "bundle.properties"
-            )
         }
         // Exclude unnecessary native libs from dependencies
         jniLibs {
@@ -462,7 +456,7 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-gpu-api:2.14.0")  // GPU API interfaces
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     
-    // OkHttp for Telegram HTTP client with proxy support
+    // OkHttp for the OTA updater HTTP client
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
     // Encrypted SharedPreferences for secure token/owner storage
@@ -471,15 +465,6 @@ dependencies {
     // H2 Database - Pure Java embedded SQL (no native dependencies, no .so files)
     // Works for UID 2000 because it's 100% Java bytecode - no Android framework needed
     implementation("com.h2database:h2:2.2.224")
-
-    // Eclipse Paho MQTT - Pure Java MQTT client (no native dependencies)
-    // mqttv3 used by HA/Mosquitto publish path (MqttPublisherService).
-    // mqttv5 used by BydCloudMqttSubscriber — BYD's EMQ broker only pushes
-    // vehicleInfo events to MQTT v5 subscribers; v3.1.1 connects fine but
-    // gets zero messages.  The two lib jars use different packages so they
-    // coexist cleanly.
-    implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
-    implementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

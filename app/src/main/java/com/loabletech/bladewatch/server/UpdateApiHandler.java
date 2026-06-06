@@ -74,7 +74,7 @@ public class UpdateApiHandler {
 
     private static void handleCheck(OutputStream out) throws Exception {
         // Outer try wraps the entire handler so a caller waiting on a tunnel
-        // (Cloudflared/zrok) ALWAYS gets a JSON body back — even on
+        // (zrok) ALWAYS gets a JSON body back — even on
         // unexpected exceptions. Without this, an exception inside the
         // AppUpdater chain bubbles up to HttpServer.handleClient's catch
         // which only logs and closes the socket, leaving the client to
@@ -89,11 +89,11 @@ public class UpdateApiHandler {
         // Run synchronously by blocking on a callback latch. AppUpdater.checkForUpdate
         // dispatches to its own executor + posts to mainHandler, so we wait here.
         // Cap wait at 12s so the tunnel timeout (typically 30s) has plenty
-        // of headroom to deliver the response. Public tunnels (zrok, free
-        // Cloudflared) sometimes terminate idle connections aggressively
-        // around the 20-30s mark, leaving the user with the dreaded empty
-        // body. 12s + a couple seconds for the server to format and send
-        // is well inside that window.
+        // of headroom to deliver the response. Public tunnels (zrok)
+        // sometimes terminate idle connections aggressively around the
+        // 20-30s mark, leaving the user with the dreaded empty body. 12s +
+        // a couple seconds for the server to format and send is well inside
+        // that window.
         final Object lock = new Object();
         final boolean[] done = {false};
         final JSONObject[] resultRef = {null};
@@ -172,47 +172,25 @@ public class UpdateApiHandler {
         JSONObject r = new JSONObject();
 
         // Detect active tunnel. Two signals:
-        //   1. /data/local/tmp/tunnel_url.txt — written by TelegramBotDaemon's
-        //      saveTunnelUrl helper, but only if the user has Telegram set up.
-        //   2. Live process probe via `pgrep` — works regardless of Telegram.
-        // We prefer the URL-based signal (more specific — distinguishes free vs.
-        // named cloudflared tunnels) and fall back to process probe.
-        // AdbDaemonLauncher.tunnelType is intentionally NOT used; it's a default
-        // value that's never reassigned at runtime.
+        //   1. /data/local/tmp/tunnel_url.txt — written when a tunnel is up.
+        //   2. Live process probe via `pgrep`.
+        // We prefer the URL-based signal and fall back to process probe.
         String lastUrl = readTextFile("/data/local/tmp/tunnel_url.txt");
         String tunnelType = "none";
         boolean tunnelUrlMayChange = false;
         if (lastUrl != null && !lastUrl.isEmpty()) {
-            if (lastUrl.contains(".trycloudflare.com")) {
-                tunnelType = "cloudflared";
-                tunnelUrlMayChange = true;          // free quick-tunnel rotates
-            } else if (lastUrl.contains("cfargotunnel.com")) {
-                tunnelType = "cloudflared";
-                tunnelUrlMayChange = false;          // named tunnel = stable
-            } else if (lastUrl.contains(".share.zrok.io")) {
+            if (lastUrl.contains(".share.zrok.io")) {
                 tunnelType = "zrok";                 // reserved-token URL is stable
-                tunnelUrlMayChange = false;
-            } else if (lastUrl.contains(".ts.net") || lastUrl.matches(".*100\\.[0-9.]+.*")) {
-                tunnelType = "tailscale";
                 tunnelUrlMayChange = false;
             } else {
                 tunnelType = "unknown";
             }
         }
 
-        // Process-probe fallback for users without Telegram (so tunnel_url.txt
-        // doesn't exist). The URL pattern path is preferred because it can
-        // distinguish free-quick from named cloudflared tunnels; this fallback
-        // assumes free-quick (worst case) when only cloudflared is detected.
+        // Process-probe fallback when tunnel_url.txt doesn't exist.
         if ("none".equals(tunnelType)) {
-            if (isProcessRunning("cloudflared")) {
-                tunnelType = "cloudflared";
-                tunnelUrlMayChange = true;  // assume free quick-tunnel without URL evidence
-            } else if (isProcessRunning("zrok")) {
+            if (isProcessRunning("zrok")) {
                 tunnelType = "zrok";
-                tunnelUrlMayChange = false;
-            } else if (isProcessRunning("tailscaled")) {
-                tunnelType = "tailscale";
                 tunnelUrlMayChange = false;
             }
         }

@@ -3,22 +3,18 @@ package com.loabletech.bladewatch.proximity;
 import com.loabletech.bladewatch.logging.DaemonLogger;
 import com.loabletech.bladewatch.storage.StorageManager;
 import com.loabletech.bladewatch.surveillance.GpuSurveillancePipeline;
-import com.loabletech.bladewatch.telegram.TelegramNotifier;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 /**
  * Proximity Recording Handler
- * 
+ *
  * Manages the recording lifecycle for Proximity Guard events:
  * - Pre-buffer capture
  * - Recording start/stop
  * - File naming with proximity_ prefix
  * - Storage management
- * - Telegram notifications
+ * - Push notifications
  */
 public class ProximityRecordingHandler {
     private static final DaemonLogger logger = DaemonLogger.getInstance("ProximityRecordingHandler");
@@ -70,9 +66,6 @@ public class ProximityRecordingHandler {
             isRecording = true;
             
             logger.info("Proximity recording started: trigger=" + triggerLevel + " dir=" + outputDir.getAbsolutePath());
-            
-            // Send Telegram notification
-            sendTelegramNotification(triggerLevel);
 
             // Publish to NotificationBus → push notifications
             publishProximityNotification(triggerLevel);
@@ -268,29 +261,4 @@ public class ProximityRecordingHandler {
         return currentTriggerLevel;
     }
     
-    // ==================== PRIVATE METHODS ====================
-    
-    /**
-     * Send Telegram notification for proximity alert.
-     */
-    private void sendTelegramNotification(String triggerLevel) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-            String timestamp = sdf.format(new Date());
-            
-            String emoji = "🚨";
-            String distance = triggerLevel.equals("RED") ? "0-0.5m" : "0-0.8m";
-            
-            String message = emoji + " Proximity Alert\n" +
-                           "Time: " + timestamp + "\n" +
-                           "Trigger: " + triggerLevel + " (" + distance + ")\n" +
-                           "Recording started...";
-            
-            TelegramNotifier.sendMessage(message);
-            logger.info("Telegram notification sent: " + triggerLevel);
-            
-        } catch (Exception e) {
-            logger.error("Failed to send Telegram notification: " + e.getMessage());
-        }
-    }
 }

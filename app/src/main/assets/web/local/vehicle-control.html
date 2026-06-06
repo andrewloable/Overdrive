@@ -54,9 +54,6 @@
                         <select class="vc-model-select" id="modelPicker" title="Vehicle model">
                             <option value="seal">BYD Seal</option>
                         </select>
-                        <div class="vc-pill" id="cloudStatus">
-                            <span class="dot amber"></span><span id="cloudStatusText" data-i18n="vehicle.checking">Checking...</span>
-                        </div>
                     </div>
 
                     <div class="vc-tyre-overlay" id="vcTyreOverlay">
@@ -87,24 +84,6 @@
                     </div>
 
                     <div class="vc-toast" id="vcToast"></div>
-
-                    <!-- Cloud Required Modal -->
-                    <div class="vc-modal-overlay" id="cloudModal">
-                        <div class="vc-modal">
-                            <div class="vc-modal-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-                                    <line x1="12" y1="8" x2="12" y2="12"/>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                </svg>
-                            </div>
-                            <div class="vc-modal-title" data-i18n="vehicle.cloud_required">Cloud Account Required</div>
-                            <div class="vc-modal-text" data-i18n="vehicle.cloud_required_text">
-                                This action requires a connected BYD Cloud account. Go to Surveillance Settings to link your credentials.
-                            </div>
-                            <button class="vc-modal-btn" id="cloudModalDismiss" data-i18n="vehicle.got_it">Got it</button>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Bottom Control Bar — Tabbed Expandable -->
@@ -250,8 +229,7 @@
                             </button>
                         </div>
                         <!-- Windows controls — per-window presets; the "All Windows → 0"
-                             row at the bottom routes through CLOUD_FIRST CLOSEWINDOW so it
-                             works even when the car is asleep, with SDK fallback. -->
+                             row at the bottom routes through the SDK CLOSEWINDOW command. -->
                         <div class="vc-panel-row vc-window-grid" id="panelWindows" style="display:none;">
                             <div class="vc-window-row" data-area="lf" data-area-num="1">
                                 <div class="vc-window-label"><span class="label-area">LF</span><span class="label-pct" id="winLabel_lf">--%</span></div>
@@ -337,7 +315,7 @@
                             </button>
                         </div>
                         <!-- Charging panel — two stacked sub-sections:
-                             1. Smart-charge schedule (BYD cloud /control/smartCharge)
+                             1. Smart-charge schedule (/api/vehicle/charging-schedule)
                              2. Charge limit (BYDAutoChargingDevice.setChargeStop*,
                                 hidden if write/read-back probe says no-op) -->
                         <div class="vc-panel-row vc-schedule" id="panelCharging" style="display:none;">

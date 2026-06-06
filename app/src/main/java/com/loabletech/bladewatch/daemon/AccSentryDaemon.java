@@ -55,8 +55,6 @@ public class AccSentryDaemon {
     private static String CMD_WIFI_ENABLE() { return Safe.s("GzzLDvODRsKARkPOXEZeIA=="); }
     /** /data/local/tmp */
     private static String PATH_DATA_LOCAL_TMP() { return Safe.s("vuaMjrmBGBFh07qqnUuL8w=="); }
-    /** /data/local/tmp/telegram_config.properties */
-    private static String PATH_TELEGRAM_CONFIG() { return Safe.s("ZHx6IP38aGV/Q7iMCCcxzwQSn0P1N0jxHygc8N+4Ft+9mlR8XQ+WvEw0ktanrtNx"); }
 
     // Power levels from BYDAutoBodyworkDevice
     private static final int POWER_LEVEL_OFF = 0;
@@ -929,14 +927,7 @@ public class AccSentryDaemon {
                 // subscriber running in-process). CameraDaemon arms/disarms surveillance
                 // based on lock/unlock events after receiving the ACC OFF notification above.
                 // AccSentryDaemon no longer needs to manage lock detection or surveillance IPC.
-                log("Door lock gate delegated to CameraDaemon (cloud MQTT in-process)");
-                
-                // 8. Optional: Telegram daemon (in separate try-catch so surveillance failure doesn't block it)
-                try {
-                    startTelegramDaemonIfEnabled();
-                } catch (Throwable t) {
-                    log("Telegram daemon start failed: " + t.getMessage());
-                }
+                log("Door lock gate delegated to CameraDaemon");
                 
                 log("Sentry mode setup complete");
                 
@@ -981,10 +972,7 @@ public class AccSentryDaemon {
         
         // Restore stock peripheral power behavior (allow MCU to cut power)
         configurePeripheralPower(false);
-        
-        // Stop Telegram daemon if it was auto-started
-        stopTelegramDaemonIfAutoStarted();
-        
+
         // Stop active charging maintenance if running
         stopChargingMaintenance();
         
@@ -2093,155 +2081,6 @@ public class AccSentryDaemon {
                 try { socket.close(); } catch (Exception ignored) {}
             }
         }
-    }
-
-    // ==================== TELEGRAM DAEMON AUTO-START ====================
-    
-    private static final String TELEGRAM_CONFIG_FILE = null; // Lazy init
-    private static String getTelegramConfigFile() { return PATH_TELEGRAM_CONFIG(); }
-    private static final String TELEGRAM_DAEMON_PROCESS = "telegram_bot_daemon";
-    
-    /**
-     * Check if Telegram daemon auto-start on ACC off is enabled.
-     */
-    private static boolean isTelegramAutoStartEnabled() {
-        try {
-            // Force-reload so a toggle the user just flipped from the app UI
-            // (different UID, different mtime tick) is visible immediately
-            // rather than after the cache expires.
-            com.loabletech.bladewatch.config.UnifiedConfigManager.forceReload();
-            boolean enabled = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.isAutoStartAccOff();
-            log("Telegram autoStartAccOff = " + enabled);
-            return enabled;
-        } catch (Exception e) {
-            log("Error reading telegram config: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Check if Telegram daemon is running.
-     */
-    private static boolean isTelegramDaemonRunning() {
-        String output = execShell("ps -A | grep " + TELEGRAM_DAEMON_PROCESS + " | grep -v grep");
-        return output != null && !output.trim().isEmpty();
-    }
-    
-    /**
-     * Start Telegram daemon if auto-start is enabled.
-     * Retries once if first attempt fails (APK path detection can be flaky when ACC is off).
-     */
-    private static void startTelegramDaemonIfEnabled() {
-        log("Checking if Telegram daemon should auto-start...");
-        
-        if (!isTelegramAutoStartEnabled()) {
-            log("Telegram auto-start not enabled, skipping");
-            return;
-        }
-        
-        // Check if user explicitly stopped it via Telegram command
-        try {
-            if (com.loabletech.bladewatch.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram("telegram")) {
-                log("Telegram daemon was stopped via Telegram command, not auto-starting");
-                return;
-            }
-        } catch (Exception e) {
-            // State file not available, proceed with auto-start
-        }
-        
-        if (isTelegramDaemonRunning()) {
-            log("Telegram daemon already running");
-            return;
-        }
-        
-        // Try up to 2 times (APK path detection can fail when system is still waking up)
-        for (int attempt = 1; attempt <= 2; attempt++) {
-            log("Starting Telegram daemon (attempt " + attempt + "/2)...");
-            
-            if (attempt > 1) {
-                try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-            }
-            
-            try {
-                launchTelegramDaemon();
-                
-                // Verify it started
-                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-                
-                if (isTelegramDaemonRunning()) {
-                    log("Telegram daemon started successfully (attempt " + attempt + ")");
-                    return;
-                } else {
-                    log("Telegram daemon not running after attempt " + attempt);
-                    String logContent = execShell("tail -20 /data/local/tmp/telegrambotdaemon.log 2>/dev/null");
-                    if (logContent != null && !logContent.isEmpty()) {
-                        log("Telegram daemon log: " + logContent);
-                    }
-                }
-            } catch (Exception e) {
-                log("Telegram daemon launch error (attempt " + attempt + "): " + e.getMessage());
-            }
-        }
-        
-        log("WARN: Telegram daemon failed to start after 2 attempts");
-    }
-    
-    /**
-     * Launch the Telegram daemon process.
-     */
-    private static void launchTelegramDaemon() {
-        
-        // SOTA: Use pm path to get current APK path (most reliable method)
-        // This ensures we always use the correct path even after app updates
-        String apkPath = execShell("pm path com.loabletech.bladewatch 2>/dev/null | head -1 | cut -d: -f2");
-        
-        // Fallback to ls if pm path fails
-        if (apkPath == null || apkPath.trim().isEmpty()) {
-            log("pm path failed, using ls fallback");
-            apkPath = execShell("ls /data/app/*/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
-            if (apkPath == null || apkPath.trim().isEmpty()) {
-                apkPath = execShell("ls /data/app/com.loabletech.bladewatch*/base.apk 2>/dev/null | head -1");
-            }
-        }
-        
-        if (apkPath == null || apkPath.trim().isEmpty()) {
-            log("ERROR: Could not find APK path for com.loabletech.bladewatch");
-            return;
-        }
-        
-        apkPath = apkPath.trim();
-        log("Using APK path: " + apkPath);
-        
-        // Launch via app_process with nice-name (matching DaemonLauncher.kt format)
-        String innerCmd = "CLASSPATH=" + apkPath + " " +
-                         "app_process /system/bin " +
-                         "--nice-name=" + TELEGRAM_DAEMON_PROCESS + " " +
-                         "com.loabletech.bladewatch.daemon.TelegramBotDaemon";
-        
-        String cmd = "nohup sh -c '" + innerCmd + "' > /data/local/tmp/telegrambotdaemon.log 2>&1 &";
-        
-        log("Telegram launch command: " + cmd);
-        execShell(cmd);
-    }
-    
-    /**
-     * Stop Telegram daemon if it was auto-started.
-     */
-    private static void stopTelegramDaemonIfAutoStarted() {
-        if (!isTelegramAutoStartEnabled()) {
-            log("Telegram auto-start not enabled, not stopping");
-            return;
-        }
-        
-        if (!isTelegramDaemonRunning()) {
-            log("Telegram daemon not running");
-            return;
-        }
-        
-        log("Stopping Telegram daemon (vehicle on)...");
-        execShell("pkill -9 -f " + TELEGRAM_DAEMON_PROCESS + " 2>/dev/null");
-        execShell("rm -f /data/local/tmp/telegram_bot_daemon.lock 2>/dev/null");
-        log("Telegram daemon stopped");
     }
 
     // ==================== CONTEXT HELPERS ====================

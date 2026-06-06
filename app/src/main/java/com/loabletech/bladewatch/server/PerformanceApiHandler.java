@@ -538,19 +538,11 @@ public class PerformanceApiHandler {
      */
     private static boolean handleSohStatus(OutputStream out) throws Exception {
         try {
-            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
-
-            if (sohEst != null) {
-                JSONObject status = sohEst.getStatus();
-                status.put("success", true);
-                HttpResponse.sendJson(out, status.toString());
-            } else {
-                JSONObject response = new JSONObject();
-                response.put("success", false);
-                response.put("error", Messages.get("errors.soh_not_initialized"));
-                HttpResponse.sendJson(out, response.toString());
-            }
+            // Battery State-of-Health estimation has been removed.
+            JSONObject response = new JSONObject();
+            response.put("success", false);
+            response.put("error", Messages.get("errors.soh_not_initialized"));
+            HttpResponse.sendJson(out, response.toString());
             return true;
         } catch (Exception e) {
             logger.error("Failed to get SOH status", e);
@@ -567,35 +559,11 @@ public class PerformanceApiHandler {
      */
     private static boolean handleSohReset(OutputStream out) throws Exception {
         try {
-            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
-
-            if (sohEst != null) {
-                sohEst.reset();
-
-                // Re-run capacity detection and seed immediately from live data.
-                // Passing null context disables every HAL probe — getEnergyMode,
-                // getFuelPercentageValue, getBatteryCapacity all need it — which
-                // means dumpPhevDiagnostics can't infer drivetrain and the
-                // exact-Ah path can't fire. Use the daemon's app context.
-                android.content.Context appCtx = com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
-                sohEst.autoDetectCarModel(appCtx);
-                sohEst.seedInitialEstimate();
-
-                JSONObject response = new JSONObject();
-                response.put("success", true);
-                response.put("message", Messages.get("messages.soh_reset_complete"));
-                if (sohEst.hasEstimate()) {
-                    response.put("newSoh", sohEst.getCurrentSoh());
-                    response.put("nominalCapacityKwh", sohEst.getNominalCapacityKwh());
-                }
-                HttpResponse.sendJson(out, response.toString());
-            } else {
-                JSONObject response = new JSONObject();
-                response.put("success", false);
-                response.put("error", Messages.get("errors.soh_not_initialized"));
-                HttpResponse.sendJson(out, response.toString());
-            }
+            // Battery State-of-Health estimation has been removed.
+            JSONObject response = new JSONObject();
+            response.put("success", false);
+            response.put("error", Messages.get("errors.soh_not_initialized"));
+            HttpResponse.sendJson(out, response.toString());
             return true;
         } catch (Exception e) {
             logger.error("Failed to reset SOH", e);
@@ -607,8 +575,8 @@ public class PerformanceApiHandler {
     /**
      * POST /api/performance/reset — bulk reset of user-selected data categories.
      *
-     * Body: {"categories": ["trips","socHistory","soh","abrpToken",
-     *                       "bydCloud","mediaRecordings","mediaSurveillance",
+     * Body: {"categories": ["trips","socHistory","soh",
+     *                       "mediaRecordings","mediaSurveillance",
      *                       "mediaProximity","mediaTrips"]}
      *
      * Each requested category runs independently — a partial failure on one
@@ -662,36 +630,7 @@ public class PerformanceApiHandler {
                             break;
                         }
                         case "soh": {
-                            com.loabletech.bladewatch.abrp.SohEstimator sohEst =
-                                SocHistoryDatabase.getInstance().getSohEstimator();
-                            if (sohEst != null) {
-                                sohEst.reset();
-                                // Pass app context — null disables HAL probes
-                                // and forces SOC-heuristic-only re-detection.
-                                android.content.Context appCtx =
-                                    com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
-                                sohEst.autoDetectCarModel(appCtx);
-                                sohEst.seedInitialEstimate();
-                                r.put("success", true);
-                            } else {
-                                r.put("success", false);
-                                r.put("error", Messages.get("errors.soh_not_initialized"));
-                            }
-                            break;
-                        }
-                        case "abrpToken": {
-                            // Use the shared singleton + service references held by
-                            // SurveillanceIpcServer. Constructing a fresh AbrpConfig
-                            // here would only modify a throwaway in-memory copy and
-                            // leave the running service still using its cached
-                            // token until the daemon restarted.
-                            boolean ok = SurveillanceIpcServer.resetAbrpForBulkWipe();
-                            r.put("success", ok);
-                            if (!ok) r.put("error", Messages.get("errors.reset_abrp_not_initialized"));
-                            break;
-                        }
-                        case "bydCloud": {
-                            com.loabletech.bladewatch.byd.cloud.BydCloudConfig.clearCredentials();
+                            // Battery State-of-Health estimation has been removed; nothing to reset.
                             r.put("success", true);
                             break;
                         }
@@ -767,18 +706,9 @@ public class PerformanceApiHandler {
      */
     private static boolean handleSohGetNominal(OutputStream out) throws Exception {
         try {
-            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
-
             JSONObject response = new JSONObject();
-            if (sohEst != null) {
-                double kwh = sohEst.getNominalCapacityKwh();
-                response.put("nominalKwh", kwh > 0 ? kwh : JSONObject.NULL);
-                response.put("nominalSource", sohEst.getNominalSource());
-            } else {
-                response.put("nominalKwh", JSONObject.NULL);
-                response.put("nominalSource", "unset");
-            }
+            response.put("nominalKwh", JSONObject.NULL);
+            response.put("nominalSource", "unset");
             HttpResponse.sendJson(out, response.toString());
             return true;
         } catch (Exception e) {
@@ -796,56 +726,11 @@ public class PerformanceApiHandler {
      */
     private static boolean handleSohSetNominal(String body, OutputStream out) throws Exception {
         try {
-            SocHistoryDatabase socDb = SocHistoryDatabase.getInstance();
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
-
-            if (sohEst == null) {
-                JSONObject err = new JSONObject();
-                err.put("success", false);
-                err.put("error", Messages.get("errors.soh_not_initialized"));
-                HttpResponse.sendJson(out, err.toString());
-                return true;
-            }
-
-            JSONObject req = (body == null || body.isEmpty())
-                ? new JSONObject() : new JSONObject(body);
-
-            // null clears the override; otherwise validate & set.
-            boolean changed;
-            if (req.isNull("nominalKwh") || !req.has("nominalKwh")) {
-                changed = true;
-                sohEst.clearUserNominal();
-            } else {
-                double kwh = req.getDouble("nominalKwh");
-                if (kwh < 8.0 || kwh > 120.0) {
-                    JSONObject err = new JSONObject();
-                    err.put("success", false);
-                    err.put("error", "nominalKwh must be between 8 and 120");
-                    HttpResponse.sendJson(out, err.toString());
-                    return true;
-                }
-                changed = true;
-                sohEst.setNominalCapacityKwhFromUser(kwh);
-            }
-
-            // Whenever the capacity baseline changes, the previously
-            // recorded SOH/calibration are no longer meaningful (they were
-            // computed against the old nominal). Reset live data and
-            // re-seed against the new baseline so the user immediately
-            // sees an SOH that reflects their current pack assumption.
-            // setNominalCapacityKwhFromUser() inside reset() will be
-            // re-applied automatically because it persists to UnifiedConfig.
-            if (changed) {
-                sohEst.reset();
-                android.content.Context appCtx =
-                    com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
-                sohEst.autoDetectCarModel(appCtx);
-                sohEst.seedInitialEstimate();
-            }
-
-            JSONObject response = sohEst.getStatus();
-            response.put("success", true);
-            HttpResponse.sendJson(out, response.toString());
+            // Battery State-of-Health estimation has been removed.
+            JSONObject err = new JSONObject();
+            err.put("success", false);
+            err.put("error", Messages.get("errors.soh_not_initialized"));
+            HttpResponse.sendJson(out, err.toString());
             return true;
         } catch (Exception e) {
             logger.error("Failed to set SOH nominal", e);

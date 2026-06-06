@@ -144,9 +144,7 @@ class DiagnosticsFragment : Fragment() {
 
         // Tunnel-state-driven refresh (changes immediately when daemons toggle).
         val tunnelObserver = Observer<String?> { _ -> updateNetworkTile() }
-        daemonsViewModel.cloudflaredController.tunnelUrl.observe(viewLifecycleOwner, tunnelObserver)
         daemonsViewModel.zrokController.tunnelUrl.observe(viewLifecycleOwner, tunnelObserver)
-        daemonsViewModel.tailscaleController.tunnelUrl.observe(viewLifecycleOwner, tunnelObserver)
         daemonsViewModel.daemonStates.observe(viewLifecycleOwner) { _ ->
             updateNetworkTile()
             // Camera tile depends on whether the camera daemon is RUNNING — refresh
@@ -321,11 +319,7 @@ class DiagnosticsFragment : Fragment() {
      * any tunnel daemon STARTING → connecting (warning), else offline (neutral).
      */
     private fun computeTunnelState(): Pair<Int, Int> {
-        val anyUrl = listOf(
-            daemonsViewModel.cloudflaredController.tunnelUrl.value,
-            daemonsViewModel.zrokController.tunnelUrl.value,
-            daemonsViewModel.tailscaleController.tunnelUrl.value
-        ).any { !it.isNullOrEmpty() }
+        val anyUrl = !daemonsViewModel.zrokController.tunnelUrl.value.isNullOrEmpty()
 
         if (anyUrl) {
             return R.string.diagnostics_tunnel_state_online to R.drawable.status_dot_online
@@ -333,9 +327,7 @@ class DiagnosticsFragment : Fragment() {
 
         val states = daemonsViewModel.daemonStates.value
         val anyStarting = states?.values?.any {
-            (it.type == DaemonType.CLOUDFLARED_TUNNEL ||
-                it.type == DaemonType.ZROK_TUNNEL ||
-                it.type == DaemonType.TAILSCALE_TUNNEL) &&
+            it.type == DaemonType.ZROK_TUNNEL &&
                 it.status == DaemonStatus.STARTING
         } == true
 

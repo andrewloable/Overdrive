@@ -41,28 +41,6 @@ public final class NotificationGate {
         return shouldPush(maxSeverity(actors), cfg);
     }
 
-    /**
-     * Telegram-tier gate. Mirrors {@link #shouldPush(Actor.Severity, SurveillanceConfig)}
-     * but reads the telegramNotices/Alerts/Critical toggles so a
-     * Telegram-only user can mute low-severity events independently of push.
-     * Same null-config-allows-through and unknown-severity-allows-through
-     * guarantees as shouldPush.
-     */
-    public static boolean shouldTelegram(Actor.Severity sev, SurveillanceConfig cfg) {
-        if (cfg == null) return true;
-        if (sev == null) return true;
-        switch (sev) {
-            case CRITICAL: return cfg.isTelegramCritical();
-            case ALERT:    return cfg.isTelegramAlerts();
-            case NOTICE:   return cfg.isTelegramNotices();
-            default:       return false;
-        }
-    }
-
-    public static boolean shouldTelegram(java.util.List<Actor> actors, SurveillanceConfig cfg) {
-        return shouldTelegram(maxSeverity(actors), cfg);
-    }
-
     public static Actor.Severity maxSeverity(java.util.List<Actor> actors) {
         if (actors == null || actors.isEmpty()) return Actor.Severity.NOTICE;
         Actor.Severity max = Actor.Severity.NOTICE;

@@ -3,7 +3,7 @@
  *
  * Loads on every page that has core.js. Auto-injects a "Check for Updates"
  * link into .sidebar-nav at DOMContentLoaded. Click → /api/update/check →
- * confirmation modal (with cloudflared rotation warning + LAN-IP hint +
+ * confirmation modal (with tunnel rotation warning + LAN-IP hint +
  * in-car-app recommendation) → /api/update/install → polls /api/update/progress
  * → handles the inevitable mid-install daemon disconnect by polling /status
  * until appVersion advances, then shows a "✅ Updated" banner.
@@ -203,7 +203,7 @@
               '<span class="upd-icon">🔁</span>' +
               '<div>' + BYD.i18n.t('update.rotation_warning') + '</div>' +
             '</div>' : (
-                tunnelType !== 'unknown' && tunnelType !== 'cloudflared' ?
+                tunnelType !== 'unknown' ?
                 '<div class="upd-row">' +
                   '<span class="upd-icon">🔗</span>' +
                   '<div>' + BYD.i18n.t('update.tunnel_stable', {type: escapeHtml(tunnelType)}) + '</div>' +

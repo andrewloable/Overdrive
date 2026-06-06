@@ -1,7 +1,6 @@
 package com.loabletech.bladewatch.surveillance;
 import com.loabletech.bladewatch.logging.DaemonLogger;
 import com.loabletech.bladewatch.ai.YoloDetector;
-import com.loabletech.bladewatch.telegram.TelegramNotifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -1204,19 +1203,9 @@ public class SurveillanceEngineGpu {
                         
                         try {
                             String videoFilename = currentEventFile != null ? currentEventFile.getName() : null;
-                            sendRichMotionNotifications(videoFilename);
                             publishMotionNotification(videoFilename);
                         } catch (Exception e) {
                             logger.warn("Failed to send motion notification: " + e.getMessage());
-                        }
-
-                        // SOTA: Fire BYD cloud deterrent (flash lights / find car)
-                        // Runs on background thread, never blocks surveillance pipeline
-                        try {
-                            com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
-                            deterrentFiredTime = now;  // Track when deterrent was dispatched
-                        } catch (Exception e) {
-                            logger.debug("Deterrent dispatch failed: " + e.getMessage());
                         }
                     }
                 } else {
@@ -1226,16 +1215,7 @@ public class SurveillanceEngineGpu {
                     if (newStopTime > recordingStopTime) {
                         recordingStopTime = newStopTime;
                     }
-                    
-                    // SOTA: Recurring deterrent — re-trigger while motion continues.
-                    // The cooldown inside BydCloudDeterrent prevents spamming (default 15s).
-                    try {
-                        com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
-                        deterrentFiredTime = now;  // Track latest deterrent dispatch
-                    } catch (Exception e) {
-                        // Fail silently — never block surveillance
-                    }
-                    
+
                     // Also run YOLO on new quadrants that have motion (even if different from original)
                     if (useObjectDetection && !isAiRunning.get()) {
                         for (int q = 0; q < MotionPipelineV2.NUM_QUADRANTS; q++) {
@@ -1344,16 +1324,9 @@ public class SurveillanceEngineGpu {
                         startRecording();
                         try {
                             String videoFilename = currentEventFile != null ? currentEventFile.getName() : null;
-                            sendRichMotionNotifications(videoFilename);
                             publishMotionNotification(videoFilename);
                         } catch (Exception e) {
                             logger.warn("Failed to send motion notification: " + e.getMessage());
-                        }
-                        try {
-                            com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent.getInstance().onMotionDetected();
-                            deterrentFiredTime = now;
-                        } catch (Exception e) {
-                            logger.debug("Deterrent dispatch failed: " + e.getMessage());
                         }
                     }
                 }
@@ -2731,145 +2704,6 @@ public class SurveillanceEngineGpu {
     }
     
     /**
-     * Publish a motion notification onto the cross-cutting NotificationBus.
-     *
-     * <p>Filename is the not-yet-finalized {@code currentEventFile} name —
-     * recording is still in progress when this fires. Delivering the push
-     * immediately (rather than waiting for finalization) prioritizes alert
-     * latency over tap-to-play polish; the events page will surface a
-     * "still recording" state until the file closes.
-     */
-    /**
-     * Send a Telegram motion notification enriched with the current Actor
-     * snapshot. Falls back to a generic "motion" payload when no Actors are
-     * known yet (e.g. recording started purely on motion before YOLO ran).
-     * Honours the user's notification tier toggles (item 8).
-     */
-    private void sendRichMotionNotifications(String videoFilename) {
-        // User opt-out: by default, Telegram only gets the recording-CLOSE
-        // photo (sendFinalTelegramNotification, fired from stopRecording). The
-        // start-stage text message is suppressed because the user-visible end
-        // result is two messages back-to-back — same content, no replace
-        // semantics in Telegram. Telegram-only users who want low-latency
-        // pings can flip telegramSendStartPing on in Sentry settings.
-        //
-        // Treat null config as "default" (off). Without this, an early-startup
-        // motion event before config has been wired would leak through with
-        // legacy "always send" behaviour, contradicting the documented default.
-        if (config == null || !config.isTelegramSendStartPing()) {
-            return;
-        }
-        java.util.List<Actor> snap = lastActors;
-        Actor.Severity peakSev = com.loabletech.bladewatch.notifications.NotificationGate.maxSeverity(snap);
-        // Per-tier muting for the web push system happens device-side via
-        // muted-categories. Telegram has its own subscription model; we still
-        // pass severity so the daemon can format the message accordingly.
-        // Static actors (parked cars next to ours) MUST NOT count or be picked
-        // as the detection label — see publishMotionNotification for the same
-        // reasoning.
-        int persons = 0, vehicles = 0, bikes = 0, animals = 0;
-        Actor.Proximity closest = null;
-        String detectionLabel = "motion";
-        Actor threat = null;
-        for (Actor a : snap) {
-            if (a.isStatic) continue;
-            switch (a.classGroup) {
-                case PERSON:  persons++;  break;
-                case VEHICLE: vehicles++; break;
-                case BIKE:    bikes++;    break;
-                case ANIMAL:  animals++;  break;
-                default: break;
-            }
-            if (closest == null || a.peakProximity.ordinal() < closest.ordinal()) {
-                closest = a.peakProximity;
-            }
-            if (threat == null
-                    || a.peakSeverity.ordinal() > threat.peakSeverity.ordinal()
-                    || (a.peakSeverity == threat.peakSeverity
-                        && classRank(a.classGroup) > classRank(threat.classGroup))) {
-                threat = a;
-            }
-        }
-        // camHint follows the threat actor so the title's "X at <camera>" phrase
-        // names the camera that saw X, not whichever actor happened to be closest.
-        String camHint = cameraNameFor(threat);
-        float bestConf = threat != null ? threat.peakConfidence : 0f;
-        if (threat != null) detectionLabel = Actor.groupLabel(threat.classGroup);
-        // Telegram tier mute — mirrors the push tier toggles so a
-        // Telegram-only user can keep CRITICAL/ALERT and silence NOTICE.
-        if (!com.loabletech.bladewatch.notifications.NotificationGate.shouldTelegram(peakSev, config)) {
-            logger.debug("Telegram start-stage suppressed by per-tier toggle (sev=" + peakSev + ")");
-            return;
-        }
-        try {
-            TelegramNotifier.notifyMotion(
-                    detectionLabel,
-                    bestConf > 0f ? bestConf : 1.0f,
-                    videoFilename,
-                    peakSev != null ? peakSev.name() : null,
-                    persons, vehicles, bikes, animals,
-                    closest != null ? closest.name() : null,
-                    camHint);
-        } catch (Throwable t) {
-            logger.debug("Telegram notify failed: " + t.getMessage());
-        }
-    }
-
-    /**
-     * Final Telegram notification at recording-end. Computes the same actor
-     * summary as {@link #sendRichMotionNotifications} but routes via
-     * {@code notifyMotionFinalized} so the daemon sends a photo (with the hero
-     * JPEG as the image and the threat summary as the caption) instead of a
-     * text-only message. Falls back gracefully on the daemon side if the photo
-     * can't be sent.
-     */
-    private void sendFinalTelegramNotification(String videoFilename, String heroPhotoPath) {
-        java.util.List<Actor> snap = lastActors;
-        Actor.Severity peakSev = com.loabletech.bladewatch.notifications.NotificationGate.maxSeverity(snap);
-        int persons = 0, vehicles = 0, bikes = 0, animals = 0;
-        Actor.Proximity closest = null;
-        Actor threat = null;
-        for (Actor a : snap) {
-            if (a.isStatic) continue;
-            switch (a.classGroup) {
-                case PERSON:  persons++;  break;
-                case VEHICLE: vehicles++; break;
-                case BIKE:    bikes++;    break;
-                case ANIMAL:  animals++;  break;
-                default: break;
-            }
-            if (closest == null || a.peakProximity.ordinal() < closest.ordinal()) {
-                closest = a.peakProximity;
-            }
-            if (threat == null
-                    || a.peakSeverity.ordinal() > threat.peakSeverity.ordinal()
-                    || (a.peakSeverity == threat.peakSeverity
-                        && classRank(a.classGroup) > classRank(threat.classGroup))) {
-                threat = a;
-            }
-        }
-        // camHint follows the threat actor — see sendRichMotionNotifications.
-        String camHint = cameraNameFor(threat);
-        // Telegram tier mute — same gate as the start-stage notification so
-        // both stages of the two-stage flow honour the same toggle.
-        if (!com.loabletech.bladewatch.notifications.NotificationGate.shouldTelegram(peakSev, config)) {
-            logger.debug("Telegram final-stage suppressed by per-tier toggle (sev=" + peakSev + ")");
-            return;
-        }
-        try {
-            TelegramNotifier.notifyMotionFinalized(
-                    videoFilename,
-                    heroPhotoPath,
-                    peakSev != null ? peakSev.name() : null,
-                    persons, vehicles, bikes, animals,
-                    closest != null ? closest.name() : null,
-                    camHint);
-        } catch (Throwable t) {
-            logger.debug("Telegram finalized notify failed: " + t.getMessage());
-        }
-    }
-
-    /**
      * Rank a class group for "which actor is the threat in this scene". Higher
      * = more important to surface. Mirrors {@link ThumbnailBuffer}'s scoring so
      * the notification title agrees with the thumbnail.
@@ -3442,8 +3276,6 @@ public class SurveillanceEngineGpu {
             String heroPath = heroSiblingFile.exists() ? heroSiblingFile.getAbsolutePath() : null;
             try { publishMotionFinal(videoName, heroName); }
             catch (Throwable t) { logger.debug("publishMotionFinal threw: " + t.getMessage()); }
-            try { sendFinalTelegramNotification(videoName, heroPath); }
-            catch (Throwable t) { logger.debug("sendFinalTelegramNotification threw: " + t.getMessage()); }
         }
 
         // Detach the segment listener so a stale lambda from a previous event

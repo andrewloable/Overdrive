@@ -606,7 +606,7 @@ public class BydDataCollector {
     // ==================== DATA COLLECTION ====================
 
     // Core data polled every 5s. Display-only data updated via listeners only (no polling).
-    // Core = fields consumed by ABRP, MQTT, trip analytics, SOC history.
+    // Core = fields consumed by trip analytics, SOC history.
     // Display = fields only shown on the web dashboard — updated by BYD HAL listener callbacks
     //           or on-demand via collectAllFull() when the HTTP API is queried.
 
@@ -742,16 +742,13 @@ public class BydDataCollector {
             }
         }
 
-        // Extended data consumed by ABRP/MQTT/trips
+        // Extended data consumed by trips, SOC history
         collectStatisticExtended(b);   // SOH, driving time, key battery
         collectInstrumentExtended(b);  // cabin temp, trip data, consumption
 
         // Key proximity probe — runs every poll (ACC on or off) so we keep observing
         // fob state across the parked-charging window and any "approach unlock" event.
         collectKeyProximity(b);
-
-        // Cloud data merge (when toggle enabled and data is fresh)
-        mergeCloudData(b);
 
         BydVehicleData built = b.build();
         snapshot.set(built);
@@ -799,9 +796,6 @@ public class BydDataCollector {
         collectChargingExtended(b);    // charging rest time
         collectBodyworkExtended(b);    // steering, auto system, 12V level, sunroof, sunshade
         collectEngineExtended(b);      // coolant, oil, engine code
-
-        // Cloud data merge (when toggle enabled and data is fresh)
-        mergeCloudData(b);
 
         BydVehicleData built = b.build();
         snapshot.set(built);
@@ -1844,14 +1838,7 @@ public class BydDataCollector {
             lastDrivetrainProbeMs = now - (DRIVETRAIN_REPROBE_MS - 5_000);
             return true;
         }
-        // Unknown — defer to capacity-based heuristic, do NOT cache.
-        try {
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst =
-                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-            if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
-                return sohEst.getNominalCapacityKwh() < 30.0;
-            }
-        } catch (Exception ignored) {}
+        // Unknown — do NOT cache. Default to non-BEV.
         return false;
     }
 
@@ -2601,9 +2588,8 @@ public class BydDataCollector {
     private void collectStatisticExtended(BydVehicleData.Builder b) {
         if (statisticDevice == null) return;
 
-        // OEM SOH: read for the b.sohPercent display fallback only. The
-        // SohEstimator no longer consumes this signal — Shape B drives the
-        // live SOH from the energy formula, calibration is a separate anchor.
+        // OEM SOH: read from the BYD statistic register for the b.sohPercent
+        // display fallback only.
         try {
             double sohValue = readOemSohPercent();
             if (sohValue > 0) {
@@ -2637,7 +2623,7 @@ public class BydDataCollector {
 
     /**
      * Extended instrument data: cabin temp, trip data, consumption.
-     * Called from collectAll() (ABRP/MQTT/trips consume these).
+     * Called from collectAll() (trips, SOC history consume these).
      */
     private void collectInstrumentExtended(BydVehicleData.Builder b) {
         // Cabin temperature is already read via acDevice.getTemprature(1) in
@@ -3045,66 +3031,6 @@ public class BydDataCollector {
         return v == null ? "n/a" : v.toString();
     }
 
-    // ==================== CLOUD DATA MERGE ====================
-
-    /**
-     * Merge cloud data as FALLBACK — only fills fields where SDK returned no value.
-     * SDK is always primary (real-time 5s poll). Cloud fills gaps only.
-     */
-    private void mergeCloudData(BydVehicleData.Builder b) {
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudConfig config =
-                    com.loabletech.bladewatch.byd.cloud.BydCloudConfig.fromUnifiedConfig();
-            if (!config.cloudDataMerge) return;
-
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
-                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
-            if (!provider.isTelemetryFresh()) return;
-
-            com.loabletech.bladewatch.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
-            if (cs == null) return;
-
-            // SOC — only if SDK didn't provide it
-            if (Double.isNaN(b.socPercent) && cs.hasSoc()) b.socPercent(cs.socPercent);
-
-            // EV range — only if SDK returned UNAVAILABLE
-            if (b.elecRangeKm == BydVehicleData.UNAVAILABLE && cs.hasElecRange()) b.elecRangeKm(cs.elecRangeKm);
-
-            // Fuel range / percent (PHEV) — only if SDK has nothing
-            if (b.fuelRangeKm == BydVehicleData.UNAVAILABLE && cs.hasFuelRange()) b.fuelRangeKm(cs.fuelRangeKm);
-            if (Double.isNaN(b.fuelPercent) && cs.hasFuelPercent()) b.fuelPercent(cs.fuelPercent);
-
-            // Charging state — only if SDK returned UNAVAILABLE
-            if (b.chargingState == BydVehicleData.UNAVAILABLE && cs.hasChargingState()) {
-                int sdkState = cs.getChargingStateAsSdk();
-                if (sdkState >= 0) b.chargingState(sdkState);
-            }
-
-            // Charge ETA — only if SDK has nothing
-            if (b.chargingRestTimeHours == BydVehicleData.UNAVAILABLE && cs.hasRemainingHours())
-                b.chargingRestTimeHours(cs.remainingHours);
-            if (b.chargingRestTimeMinutes == BydVehicleData.UNAVAILABLE && cs.hasRemainingMinutes())
-                b.chargingRestTimeMinutes(cs.remainingMinutes);
-
-            // Temperatures — only if SDK returned NaN
-            if (Double.isNaN(b.insideTempC) && cs.hasInsideTemp()) b.insideTempC(cs.insideTempC);
-            if (Double.isNaN(b.outsideTempC) && cs.hasOutsideTemp()) b.outsideTempC(cs.outsideTempC);
-
-            // Odometer — only if SDK returned UNAVAILABLE
-            if (b.totalMileageKm == BydVehicleData.UNAVAILABLE && cs.hasTotalMileage())
-                b.totalMileageKm(cs.totalMileageKm);
-
-            // Air quality — only if SDK returned UNAVAILABLE
-            if (b.pm25Inside == BydVehicleData.UNAVAILABLE && cs.hasPm25Inside())
-                b.pm25Inside((int) cs.pm25Inside);
-            if (b.pm25Outside == BydVehicleData.UNAVAILABLE && cs.hasPm25Outside())
-                b.pm25Outside((int) cs.pm25Outside);
-
-        } catch (Exception e) {
-            logger.debug("Cloud data merge error: " + e.getMessage());
-        }
-    }
-
     // ==================== LISTENER REGISTRATION ====================
 
     private void registerAllListeners() {
@@ -3400,13 +3326,6 @@ public class BydDataCollector {
                             
                             if (isFirst) {
                                 logger.info("HV pack voltage: " + String.format("%.1f", volts) + "V");
-                                try {
-                                    com.loabletech.bladewatch.abrp.SohEstimator soh = 
-                                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-                                    if (soh != null) {
-                                        soh.autoDetectFromPackVoltage(volts, current);
-                                    }
-                                } catch (Exception ignored) {}
                             }
                         }
                     }
@@ -4674,12 +4593,11 @@ public class BydDataCollector {
     }
 
     // --- Charging ---
-    // The smart-charging schedule lives in BYD cloud, not the HAL. The Seal HAL
-    // exposes setChargeStop*/getChargeStop* methods that look like they should
-    // work but: getChargeStopSupportConfig=0, getters return 0xFFFF, setters
-    // silently return success-but-no-op. See feedback_byd_hal_unreliable_signals.
-    // All schedule reads/writes go through BydCloudClient smart-charging
-    // endpoints in VehicleControlApiHandler / VehicleCommandRouter.
+    // The Seal HAL exposes setChargeStop*/getChargeStop* methods that look like
+    // they should work but: getChargeStopSupportConfig=0, getters return 0xFFFF,
+    // setters silently return success-but-no-op. See
+    // feedback_byd_hal_unreliable_signals. Smart-charging schedule reads/writes
+    // are not available locally.
 
     // BEV charge-cap: BYDAutoChargingDevice.setChargeStopCapacityState (target %)
     // + setChargeStopSwitchState (master on/off). On Seal trims the

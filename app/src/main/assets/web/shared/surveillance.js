@@ -43,17 +43,7 @@ BYD.surveillance = {
         // Per-quadrant sensitivity / zone overrides. Keys: Q0=front, Q1=right,
         // Q2=rear, Q3=left. Absent key = inherit global. The "Side-cam Boost"
         // UI writes to Q1 + Q3.
-        quadrantOverrides: {},
-        // Telegram-specific: send a "Recording in progress…" text ping at
-        // recording start. OFF by default so users with both PWA + Telegram
-        // see one notification per event (PWA has tag-replace; Telegram does
-        // not). Telegram-only users may turn this on for low-latency awareness.
-        telegramSendStartPing: false,
-        // Per-tier Telegram filter — mirrors the push tier toggles. Defaults
-        // match: NOTICE off (background noise), ALERT + CRITICAL on.
-        telegramNotices: false,
-        telegramAlerts: true,
-        telegramCritical: true
+        quadrantOverrides: {}
     },
     storageInfo: {
         sdCardAvailable: false,
@@ -117,16 +107,6 @@ BYD.surveillance = {
         this.updateUI();
         this.startClock();
 
-        // Telegram pairing state — drives the tier filter availability UI.
-        // Re-checked when reloadConfig() fires (visibility change, periodic
-        // refresh) so a freshly-paired bot un-greys the toggles live.
-        this.refreshTelegramAvailability();
-        
-        // Load BYD Cloud status
-        if (window.BydCloud) {
-            BydCloud.loadStatus();
-        }
-        
         // Show CDR cleanup card if SD card is selected on load
         this.updateCdrCleanupVisibility();
         
@@ -195,11 +175,8 @@ BYD.surveillance = {
         } catch (e) {
             console.warn('Failed to reload config:', e);
         }
-        // Re-probe Telegram pairing on every reload — newly-paired bots
-        // should un-grey the tier toggles without a page refresh.
-        this.refreshTelegramAvailability();
     },
-    
+
     async loadStorageSettings() {
         try {
             const resp = await fetch('/api/settings/storage');
@@ -649,7 +626,7 @@ BYD.surveillance = {
         update();
         setInterval(update, 1000);
         
-        // Config refresh (every 10s) to catch external changes (Telegram, IPC)
+        // Config refresh (every 10s) to catch external changes (IPC)
         setInterval(() => {
             if (!this.hasUnsavedChanges) {
                 this.reloadConfig();
@@ -789,10 +766,7 @@ BYD.surveillance = {
         
         // V2 Motion Detection UI
         this.updateV2UI();
-        
-        // Deterrent Action UI
-        this.updateDeterrentUI();
-        
+
         // Reset Apply button state after UI update (no unsaved changes after load)
         this.hasUnsavedChanges = false;
         document.getElementById('btnApply').disabled = true;
@@ -1145,127 +1119,6 @@ BYD.surveillance = {
         const sens = parseInt(document.getElementById('sideCamSensSlider').value);
         this._writeSideCamOverrides(sens, zone);
         this.markChanged();
-    },
-
-    updateTelegramStartPing() {
-        const el = document.getElementById('v2TelegramSendStartPing');
-        if (!el) return;
-        this.config.telegramSendStartPing = el.checked;
-        this._persistTelegramFields(['telegramSendStartPing']);
-    },
-
-    /**
-     * Per-tier Telegram filter handler. Wires the three new toggles
-     * (Notice / Alert / Critical) into config and persists immediately
-     * — the Telegram block lives on notifications.html, which has no
-     * Apply button, so we can't rely on the surveillance.html partial-save
-     * path here.
-     */
-    updateTelegramTiers() {
-        const n = document.getElementById('v2TelegramNotices');
-        const a = document.getElementById('v2TelegramAlerts');
-        const c = document.getElementById('v2TelegramCritical');
-        if (n) this.config.telegramNotices = n.checked;
-        if (a) this.config.telegramAlerts = a.checked;
-        if (c) this.config.telegramCritical = c.checked;
-        this._persistTelegramFields(['telegramNotices', 'telegramAlerts', 'telegramCritical']);
-    },
-
-    /**
-     * Immediate save for the v2Telegram* toggles on the Notifications →
-     * Telegram tab. Mirrors TelegramPrefs.save() over on
-     * /api/telegram/preferences: edit lands in this.config, POST it
-     * straight to /api/surveillance/config, and on success sync
-     * savedConfig so the dirty diff (and any sibling Apply button on
-     * surveillance.html) doesn't think this tab is still pending. On
-     * failure, revert the in-memory + checkbox state so the UI doesn't
-     * pretend the change was persisted.
-     */
-    _persistTelegramFields(fields) {
-        const prev = {};
-        const body = {};
-        for (let i = 0; i < fields.length; i++) {
-            const k = fields[i];
-            prev[k] = this.savedConfig ? this.savedConfig[k] : undefined;
-            body[k] = this.config[k];
-        }
-        fetch('/api/surveillance/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        }).then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
-          .then(() => {
-              if (this.savedConfig) {
-                  for (let i = 0; i < fields.length; i++) {
-                      this.savedConfig[fields[i]] = this.config[fields[i]];
-                  }
-              }
-              this.markChanged();
-              if (BYD.utils && BYD.utils.toast) {
-                  BYD.utils.toast(BYD.i18n.t('telegram.prefs_saved'), 'success');
-              }
-          })
-          .catch(() => {
-              for (let i = 0; i < fields.length; i++) {
-                  const k = fields[i];
-                  if (prev[k] !== undefined) this.config[k] = prev[k];
-              }
-              const tg = document.getElementById('v2TelegramSendStartPing');
-              if (tg) tg.checked = !!this.config.telegramSendStartPing;
-              const tn = document.getElementById('v2TelegramNotices');
-              if (tn) tn.checked = this.config.telegramNotices === true;
-              const ta = document.getElementById('v2TelegramAlerts');
-              if (ta) ta.checked = this.config.telegramAlerts !== false;
-              const tc = document.getElementById('v2TelegramCritical');
-              if (tc) tc.checked = this.config.telegramCritical !== false;
-              if (BYD.utils && BYD.utils.toast) {
-                  BYD.utils.toast(BYD.i18n.t('telegram.prefs_save_failed'), 'error');
-              }
-          });
-    },
-
-    /**
-     * Reflect the Telegram-bot pairing state in the tier filter UI. The
-     * tier toggles + the two-stage start-ping are functionally inert when
-     * the bot isn\'t paired (engine still calls TelegramNotifier, daemon
-     * just answers "Owner not set" and drops the message), so we visually
-     * disable them and show an inline warning so the user understands
-     * why their toggles don\'t produce messages. Re-runs on every config
-     * refresh (every 10s) so freshly-paired bots un-grey live without a
-     * page reload.
-     */
-    async refreshTelegramAvailability() {
-        let paired = false;
-        try {
-            const r = await fetch('/api/settings/telegram-status');
-            if (r.ok) {
-                const j = await r.json();
-                paired = !!(j && j.enabled);
-            }
-        } catch (e) {
-            // Network blip / endpoint missing on older builds — treat as
-            // "unknown" and leave toggles enabled so we don\'t block users
-            // on a transient failure.
-            paired = true;
-        }
-        const group = document.getElementById('v2TelegramTierGroup');
-        const warning = document.getElementById('v2TelegramTierWarning');
-        const startPing = document.getElementById('v2TelegramSendStartPing');
-        const tierIds = ['v2TelegramNotices', 'v2TelegramAlerts', 'v2TelegramCritical'];
-
-        const setDisabled = (el, dis) => {
-            if (!el) return;
-            el.disabled = dis;
-            const row = el.closest('.setting-row');
-            if (row) {
-                row.style.opacity = dis ? '0.55' : '';
-                row.style.pointerEvents = dis ? 'none' : '';
-            }
-        };
-        setDisabled(startPing, !paired);
-        for (const id of tierIds) setDisabled(document.getElementById(id), !paired);
-        if (warning) warning.style.display = paired ? 'none' : 'block';
-        if (group) group.dataset.telegramPaired = paired ? '1' : '0';
     },
 
     updateV2Dev() {
@@ -1665,20 +1518,6 @@ BYD.surveillance = {
         const fd = document.getElementById('v2FilterDebugLog');
         if (fd) fd.checked = this.config.filterDebugLog;
 
-        // Telegram start-ping opt-in
-        const tg = document.getElementById('v2TelegramSendStartPing');
-        if (tg) tg.checked = !!this.config.telegramSendStartPing;
-
-        // Per-tier Telegram filter — null-coalesce to the documented defaults
-        // so configs saved before these fields existed render correctly
-        // (notices off, alerts on, critical on).
-        const tn = document.getElementById('v2TelegramNotices');
-        if (tn) tn.checked = this.config.telegramNotices === true;
-        const ta = document.getElementById('v2TelegramAlerts');
-        if (ta) ta.checked = this.config.telegramAlerts !== false;
-        const tc = document.getElementById('v2TelegramCritical');
-        if (tc) tc.checked = this.config.telegramCritical !== false;
-        
         // Object detection checkboxes
         const dp = document.getElementById('detectPerson');
         if (dp) dp.checked = this.config.detectPerson;
@@ -1713,8 +1552,7 @@ BYD.surveillance = {
     _tabFieldMap: {
         general: [
             'enabled',
-            'scheduleEnabled', 'scheduleRules',
-            'deterrentAction', 'deterrentCooldownSeconds'
+            'scheduleEnabled', 'scheduleRules'
         ],
         detection: [
             'environmentPreset',
@@ -1847,28 +1685,6 @@ BYD.surveillance = {
     },
 
     /**
-     * Lightweight init for pages that only mount the Telegram delivery
-     * controls (notifications.html). Loads the surveillance config, paints
-     * the Telegram checkboxes via updateUI(), and refreshes the bot-paired
-     * availability state. Every DOM read inside updateUI() is null-guarded
-     * so missing controls (sensitivity slider, env preset, ROI editor, …)
-     * are skipped without warnings.
-     */
-    async initTelegramOnly() {
-        await this.loadConfig();
-        this.updateUI();
-        this.refreshTelegramAvailability();
-        // Re-poll the pairing state when the user comes back to this tab —
-        // a fresh bot pair done in the Telegram daemon page should un-grey
-        // the toggles without a manual reload.
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                this.refreshTelegramAvailability();
-            }
-        });
-    },
-
-    /**
      * Lightweight init for pages that only need the heatmap overlay (e.g., live view).
      * Loads config and starts heatmap if enabled, without touching surveillance UI elements.
      */
@@ -1936,348 +1752,9 @@ BYD.surveillance = {
         // not the user's preference. Surveillance can be enabled (preference=true) but not
         // active (gpuSurveillance=false) when ACC is ON. The toggle reflects the preference,
         // which is loaded from the config API, not from status.
-    },
-
-    // ── Deterrent Action ────────────────────────────────────────────────
-
-    updateDeterrent(value) {
-        this.config.deterrentAction = value;
-        // Save immediately (deterrent is independent of the Apply button)
-        fetch('/api/surveillance/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deterrentAction: value })
-        }).then(() => {
-            this.updateDeterrentUI();
-        }).catch(e => console.warn('Failed to save deterrent:', e));
-    },
-
-    updateDeterrentUI() {
-        const action = this.config.deterrentAction || 'silent';
-        const select = document.getElementById('deterrentAction');
-        if (select) select.value = action;
-
-        const badge = document.getElementById('deterrentBadge');
-        if (badge) {
-            const labels = {
-                silent: BYD.i18n.t('surveillance.deterrent_silent_badge'),
-                flash_lights: BYD.i18n.t('surveillance.deterrent_flash_badge'),
-                find_car: BYD.i18n.t('surveillance.deterrent_horn_badge')
-            };
-            badge.textContent = labels[action] || BYD.i18n.t('surveillance.deterrent_silent_badge');
-            badge.className = 'status-badge ' + (action === 'silent' ? 'inactive' : 'active');
-        }
-
-        // Show warning if cloud action selected but not configured
-        const warning = document.getElementById('deterrentWarning');
-        if (warning) {
-            const needsCloud = action !== 'silent';
-            const configured = this.config.bydCloudEnabled;
-            warning.style.display = (needsCloud && !configured) ? 'block' : 'none';
-        }
     }
 };
 
 // Alias for backward compatibility
 window.SurvSettings = BYD.surveillance;
 
-// ── BYD Cloud Account Setup ─────────────────────────────────────────────
-
-window.BydCloud = {
-    isConfigured: false,
-
-    async loadStatus() {
-        try {
-            const resp = await fetch('/api/bydcloud/status');
-            const data = await resp.json();
-            if (data.success && data.status) {
-                this.isConfigured = data.status.configured;
-                this.updateStatusUI(data.status);
-            }
-        } catch (e) {
-            console.warn('Failed to load BYD Cloud status:', e);
-        }
-    },
-
-    updateStatusUI(status) {
-        const badge = document.getElementById('bydCloudBadge');
-        const info = document.getElementById('bydCloudInfo');
-        const clearSection = document.getElementById('bydClearSection');
-        const testBtn = document.getElementById('bydTestBtn');
-        const saveBtn = document.getElementById('bydSaveBtn');
-        const emailInput = document.getElementById('bydEmail');
-        const pwdHint = document.getElementById('bydPasswordHint');
-        const pinHint = document.getElementById('bydPinHint');
-        const pwdInput = document.getElementById('bydPassword');
-        const pinInput = document.getElementById('bydPin');
-
-        if (status.verified) {
-            this.isConfigured = true;
-            if (badge) { badge.textContent = BYD.i18n.t('surveillance.byd_badge_connected'); badge.className = 'status-badge active'; }
-            if (info) {
-                info.style.display = 'block';
-                document.getElementById('bydVinDisplay').textContent = status.vin || '\u2014';
-                document.getElementById('bydAccountDisplay').textContent = status.username || '\u2014';
-            }
-            if (clearSection) clearSection.style.display = 'block';
-            if (testBtn) { testBtn.disabled = false; testBtn.style.color = 'var(--text-primary)'; testBtn.style.borderColor = 'var(--brand-primary)'; }
-            if (emailInput) emailInput.value = status.username || '';
-            var regionSelect = document.getElementById('bydRegion');
-            if (regionSelect && status.region) regionSelect.value = status.region;
-            if (pwdInput) pwdInput.placeholder = BYD.i18n.t('surveillance.byd_password_placeholder_keep');
-            if (pinInput) pinInput.placeholder = BYD.i18n.t('surveillance.byd_pin_placeholder_keep');
-            if (pwdHint) pwdHint.textContent = BYD.i18n.t('surveillance.byd_pwd_keep');
-            if (pinHint) pinHint.textContent = BYD.i18n.t('surveillance.byd_pin_keep');
-            if (saveBtn) saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' + BYD.i18n.t('surveillance.update_credentials');
-        } else {
-            this.isConfigured = status.configured || false;
-            if (status.configured && !status.verified) {
-                if (badge) { badge.textContent = BYD.i18n.t('surveillance.byd_badge_saved'); badge.className = 'status-badge inactive'; }
-            } else {
-                if (badge) { badge.textContent = BYD.i18n.t('surveillance.byd_badge_not_set'); badge.className = 'status-badge inactive'; }
-            }
-            if (info) info.style.display = 'none';
-            if (clearSection) clearSection.style.display = 'none';
-            if (testBtn) { testBtn.disabled = true; testBtn.style.color = 'var(--text-muted)'; testBtn.style.borderColor = 'var(--border-default)'; }
-            if (pwdInput) pwdInput.placeholder = BYD.i18n.t('surveillance.byd_pwd_placeholder');
-            if (pinInput) pinInput.placeholder = '123456';
-            if (pwdHint) pwdHint.textContent = BYD.i18n.t('surveillance.byd_pwd_hint');
-            if (pinHint) pinHint.textContent = BYD.i18n.t('surveillance.byd_pin_hint');
-            if (saveBtn) saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' + BYD.i18n.t('surveillance.save_credentials');
-        }
-
-        BYD.surveillance.config.bydCloudEnabled = status.verified || false;
-        BYD.surveillance.updateDeterrentUI();
-
-        // Cloud push status
-        var pushSection = document.getElementById('bydCloudPushSection');
-        var mergeSection = document.getElementById('bydCloudMergeSection');
-        if (status.verified && status.cloudPush) {
-            var cp = status.cloudPush;
-            if (pushSection) pushSection.style.display = 'block';
-            if (mergeSection) mergeSection.style.display = 'block';
-
-            var pushBadge = document.getElementById('bydPushBadge');
-            var pushAge = document.getElementById('bydPushAge');
-            var pushLock = document.getElementById('bydPushLock');
-            var pushSoc = document.getElementById('bydPushSoc');
-            var pushCharging = document.getElementById('bydPushCharging');
-
-            if (pushBadge) {
-                if (cp.connected && cp.lastMessageAge >= 0 && cp.lastMessageAge < 120) {
-                    pushBadge.textContent = BYD.i18n.t('surveillance.byd_badge_live');
-                    pushBadge.className = 'status-badge active';
-                } else if (cp.connected && cp.lastMessageAge >= 0 && cp.lastMessageAge < 600) {
-                    pushBadge.textContent = BYD.i18n.t('surveillance.byd_badge_ok');
-                    pushBadge.className = 'status-badge active';
-                } else if (cp.connected && cp.lastMessageAge >= 600) {
-                    pushBadge.textContent = BYD.i18n.t('surveillance.byd_badge_stale');
-                    pushBadge.className = 'status-badge inactive';
-                } else if (cp.connected) {
-                    pushBadge.textContent = BYD.i18n.t('surveillance.byd_badge_waiting');
-                    pushBadge.className = 'status-badge inactive';
-                } else {
-                    pushBadge.textContent = BYD.i18n.t('surveillance.byd_badge_offline');
-                    pushBadge.className = 'status-badge inactive';
-                }
-            }
-
-            if (pushAge) {
-                if (cp.lastMessageAge >= 0) {
-                    var age = cp.lastMessageAge;
-                    pushAge.textContent = age < 60 ? BYD.i18n.t('surveillance.byd_age_seconds', {n: age}) : BYD.i18n.t('surveillance.byd_age_minutes', {n: Math.floor(age / 60)});
-                } else {
-                    pushAge.textContent = cp.connected ? BYD.i18n.t('surveillance.byd_waiting_data') : '';
-                }
-            }
-
-            if (pushLock) {
-                if (cp.lockState && cp.lockState !== 'unknown') {
-                    var lockIcon = cp.lockState === 'locked' ? '\uD83D\uDD12' : '\uD83D\uDD13';
-                    pushLock.textContent = lockIcon + ' ' + cp.lockState;
-                } else if (cp.connected && cp.lastMessageAge < 0) {
-                    pushLock.textContent = BYD.i18n.t('surveillance.byd_waiting_tbox');
-                } else {
-                    pushLock.textContent = '';
-                }
-            }
-            if (pushSoc && cp.socPercent != null) {
-                pushSoc.textContent = '\uD83D\uDD0B ' + cp.socPercent + '%';
-            } else if (pushSoc) {
-                pushSoc.textContent = '';
-            }
-            if (pushCharging) {
-                if (cp.chargingState && cp.chargingState !== 'unknown') {
-                    var chgLabel = { 'not_charging': BYD.i18n.t('surveillance.byd_charge_not_charging'), 'charging': BYD.i18n.t('surveillance.byd_charge_charging') };
-                    pushCharging.textContent = '\u26A1 ' + (chgLabel[cp.chargingState] || cp.chargingState);
-                } else {
-                    pushCharging.textContent = '';
-                }
-            }
-
-            // Merge toggle
-            var mergeToggle = document.getElementById('bydCloudMergeToggle');
-            if (mergeToggle) mergeToggle.checked = cp.cloudDataMerge || false;
-        } else {
-            if (pushSection) pushSection.style.display = 'none';
-            if (mergeSection) mergeSection.style.display = 'none';
-        }
-    },
-
-    async saveCredentials() {
-        const email = document.getElementById('bydEmail').value.trim();
-        const password = document.getElementById('bydPassword').value.trim();
-        const pin = document.getElementById('bydPin').value.trim();
-        const region = document.getElementById('bydRegion').value;
-        const saveBtn = document.getElementById('bydSaveBtn');
-        // Preserve the icon + label so the finally block can restore it cleanly
-        // after the request resolves; assigning .textContent strips the SVG.
-        const saveBtnHtml = saveBtn ? saveBtn.innerHTML : null;
-
-        if (!email) { this.showStatus(BYD.i18n.t('surveillance.byd_email_required'), 'error'); return; }
-        if (!this.isConfigured && (!password || !pin)) {
-            this.showStatus(BYD.i18n.t('surveillance.byd_pwd_pin_required'), 'error');
-            return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = BYD.i18n.t('surveillance.byd_saving');
-        this.showStatus(BYD.i18n.t('surveillance.byd_save_progress'), 'info');
-
-        try {
-            const body = { username: email, region: region };
-            if (password) body.password = password;
-            if (pin) body.controlPin = pin;
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
-            const resp = await fetch('/api/bydcloud/setup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const data = await resp.json();
-
-            if (data.success) {
-                this.showStatus(BYD.i18n.t('surveillance.byd_save_verified', {vin: data.vin}), 'success');
-                document.getElementById('bydPassword').value = '';
-                document.getElementById('bydPin').value = '';
-            } else {
-                this.showStatus('\u2717 ' + (data.error || BYD.i18n.t('surveillance.byd_save_failed')), 'error');
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                this.showStatus(BYD.i18n.t('surveillance.byd_request_long'), 'info');
-                // The server might still be processing — wait and check
-                await new Promise(function(r) { setTimeout(r, 5000); });
-            } else {
-                this.showStatus('\u2717 ' + BYD.i18n.t('vehicle.network_error_msg', {message: e.message}), 'error');
-            }
-        } finally {
-            saveBtn.disabled = false;
-            if (saveBtnHtml != null) saveBtn.innerHTML = saveBtnHtml;
-            await this.loadStatus();
-        }
-    },
-
-    async testConnection() {
-        const testBtn = document.getElementById('bydTestBtn');
-        testBtn.disabled = true;
-        testBtn.textContent = BYD.i18n.t('surveillance.byd_test_testing');
-        this.showStatus(BYD.i18n.t('surveillance.byd_test_progress'), 'info');
-
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
-            const resp = await fetch('/api/bydcloud/test', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'flash_lights' }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const data = await resp.json();
-            if (data.success) {
-                this.showStatus(BYD.i18n.t('surveillance.byd_test_sent'), 'success');
-            } else {
-                this.showStatus('\u2717 ' + (data.error || BYD.i18n.t('surveillance.byd_test_failed')), 'error');
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                this.showStatus(BYD.i18n.t('surveillance.byd_test_check_car'), 'info');
-            } else {
-                this.showStatus('\u2717 ' + e.message, 'error');
-            }
-        } finally {
-            testBtn.disabled = false;
-            testBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> ' + BYD.i18n.t('surveillance.test_connection');
-        }
-    },
-
-    async clearCredentials() {
-        if (!confirm(BYD.i18n.t('surveillance.confirm_clear_byd_creds'))) return;
-
-        try {
-            await fetch('/api/bydcloud/clear', { method: 'POST' });
-            this.showStatus(BYD.i18n.t('surveillance.byd_creds_cleared'), 'info');
-            document.getElementById('bydEmail').value = '';
-            document.getElementById('bydPassword').value = '';
-            document.getElementById('bydPin').value = '';
-            const deterrentSelect = document.getElementById('deterrentAction');
-            if (deterrentSelect && deterrentSelect.value !== 'silent') {
-                deterrentSelect.value = 'silent';
-                BYD.surveillance.updateDeterrent('silent');
-            }
-            await this.loadStatus();
-        } catch (e) {
-            this.showStatus('\u2717 ' + e.message, 'error');
-        }
-    },
-
-    showStatus(message, type) {
-        const div = document.getElementById('bydCloudStatus');
-        if (!div) return;
-        div.style.display = 'block';
-        div.textContent = message;
-        const colors = {
-            success: { bg: 'rgba(34,197,94,0.1)', border: '#22c55e', color: '#16a34a' },
-            error:   { bg: 'rgba(239,68,68,0.1)', border: '#ef4444', color: '#dc2626' },
-            info:    { bg: 'rgba(59,130,246,0.1)', border: '#3b82f6', color: '#2563eb' }
-        };
-        const c = colors[type] || colors.info;
-        div.style.background = c.bg;
-        div.style.borderLeft = '3px solid ' + c.border;
-        div.style.color = c.color;
-        if (type !== 'error') {
-            setTimeout(function() { if (div.textContent === message) div.style.display = 'none'; }, 8000);
-        }
-    },
-
-    togglePasswordVisibility(inputId, btn) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        if (input.type === 'password') {
-            input.type = 'text';
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-        } else {
-            input.type = 'password';
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-        }
-    },
-
-    async toggleCloudDataMerge(enabled) {
-        try {
-            await fetch('/api/bydcloud/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cloudDataMerge: enabled })
-            });
-        } catch (e) {
-            console.warn('Failed to update cloud data merge:', e);
-        }
-    }
-};

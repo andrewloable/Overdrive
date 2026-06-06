@@ -87,45 +87,7 @@ public class QualitySettingsApiHandler {
             handleAppearancePost(out, body);
             return true;
         }
-        // Telegram bot status — used by the surveillance settings UI to
-        // grey-out the per-tier filter toggles when the bot isn\'t paired,
-        // so the user understands why the toggles do nothing instead of
-        // silently configuring a feature that can never fire.
-        if (path.equals("/api/settings/telegram-status") && method.equals("GET")) {
-            sendTelegramStatus(out);
-            return true;
-        }
         return false;
-    }
-
-    /**
-     * GET /api/settings/telegram-status — read /data/local/tmp/telegram_config.properties
-     * and report whether the bot is configured (token present) and paired
-     * (owner_chat_id > 0). Both must be true for any Telegram message to
-     * actually leave the device. The web UI uses this to disable the tier
-     * filter toggles + show a "pair Telegram first" hint.
-     */
-    private static void sendTelegramStatus(OutputStream out) throws Exception {
-        boolean configured = false;
-        boolean paired = false;
-        try {
-            configured = com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.hasBotToken();
-            paired = configured
-                    && com.loabletech.bladewatch.telegram.config.UnifiedTelegramConfig.getOwnerChatId() > 0;
-        } catch (Exception e) {
-            // Treat any read failure as "not configured" — the UI will
-            // grey out the toggles and the runtime gate (NotificationGate
-            // → daemon "Owner not set") still backstops the user.
-        }
-        JSONObject response = new JSONObject();
-        response.put("success", true);
-        response.put("configured", configured);
-        response.put("paired", paired);
-        // `enabled` = the gate condition the engine effectively uses (token
-        // present AND owner paired). Surface as a single field so the UI
-        // doesn\'t have to re-compute the same logic.
-        response.put("enabled", configured && paired);
-        HttpResponse.sendJson(out, response.toString());
     }
 
     /**

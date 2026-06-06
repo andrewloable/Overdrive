@@ -26,15 +26,6 @@ public final class UpdateLifecycle {
 
     public static final String UPDATE_IN_PROGRESS_FILE = "/data/local/tmp/bladewatch_update_in_progress";
     public static final String POST_UPDATE_FILE = "/data/local/tmp/bladewatch_post_update";
-    /**
-     * One-shot marker read by TelegramBotDaemon's notifyTunnel handler so the
-     * first post-update tunnel-URL message can include the new version (and a
-     * "this is why your URL changed" hint) instead of the generic "URL changed"
-     * copy. Contains the version string (e.g. "alpha-v11.4"). Deleted by the
-     * daemon after consuming.
-     */
-    public static final String TELEGRAM_POST_UPDATE_HINT_FILE =
-            "/data/local/tmp/bladewatch_post_update_pending_telegram";
 
     public static final String EXTRA_POST_UPDATE = "post_update";
 
@@ -69,12 +60,7 @@ public final class UpdateLifecycle {
         //   byd_cam_daemon       (DaemonLauncher.CAMERA_DAEMON_PROCESS)
         //   sentry_daemon        (DaemonLauncher.SENTRY_DAEMON_PROCESS)
         //   acc_sentry_daemon    (DaemonLauncher.ACC_SENTRY_DAEMON_PROCESS)
-        //   sentry_proxy         (DaemonLauncher.PROXY_DAEMON_PROCESS)
-        //   telegram_bot_daemon  (DaemonLauncher.TELEGRAM_DAEMON_PROCESS)
-        //   tailscaled           (TailscaleLauncher line 308)
-        //   cloudflared          (TunnelLauncher.CLOUDFLARED_PROCESS)
         //   zrok                 (ZrokLauncher.ZROK_PROCESS)
-        //   sing-box             (SingboxLauncher)
         String cmd =
                 // Sentinel first so any racing watchdog sees "disabled" and bails out
                 "echo 'disabled by post-update reset' > /data/local/tmp/camera_daemon.disabled; " +
@@ -86,17 +72,9 @@ public final class UpdateLifecycle {
                 "pkill -9 -f 'cam_daemon' 2>/dev/null; " +           // defensive (catches any cam_daemon variant)
                 "pkill -9 -f 'sentry_daemon' 2>/dev/null; " +         // also catches acc_sentry_daemon
                 "pkill -9 -f 'acc_sentry_daemon' 2>/dev/null; " +
-                "pkill -9 -f 'telegram_bot_daemon' 2>/dev/null; " +
-                "pkill -9 -f 'sentry_proxy' 2>/dev/null; " +
-                "pkill -9 -f 'cloudflared' 2>/dev/null; " +
                 "pkill -9 -f 'zrok' 2>/dev/null; " +
-                "pkill -9 -f 'sing-box' 2>/dev/null; " +
-                "pkill -9 -f 'tailscaled' 2>/dev/null; " +            // tailscale daemon
                 // killall as a backup for binaries whose argv[0] differs from -f match
-                "killall -9 cloudflared 2>/dev/null; " +
                 "killall -9 zrok 2>/dev/null; " +
-                "killall -9 tailscaled 2>/dev/null; " +
-                "killall -9 sing-box 2>/dev/null; " +
                 // Lock + watchdog state
                 "rm -f /data/local/tmp/*_daemon.lock 2>/dev/null; " +
                 "rm -f /data/local/tmp/*_daemon.disabled 2>/dev/null; " +

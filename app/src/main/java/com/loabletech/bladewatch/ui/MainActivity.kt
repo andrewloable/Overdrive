@@ -191,30 +191,6 @@ class MainActivity : AppCompatActivity() {
                                 Toast.makeText(this, getString(R.string.toast_updated_to, updatedVersion), Toast.LENGTH_LONG).show()
                                 logsViewModel.info("Update", "App updated to $updatedVersion")
                             }
-                            // Plant the Telegram post-update hint file so when
-                            // the cloudflared tunnel comes back with a NEW URL,
-                            // the user sees the post-update bot message instead
-                            // of the generic "URL changed" message.
-                            // The daemon deletes the hint after one read, so
-                            // subsequent (non-update) tunnel restarts go back
-                            // to the normal copy.
-                            try {
-                                val adb = com.loabletech.bladewatch.launcher.AdbDaemonLauncher(this)
-                                val hintFile = com.loabletech.bladewatch.updater
-                                    .UpdateLifecycle.TELEGRAM_POST_UPDATE_HINT_FILE
-                                adb.executeShellCommand(
-                                    "echo '$updatedVersion' > $hintFile",
-                                    object : com.loabletech.bladewatch.launcher
-                                        .AdbDaemonLauncher.LaunchCallback {
-                                        override fun onLog(message: String) {}
-                                        override fun onLaunched() {}
-                                        override fun onError(error: String) {}
-                                    }
-                                )
-                            } catch (e: Exception) {
-                                android.util.Log.w("MainActivity",
-                                    "Failed to plant Telegram post-update hint: ${e.message}")
-                            }
                         }
                         startDaemons.run()
                     }
@@ -849,72 +825,36 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun observeViewModels() {
-        // Observe tunnel URL from cloudflared controller
-        daemonsViewModel.cloudflaredController.tunnelUrl.observe(this) { url ->
-            mainViewModel.setTunnelUrl(url)
-            updateUrlDisplay()
-        }
-        
-        // Observe tunnel URL from zrok controller
+        // Observe tunnel URL from zrok controller (the only supported tunnel).
         daemonsViewModel.zrokController.tunnelUrl.observe(this) { url ->
-            // Zrok URL takes precedence if available
             if (!url.isNullOrEmpty()) {
                 mainViewModel.setTunnelUrl(url)
             }
             updateUrlDisplay()
         }
 
-        // Observe tunnel URL from tailscale controller
-        daemonsViewModel.tailscaleController.tunnelUrl.observe(this) { url ->
-            // Tailscale is lowest priority — only adopt its URL when no higher-priority tunnel has one
-            val zrokUrl = daemonsViewModel.zrokController.tunnelUrl.value
-            val cloudflaredUrl = daemonsViewModel.cloudflaredController.tunnelUrl.value
-            if (zrokUrl.isNullOrEmpty() && cloudflaredUrl.isNullOrEmpty() && !url.isNullOrEmpty()) {
-                mainViewModel.setTunnelUrl(url)
-            }
-            updateUrlDisplay()
-        }
-        
-        // Observe daemon states for tunnel status (cloudflared, zrok or tailscale)
+        // Observe daemon states for zrok tunnel status.
         daemonsViewModel.daemonStates.observe(this) { states ->
-            val cloudflaredState = states[DaemonType.CLOUDFLARED_TUNNEL]
             val zrokState = states[DaemonType.ZROK_TUNNEL]
-            val tailscaleState = states[DaemonType.TAILSCALE_TUNNEL]
-            // Show online if either tunnel is running
-            val tunnelStatus = when {
-                zrokState?.status == DaemonStatus.RUNNING -> DaemonStatus.RUNNING
-                cloudflaredState?.status == DaemonStatus.RUNNING -> DaemonStatus.RUNNING
-                tailscaleState?.status == DaemonStatus.RUNNING -> DaemonStatus.RUNNING
-                zrokState?.status == DaemonStatus.STARTING -> DaemonStatus.STARTING
-                cloudflaredState?.status == DaemonStatus.STARTING -> DaemonStatus.STARTING
-                tailscaleState?.status == DaemonStatus.STARTING -> DaemonStatus.STARTING
+            val tunnelStatus = when (zrokState?.status) {
+                DaemonStatus.RUNNING -> DaemonStatus.RUNNING
+                DaemonStatus.STARTING -> DaemonStatus.STARTING
                 else -> DaemonStatus.STOPPED
             }
             updateStatusIndicator(tunnelStatus)
         }
     }
-    
+
     private fun updateUrlDisplay() {
-        // Check both tunnel URLs - prefer zrok if available
-        val zrokUrl = daemonsViewModel.zrokController.tunnelUrl.value
-        val cloudflaredUrl = daemonsViewModel.cloudflaredController.tunnelUrl.value
-        val tailscaleUrl = daemonsViewModel.tailscaleController.tunnelUrl.value
-        val tunnelUrl = zrokUrl?.takeIf { it.isNotEmpty() } ?: cloudflaredUrl?.takeIf { it.isNotEmpty() } ?: tailscaleUrl
-        
-        // Both modes now use tunnel URL
+        val tunnelUrl = daemonsViewModel.zrokController.tunnelUrl.value
+
         if (tunnelUrl.isNullOrEmpty()) {
             // Show context-aware message based on tunnel state
             val states = daemonsViewModel.daemonStates.value
-            val cfState = states?.get(DaemonType.CLOUDFLARED_TUNNEL)
             val zrokState = states?.get(DaemonType.ZROK_TUNNEL)
-            val tailscaleState = states?.get(DaemonType.TAILSCALE_TUNNEL)
-            val message = when {
-                zrokState?.status == DaemonStatus.STARTING -> "Starting Zrok tunnel..."
-                cfState?.status == DaemonStatus.STARTING -> "Starting Cloudflared tunnel..."
-                tailscaleState?.status == DaemonStatus.STARTING -> "Starting Tailscale tunnel..."
-                zrokState?.status == DaemonStatus.RUNNING -> "Waiting for tunnel URL..."
-                cfState?.status == DaemonStatus.RUNNING -> "Waiting for tunnel URL..."
-                tailscaleState?.status == DaemonStatus.RUNNING -> "Waiting for tailscale URL..."
+            val message = when (zrokState?.status) {
+                DaemonStatus.STARTING -> "Starting Zrok tunnel..."
+                DaemonStatus.RUNNING -> "Waiting for tunnel URL..."
                 else -> "No tunnel running"
             }
             tvCurrentUrl.text = message
@@ -1434,8 +1374,6 @@ class MainActivity : AppCompatActivity() {
         R.id.cbResetTrips to "trips",
         R.id.cbResetSocHistory to "socHistory",
         R.id.cbResetSoh to "soh",
-        R.id.cbResetAbrpToken to "abrpToken",
-        R.id.cbResetBydCloud to "bydCloud",
         R.id.cbResetMediaRecordings to "mediaRecordings",
         R.id.cbResetMediaSurveillance to "mediaSurveillance",
         R.id.cbResetMediaProximity to "mediaProximity",
@@ -1488,8 +1426,6 @@ class MainActivity : AppCompatActivity() {
             "trips" to getString(R.string.reset_label_trips),
             "socHistory" to getString(R.string.reset_label_soc_history),
             "soh" to getString(R.string.reset_label_soh),
-            "abrpToken" to getString(R.string.reset_label_abrp_token),
-            "bydCloud" to getString(R.string.reset_label_byd_cloud),
             "mediaRecordings" to getString(R.string.reset_label_recordings),
             "mediaSurveillance" to getString(R.string.reset_label_sentry_events),
             "mediaProximity" to getString(R.string.reset_label_proximity),

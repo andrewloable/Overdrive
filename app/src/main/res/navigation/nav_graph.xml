@@ -79,61 +79,12 @@
             android:defaultValue="/trips" />
     </fragment>
 
-    <!-- Integrations: roll-up of Telegram + ABRP + MQTT -->
+    <!-- Integrations -->
     <fragment
         android:id="@+id/integrationsFragment"
         android:name="com.loabletech.bladewatch.ui.fragment.IntegrationsFragment"
         android:label="@string/rail_integrations"
         tools:layout="@layout/fragment_integrations" />
-
-    <!-- Sub-destinations under Integrations (entered via cards, not the rail).
-         All three render via WebViewFragment pointing at the corresponding
-         page in /web/local — keeps the integrations stack on a single
-         renderer and lets us iterate on UX in HTML/CSS/JS instead of
-         touching native layouts every time. -->
-    <fragment
-        android:id="@+id/telegramSettingsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
-        android:label="@string/nav_page_telegram"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/telegram" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/abrpSettingsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
-        android:label="@string/nav_page_abrp"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/abrp" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/mqttFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
-        android:label="@string/nav_page_mqtt"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/mqtt" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/bydCloudFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.WebViewFragment"
-        android:label="@string/nav_page_byd_cloud"
-        tools:layout="@layout/fragment_webview">
-        <argument
-            android:name="page_path"
-            app:argType="string"
-            android:defaultValue="/byd-cloud" />
-    </fragment>
 
     <!-- Diagnostics: logs + ADB console + utilities -->
     <fragment

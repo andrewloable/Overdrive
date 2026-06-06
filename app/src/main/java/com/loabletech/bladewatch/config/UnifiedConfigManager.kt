@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong
  * - surveillance: Detection settings (minObjectSize, flashImmunity, etc.)
  * - recording: Recording settings (bitrate, codec, pre/post buffer)
  * - streaming: Streaming quality settings
- * - telegram: Telegram bot settings
  * - network: Network exposure settings
  */
 object UnifiedConfigManager {
@@ -79,7 +78,6 @@ object UnifiedConfigManager {
         unified.put("surveillance", JSONObject())
         unified.put("recording", JSONObject())
         unified.put("streaming", JSONObject())
-        unified.put("telegram", JSONObject())
         unified.put("network", JSONObject())
         unified.put("proximityGuard", JSONObject())
         unified.put("telemetryOverlay", JSONObject())
@@ -248,12 +246,6 @@ object UnifiedConfigManager {
         }
         if (!statusOverlay.has("cameraVisible")) statusOverlay.put("cameraVisible", true)
         if (!statusOverlay.has("tripVisible")) statusOverlay.put("tripVisible", true)
-        
-        // BYD Cloud defaults
-        val bydCloud = config.optJSONObject("bydCloud") ?: JSONObject().also {
-            config.put("bydCloud", it)
-        }
-        if (!bydCloud.has("enabled")) bydCloud.put("enabled", false)
 
         // Vehicle appearance defaults — selected 3D model and body paint color.
         // Stored unified so AVN and remote (phone-over-tunnel) clients show the
@@ -443,14 +435,6 @@ object UnifiedConfigManager {
     }
     
     /**
-     * Get telegram config section.
-     */
-    @JvmStatic
-    fun getTelegram(): JSONObject {
-        return loadConfig().optJSONObject("telegram") ?: JSONObject()
-    }
-    
-    /**
      * Get proximity guard config section.
      */
     @JvmStatic
@@ -493,14 +477,6 @@ object UnifiedConfigManager {
     @JvmStatic
     fun setStreaming(streaming: JSONObject): Boolean {
         return updateSection("streaming", streaming)
-    }
-    
-    /**
-     * Update telegram config section.
-     */
-    @JvmStatic
-    fun setTelegram(telegram: JSONObject): Boolean {
-        return updateSection("telegram", telegram)
     }
     
     /**
@@ -558,25 +534,6 @@ object UnifiedConfigManager {
     fun setStatusOverlay(statusOverlay: JSONObject): Boolean {
         return updateSection("statusOverlay", statusOverlay)
     }
-    
-    /**
-     * Get BYD Cloud config section.
-     * Defaults to enabled=false if section doesn't exist.
-     */
-    @JvmStatic
-    fun getBydCloud(): JSONObject {
-        return loadConfig().optJSONObject("bydCloud") ?: JSONObject().apply {
-            put("enabled", false)
-        }
-    }
-    
-    /**
-     * Update BYD Cloud config section.
-     */
-    @JvmStatic
-    fun setBydCloud(bydCloud: JSONObject): Boolean {
-        return updateSection("bydCloud", bydCloud)
-    }
 
     /**
      * Check whether LAN HTTP binding is explicitly enabled.
@@ -616,8 +573,8 @@ object UnifiedConfigManager {
 
     /**
      * Web-shell appearance preference (theme picker shipped in the WebView
-     * pages). Stored separately from the Android-shell theme so a
-     * Telegram-bot user accessing the tunnel can pick their own preference
+     * pages). Stored separately from the Android-shell theme so a remote
+     * user accessing the tunnel can pick their own preference
      * without touching the Android side. Default: "dark".
      *
      * Schema:
@@ -778,11 +735,9 @@ object UnifiedConfigManager {
         config.put("surveillance", JSONObject())
         config.put("recording", JSONObject())
         config.put("streaming", JSONObject())
-        config.put("telegram", JSONObject())
         config.put("proximityGuard", JSONObject())
         config.put("telemetryOverlay", JSONObject())
         config.put("tripAnalytics", JSONObject())
-        config.put("bydCloud", JSONObject())
         config.put("version", 1)
         config.put("lastModified", System.currentTimeMillis())
         applyDefaults(config)
@@ -820,10 +775,6 @@ object UnifiedConfigManager {
     private fun sensitiveKeysFor(section: String): Set<String> {
         return when (section) {
             "auth" -> setOf("deviceSecret")
-            "telegram" -> setOf("botToken")
-            "bydCloud" -> setOf("rawPassword", "loginKey", "signPassword", "commandPwd")
-            "mqtt" -> setOf("password")
-            "abrp" -> setOf("user_token", "api_key")
             "zrok" -> setOf("enableToken", "reservedToken", "enable_token", "reserved_token")
             else -> emptySet()
         }

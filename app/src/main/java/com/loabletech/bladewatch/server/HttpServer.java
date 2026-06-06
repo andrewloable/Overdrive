@@ -94,30 +94,7 @@ public class HttpServer {
 
             // Extract overlay icons for telemetry overlay
             extractAssetDir(assetManager, "overlay", new File("/data/local/tmp/overlay"));
-            
-            // Extract BYD cloud crypto tables
-            try {
-                String bydAsset = "byd/bangcle_tables.bin";
-                String[] bydFiles = assetManager.list("byd");
-                if (bydFiles != null && bydFiles.length > 0) {
-                    File bydTablesFile = new File("/data/local/tmp/bangcle_tables.bin");
-                    if (!bydTablesFile.exists() || bydTablesFile.length() == 0) {
-                        try (InputStream in = assetManager.open(bydAsset);
-                             java.io.FileOutputStream fos = new java.io.FileOutputStream(bydTablesFile)) {
-                            byte[] buf = new byte[8192];
-                            int n;
-                            while ((n = in.read(buf)) != -1) {
-                                fos.write(buf, 0, n);
-                            }
-                        }
-                        bydTablesFile.setReadable(true, false);
-                        CameraDaemon.log("Extracted BYD Bangcle tables to " + bydTablesFile.getAbsolutePath() + " (" + bydTablesFile.length() + " bytes)");
-                    }
-                }
-            } catch (Exception e) {
-                CameraDaemon.log("Could not extract BYD Bangcle tables: " + e.getMessage());
-            }
-            
+
             CameraDaemon.log("Web assets extracted to " + WEB_ROOT);
         } catch (Exception e) {
             CameraDaemon.log("Failed to extract web assets: " + e.getMessage());
@@ -254,7 +231,7 @@ public class HttpServer {
             String authHeader = null;
             // Reverse-proxy fingerprints — used by AuthMiddleware to disable
             // the loopback safety net when a tunnel relayed the request.
-            // Cloudflared injects Cf-*, zrok / ngrok injects X-Forwarded-*.
+            // zrok injects X-Forwarded-*.
             boolean hasTunnelHeaders = false;
             String forwardedFor = null;
             String hostHeader = null;
@@ -337,8 +314,8 @@ public class HttpServer {
             String method = parts[0];
             String path = parts[1];
             
-            // Extend timeout for slow BYD cloud API calls (login + verify can take 10-15s)
-            if (path.startsWith("/api/bydcloud") || path.startsWith("/api/vehicle/lock") || 
+            // Extend timeout for slow vehicle control API calls.
+            if (path.startsWith("/api/vehicle/lock") ||
                 path.startsWith("/api/vehicle/unlock") || path.startsWith("/api/vehicle/flash")) {
                 client.setSoTimeout(60000);
             }
@@ -449,14 +426,6 @@ public class HttpServer {
                 if (!serveStaticFile(out, "local/performance.html")) {
                     HttpResponse.sendError(out, 404, "performance.html not found");
                 }
-            } else if (path.equals("/abrp.html") || path.equals("/abrp")) {
-                if (!serveStaticFile(out, "local/abrp.html")) {
-                    HttpResponse.sendError(out, 404, "abrp.html not found");
-                }
-            } else if (path.equals("/mqtt.html") || path.equals("/mqtt")) {
-                if (!serveStaticFile(out, "local/mqtt.html")) {
-                    HttpResponse.sendError(out, 404, "mqtt.html not found");
-                }
             } else if (path.equals("/trips.html") || path.equals("/trips")) {
                 if (!serveStaticFile(out, "local/trips.html")) {
                     HttpResponse.sendError(out, 404, "trips.html not found");
@@ -464,14 +433,6 @@ public class HttpServer {
             } else if (path.equals("/vehicle-control.html") || path.equals("/vehicle-control")) {
                 if (!serveStaticFile(out, "local/vehicle-control.html")) {
                     HttpResponse.sendError(out, 404, "vehicle-control.html not found");
-                }
-            } else if (path.equals("/telegram.html") || path.equals("/telegram")) {
-                if (!serveStaticFile(out, "local/telegram.html")) {
-                    HttpResponse.sendError(out, 404, "telegram.html not found");
-                }
-            } else if (path.equals("/byd-cloud.html") || path.equals("/byd-cloud")) {
-                if (!serveStaticFile(out, "local/byd-cloud.html")) {
-                    HttpResponse.sendError(out, 404, "byd-cloud.html not found");
                 }
             } else if (path.equals("/notifications.html") || path.equals("/notifications")) {
                 if (!serveStaticFile(out, "local/notifications.html")) {
@@ -604,11 +565,6 @@ public class HttpServer {
             return SurveillanceApiHandler.handle(method, path, body, out);
         }
         
-        // BYD Cloud API
-        if (path.startsWith("/api/bydcloud")) {
-            return BydCloudApiHandler.handle(method, path, body, out);
-        }
-        
         // Streaming API
         if (path.startsWith("/api/stream")) {
             return StreamingApiHandler.handle(method, path, body, out);
@@ -622,24 +578,6 @@ public class HttpServer {
         // Quality Settings API (includes storage settings)
         if (path.startsWith("/api/settings/")) {
             return QualitySettingsApiHandler.handle(method, path, body, out);
-        }
-        
-        // ABRP API
-        if (path.startsWith("/api/abrp/")) {
-            return AbrpApiHandler.handle(method, path, body, out);
-        }
-        
-        // MQTT API
-        if (path.startsWith("/api/mqtt/")) {
-            return MqttApiHandler.handle(method, path, body, out);
-        }
-
-        // Telegram bot config API (token / pairing PIN / owner / preferences).
-        // Reads + writes /data/local/tmp/telegram_config.properties directly
-        // — same file the native TelegramSettingsFragment writes via ADB
-        // shell. The HTTP daemon runs as UID shell so direct writes work.
-        if (path.startsWith("/api/telegram/")) {
-            return TelegramApiHandler.handle(method, path, body, out);
         }
         
         // Trip Analytics API
@@ -849,34 +787,25 @@ public class HttpServer {
         try {
             JSONObject soh = new JSONObject();
             boolean hasSoh = false;
-            
-            com.loabletech.bladewatch.monitor.SocHistoryDatabase socDb = com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance();
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = socDb != null ? socDb.getSohEstimator() : null;
-            if (sohEst != null && sohEst.hasEstimate()) {
-                soh.put("percent", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
-                soh.put("estimatedCapacityKwh", Math.round(sohEst.getEstimatedCapacityKwh() * 10) / 10.0);
-                soh.put("nominalCapacityKwh", sohEst.getNominalCapacityKwh());
-                hasSoh = true;
-            } else {
-                // Fallback: read from persisted file
-                java.io.File sohFile = new java.io.File("/data/local/tmp/abrp_soh_estimate.properties");
-                if (sohFile.exists()) {
-                    java.util.Properties props = new java.util.Properties();
-                    try (java.io.FileInputStream fis = new java.io.FileInputStream(sohFile)) {
-                        props.load(fis);
-                    }
-                    String sohStr = props.getProperty("soh_percent");
-                    if (sohStr != null) {
-                        double sohVal = Double.parseDouble(sohStr);
-                        // Reject out-of-range values (e.g. 101 from bogus BMS sentinels)
-                        if (sohVal > 0 && sohVal <= 100) {
-                            soh.put("percent", Math.round(sohVal * 10) / 10.0);
-                            hasSoh = true;
-                        }
+
+            // Read SOH percent from the persisted battery-health estimate file.
+            java.io.File sohFile = new java.io.File("/data/local/tmp/abrp_soh_estimate.properties");
+            if (sohFile.exists()) {
+                java.util.Properties props = new java.util.Properties();
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(sohFile)) {
+                    props.load(fis);
+                }
+                String sohStr = props.getProperty("soh_percent");
+                if (sohStr != null) {
+                    double sohVal = Double.parseDouble(sohStr);
+                    // Reject out-of-range values (e.g. 101 from bogus BMS sentinels)
+                    if (sohVal > 0 && sohVal <= 100) {
+                        soh.put("percent", Math.round(sohVal * 10) / 10.0);
+                        hasSoh = true;
                     }
                 }
             }
-            
+
             if (hasSoh) status.put("soh", soh);
         } catch (Exception e) {
             // SOH not available

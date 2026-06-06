@@ -316,30 +316,6 @@ public class ModelsApiHandler {
             return;
         }
 
-        // When the user changes the vehicle model, the baseline pack
-        // capacity that the SOH estimator was using may no longer apply
-        // (different model = different default kWh). Reset and re-seed
-        // SOH so the displayed health value reflects the new pack rather
-        // than carrying stale calibration from the previous selection.
-        // Skipped when only color changed — that has no SOH bearing.
-        if (incoming.has("modelId")) {
-            try {
-                com.loabletech.bladewatch.monitor.SocHistoryDatabase socDb =
-                    com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance();
-                com.loabletech.bladewatch.abrp.SohEstimator sohEst =
-                    socDb != null ? socDb.getSohEstimator() : null;
-                if (sohEst != null) {
-                    sohEst.reset();
-                    android.content.Context appCtx =
-                        com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext();
-                    sohEst.autoDetectCarModel(appCtx);
-                    sohEst.seedInitialEstimate();
-                }
-            } catch (Throwable t) {
-                logger.warn(TAG + ": SOH reset on model change failed: " + t.getMessage());
-            }
-        }
-
         HttpResponse.sendJson(out, "{\"ok\":true}");
     }
 

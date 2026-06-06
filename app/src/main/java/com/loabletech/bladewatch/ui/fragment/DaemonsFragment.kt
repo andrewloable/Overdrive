@@ -8,22 +8,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.loabletech.bladewatch.ui.adapter.DaemonAdapter
 import com.loabletech.bladewatch.ui.viewmodel.DaemonsViewModel
 import com.loabletech.bladewatch.ui.model.DaemonType
-import com.loabletech.bladewatch.R
 import com.loabletech.bladewatch.ui.model.DaemonStatus
-import com.loabletech.bladewatch.ui.util.QrCodeGenerator
+import com.loabletech.bladewatch.R
 
 /**
  * Fragment for managing background daemons.
@@ -117,7 +112,6 @@ class DaemonsFragment : Fragment() {
     private fun onDaemonConfigureClicked(type: DaemonType) {
         when (type) {
             DaemonType.ZROK_TUNNEL -> showZrokTokenDialog()
-            DaemonType.TAILSCALE_TUNNEL -> showTailscaleSettingsDialog()
             else -> {
                 // Other daemons don't need configuration yet
                 Toast.makeText(context, getString(R.string.toast_no_config_needed, type.displayName), Toast.LENGTH_SHORT).show()
@@ -170,103 +164,6 @@ class DaemonsFragment : Fragment() {
         }
     }
 
-    /**
-     * Show dialog to configure and login to Tailscale.
-     */
-    private fun showTailscaleSettingsDialog() {
-        val context = context ?: return
-        var loginGenerated = false
-
-        activity?.runOnUiThread {
-            val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_tailscale_settings, null)
-            val loginGenerateButton = dialogView.findViewById<TextView>(R.id.generateLoginUrlBtn)
-            val qrCodeContainer = dialogView.findViewById<LinearLayout>(R.id.qrCodeContainer)
-            val qrCodeText = dialogView.findViewById<TextView>(R.id.qrCodeURL)
-            val qrCodeImage = dialogView.findViewById<ImageView>(R.id.qrCodeImage)
-            val proxySwitch = dialogView.findViewById<SwitchMaterial>(R.id.switchTailscaleProxy)
-
-            daemonsViewModel.tailscaleController.isProxyEnabled { isEnabled ->
-                activity?.runOnUiThread {
-                    proxySwitch.isChecked = isEnabled
-                }
-            }
-
-            loginGenerateButton.setOnClickListener {
-                if (!loginGenerated) {
-                    loginGenerated = true
-                    qrCodeContainer.visibility = View.VISIBLE
-                    daemonsViewModel.tailscaleController.generateLoginUrl { url ->
-                        activity?.runOnUiThread {
-                            if (url != null) {
-                                val qrBitmap = QrCodeGenerator.generate(url, 400)
-                                qrCodeImage.setImageBitmap(qrBitmap)
-                                qrCodeText.text = url
-                                qrCodeText.setTextColor(ContextCompat.getColor(context, R.color.brand_primary))
-                            } else {
-                                qrCodeText.text = getString(R.string.tailscale_failed_login_url)
-                                qrCodeText.setTextColor(ContextCompat.getColor(context, R.color.status_danger))
-                                loginGenerated = false
-                            }
-                        }
-                    }
-                }
-            }
-
-            daemonsViewModel.tailscaleController.tunnelUrl.observe(viewLifecycleOwner) { url ->
-                if (loginGenerated && !url.isNullOrEmpty()) {
-                    activity?.runOnUiThread {
-                        qrCodeContainer.visibility = View.GONE
-                        loginGenerated = false
-                        loginGenerateButton.text = getString(R.string.tailscale_logged_in_relogin)
-                    }
-                }
-            }
-
-            val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
-                .setIcon(R.drawable.ic_mqtt)
-                .setTitle(getString(R.string.dialog_tailscale_settings_title))
-                .setMessage(getString(R.string.dialog_tailscale_settings_message))
-                .setView(dialogView)
-                .setPositiveButton(getString(R.string.dialog_save)) { _, _ ->
-                    val enableProxy = proxySwitch.isChecked
-                    daemonsViewModel.tailscaleController.isProxyEnabled { wasEnabled ->
-                        activity?.runOnUiThread {
-                            // Only confirm when *turning on* the proxy (going off→on). Disabling is always safe.
-                            if (enableProxy && !wasEnabled) {
-                                confirmEnableTailscaleProxy()
-                            } else {
-                                saveTailscaleProxySettings(enableProxy)
-                            }
-                        }
-                    }
-                }
-                .setNegativeButton(getString(R.string.action_cancel), null)
-                .setNeutralButton(getString(R.string.dialog_delete)) { _, _ ->
-                    confirmResetTailscaleEnvironment()
-                }
-                .create()
-
-            dialog.show()
-        }
-    }
-
-    /**
-     * Confirm before enabling the tailscale proxy — has implications for MQTT to public brokers.
-     */
-    private fun confirmEnableTailscaleProxy() {
-        val context = context ?: return
-
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
-            .setIcon(R.drawable.ic_warning)
-            .setTitle(getString(R.string.dialog_tailscale_proxy_enable_title))
-            .setMessage(getString(R.string.dialog_tailscale_proxy_enable_message))
-            .setPositiveButton(getString(R.string.dialog_enable)) { _, _ ->
-                saveTailscaleProxySettings(true)
-            }
-            .setNegativeButton(getString(R.string.action_cancel), null)
-            .show()
-    }
-    
     /**
      * Show confirmation dialog before resetting zrok environment.
      */
@@ -322,74 +219,6 @@ class DaemonsFragment : Fragment() {
         })
     }
 
-    /**
-     * Show confirmation dialog before resetting tailscale environment.
-     */
-    private fun confirmResetTailscaleEnvironment() {
-        val context = context ?: return
-
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(context, R.style.Theme_BladeWatch_M3_Dialog)
-            .setIcon(R.drawable.ic_warning)
-            .setTitle(getString(R.string.dialog_tailscale_reset_title))
-            .setMessage(getString(R.string.dialog_tailscale_reset_message))
-            .setPositiveButton(getString(R.string.dialog_reset)) { _, _ ->
-                resetTailscaleEnvironment()
-            }
-            .setNegativeButton(getString(R.string.action_cancel), null)
-            .show()
-    }
-
-    /**
-     * Reset tailscale environment: stop tunnel, disable environment.
-     */
-    private fun resetTailscaleEnvironment() {
-        val context = context ?: return
-        Toast.makeText(context, getString(R.string.toast_resetting_tailscale), Toast.LENGTH_SHORT).show()
-
-        // First stop the tunnel if running
-        daemonsViewModel.stopDaemon(DaemonType.TAILSCALE_TUNNEL)
-
-        // Then disable the environment (removes environment.json and reserved tokens)
-        daemonsViewModel.tailscaleController.disableEnvironment(object : com.loabletech.bladewatch.ui.daemon.DaemonCallback {
-            override fun onStatusChanged(status: com.loabletech.bladewatch.ui.model.DaemonStatus, message: String) {
-                Toast.makeText(context, getString(R.string.toast_tailscale_reset_success), Toast.LENGTH_LONG).show()
-            }
-
-            override fun onError(error: String) {
-                Toast.makeText(context, getString(R.string.toast_tailscale_reset_warnings, error), Toast.LENGTH_LONG).show()
-            }
-        })
-    }
-
-    private fun saveTailscaleProxySettings(enabled: Boolean) {
-        daemonsViewModel.tailscaleController.saveProxySettings(enabled) { saved ->
-            activity?.runOnUiThread {
-                if (saved != null) {
-                    if (saved) {
-                        // Force MQTT proxy probe to re-run on next reconnect
-                        com.loabletech.bladewatch.mqtt.ProxyHelper.invalidateCache()
-
-                        val status = daemonsViewModel.daemonStates.value?.get(DaemonType.TAILSCALE_TUNNEL)?.status
-                        if (status != DaemonStatus.STOPPED) {
-                            daemonsViewModel.stopDaemon(DaemonType.TAILSCALE_TUNNEL)
-                            handler.postDelayed(
-                                { daemonsViewModel.startDaemon(DaemonType.TAILSCALE_TUNNEL) },
-                                2000
-                            )
-                        }
-                        if (enabled) {
-                            Toast.makeText(context, getString(R.string.toast_tailscale_proxy_enabled), Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, getString(R.string.toast_tailscale_proxy_disabled), Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, getString(R.string.toast_tailscale_proxy_save_failed), Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-    }
-    
     private fun saveZrokToken(token: String) {
         daemonsViewModel.zrokController.saveEnableToken(token) { success ->
             activity?.runOnUiThread {

@@ -1,7 +1,5 @@
 package com.loabletech.bladewatch.logging;
 
-import com.loabletech.bladewatch.BuildConfig;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,15 +44,9 @@ public final class DaemonLogConfig {
     
     /** SentryDaemon - legacy sentry process */
     public static final boolean SENTRY_DAEMON = false;
-    
-    /** TelegramBotDaemon - Telegram notification service */
-    public static final boolean TELEGRAM_BOT_DAEMON = false;
-    
+
     /** BydEventDaemon - BYD vehicle event listener */
     public static final boolean BYD_EVENT_DAEMON = false;
-    
-    /** GlobalProxyDaemon - VPN/proxy daemon (uses own log method, not DaemonLogger) */
-    public static final boolean GLOBAL_PROXY_DAEMON = false;
 
     // ==================== GPU PIPELINE ====================
     
@@ -152,33 +144,13 @@ public final class DaemonLogConfig {
     /** WSStreamServer - WebSocket stream server */
     public static final boolean WS_STREAM_SERVER = false;
 
-    // ==================== TELEMETRY & ABRP ====================
-    
-    /** AbrpTelemetryService - ABRP telemetry */
-    public static final boolean ABRP_TELEMETRY = false;
-    
-    /** AbrpConfig - ABRP configuration */
-    public static final boolean ABRP_CONFIG = false;
-    
-    /** SohEstimator - battery SOH estimation */
-    public static final boolean SOH_ESTIMATOR = BuildConfig.DEBUG;
-    
+    // ==================== TELEMETRY ====================
+
     /** TelemetryDataCollector - telemetry data collection */
     public static final boolean TELEMETRY_DATA_COLLECTOR = false;
-    
+
     /** OverlayRenderer - telemetry overlay rendering */
     public static final boolean OVERLAY_RENDERER = false;
-
-    // ==================== MQTT ====================
-
-    /** MqttConnectionManager - MQTT connection orchestration */
-    public static final boolean MQTT_CONNECTION_MANAGER = false;
-
-    /** MqttPublisher - per-connection MQTT publishing */
-    public static final boolean MQTT_PUBLISHER = false;
-
-    /** MqttConnectionStore - MQTT config persistence */
-    public static final boolean MQTT_CONNECTION_STORE = false;
 
     // ==================== TRIP ANALYTICS ====================
     
@@ -200,10 +172,7 @@ public final class DaemonLogConfig {
     
     /** SurveillanceIPC - surveillance IPC server */
     public static final boolean SURVEILLANCE_IPC = false;
-    
-    /** AbrpApiHandler - ABRP API handler */
-    public static final boolean ABRP_API_HANDLER = false;
-    
+
     /** PerformanceApiHandler - performance API handler */
     public static final boolean PERFORMANCE_API_HANDLER = false;
 
@@ -217,7 +186,7 @@ public final class DaemonLogConfig {
      */
     public static final boolean ANY_LOGGING_ENABLED = ENABLE_ALL
         || CAMERA_DAEMON || ACC_SENTRY_DAEMON || SENTRY_DAEMON
-        || TELEGRAM_BOT_DAEMON || BYD_EVENT_DAEMON || GLOBAL_PROXY_DAEMON
+        || BYD_EVENT_DAEMON
         || GPU_PIPELINE || PANORAMIC_CAMERA || EGL_CORE || GL_UTIL
         || GPU_MOSAIC_RECORDER || GPU_DOWNSCALER || GPU_STREAM_SCALER
         || HW_ENCODER || ADAPTIVE_BITRATE || H264_CIRCULAR_BUFFER
@@ -227,21 +196,18 @@ public final class DaemonLogConfig {
         || PROXIMITY_RADAR_MONITOR || PROXIMITY_RECORDING_HANDLER
         || PROXIMITY_GUARD_CONFIG || GEAR_MONITOR || VEHICLE_DATA_MONITOR
         || VEHICLE_DATA_BRIDGE || PERFORMANCE_MONITOR || PERFORMANCE_BRIDGE
-        || SOC_HISTORY_DATABASE || WS_STREAM_SERVER || ABRP_TELEMETRY
-        || ABRP_CONFIG || SOH_ESTIMATOR || TELEMETRY_DATA_COLLECTOR
+        || SOC_HISTORY_DATABASE || WS_STREAM_SERVER
+        || TELEMETRY_DATA_COLLECTOR
         || OVERLAY_RENDERER || TRIP_ANALYTICS || STORAGE_MANAGER
-        || MQTT_CONNECTION_MANAGER || MQTT_PUBLISHER || MQTT_CONNECTION_STORE
         || EXTERNAL_STORAGE_CLEANER || HTTP_SERVER || SURVEILLANCE_IPC
-        || ABRP_API_HANDLER || PERFORMANCE_API_HANDLER;
+        || PERFORMANCE_API_HANDLER;
     
     static {
         if (!ENABLE_ALL) {
             if (CAMERA_DAEMON)              ENABLED_TAGS.add("CameraDaemon");
             if (ACC_SENTRY_DAEMON)          ENABLED_TAGS.add("AccSentryDaemon");
             if (SENTRY_DAEMON)              ENABLED_TAGS.add("SentryDaemon");
-            if (TELEGRAM_BOT_DAEMON)        ENABLED_TAGS.add("TelegramBotDaemon");
             if (BYD_EVENT_DAEMON)           ENABLED_TAGS.add("BydEventDaemon");
-            if (GLOBAL_PROXY_DAEMON)        ENABLED_TAGS.add("GlobalProxyDaemon");
             if (GPU_PIPELINE)               ENABLED_TAGS.add("GpuPipeline");
             if (PANORAMIC_CAMERA)           ENABLED_TAGS.add("PanoramicCameraGpu");
             if (EGL_CORE)                   ENABLED_TAGS.add("EGLCore");
@@ -269,14 +235,8 @@ public final class DaemonLogConfig {
             if (PERFORMANCE_BRIDGE)         ENABLED_TAGS.add("PerformanceBridge");
             if (SOC_HISTORY_DATABASE)       ENABLED_TAGS.add("SocHistoryDatabase");
             if (WS_STREAM_SERVER)           ENABLED_TAGS.add("WSStreamServer");
-            if (ABRP_TELEMETRY)             ENABLED_TAGS.add("AbrpTelemetryService");
-            if (ABRP_CONFIG)                ENABLED_TAGS.add("AbrpConfig");
-            if (SOH_ESTIMATOR)              ENABLED_TAGS.add("SohEstimator");
             if (TELEMETRY_DATA_COLLECTOR)   ENABLED_TAGS.add("TelemetryDataCollector");
             if (OVERLAY_RENDERER)           ENABLED_TAGS.add("OverlayRenderer");
-            if (MQTT_CONNECTION_MANAGER)    ENABLED_TAGS.add("MqttConnectionManager");
-            if (MQTT_PUBLISHER)             ENABLED_TAGS.add("MqttPublisher");
-            if (MQTT_CONNECTION_STORE)      ENABLED_TAGS.add("MqttConnectionStore");
             if (TRIP_ANALYTICS) {
                 ENABLED_TAGS.add("TripAnalyticsManager");
                 ENABLED_TAGS.add("TripDetector");
@@ -291,7 +251,6 @@ public final class DaemonLogConfig {
             if (EXTERNAL_STORAGE_CLEANER)   ENABLED_TAGS.add("ExternalStorageCleaner");
             if (HTTP_SERVER)                ENABLED_TAGS.add("HttpServer");
             if (SURVEILLANCE_IPC)           ENABLED_TAGS.add("SurveillanceIPC");
-            if (ABRP_API_HANDLER)           ENABLED_TAGS.add("AbrpApiHandler");
             if (PERFORMANCE_API_HANDLER)    ENABLED_TAGS.add("PerformanceApiHandler");
         }
     }

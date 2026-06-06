@@ -8,8 +8,6 @@ import android.media.MediaMuxer;
 import android.os.Bundle;
 import android.view.Surface;
 
-import com.loabletech.bladewatch.telegram.TelegramNotifier;
-
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -1057,13 +1055,6 @@ public class HardwareEventRecorderGpu {
                         com.loabletech.bladewatch.storage.StorageManager.getInstance().onFileSaved(finalFile);
                     } catch (Exception e) {
                         logger.warn("onFileSaved error: " + e.getMessage());
-                    }
-
-                    try {
-                        TelegramNotifier.notifyVideoRecorded(
-                                finalFile.getAbsolutePath(), null, (int) durationSec);
-                    } catch (Exception e) {
-                        logger.warn("Failed to emit video notification: " + e.getMessage());
                     }
                 } else {
                     logger.error("Failed to rename temp file — deleting orphan");

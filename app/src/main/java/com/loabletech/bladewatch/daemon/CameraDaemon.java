@@ -3,9 +3,6 @@ package com.loabletech.bladewatch.daemon;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.loabletech.bladewatch.abrp.AbrpConfig;
-import com.loabletech.bladewatch.abrp.AbrpTelemetryService;
-import com.loabletech.bladewatch.abrp.SohEstimator;
 import com.loabletech.bladewatch.logging.DaemonLogger;
 import com.loabletech.bladewatch.monitor.AccMonitor;
 import com.loabletech.bladewatch.server.HttpServer;
@@ -96,15 +93,12 @@ public class CameraDaemon {
     private static volatile boolean pendingAccOff = false;
     
     // ==================== DOOR LOCK GATE (surveillance arm/disarm) ====================
-    // Lock detection runs in CameraDaemon's process where cloud MQTT is active.
     // Surveillance is only armed after doors are locked (reduces false triggers from owner exiting).
     private static volatile boolean doorLockListenerArmed = false;
 
-    // Three parallel lock-event sources, all active simultaneously while the
-    // gate is open. Cloud is fragile in the field (rarely fires lock events
-    // even when MQTT is healthy), so device-SDK and polling exist as
-    // independent backups rather than as a fallback chain.
-    private static com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.CloudLockStateListener cloudLockListener = null;
+    // Two parallel lock-event sources, both active simultaneously while the
+    // gate is open: the device-SDK typed listener and a periodic poll. They
+    // run as independent backups rather than as a fallback chain.
     private static com.loabletech.bladewatch.byd.BydDataCollector.DoorLockListener deviceLockSubscriber = null;
     private static Thread unlockPollThread = null;
     // Reverse watchdog: periodically queries hardware ACC state and force-
@@ -137,13 +131,6 @@ public class CameraDaemon {
     
     // ==================== DEVICE ID ====================
     private static String deviceId = "unknown";
-    
-    // ==================== ABRP TELEMETRY ====================
-    private static AbrpTelemetryService abrpTelemetryService;
-    private static com.loabletech.bladewatch.abrp.SohEstimator sohEstimator;
-    
-    // ==================== MQTT CONNECTIONS ====================
-    private static com.loabletech.bladewatch.mqtt.MqttConnectionManager mqttConnectionManager;
     
     // ==================== TRIP ANALYTICS ====================
     private static com.loabletech.bladewatch.trips.TripAnalyticsManager tripAnalyticsManager;
@@ -192,13 +179,6 @@ public class CameraDaemon {
             log("ACC ON: BydDataCollector re-init failed: " + e.getMessage());
         }
 
-        // Start BYD Cloud MQTT subscriber (if credentials configured)
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().startSubscriberIfConfigured();
-        } catch (Exception e) {
-            log("Cloud subscriber start failed: " + e.getMessage());
-        }
-        
         // Re-init GearMonitor with valid context
         try {
             com.loabletech.bladewatch.monitor.GearMonitor gearMonitor = com.loabletech.bladewatch.monitor.GearMonitor.getInstance();
@@ -443,92 +423,14 @@ public class CameraDaemon {
         // Initialize Safe Location Manager (geofence zones)
         com.loabletech.bladewatch.surveillance.SafeLocationManager.getInstance().init();
 
-        // Initialize SohEstimator (load persisted SOH — capacity detection deferred until collector is ready)
-        try {
-            sohEstimator = new SohEstimator();
-            sohEstimator.init();
-        } catch (Exception e) {
-            log("SohEstimator init error: " + e.getMessage());
-        }
-
         // Initialize Vehicle Data Monitor + BydDataCollector
         initVehicleDataMonitor();
-
-        // Now that BydDataCollector is ready, detect car model for accurate capacity
-        try {
-            if (sohEstimator != null) {
-                sohEstimator.autoDetectCarModel(sharedAppContext);
-                sohEstimator.seedInitialEstimate();
-                log("SohEstimator: " + (sohEstimator.hasEstimate()
-                        ? String.format("%.1f%%", sohEstimator.getCurrentSoh())
-                        : "no estimate")
-                    + " (capacity: " + String.format("%.2f kWh", sohEstimator.getNominalCapacityKwh()) + ")");
-            }
-        } catch (Exception e) {
-            log("SohEstimator autoDetect error: " + e.getMessage());
-        }
-
-        // Initialize ABRP Telemetry Service
-        try {
-            log("Initializing ABRP telemetry...");
-            AbrpConfig abrpConfig = new AbrpConfig();
-            abrpConfig.load();
-            
-            // Auto-set car_model in ABRP config if not already set
-            if (sohEstimator != null && (abrpConfig.getCarModel() == null || abrpConfig.getCarModel().isEmpty())) {
-                double cap = sohEstimator.getNominalCapacityKwh();
-                String model = capacityToModelName(cap);
-                if (model != null) {
-                    abrpConfig.setCarModel(model);
-                    abrpConfig.save();
-                    log("Auto-detected car model for ABRP: " + model + " (" + cap + " KWh)");
-                }
-            }
-            
-            abrpTelemetryService = new AbrpTelemetryService(abrpConfig, sohEstimator);
-            abrpTelemetryService.init(sharedAppContext);
-            
-            // Set IPC references so SurveillanceIpcServer can access ABRP
-            SurveillanceIpcServer.setAbrpReferences(abrpConfig, abrpTelemetryService);
-            
-            if (abrpConfig.isEnabled() && abrpConfig.isConfigured()) {
-                abrpTelemetryService.start();
-                log("ABRP telemetry started (token: " + abrpConfig.getMaskedToken() + ")");
-            } else {
-                log("ABRP telemetry not started (enabled=" + abrpConfig.isEnabled() + ", configured=" + abrpConfig.isConfigured() + ")");
-            }
-        } catch (Exception e) {
-            log("ABRP init error: " + e.getMessage());
-        }
-
-        // Initialize MQTT Connection Manager
-        try {
-            log("Initializing MQTT connections...");
-            mqttConnectionManager = new com.loabletech.bladewatch.mqtt.MqttConnectionManager();
-            mqttConnectionManager.init(deviceId, sohEstimator);
-
-            // Set IPC reference so SurveillanceIpcServer can access MQTT
-            SurveillanceIpcServer.setMqttManager(mqttConnectionManager);
-
-            // Start all enabled connections
-            mqttConnectionManager.startAll();
-            log("MQTT initialized (" + mqttConnectionManager.getActiveCount() + " active connections)");
-        } catch (Exception e) {
-            log("MQTT init error: " + e.getMessage());
-        }
-
-        // Start BYD Cloud MQTT subscriber for remote command results + push data
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().startSubscriberIfConfigured();
-        } catch (Exception e) {
-            log("Cloud MQTT subscriber start failed: " + e.getMessage());
-        }
 
         // Initialize Trip Analytics
         try {
             log("Initializing Trip Analytics...");
             tripAnalyticsManager = new com.loabletech.bladewatch.trips.TripAnalyticsManager();
-            tripAnalyticsManager.init(sharedAppContext, telemetryDataCollector, sohEstimator);
+            tripAnalyticsManager.init(sharedAppContext, telemetryDataCollector);
             log("Trip Analytics initialized (enabled=" + tripAnalyticsManager.isEnabled() + ")");
 
             // ONE-TIME migration: Clear poisoned consumption buckets if this is a PHEV
@@ -537,9 +439,15 @@ public class CameraDaemon {
             // This must only run ONCE — running it every startup wipes all accumulated
             // consumption data, which makes the personalized range estimator return null
             // until enough new trips rebuild the buckets (minimum 3 samples per bucket).
+            // Capacity is sourced from BYD-local nominal capacity (VehicleDataMonitor).
+            double nominalKwh = 0.0;
+            try {
+                nominalKwh = com.loabletech.bladewatch.monitor.VehicleDataMonitor
+                    .getInstance().getNominalCapacityKwh();
+            } catch (Exception ignored) {}
             java.io.File bucketMigrationMarker = new java.io.File("/data/local/tmp/bladewatch_bucket_migration_done");
-            if (sohEstimator != null && sohEstimator.getNominalCapacityKwh() > 0
-                    && sohEstimator.getNominalCapacityKwh() < 30.0
+            if (nominalKwh > 0
+                    && nominalKwh < 30.0
                     && tripAnalyticsManager.getDatabase() != null
                     && !bucketMigrationMarker.exists()) {
                 tripAnalyticsManager.getDatabase().clearConsumptionBuckets();
@@ -928,8 +836,6 @@ public class CameraDaemon {
         
         // Stop services
         if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
-        if (abrpTelemetryService != null) abrpTelemetryService.stop();
-        if (mqttConnectionManager != null) mqttConnectionManager.stopAll();
         if (tcpServer != null) tcpServer.stop();
         if (httpServer != null) httpServer.stop();
         if (ipcServer != null) ipcServer.stop();
@@ -1128,13 +1034,7 @@ public class CameraDaemon {
                     com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 
-                // 5. Stop services (MQTT, ABRP, Trip Analytics)
-                try {
-                    if (mqttConnectionManager != null) mqttConnectionManager.stopAll();
-                } catch (Exception e) { /* ignore */ }
-                try {
-                    if (abrpTelemetryService != null) abrpTelemetryService.stop();
-                } catch (Exception e) { /* ignore */ }
+                // 5. Stop services (Trip Analytics)
                 try {
                     if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
                 } catch (Exception e) { /* ignore */ }
@@ -1514,8 +1414,8 @@ public class CameraDaemon {
     
     // ==================== DOOR LOCK GATE ====================
     // Surveillance is only armed after doors are locked. This prevents false motion
-    // events from the owner exiting the car. Cloud lock detection is primary (MQTT
-    // subscriber runs in this process), device SDK is fallback, 60s timeout is last resort.
+    // events from the owner exiting the car. Device SDK typed listener and a 5s
+    // poll run in parallel; a 60s timeout is the last resort.
     
     /**
      * Register door lock listener and arm surveillance when doors lock.
@@ -1527,30 +1427,24 @@ public class CameraDaemon {
     private static void registerDoorLockListenerAndArmOnLock() {
         doorLockListenerArmed = false;
 
-        // Three parallel lock-event sources, all active simultaneously while
+        // Two parallel lock-event sources, both active simultaneously while
         // the gate is open:
-        //   1. Cloud MQTT (BydCloudDataProvider)         — fast when it works,
-        //      but historically very fragile in the field (events rarely fire
-        //      even with healthy MQTT and fresh snapshots).
-        //   2. Device SDK typed listener (via BydDataCollector) — primary
+        //   1. Device SDK typed listener (via BydDataCollector) — primary
         //      reliable source. Single registration at daemon startup.
-        //   3. Periodic getDoorLockStatus(area=1) poll       — catches any
-        //      lock event that neither listener delivered.
+        //   2. Periodic getDoorLockStatus(area=1) poll       — catches any
+        //      lock event the listener didn't deliver.
         //
-        // All three converge through applyLockEvent() which is idempotent —
+        // Both converge through applyLockEvent() which is idempotent —
         // multiple sources reporting the same transition cause exactly one
         // arm or disarm. There is no primary/fallback toggle: every source
         // runs in parallel, so a silent failure of one doesn't gate the
         // others.
 
-        attachCloudLockSource();
         attachDeviceLockSource();
         startUnlockPollThread();
 
         // Initial state probe: if doors are already locked at gate-entry, arm
-        // now without waiting for an event. Both sources are checked.
-        Boolean cloudInitial = currentCloudLockState();
-        if (cloudInitial != null) applyLockEvent(cloudInitial, "cloud-initial");
+        // now without waiting for an event.
         Boolean deviceInitial = currentDeviceLockState();
         if (deviceInitial != null) applyLockEvent(deviceInitial, "device-initial");
 
@@ -1602,25 +1496,8 @@ public class CameraDaemon {
         }
     }
 
-    /** Cloud (MQTT) lock-event source. Always attached — runs in parallel
-     *  with the device-SDK source. No primary/fallback toggle. */
-    private static void attachCloudLockSource() {
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider cloudProvider =
-                com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
-            if (cloudLockListener != null) {
-                cloudProvider.removeLockStateListener(cloudLockListener);
-            }
-            cloudLockListener = (locked, timestampMs) -> applyLockEvent(locked, "cloud");
-            cloudProvider.addLockStateListener(cloudLockListener);
-            log("LOCK GATE: Cloud lock listener attached");
-        } catch (Exception e) {
-            log("LOCK GATE: Cloud listener attach failed: " + e.getMessage());
-        }
-    }
-
     /** Device-SDK lock-event source via BydDataCollector's typed listener.
-     *  Always attached — runs in parallel with the cloud source. */
+     *  Always attached — runs in parallel with the poll source. */
     private static void attachDeviceLockSource() {
         if (sharedAppContext == null) {
             log("LOCK GATE: No context — device-SDK source unavailable");
@@ -1630,7 +1507,7 @@ public class CameraDaemon {
             Object doorLockDevice = com.loabletech.bladewatch.byd.BydDeviceHelper.getDevice(
                 "android.hardware.bydauto.doorlock.BYDAutoDoorLockDevice", sharedAppContext);
             if (doorLockDevice == null) {
-                log("LOCK GATE: BYDAutoDoorLockDevice unavailable — relying on cloud + timeout");
+                log("LOCK GATE: BYDAutoDoorLockDevice unavailable — relying on poll + timeout");
                 return;
             }
         } catch (Exception e) {
@@ -1638,20 +1515,6 @@ public class CameraDaemon {
             return;
         }
         subscribeDeviceLockListener();
-    }
-
-    /** @return true=locked, false=unlocked, null=unknown/cloud unavailable. */
-    private static Boolean currentCloudLockState() {
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider cloudProvider =
-                com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
-            if (!cloudProvider.isLockStateFresh()) return null;
-            com.loabletech.bladewatch.byd.cloud.VehicleCloudSnapshot cs = cloudProvider.getSnapshot();
-            if (cs == null) return null;
-            if (cs.isAllLocked()) return true;
-            if (cs.isAnyUnlocked()) return false;
-        } catch (Exception ignored) {}
-        return null;
     }
 
     /** @return true=locked, false=unlocked, null=unknown/device unavailable. */
@@ -1812,9 +1675,7 @@ public class CameraDaemon {
         stopUnlockPollThread();
 
         unlockPollThread = new Thread(() -> {
-            log("Unlock poll thread started (5s polling getDoorLockStatus + REST fallback)");
-
-            int restPollCounter = 0;
+            log("Unlock poll thread started (5s polling getDoorLockStatus)");
 
             while (!com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) {
                 try {
@@ -1824,9 +1685,9 @@ public class CameraDaemon {
                 }
                 if (com.loabletech.bladewatch.monitor.AccMonitor.isAccOn()) return;
 
-                // Source 1: SDK device poll. Returns INVALID(0) on firmwares
-                // that don't expose getDoorLockStatus(area) to user UID, but
-                // still works on most cars and gives us a fast (5s) signal.
+                // SDK device poll. Returns INVALID(0) on firmwares that don't
+                // expose getDoorLockStatus(area) to user UID, but still works
+                // on most cars and gives us a fast (5s) signal.
                 try {
                     Object doorLockDevice = com.loabletech.bladewatch.byd.BydDeviceHelper.getDevice(
                         "android.hardware.bydauto.doorlock.BYDAutoDoorLockDevice", sharedAppContext);
@@ -1840,27 +1701,6 @@ public class CameraDaemon {
                     }
                 } catch (Exception e) {
                     // Silently continue — device may be sleeping
-                }
-
-                // Source 2: REST realtime poll fallback. Fires only when the
-                // cached cloud lock state has gone stale (5 min default), and
-                // is internally rate-limited at 30s. So this loop calls it
-                // every UNLOCK_POLL_INTERVAL_MS but the actual REST hit only
-                // happens when we genuinely need fresh data.
-                // The 12-iteration gate avoids hitting refreshLockStateIfStale()
-                // every 5s — that's still a no-op call but cheap to skip.
-                restPollCounter++;
-                if (restPollCounter >= 12) { // ~ once per minute at 5s interval
-                    restPollCounter = 0;
-                    try {
-                        com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance()
-                                .refreshLockStateIfStale();
-                        // The data provider fires its CloudLockStateListener
-                        // automatically when the fetch reveals a transition,
-                        // which we attached via attachCloudLockSource().
-                    } catch (Exception e) {
-                        // Silently continue — cloud may be down
-                    }
                 }
             }
             log("Unlock poll thread exiting (ACC ON)");
@@ -1882,14 +1722,7 @@ public class CameraDaemon {
     private static void cleanupDoorLockGate() {
         doorLockListenerArmed = false;
 
-        // Detach all three lock-event sources
-        if (cloudLockListener != null) {
-            try {
-                com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance()
-                    .removeLockStateListener(cloudLockListener);
-            } catch (Exception ignored) {}
-            cloudLockListener = null;
-        }
+        // Detach both lock-event sources
         unsubscribeDeviceLockListener();
         stopUnlockPollThread();
 
@@ -2062,8 +1895,8 @@ public class CameraDaemon {
                 // poke AVC; only this surveillance path runs without it.
                 // Door lock gate: surveillance is armed only after doors are locked.
                 // This prevents false motion events from the owner exiting the car.
-                // Three parallel sources fire concurrently (cloud MQTT, device-SDK
-                // typed listener, 5s polling); arm timeout at 60s; ACC-ON disarm
+                // Two parallel sources fire concurrently (device-SDK typed
+                // listener, 5s polling); arm timeout at 60s; ACC-ON disarm
                 // watchdog runs in parallel as reverse fallback.
                 log("Pipeline started in sentry mode — waiting for door lock to arm surveillance");
                 registerDoorLockListenerAndArmOnLock();
@@ -2094,7 +1927,7 @@ public class CameraDaemon {
             // Stop schedule checker (only runs during ACC OFF sentry mode)
             stopScheduleChecker();
 
-            // Stop door lock gate: detach cloud + device-SDK listeners, stop
+            // Stop door lock gate: detach device-SDK listener, stop
             // unlock poll, stop ACC-ON disarm watchdog.
             cleanupDoorLockGate();
 
@@ -2659,19 +2492,6 @@ public class CameraDaemon {
      */
     private static int countTodaysEvents() {
         return getTodaysEvents().size();
-    }
-    
-    /** Map battery capacity to ABRP car model name */
-    private static String capacityToModelName(double capacityKwh) {
-        if (capacityKwh >= 105) return "byd:seal:23:108";     // Tang EV
-        if (capacityKwh >= 84) return "byd:han:21:85";        // Han EV
-        if (capacityKwh >= 80) return "byd:seal:23:82";       // Seal
-        if (capacityKwh >= 70) return "byd:seal_u:24:72";     // Seal U
-        if (capacityKwh >= 59) return "byd:atto3:22:60";      // Atto 3
-        if (capacityKwh >= 55) return "byd:qin_plus:21:56";   // Qin Plus
-        if (capacityKwh >= 43) return "byd:dolphin:22:45";    // Dolphin
-        if (capacityKwh >= 36) return "byd:seagull:23:38";    // Seagull
-        return null;
     }
     
     /**
@@ -3325,17 +3145,17 @@ public class CameraDaemon {
             // Initialize SOC History Database for persistent battery tracking
             com.loabletech.bladewatch.monitor.SocHistoryDatabase socDb =
                 com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance();
-            socDb.setSohEstimator(sohEstimator);
             socDb.init();
             socDb.start();
-            
-            // Fix stale kWh records from before PHEV capacity was correctly detected
-            if (sohEstimator != null && sohEstimator.getNominalCapacityKwh() > 0
-                    && sohEstimator.getNominalCapacityKwh() < 30.0) {
-                log("Fixing stale kWh records for PHEV (nominal=" + sohEstimator.getNominalCapacityKwh() + " kWh)");
-                socDb.fixStaleRemainingKwh(sohEstimator.getNominalCapacityKwh());
+
+            // Fix stale kWh records from before PHEV capacity was correctly detected.
+            // Capacity is sourced from BYD-local nominal capacity (VehicleDataMonitor).
+            double socNominalKwh = vehicleMonitor.getNominalCapacityKwh();
+            if (socNominalKwh > 0 && socNominalKwh < 30.0) {
+                log("Fixing stale kWh records for PHEV (nominal=" + socNominalKwh + " kWh)");
+                socDb.fixStaleRemainingKwh(socNominalKwh);
             }
-            
+
             log("SOC History Database initialized successfully");
             
         } catch (Exception e) {

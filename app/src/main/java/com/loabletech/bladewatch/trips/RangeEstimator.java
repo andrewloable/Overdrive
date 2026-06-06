@@ -1,16 +1,16 @@
 package com.loabletech.bladewatch.trips;
 
-import com.loabletech.bladewatch.abrp.SohEstimator;
 import com.loabletech.bladewatch.logging.DaemonLogger;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 
 /**
- * Personalized range prediction using bucketed consumption model with
- * SoH-adjusted energy, recency-weighted bucket selection, and multi-bucket
- * blending for smooth transitions between driving conditions.
+ * Personalized range prediction using a bucketed consumption model with
+ * recency-weighted bucket selection and multi-bucket blending for smooth
+ * transitions between driving conditions.
  *
- * Key improvements over naive bucket lookup:
- *   1. SoH-adjusted available energy — a degraded battery at 85% SoH has less
- *      usable kWh at the same SoC%, regardless of consumption rate
+ * Key features:
+ *   1. Usable available energy from BYD-local nominal pack capacity (no SoH
+ *      degradation source is available, so the pack is treated as healthy)
  *   2. Recency-weighted fallback chain: exact bucket → neighbor blend → overall
  *   3. Exponential decay weighting so recent trips matter more than old ones
  *   4. Proper confidence intervals using t-distribution-inspired widening for
@@ -30,12 +30,23 @@ public class RangeEstimator {
     private static final double BMS_CUTOFF_SOC = 2.0;
 
     private final TripDatabase database;
-    private final SohEstimator sohEstimator;
 
-    public RangeEstimator(TripDatabase database, SohEstimator sohEstimator) {
+    public RangeEstimator(TripDatabase database) {
         this.database = database;
-        this.sohEstimator = sohEstimator;
         backfillBucketsIfNeeded();
+    }
+
+    /**
+     * Nominal pack capacity (kWh) from BYD local vehicle data. There is no SoH
+     * degradation source available, so this is the usable nominal capacity at
+     * face value. Returns 0 when no capacity signal is available.
+     */
+    private double getNominalCapacityKwh() {
+        try {
+            return VehicleDataMonitor.getInstance().getNominalCapacityKwh();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     // ==================== Backfill ====================
@@ -75,7 +86,7 @@ public class RangeEstimator {
                     consumptionRate = energyUsed / trip.distanceKm;
                 } else if (trip.socStart > trip.socEnd && trip.socStart > 0) {
                     // Fallback: SoC-based
-                    double nominalKwh = sohEstimator.getNominalCapacityKwh();
+                    double nominalKwh = getNominalCapacityKwh();
                     double socDelta = trip.socStart - trip.socEnd;
                     consumptionRate = (socDelta * nominalKwh / 100.0) / trip.distanceKm;
                 }
@@ -145,7 +156,7 @@ public class RangeEstimator {
      * Estimate remaining range based on current conditions and historical consumption data.
      *
      * Algorithm:
-     *   1. Compute usable energy: SoH-adjusted capacity × usable SoC (above BMS cutoff)
+     *   1. Compute usable energy: nominal capacity × usable SoC (above BMS cutoff)
      *   2. Look up consumption rate from best matching bucket with fallback chain
      *   3. Estimate auxiliary drain (HVAC) based on temperature
      *   4. Compute range = usable energy / (consumption rate + aux drain per km)
@@ -160,7 +171,7 @@ public class RangeEstimator {
     public RangeEstimate estimate(double currentSocPercent, double currentSpeedKmh,
                                   int extTempC, int dnaOverallScore) {
 
-        // 1. Compute usable energy with SoH adjustment
+        // 1. Compute usable energy from nominal pack capacity
         double usableEnergyKwh = computeUsableEnergy(currentSocPercent);
         if (usableEnergyKwh <= 0) {
             logger.debug("No usable energy remaining (SoC=" + currentSocPercent + "%)");
@@ -245,7 +256,7 @@ public class RangeEstimator {
             source = "kWh=" + String.format("%.2f", energyUsed);
         } else {
             // Fallback: derive from SoC delta × nominal capacity
-            double nominalCapacityKwh = sohEstimator.getNominalCapacityKwh();
+            double nominalCapacityKwh = getNominalCapacityKwh();
             double socDelta = trip.socStart - trip.socEnd;
 
             if (socDelta <= 0) {
@@ -276,25 +287,17 @@ public class RangeEstimator {
 
     /**
      * Compute usable energy in kWh, accounting for:
-     *   - Battery SoH (degraded batteries have less actual capacity)
      *   - BMS cutoff buffer (bottom ~5% SoC is not usable)
      *   - Non-linear taper below 10% SoC (BMS limits discharge rate)
+     *
+     * NOTE: SoH degradation is no longer applied — there is no BYD-local
+     * degradation source, so the pack is treated as healthy (100% SoH) and the
+     * nominal capacity is used at face value.
      */
     private double computeUsableEnergy(double currentSocPercent) {
-        double nominalKwh = sohEstimator.getNominalCapacityKwh();
+        // No SoH data available — use nominal capacity (assume battery is healthy).
+        double actualCapacityKwh = getNominalCapacityKwh();
 
-        // Apply SoH if available — a battery at 85% SoH has 85% of nominal capacity
-        double actualCapacityKwh;
-        if (sohEstimator.hasEstimate()) {
-            double sohFraction = sohEstimator.getCurrentSoh() / 100.0;
-            actualCapacityKwh = nominalKwh * sohFraction;
-        } else {
-            // No SoH data — use nominal capacity (assume battery is healthy)
-            actualCapacityKwh = nominalKwh;
-        }
-
-        // If nominal capacity is 0 (detection failed), try computing from
-        // the persisted SOH file which now saves the capacity.
         if (actualCapacityKwh <= 0) {
             logger.debug("No usable capacity for range estimation");
             return 0;

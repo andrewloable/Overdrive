@@ -2,7 +2,6 @@ package com.loabletech.bladewatch.server;
 
 import com.loabletech.bladewatch.byd.BydDataCollector;
 import com.loabletech.bladewatch.byd.BydVehicleData;
-import com.loabletech.bladewatch.byd.cloud.BydCloudConfig;
 import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter;
 import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter.CommandResult;
 import com.loabletech.bladewatch.byd.routing.VehicleCommandRouter.VehicleCommand;
@@ -15,28 +14,25 @@ import java.io.OutputStream;
 
 /**
  * API handler for the Vehicle Control page. All write endpoints route
- * through {@link VehicleCommandRouter}, which decides per command whether to
- * attempt cloud first, fall back to SDK, or treat as cloud-only / SDK-only.
+ * through {@link VehicleCommandRouter}.
  *
  * Endpoints:
  *   GET  /api/vehicle/state         — current door/window/trunk/lock state
  *   GET  /api/vehicle/ac-diagnostics — read-only AC SDK method/getter probe
  *   GET  /api/vehicle/seat-diagnostics — read-only seat hardware/capability probe
- *   GET  /api/vehicle/cloud-status  — BYD Cloud connection status
- *   GET  /api/vehicle/cloud-lock    — cached cloud lock state (REST refresh if stale)
- *   POST /api/vehicle/lock          — CLOUD_FIRST
- *   POST /api/vehicle/unlock        — CLOUD_FIRST
- *   POST /api/vehicle/trunk         — open=cloud-unlock+SDK, close/stop=SDK
- *   POST /api/vehicle/window        — area=0+close=CLOUD_FIRST, others SDK_ONLY
- *   POST /api/vehicle/flash         — CLOUD_FIRST (cloud-only on this gen)
- *   POST /api/vehicle/find-car      — CLOUD_FIRST (cloud-only on this gen)
- *   POST /api/vehicle/climate       — power=CLOUD_FIRST, set_temp/set_fan=SDK_ONLY
+ *   POST /api/vehicle/lock          — lock
+ *   POST /api/vehicle/unlock        — unlock
+ *   POST /api/vehicle/trunk         — open/close/stop
+ *   POST /api/vehicle/window        — window move
+ *   POST /api/vehicle/flash         — flash lights
+ *   POST /api/vehicle/find-car      — find car
+ *   POST /api/vehicle/climate       — climate control
  *   POST /api/vehicle/seat          — SDK_ONLY
  *   POST /api/vehicle/lights        — SDK_ONLY
  *   POST /api/vehicle/adas          — SDK_ONLY
- *   POST /api/vehicle/battery-heat  — CLOUD_ONLY
- *   GET  /api/vehicle/charging-schedule  — local mirror { enabled, startChargeTime, endChargeTime, chargeWay }
- *   POST /api/vehicle/charging-schedule  — { startChargeTime, endChargeTime, chargeWay, enabled } CLOUD_ONLY
+ *   POST /api/vehicle/battery-heat  — battery preconditioning
+ *   GET  /api/vehicle/charging-schedule  — { enabled, startChargeTime, endChargeTime, chargeWay }
+ *   POST /api/vehicle/charging-schedule  — { startChargeTime, endChargeTime, chargeWay, enabled }
  *   GET  /api/vehicle/charge-cap         — { percent, enabled, supported } SDK_ONLY (BYDAutoChargingDevice.getChargeStopCapacityState)
  *   POST /api/vehicle/charge-cap         — { percent?, enabled? } SDK_ONLY
  */
@@ -62,18 +58,6 @@ public class VehicleControlApiHandler {
         // GET /api/vehicle/seat-diagnostics
         if (cleanPath.equals("/api/vehicle/seat-diagnostics") && method.equals("GET")) {
             handleSeatDiagnostics(out);
-            return true;
-        }
-
-        // GET /api/vehicle/cloud-status
-        if (cleanPath.equals("/api/vehicle/cloud-status") && method.equals("GET")) {
-            handleCloudStatus(out);
-            return true;
-        }
-
-        // GET /api/vehicle/cloud-lock
-        if (cleanPath.equals("/api/vehicle/cloud-lock") && method.equals("GET")) {
-            handleCloudLock(out);
             return true;
         }
 
@@ -214,37 +198,6 @@ public class VehicleControlApiHandler {
             doors.put("trunk", data.doorLockStatus[4]);
             doors.put("hood", data.doorLockStatus[5]);
             doors.put("overall", data.doorLockStatus[6]);
-        }
-        try {
-            com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
-                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
-            // Trigger an on-demand REST refresh if our cached snapshot is
-            // stale. The call is internally rate-limited (30s cooldown) and
-            // runs asynchronously; the *current* snapshot is used to render
-            // this response, but the next request will see fresh data.
-            new Thread(provider::refreshLockStateIfStale, "CloudLockRefresh").start();
-            com.loabletech.bladewatch.byd.cloud.VehicleCloudSnapshot cs = provider.getSnapshot();
-            if (cs != null && cs.hasValidLockState()) {
-                // Cloud snapshot semantics:
-                //   leftFrontDoorLock etc.: 1=UNLOCKED, 2=LOCKED (per pyBYD)
-                // API contract semantics: 1=locked, 2=unlocked (inverted).
-                int lf = cloudLockToApi(cs.leftFrontDoorLock);
-                int rf = cloudLockToApi(cs.rightFrontDoorLock);
-                int lr = cloudLockToApi(cs.leftRearDoorLock);
-                int rr = cloudLockToApi(cs.rightRearDoorLock);
-                if (lf != -1) doors.put("lf", lf);
-                if (rf != -1) doors.put("rf", rf);
-                if (lr != -1) doors.put("lr", lr);
-                if (rr != -1) doors.put("rr", rr);
-                int overall;
-                if (cs.isAnyUnlocked()) overall = 2;
-                else if (cs.isAllLocked()) overall = 1;
-                else overall = -1;
-                if (overall != -1) doors.put("overall", overall);
-                doors.put("source", "cloud");
-            }
-        } catch (Exception e) {
-            logger.debug("cloud-lock overlay failed: " + e.getMessage());
         }
         response.put("doors", doors);
 
@@ -448,39 +401,6 @@ public class VehicleControlApiHandler {
         JSONObject response = new JSONObject();
         response.put("success", true);
         response.put("ac", BydDataCollector.getInstance().diagnoseAc());
-        HttpResponse.sendJson(out, response.toString());
-    }
-
-    /**
-     * Returns BYD Cloud connection status.
-     */
-    private static void handleCloudStatus(OutputStream out) throws Exception {
-        JSONObject response = new JSONObject();
-        BydCloudConfig config = BydCloudConfig.fromUnifiedConfig();
-        response.put("success", true);
-        response.put("configured", config.isConfigured());
-        response.put("verified", config.isVerified());
-        response.put("enabled", config.enabled);
-        HttpResponse.sendJson(out, response.toString());
-    }
-
-    /**
-     * Returns the cloud-derived lock state. Triggers a one-shot REST refresh
-     * on the data-provider thread if MQTT data is stale or unavailable.
-     * The refresh is rate-limited inside the provider to protect BYD's API.
-     */
-    private static void handleCloudLock(OutputStream out) throws Exception {
-        com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider provider =
-                com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance();
-
-        // Kick off the refresh in the background — don't block the HTTP
-        // response on a BYD round-trip (REST + login can take seconds).
-        // The provider applies its own staleness check + cooldown.
-        new Thread(provider::refreshLockStateIfStale, "CloudLockRefresh").start();
-
-        JSONObject response = new JSONObject();
-        response.put("success", true);
-        response.put("status", provider.getStatusJson());
         HttpResponse.sendJson(out, response.toString());
     }
 
@@ -861,44 +781,17 @@ public class VehicleControlApiHandler {
     }
 
     /**
-     * Charging-schedule state. BYD's smartCharge/homePage endpoint returns
-     * telemetry only (no echo of the configured schedule), so our source of
-     * truth is {@link SmartChargeCache}, a local mirror updated on every
-     * successful saveOrUpdate / changeChargeStatue.
+     * Charging-schedule state. The readback source (BYD cloud) has been
+     * removed, so this now always reports unsupported.
      */
     private static void handleGetChargingSchedule(OutputStream out) throws Exception {
         JSONObject resp = new JSONObject();
         try {
-            BydCloudConfig cfg = BydCloudConfig.fromUnifiedConfig();
-            if (!cfg.isConfigured() || cfg.vin == null || cfg.vin.isEmpty()) {
-                resp.put("success", true);
-                resp.put("supported", false);
-                resp.put("reason", "cloud_not_configured");
-                HttpResponse.sendJson(out, resp.toString());
-                return;
-            }
-            com.loabletech.bladewatch.byd.cloud.BydCloudClient client =
-                    com.loabletech.bladewatch.byd.cloud.BydCloudDataProvider.getInstance().getSharedClient();
-            if (client == null) {
-                resp.put("success", true);
-                resp.put("supported", false);
-                resp.put("reason", "cloud_client_unavailable");
-                HttpResponse.sendJson(out, resp.toString());
-                return;
-            }
-            Boolean enabled = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getEnabled();
-            String start = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getStartChargeTime();
-            String end = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getEndChargeTime();
-            String way = com.loabletech.bladewatch.byd.cloud.SmartChargeCache.getChargeWay();
+            // Charging-schedule readback was sourced from BYD cloud, which has
+            // been removed. Report unsupported so the UI hides the section.
             resp.put("success", true);
-            resp.put("supported", true);
-            if (enabled == null) resp.put("enabled", JSONObject.NULL);
-            else resp.put("enabled", enabled.booleanValue());
-            resp.put("startChargeTime", start == null ? JSONObject.NULL : start);
-            resp.put("endChargeTime", end == null ? JSONObject.NULL : end);
-            resp.put("chargeWay", way == null ? JSONObject.NULL : way);
-            logger.info("ChargingSchedule GET (local cache) → enabled=" + enabled
-                    + " start=" + start + " end=" + end + " way=" + way);
+            resp.put("supported", false);
+            resp.put("reason", "cloud_not_configured");
         } catch (Exception e) {
             logger.warn("ChargingSchedule read failed: " + e.getMessage());
             resp.put("success", false);
@@ -1045,18 +938,6 @@ public class VehicleControlApiHandler {
     }
 
     // ==================== HELPERS ====================
-
-    /**
-     * Convert BYD cloud per-door lock value to API contract.
-     *   pyBYD reports: 1=UNLOCKED, 2=LOCKED on each *DoorLock field.
-     *   API contract publishes: 1=locked, 2=unlocked (inverted, historical).
-     * VehicleCloudSnapshot.LOCK_UNAVAILABLE / LOCK_UNKNOWN both map to -1.
-     */
-    private static int cloudLockToApi(int cloud) {
-        if (cloud == 2) return 1; // LOCKED
-        if (cloud == 1) return 2; // UNLOCKED
-        return -1;
-    }
 
     private static boolean isValidPercent(int value) {
         return value >= 0 && value <= 100;

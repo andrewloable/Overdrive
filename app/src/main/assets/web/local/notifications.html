@@ -12,18 +12,13 @@
     <script src="../shared/theme.js?v=3"></script>
     <script src="../shared/app-shell.js"></script>
     <!--
-      Bottom-tab manifest for Notifications. Three task-based tabs:
+      Bottom-tab manifest for Notifications. Two task-based tabs:
         Push     — per-device push permission + per-category toggles
-        Telegram — Two-stage Telegram alerts + tier filter (was on Surveillance)
         Devices  — registered push subscriptions
-      The Telegram block reuses the legacy IDs (v2TelegramSendStartPing,
-      v2TelegramTierGroup, v2TelegramNotices/Alerts/Critical) so the
-      SurvSettings bindings in shared/surveillance.js keep firing.
     -->
     <script>
         window.OT_TABS = [
             { id: 'push',     label: 'Push',     i18n: 'notif.tab_push',     svg: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
-            { id: 'telegram', label: 'Telegram', i18n: 'notif.tab_telegram', svg: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
             { id: 'devices',  label: 'Devices',  i18n: 'notif.tab_devices',  svg: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>', readOnly: true }
         ];
     </script>
@@ -237,10 +232,10 @@
                         <!-- Origin + backend warnings are PUSH-ONLY: they
                              explain why the per-device push subscribe button
                              is dead, so they shouldn't bleed onto the
-                             Telegram or Devices tabs (those have nothing to
-                             do with the Web Push origin requirement). -->
+                             Devices tab (which has nothing to do with the
+                             Web Push origin requirement). -->
                         <div id="originBanner" class="notif-status warn" style="display:none;margin-bottom:14px;" data-i18n="notif.origin_banner">
-                            Push notifications require Zrok or a reverse proxy. Cloudflare quick tunnels change every restart and would invalidate every subscription. Tailscale serves over plain HTTP and can't be used for Web Push unless using a reverse proxy. Open the dashboard from your reserved Zrok or reverse proxy URL on your phone, Add to Home Screen, then return here to enable.
+                            Push notifications require Zrok or a reverse proxy. Open the dashboard from your reserved Zrok or reverse proxy URL on your phone, Add to Home Screen, then return here to enable.
                         </div>
                         <div id="backendBanner" class="notif-status warn" style="display:none;margin-bottom:14px;" data-i18n="notif.backend_banner">
                             Notifications backend not initialized. Reserve a Zrok URL via the daemons screen and restart the daemon to enable push delivery.
@@ -268,126 +263,6 @@
                         </div>
                     </div>
 
-                    <!-- ===== Telegram tab ===== -->
-                    <div class="notif-section" data-tab="telegram" id="telegramSection">
-                        <h2 data-i18n="notif.telegram">Telegram delivery</h2>
-                        <p class="notif-section-sub" data-i18n="notif.telegram_sub">
-                            Send surveillance events to a paired Telegram chat. Pair the bot in the Telegram daemon settings; toggles below decide which severities reach the chat. Off tiers are still recorded — only the message is suppressed.
-                        </p>
-                        <div class="notif-card" style="padding: 6px 0;">
-                            <div class="notif-row">
-                                <div class="notif-row-text">
-                                    <div class="notif-row-label" data-i18n="surveillance.telegram_two_stage">Two-stage Telegram alerts</div>
-                                    <div class="notif-row-note" data-i18n="surveillance.telegram_two_stage_desc">Send a quick "recording started" message, then the photo when it ends. Off by default — the photo alone is usually enough.</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="v2TelegramSendStartPing" onchange="SurvSettings.updateTelegramStartPing()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="v2TelegramTierGroup" style="margin-top:18px;">
-                            <p class="notif-section-sub" data-i18n="surveillance.telegram_tiers_desc">Pick which severity tiers reach your Telegram chat. Off tiers are still recorded; only the message is suppressed.</p>
-                            <div id="v2TelegramTierWarning" class="info-box-warning" style="display:none;margin-bottom:12px;">
-                                <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                <span style="font-size:12px;color:var(--warning);" data-i18n="surveillance.telegram_not_paired">Telegram bot isn't paired yet — tier toggles have no effect until you link a bot.</span>
-                            </div>
-                            <div class="notif-card" style="padding: 6px 0;">
-                                <div class="notif-row">
-                                    <div class="notif-row-text">
-                                        <div class="notif-row-label">
-                                            <span class="status-dot" style="background:var(--text-muted);"></span>
-                                            <span data-i18n="surveillance.tier_notice">Notice</span>
-                                        </div>
-                                        <div class="notif-row-note" data-i18n="surveillance.tier_notice_desc">Routine activity (parked cars, distant movement)</div>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="v2TelegramNotices" onchange="SurvSettings.updateTelegramTiers()">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                                <div class="notif-row">
-                                    <div class="notif-row-text">
-                                        <div class="notif-row-label">
-                                            <span class="status-dot" style="background:#FFB75A;"></span>
-                                            <span data-i18n="surveillance.tier_alert">Alert</span>
-                                        </div>
-                                        <div class="notif-row-note" data-i18n="surveillance.tier_alert_desc">Approaching person, vehicle close enough to warrant attention</div>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="v2TelegramAlerts" onchange="SurvSettings.updateTelegramTiers()">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                                <div class="notif-row">
-                                    <div class="notif-row-text">
-                                        <div class="notif-row-label">
-                                            <span class="status-dot" style="background:#FF6B6B;"></span>
-                                            <span data-i18n="surveillance.tier_critical">Critical</span>
-                                        </div>
-                                        <div class="notif-row-note" data-i18n="surveillance.tier_critical_desc">Person at very close range — likely tampering / loitering</div>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="v2TelegramCritical" onchange="SurvSettings.updateTelegramTiers()">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ===== Telegram delivery preferences =====
-                             Lives here (not on telegram.html) so the user has
-                             one place to decide WHAT events arrive via Telegram.
-                             Each toggle persists to the daemon properties file
-                             via /api/telegram/preferences (partial-merge), the
-                             same endpoint the Telegram daemon-behavior page
-                             uses. -->
-                        <p class="notif-section-sub" style="margin-top:22px;" data-i18n="notif.telegram_delivery_sub">What kind of events Telegram receives. Independent from the per-tier filter above — these toggle entire categories on or off.</p>
-                        <div class="notif-card" style="padding: 6px 0;">
-                            <div class="notif-row">
-                                <div class="notif-row-text">
-                                    <div class="notif-row-label" data-i18n="telegram.critical_alerts">Critical alerts</div>
-                                    <div class="notif-row-note" data-i18n="telegram.critical_alerts_desc">Drop-everything events — vehicle health faults, tampering, charging faults. Keep this on.</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="tgPrefCriticalAlerts" onchange="TelegramPrefs.save()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="notif-row">
-                                <div class="notif-row-text">
-                                    <div class="notif-row-label" data-i18n="telegram.connectivity_updates">Connectivity updates</div>
-                                    <div class="notif-row-note" data-i18n="telegram.connectivity_updates_desc">Notify when the daemon starts, stops, or restarts. Useful for diagnostics; chatty in normal use.</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="tgPrefConnectivity" onchange="TelegramPrefs.save()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="notif-row">
-                                <div class="notif-row-text">
-                                    <div class="notif-row-label" data-i18n="telegram.motion_text">Motion text alerts</div>
-                                    <div class="notif-row-note" data-i18n="telegram.motion_text_desc">Send a short text message when surveillance detects motion. Photos / videos are governed by the toggles below.</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="tgPrefMotionText" onchange="TelegramPrefs.save()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="notif-row">
-                                <div class="notif-row-text">
-                                    <div class="notif-row-label" data-i18n="telegram.video_uploads">Send videos</div>
-                                    <div class="notif-row-note" data-i18n="telegram.video_uploads_desc">Upload short clips on Critical events. Costs more bandwidth — disable if you're on a slow tunnel.</div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="tgPrefVideoUploads" onchange="TelegramPrefs.save()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="notif-section" data-tab="devices">
                         <h2 data-i18n="notif.registered_devices">Registered devices</h2>
                         <p class="notif-section-sub" data-i18n="notif.devices_sub">
@@ -409,11 +284,6 @@
     <script src="../shared/pwa-init.js"></script>
     <script src="../shared/core.js"></script>
     <script src="../shared/update-flow.js"></script>
-    <!-- surveillance.js owns the SurvSettings module that backs the Telegram
-         tier toggles. We load it here so the v2TelegramSendStartPing /
-         v2TelegramTierGroup controls hooked into surveillance.js wiring
-         keep firing without a per-page bridge. -->
-    <script src="../shared/surveillance.js"></script>
     <script>
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
@@ -446,58 +316,8 @@
         if (typeof BYD !== 'undefined' && BYD.core) {
             BYD.i18n.init().then(function () {
                 BYD.core.init();
-                // Hydrate the Telegram tab — paints toggle states from
-                // /api/surveillance/config + queries telegram pairing state.
-                if (window.SurvSettings && SurvSettings.initTelegramOnly) {
-                    SurvSettings.initTelegramOnly();
-                }
-                // Telegram delivery preferences (critical / connectivity /
-                // motion text / videos) — persisted via /api/telegram/preferences.
-                if (window.TelegramPrefs) TelegramPrefs.load();
             });
         }
-
-        // ===== Telegram delivery preferences module =====
-        // Lives here (not in shared/surveillance.js) because the four toggles
-        // are notification-page-local — they don't bind to surveillance config
-        // and don't need the heavier SurvSettings init flow. Load + save go
-        // through /api/telegram/preferences (same endpoint telegram.html
-        // uses for autoStartAccOff, partial-merge body).
-        window.TelegramPrefs = (function () {
-            'use strict';
-            function $(id) { return document.getElementById(id); }
-            function tr(k) { return (window.BYD && BYD.i18n) ? (BYD.i18n.t(k) || k) : k; }
-            function toast(msg, kind) {
-                if (window.BYD && BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, kind || 'info');
-            }
-            function load() {
-                fetch('/api/telegram/status', { cache: 'no-store' })
-                    .then(function (r) { return r.json(); })
-                    .then(function (s) {
-                        if ($('tgPrefCriticalAlerts')) $('tgPrefCriticalAlerts').checked = s.criticalAlerts !== false;
-                        if ($('tgPrefConnectivity'))   $('tgPrefConnectivity').checked   = !!s.connectivityUpdates;
-                        if ($('tgPrefMotionText'))     $('tgPrefMotionText').checked     = s.motionText !== false;
-                        if ($('tgPrefVideoUploads'))   $('tgPrefVideoUploads').checked   = !!s.videoUploads;
-                    })
-                    .catch(function () { /* status endpoint unreachable — leave defaults */ });
-            }
-            function save() {
-                var body = {};
-                if ($('tgPrefCriticalAlerts')) body.criticalAlerts      = $('tgPrefCriticalAlerts').checked;
-                if ($('tgPrefConnectivity'))   body.connectivityUpdates = $('tgPrefConnectivity').checked;
-                if ($('tgPrefMotionText'))     body.motionText          = $('tgPrefMotionText').checked;
-                if ($('tgPrefVideoUploads'))   body.videoUploads        = $('tgPrefVideoUploads').checked;
-                fetch('/api/telegram/preferences', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                }).then(function (r) { return r.json(); }).then(function (data) {
-                    if (data && data.success) toast(tr('telegram.prefs_saved'), 'success');
-                    else toast(tr('telegram.prefs_save_failed'), 'error');
-                }).catch(function () { toast(tr('telegram.prefs_save_failed'), 'error'); });
-            }
-            return { load: load, save: save };
-        }());
 
         // ==================== ORIGIN GATE ====================
         // Dev escape hatch: ?devPwa=1 lets the page run its full flow against
@@ -510,8 +330,7 @@
             var host = window.location.hostname || '';
             var loopback = host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0';
             var insecure = !window.isSecureContext;
-            var cloudflare = /[a-z0-9-]*\.trycloudflare\.com/i.test(host);
-            return !(loopback || insecure || cloudflare);
+            return !(loopback || insecure);
         })();
         var notZrok  = !/\.share\.zrok\.io$/i.test(window.location.hostname);
 

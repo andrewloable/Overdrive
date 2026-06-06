@@ -250,13 +250,7 @@ public class AppUpdater {
 
     private void cleanupLeftoverApk() {
         try {
-            // Also age out a stale Telegram post-update hint older than 24h —
-            // if Telegram never came back online to consume it, the user has
-            // already noticed the URL change through other means and a "you
-            // were just updated" message would be confusing days later.
-            String cmd = "rm -f " + APK_PATH + "; " +
-                    "find " + UpdateLifecycle.TELEGRAM_POST_UPDATE_HINT_FILE +
-                    " -mmin +1440 -delete 2>/dev/null; echo done";
+            String cmd = "rm -f " + APK_PATH + "; echo done";
             runShell(cmd, new com.loabletech.bladewatch.launcher.AdbDaemonLauncher.LaunchCallback() {
                 @Override public void onLog(String m) {}
                 @Override public void onLaunched() { Log.i(TAG, "Cleaned up leftover APK"); }

@@ -6,7 +6,6 @@ import android.os.Looper
 import com.loabletech.bladewatch.launcher.AdbDaemonLauncher
 import com.loabletech.bladewatch.launcher.AdbShellExecutor
 import com.loabletech.bladewatch.launcher.ZrokLauncher
-import com.loabletech.bladewatch.launcher.TailscaleLauncher
 import com.loabletech.bladewatch.logging.LogManager
 import com.loabletech.bladewatch.ui.model.DaemonType
 import com.loabletech.bladewatch.ui.util.PreferencesManager
@@ -31,11 +30,7 @@ class DaemonStartupManager(
         )
 
         val OPTIONAL_DAEMONS: List<DaemonType> = listOf(
-            DaemonType.SINGBOX_PROXY,
-            DaemonType.CLOUDFLARED_TUNNEL,
             DaemonType.ZROK_TUNNEL,
-            DaemonType.TAILSCALE_TUNNEL,
-            DaemonType.TELEGRAM_DAEMON,
         )
 
         // Track intentional stops so health check doesn't fight the user
@@ -140,7 +135,7 @@ class DaemonStartupManager(
         daemonsViewModel?.let { vm ->
             DaemonType.values().forEach { type -> vm.refreshDaemonStatus(type, logResult = true) }
             // Camera daemon defaults to private stream mode. Public exposure is opt-in
-            // per-tunnel (cloudflared / zrok) via the Daemons settings, not a global mode.
+            // via the zrok tunnel in the Daemons settings, not a global mode.
             log.info(TAG, "Syncing camera daemon stream mode to: private")
             vm.cameraDaemonController.setStreamMode("private")
         }
@@ -223,47 +218,13 @@ class DaemonStartupManager(
         }
         log.info(TAG, "Starting optional daemons from preferences...")
 
-        // Singbox starts iff the user enabled it. Tunnels are independent toggles.
-        if (PreferencesManager.isDaemonEnabled(DaemonType.SINGBOX_PROXY)) {
-            vm.singboxController.isRunning { isRunning ->
-                if (isRunning) {
-                    log.info(TAG, "Singbox already running, skipping start")
-                    handler.postDelayed({ startTunnelFromPreferences(vm) }, 1000)
-                } else {
-                    log.info(TAG, "Starting Singbox (user enabled)...")
-                    handler.post { vm.startDaemon(DaemonType.SINGBOX_PROXY) }
-                    handler.postDelayed({ startTunnelFromPreferences(vm) }, 5000)
-                }
-            }
-        } else {
-            startTunnelFromPreferences(vm)
-        }
-        
-        // Start Telegram Bot daemon if user enabled it
-        if (PreferencesManager.isDaemonEnabled(DaemonType.TELEGRAM_DAEMON)) {
-            handler.postDelayed({
-                log.info(TAG, "Starting Telegram Bot daemon (user enabled)...")
-                vm.startDaemon(DaemonType.TELEGRAM_DAEMON)
-            }, 15000)
-        }
+        startTunnelFromPreferences(vm)
     }
 
     private fun startTunnelFromPreferences(vm: DaemonsViewModel) {
-        val cloudflaredEnabled = PreferencesManager.isDaemonEnabled(DaemonType.CLOUDFLARED_TUNNEL)
         val zrokEnabled = PreferencesManager.isDaemonEnabled(DaemonType.ZROK_TUNNEL)
-        val tailscaleEnabled = PreferencesManager.isDaemonEnabled(DaemonType.TAILSCALE_TUNNEL)
 
-        // Cloudflared and Zrok are mutually exclusive (both expose the dashboard publicly)
-        if (cloudflaredEnabled) {
-            vm.cloudflaredController.isRunning { isRunning ->
-                if (isRunning) {
-                    log.info(TAG, "Cloudflared already running, skipping start")
-                } else {
-                    log.info(TAG, "Starting Cloudflared (user enabled)...")
-                    handler.post { vm.startDaemon(DaemonType.CLOUDFLARED_TUNNEL) }
-                }
-            }
-        } else if (zrokEnabled) {
+        if (zrokEnabled) {
             vm.zrokController.isRunning { isRunning ->
                 if (isRunning) {
                     log.info(TAG, "Zrok already running, skipping start")
@@ -272,61 +233,17 @@ class DaemonStartupManager(
                     handler.post { vm.startDaemon(DaemonType.ZROK_TUNNEL) }
                 }
             }
-        } else if (!tailscaleEnabled) {
+        } else {
             log.info(TAG, "No tunnel enabled by user")
-        }
-
-        // Tailscale runs independently — it's private access, not a public dashboard tunnel
-        if (tailscaleEnabled) {
-            vm.tailscaleController.isRunning { isRunning ->
-                if (isRunning) {
-                    log.info(TAG, "Tailscale already running, skipping start")
-                } else {
-                    log.info(TAG, "Starting Tailscale (user enabled)...")
-                    handler.post { vm.startDaemon(DaemonType.TAILSCALE_TUNNEL) }
-                }
-            }
         }
     }
 
     private fun startOptionalDaemonsViaAdb() {
         log.info(TAG, "Starting optional daemons via ADB...")
         try {
-            // Singbox is gated only by its own user toggle now.
-            if (PreferencesManager.isDaemonEnabled(DaemonType.SINGBOX_PROXY)) {
-                log.info(TAG, "Boot: Starting Singbox (user enabled)...")
-                adbLauncher.startSingbox(createLogCallback("Singbox"))
-            }
-
-            val tunnelDelay = 0L
-
-            handler.postDelayed({
-                // Cloudflared and Zrok are mutually exclusive
-                if (PreferencesManager.isDaemonEnabled(DaemonType.CLOUDFLARED_TUNNEL)) {
-                    log.info(TAG, "Boot: Starting Cloudflared...")
-                    adbLauncher.launchTunnel(object : AdbDaemonLauncher.TunnelCallback {
-                        override fun onLog(message: String) { log.debug(TAG, "[Cloudflared] $message") }
-                        override fun onTunnelUrl(url: String) { log.info(TAG, "Boot: Cloudflared URL: $url") }
-                        override fun onError(error: String) { log.error(TAG, "Boot: Cloudflared error: $error") }
-                    })
-                } else if (PreferencesManager.isDaemonEnabled(DaemonType.ZROK_TUNNEL)) {
-                    log.info(TAG, "Boot: Starting Zrok...")
-                    startZrokOnBoot()
-                }
-
-                // Tailscale runs independently of cloudflared/zrok
-                if (PreferencesManager.isDaemonEnabled(DaemonType.TAILSCALE_TUNNEL)) {
-                    log.info(TAG, "Boot: Starting Tailscale...")
-                    startTailscaleOnBoot()
-                }
-            }, tunnelDelay)
-            
-            // Start Telegram Bot daemon if user enabled it
-            if (PreferencesManager.isDaemonEnabled(DaemonType.TELEGRAM_DAEMON)) {
-                handler.postDelayed({
-                    log.info(TAG, "Boot: Starting Telegram Bot daemon...")
-                    adbLauncher.launchTelegramDaemon(createLogCallback("TelegramBot"))
-                }, 15000) // Start after core daemons are up
+            if (PreferencesManager.isDaemonEnabled(DaemonType.ZROK_TUNNEL)) {
+                log.info(TAG, "Boot: Starting Zrok...")
+                startZrokOnBoot()
             }
         } catch (e: Exception) {
             log.error(TAG, "Error starting optional daemons: ${e.message}")
@@ -356,60 +273,16 @@ class DaemonStartupManager(
     }
 
     /**
-     * Start Tailscale tunnel on boot using TailscaleLauncher directly.
-     */
-    private fun startTailscaleOnBoot() {
-        val adbShellExecutor = AdbShellExecutor(context)
-        val tailscaleLauncher = TailscaleLauncher(context, adbShellExecutor, log)
-
-        tailscaleLauncher.launchTailscale(object : TailscaleLauncher.TailscaleCallback {
-            override fun onLog(message: String) {
-                log.debug(TAG, "[Tailscale Boot] $message")
-            }
-
-            override fun onTunnelUrl(url: String?) {
-                log.info(TAG, "Boot: Tailscale URL: $url")
-            }
-
-            override fun onError(error: String) {
-                log.error(TAG, "Boot: Tailscale error: $error")
-            }
-        })
-    }
-
-
-    /**
      * Restart tunnel if enabled. When forceRestart=true, kills existing tunnel first
-     * so it can pick up new proxy settings (e.g., after singbox toggle).
+     * so it can pick up new settings.
      */
     private fun restartTunnelIfEnabled(vm: DaemonsViewModel, forceRestart: Boolean = false) {
-        val cloudflaredEnabled = PreferencesManager.isDaemonEnabled(DaemonType.CLOUDFLARED_TUNNEL)
         val zrokEnabled = PreferencesManager.isDaemonEnabled(DaemonType.ZROK_TUNNEL)
-        val tailscaleEnabled = PreferencesManager.isDaemonEnabled(DaemonType.TAILSCALE_TUNNEL)
 
-        // Cloudflared and Zrok are mutually exclusive
-        if (cloudflaredEnabled) {
-            vm.cloudflaredController.isRunning { isRunning ->
-                if (isRunning && forceRestart) {
-                    log.info(TAG, "Restarting Cloudflared to apply new proxy settings...")
-                    handler.post {
-                        vm.stopDaemon(DaemonType.CLOUDFLARED_TUNNEL)
-                        handler.postDelayed({
-                            log.info(TAG, "Starting Cloudflared with new settings")
-                            vm.startDaemon(DaemonType.CLOUDFLARED_TUNNEL)
-                        }, 2000)
-                    }
-                } else if (!isRunning) {
-                    log.info(TAG, "Starting Cloudflared (user enabled)")
-                    handler.post { vm.startDaemon(DaemonType.CLOUDFLARED_TUNNEL) }
-                } else {
-                    log.info(TAG, "Cloudflared already running, no restart needed")
-                }
-            }
-        } else if (zrokEnabled) {
+        if (zrokEnabled) {
             vm.zrokController.isRunning { isRunning ->
                 if (isRunning && forceRestart) {
-                    log.info(TAG, "Restarting Zrok to apply new proxy settings...")
+                    log.info(TAG, "Restarting Zrok to apply new settings...")
                     handler.post {
                         vm.stopDaemon(DaemonType.ZROK_TUNNEL)
                         handler.postDelayed({
@@ -425,29 +298,8 @@ class DaemonStartupManager(
                 }
             }
         }
-
-        // Tailscale runs independently of cloudflared/zrok
-        if (tailscaleEnabled) {
-            vm.tailscaleController.isRunning { isRunning ->
-                if (isRunning && forceRestart) {
-                    log.info(TAG, "Restarting Tailscale to apply new proxy settings...")
-                    handler.post {
-                        vm.stopDaemon(DaemonType.TAILSCALE_TUNNEL)
-                        handler.postDelayed({
-                            log.info(TAG, "Starting Tailscale with new settings")
-                            vm.startDaemon(DaemonType.TAILSCALE_TUNNEL)
-                        }, 2000)
-                    }
-                } else if (!isRunning) {
-                    log.info(TAG, "Starting Tailscale (user enabled)")
-                    handler.post { vm.startDaemon(DaemonType.TAILSCALE_TUNNEL) }
-                } else {
-                    log.info(TAG, "Tailscale already running, no restart needed")
-                }
-            }
-        }
     }
-    
+
     private fun startTunnelIfEnabled(vm: DaemonsViewModel) {
         restartTunnelIfEnabled(vm, forceRestart = false)
     }
@@ -520,38 +372,14 @@ class DaemonStartupManager(
         // Core daemons: always restart unless user explicitly stopped
         for (type in CORE_DAEMONS) {
             if (type in userStoppedDaemons) continue
-            if (isDaemonStoppedViaTelegram(type)) continue
             checkAndRelaunchDaemon(type)
         }
 
         // Optional daemons: only restart if user had them enabled in preferences
         for (type in OPTIONAL_DAEMONS) {
             if (type in userStoppedDaemons) continue
-            if (isDaemonStoppedViaTelegram(type)) continue
             if (!PreferencesManager.isDaemonEnabled(type)) continue
             checkAndRelaunchDaemon(type)
-        }
-    }
-
-    /**
-     * Check if a daemon was stopped via Telegram bot.
-     * Reads the shared state file written by DaemonCommandHandler.
-     */
-    private fun isDaemonStoppedViaTelegram(type: DaemonType): Boolean {
-        val telegramName = when (type) {
-            DaemonType.CAMERA_DAEMON -> "camera"
-            DaemonType.SENTRY_DAEMON -> "sentry"
-            DaemonType.ACC_SENTRY_DAEMON -> "acc"
-            DaemonType.TELEGRAM_DAEMON -> "telegram"
-            DaemonType.CLOUDFLARED_TUNNEL -> "cloudflared"
-            DaemonType.ZROK_TUNNEL -> "zrok"
-            DaemonType.TAILSCALE_TUNNEL -> "tailscale"
-            DaemonType.SINGBOX_PROXY -> "singbox"
-        }
-        return try {
-            com.loabletech.bladewatch.daemon.telegram.DaemonCommandHandler.isDaemonStoppedViaTelegram(telegramName)
-        } catch (e: Exception) {
-            false
         }
     }
 

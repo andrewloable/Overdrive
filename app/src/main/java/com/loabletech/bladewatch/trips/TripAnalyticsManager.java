@@ -2,9 +2,9 @@ package com.loabletech.bladewatch.trips;
 
 import android.content.Context;
 
-import com.loabletech.bladewatch.abrp.SohEstimator;
 import com.loabletech.bladewatch.logging.DaemonLogger;
 import com.loabletech.bladewatch.monitor.GearMonitor;
+import com.loabletech.bladewatch.monitor.VehicleDataMonitor;
 import com.loabletech.bladewatch.storage.StorageManager;
 import com.loabletech.bladewatch.telemetry.TelemetryDataCollector;
 
@@ -16,7 +16,7 @@ import java.util.List;
  * Single entry point for CameraDaemon integration.
  *
  * Lifecycle:
- *   CameraDaemon.main() → init(context, telemetryDataCollector, sohEstimator)
+ *   CameraDaemon.main() → init(context, telemetryDataCollector)
  *   CameraDaemon.shutdown() → shutdown()
  *   GearMonitor callback → onGearChanged(newGear)
  */
@@ -32,7 +32,6 @@ public class TripAnalyticsManager {
     private RangeEstimator rangeEstimator;
 
     private TelemetryDataCollector telemetryDataCollector;
-    private SohEstimator sohEstimator;
 
     private volatile boolean enabled = false;
     private volatile boolean initialized = false;
@@ -40,7 +39,7 @@ public class TripAnalyticsManager {
     // ==================== LIFECYCLE ====================
 
     /**
-     * Initialize trip analytics. Called from CameraDaemon.main() after ABRP init.
+     * Initialize trip analytics. Called from CameraDaemon.main().
      *
      * 1. Load TripConfig from properties file
      * 2. If enabled: initialize TripDatabase, TripDetector, TripTelemetryRecorder,
@@ -49,10 +48,8 @@ public class TripAnalyticsManager {
      * 4. Ensure StorageManager.getInstance().getTripsDir() exists
      * 5. Log initialization status
      */
-    public void init(Context context, TelemetryDataCollector telemetryDataCollector,
-                     SohEstimator sohEstimator) {
+    public void init(Context context, TelemetryDataCollector telemetryDataCollector) {
         this.telemetryDataCollector = telemetryDataCollector;
-        this.sohEstimator = sohEstimator;
 
         // 1. Load config
         config = new TripConfig();
@@ -298,7 +295,7 @@ public class TripAnalyticsManager {
         scoreEngine = new TripScoreEngine();
 
         // Range estimator
-        rangeEstimator = new RangeEstimator(database, sohEstimator);
+        rangeEstimator = new RangeEstimator(database);
 
         enabled = true;
         logger.info("Trip analytics components initialized");
@@ -375,34 +372,29 @@ public class TripAnalyticsManager {
         }
 
         // Snapshot electricity rate and compute trip cost.
-        // Use SohEstimator's calibrated nominal capacity for accurate energy calculation.
+        // Use the BYD-local nominal pack capacity for energy calculation.
         if (config != null) {
             trip.electricityRate = config.getElectricityRate();
             trip.currency = config.getCurrency();
-            
+
             double energyUsed = trip.getEnergyUsedKwh();
-            
+
             // If BMS kWh readings weren't available, estimate from SoC delta
-            // using the SohEstimator's calibrated nominal capacity (from pack voltage).
+            // using the BYD-local nominal pack capacity. No SoH degradation
+            // source is available, so the pack is treated as healthy.
             if (energyUsed <= 0 && trip.socStart > 0 && trip.socEnd > 0 && trip.socStart > trip.socEnd) {
-                double nominalKwh = 0;
                 try {
-                    com.loabletech.bladewatch.abrp.SohEstimator soh = 
-                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-                    if (soh != null && soh.getNominalCapacityKwh() > 0) {
-                        nominalKwh = soh.getNominalCapacityKwh();
-                        double sohPercent = soh.hasEstimate() ? soh.getCurrentSoh() : 100.0;
-                        // Actual usable capacity = nominal × SOH
-                        double usableKwh = nominalKwh * (sohPercent / 100.0);
-                        energyUsed = ((trip.socStart - trip.socEnd) / 100.0) * usableKwh;
-                        logger.info(String.format("Energy estimated from SoC: %.1f%% → %.1f%% = %.2f kWh (nominal=%.1f, SOH=%.1f%%)",
-                                trip.socStart, trip.socEnd, energyUsed, nominalKwh, sohPercent));
+                    double nominalKwh = VehicleDataMonitor.getInstance().getNominalCapacityKwh();
+                    if (nominalKwh > 0) {
+                        energyUsed = ((trip.socStart - trip.socEnd) / 100.0) * nominalKwh;
+                        logger.info(String.format("Energy estimated from SoC: %.1f%% → %.1f%% = %.2f kWh (nominal=%.1f)",
+                                trip.socStart, trip.socEnd, energyUsed, nominalKwh));
                     }
                 } catch (Exception e) {
-                    logger.warn("SohEstimator not available for energy estimation: " + e.getMessage());
+                    logger.warn("Nominal capacity not available for energy estimation: " + e.getMessage());
                 }
             }
-            
+
             // Store computed energy for the database (so future reads don't need to re-estimate)
             if (energyUsed > 0 && trip.distanceKm > 0) {
                 trip.energyPerKm = energyUsed / trip.distanceKm;

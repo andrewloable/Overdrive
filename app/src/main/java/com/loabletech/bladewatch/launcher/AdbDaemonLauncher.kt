@@ -4,36 +4,32 @@ import android.content.Context
 import com.loabletech.bladewatch.logging.LogManager
 
 /**
- * Facade for launching daemons, tunnels, and services via ADB shell.
- * 
+ * Facade for launching daemons and services via ADB shell.
+ *
  * This class delegates to specialized launchers:
  * - AdbShellExecutor: ADB connection and shell command execution
  * - DaemonLauncher: Daemon process launching (CameraDaemon, SentryDaemon, etc.)
- * - TunnelLauncher: Tunnel launching (Cloudflared)
  * - ServiceLauncher: Android service launching and permission configuration
- * 
+ *
  * Maintains backward compatibility with the original AdbDaemonLauncher API.
+ *
+ * Note: Cloudflared/Tailscale tunnels, the sing-box proxy, the proxy daemon,
+ * and the Telegram daemon have been removed. The corresponding methods are
+ * retained as no-op stubs so existing callers keep compiling; the supported
+ * tunnel (Zrok) is managed separately via ZrokLauncher/ZrokController.
  */
 class AdbDaemonLauncher(private val context: Context) {
-    
+
     companion object {
         private const val TAG = "AdbDaemonLauncher"
-        
-        // Tunnel configuration (kept for backward compatibility)
-        var tunnelType: String = "cloudflared"
-        
-        // Track last notified tunnel URL to avoid duplicate notifications
-        @Volatile
-        private var lastNotifiedTunnelUrl: String? = null
     }
-    
+
     // Shared LogManager instance
     private val logManager = LogManager.getInstance()
-    
+
     // Specialized launchers
     private val adbShellExecutor = AdbShellExecutor(context)
     private val daemonLauncher = DaemonLauncher(context, adbShellExecutor, logManager)
-    private val tunnelLauncher = TunnelLauncher(context, adbShellExecutor, logManager)
     private val serviceLauncher = ServiceLauncher(context, adbShellExecutor, logManager)
     
     // ==================== CALLBACK INTERFACES ====================
@@ -41,12 +37,6 @@ class AdbDaemonLauncher(private val context: Context) {
     interface LaunchCallback {
         fun onLog(message: String)
         fun onLaunched()
-        fun onError(error: String)
-    }
-    
-    interface TunnelCallback {
-        fun onLog(message: String)
-        fun onTunnelUrl(url: String)
         fun onError(error: String)
     }
     
@@ -117,28 +107,6 @@ class AdbDaemonLauncher(private val context: Context) {
     }
     
     /**
-     * Launch the TelegramBotDaemon via ADB shell.
-     * This daemon handles Telegram bot polling and notifications.
-     */
-    fun launchTelegramDaemon(callback: LaunchCallback) {
-        daemonLauncher.launchTelegramDaemon(callback.toDaemonCallback())
-    }
-    
-    /**
-     * Stop the TelegramBotDaemon.
-     */
-    fun stopTelegramDaemon(callback: LaunchCallback) {
-        daemonLauncher.stopTelegramDaemon(callback.toDaemonCallback())
-    }
-    
-    /**
-     * Launch the proxy daemon via ADB shell.
-     */
-    fun launchProxyDaemon(callback: LaunchCallback) {
-        daemonLauncher.launchProxyDaemon(callback.toDaemonCallback())
-    }
-    
-    /**
      * Kill the daemon process via ADB.
      */
     fun killDaemon(callback: LaunchCallback) {
@@ -180,60 +148,10 @@ class AdbDaemonLauncher(private val context: Context) {
         daemonLauncher.getSubprocesses(processPatterns, callback)
     }
     
-    // ==================== TUNNEL LAUNCHING ====================
-    
-    /**
-     * Launch tunnel based on configured tunnel type.
-     * Automatically notifies TelegramBotDaemon when tunnel URL is established.
-     */
-    fun launchTunnel(callback: TunnelCallback) {
-        // Currently only Cloudflared is supported
-        tunnelLauncher.launchCloudflared(object : TunnelLauncher.TunnelCallback {
-            override fun onLog(message: String) = callback.onLog(message)
-            
-            override fun onTunnelUrl(url: String) {
-                // Notify Telegram daemon via IPC when tunnel URL is established
-                // Only notify if URL is new/different to avoid duplicate messages
-                if (url.isNotEmpty() && url != lastNotifiedTunnelUrl) {
-                    lastNotifiedTunnelUrl = url
-                    com.loabletech.bladewatch.telegram.TelegramNotifier.notifyTunnelUrl(url, true)
-                }
-                callback.onTunnelUrl(url)
-            }
-            
-            override fun onError(error: String) = callback.onError(error)
-        })
-    }
-    
-    /**
-     * Stop the tunnel.
-     */
-    fun stopTunnel(callback: LaunchCallback) {
-        // Clear tracked URL so next tunnel start will notify
-        lastNotifiedTunnelUrl = null
-        
-        tunnelLauncher.stopTunnel(object : TunnelLauncher.TunnelCallback {
-            override fun onLog(message: String) = callback.onLog(message)
-            override fun onTunnelUrl(url: String) = callback.onLaunched()
-            override fun onError(error: String) = callback.onError(error)
-        })
-    }
-    
-    /**
-     * Check if tunnel is running.
-     */
-    fun isTunnelRunning(callback: (Boolean) -> Unit) {
-        tunnelLauncher.isTunnelRunning(callback)
-    }
-    
-    /**
-     * Get current tunnel URL from log file.
-     */
-    fun getTunnelUrl(callback: (String?) -> Unit) {
-        tunnelLauncher.getTunnelUrl(callback)
-    }
-    
     // ==================== SERVICE LAUNCHING ====================
+    //
+    // The supported tunnel (Zrok) is managed separately via
+    // ZrokLauncher/ZrokController.
     
     /**
      * Start daemons via ADB shell.
@@ -306,29 +224,6 @@ class AdbDaemonLauncher(private val context: Context) {
      */
     fun stopSentryDaemon(callback: LaunchCallback) {
         daemonLauncher.killDaemon("sentry_daemon", callback.toDaemonCallback())
-    }
-    
-    // ==================== SENTRY PROXY ====================
-    
-    /**
-     * Launch the Sentry Proxy daemon (alias for launchProxyDaemon).
-     */
-    fun launchSentryProxy(callback: LaunchCallback) {
-        daemonLauncher.launchProxyDaemon(callback.toDaemonCallback())
-    }
-    
-    /**
-     * Stop the Sentry Proxy and clear proxy settings.
-     */
-    fun stopSentryProxy(callback: LaunchCallback) {
-        daemonLauncher.stopProxyDaemon(callback.toDaemonCallback())
-    }
-    
-    /**
-     * Check if Sentry Proxy is running.
-     */
-    fun isSentryProxyRunning(callback: (Boolean) -> Unit) {
-        daemonLauncher.isProxyDaemonRunning(callback)
     }
     
     // ==================== LOCATION SIDECAR MANAGEMENT ====================
@@ -424,28 +319,6 @@ class AdbDaemonLauncher(private val context: Context) {
         serviceLauncher.stopLocationSidecarService(callback.toServiceCallback())
     }
     
-    // ==================== SINGBOX ====================
-    
-    /**
-     * Launch sing-box proxy.
-     */
-    fun startSingbox(callback: LaunchCallback) {
-        val singboxLauncher = SingboxLauncher(context, adbShellExecutor, logManager)
-        singboxLauncher.launchSingbox(object : SingboxLauncher.SingboxCallback {
-            override fun onLog(message: String) = callback.onLog(message)
-            override fun onStarted() = callback.onLaunched()
-            override fun onError(error: String) = callback.onError(error)
-        })
-    }
-    
-    /**
-     * Check if sing-box is running.
-     */
-    fun isSingboxRunning(callback: (Boolean) -> Unit) {
-        val singboxLauncher = SingboxLauncher(context, adbShellExecutor, logManager)
-        singboxLauncher.isRunning(callback)
-    }
-    
     // ==================== SHELL EXECUTION ====================
     
     /**
@@ -473,12 +346,6 @@ class AdbDaemonLauncher(private val context: Context) {
         override fun onLog(message: String) = this@toDaemonCallback.onLog(message)
         override fun onLaunched() = this@toDaemonCallback.onLaunched()
         override fun onError(error: String) = this@toDaemonCallback.onError(error)
-    }
-    
-    private fun TunnelCallback.toTunnelCallback() = object : TunnelLauncher.TunnelCallback {
-        override fun onLog(message: String) = this@toTunnelCallback.onLog(message)
-        override fun onTunnelUrl(url: String) = this@toTunnelCallback.onTunnelUrl(url)
-        override fun onError(error: String) = this@toTunnelCallback.onError(error)
     }
     
     private fun LaunchCallback.toServiceCallback() = object : ServiceLauncher.LaunchCallback {

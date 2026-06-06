@@ -4,8 +4,7 @@
   Incoming destination grows in from 0.85x and fades up — feels like
   a forward camera dolly. Pair with m3_shared_z_exit.xml.
 
-  Used by Settings → sub-page (Appearance, Privacy, About), Recordings → Video,
-  Integrations → Telegram / ABRP / MQTT.
+  Used by Settings → sub-page (Appearance, Privacy, About) and Recordings → Video.
 -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
     android:interpolator="@android:interpolator/decelerate_quad"

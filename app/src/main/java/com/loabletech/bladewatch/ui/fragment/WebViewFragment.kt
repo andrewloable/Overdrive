@@ -25,11 +25,10 @@ import com.loabletech.bladewatch.daemon.CameraDaemon
 /**
  * WebView fragment that loads pages from the daemon's HTTP server.
  *
- * Problem: sing-box sets a system HTTP proxy (127.0.0.1:8119) which WebView
- * honors. Requests to 127.0.0.1:8080 get routed through the proxy and fail.
- *
- * Solution: Temporarily clear the system proxy before loading, restore after.
- * Also inject auth JWT cookie so API calls pass AuthMiddleware.
+ * All localhost requests are fetched directly (Proxy.NO_PROXY) via
+ * shouldInterceptRequest / the AndroidBridge so they never get routed through
+ * any system HTTP proxy. Also injects an auth JWT cookie so API calls pass
+ * AuthMiddleware.
  */
 class WebViewFragment : Fragment() {
 
@@ -51,7 +50,7 @@ class WebViewFragment : Fragment() {
          *      bottom-right (default top-left collides with the camera-top-bar
          *      pill in landscape windowed mode).
          *   4. Patches window.fetch() to route POST/PUT/DELETE through
-         *      AndroidBridge.httpRequest() so writes bypass sing-box proxy.
+         *      AndroidBridge.httpRequest() so writes go direct (NO_PROXY).
          *      GET requests go through the normal WebView path so polling
          *      doesn't block the JS thread.
          */
@@ -98,8 +97,8 @@ class WebViewFragment : Fragment() {
         '* { -webkit-tap-highlight-color: transparent !important; }',
 
         // === Generic icon-then-text spacing inside the WebView shell.
-        //     Across pages (recording.html / surveillance.html / mqtt.html
-        //     / about.html / abrp.html / telegram.html ...) icon+title rows
+        //     Across pages (recording.html / surveillance.html /
+        //     about.html ...) icon+title rows
         //     use `display:flex; gap:` to space the leading SVG from its
         //     label. Chrome 58 on the BYD head-unit honors `gap` only
         //     intermittently — on some firmware builds the icon and the
@@ -225,7 +224,7 @@ class WebViewFragment : Fragment() {
         tabsObserver.observe(document.body, { childList: true, subtree: true });
     }
 
-    // Replace fetch() to bypass sing-box proxy for localhost
+    // Replace fetch() to route writes direct (NO_PROXY) for localhost
     if (window.AndroidBridge && !window._fetchPatched) {
         window._fetchPatched = true;
         var _orig = window.fetch;
@@ -371,7 +370,7 @@ class WebViewFragment : Fragment() {
                 
                 /**
                  * SOTA FIX: Intercept VIDEO requests with aggressive header handling.
-                 * Bypasses sing-box proxy for all localhost requests.
+                 * All localhost requests go direct (NO_PROXY).
                  */
                 override fun shouldInterceptRequest(
                     view: WebView?,
@@ -382,99 +381,78 @@ class WebViewFragment : Fragment() {
                     // FILTER: Only intercept our local server and external map/CDN resources
                     val isLocalServer = url.contains("127.0.0.1:${CameraDaemon.HTTP_PORT}") ||
                         url.contains("localhost:${CameraDaemon.HTTP_PORT}")
-                    
-                    // Bypass proxy for map tiles and CDN resources (sing-box proxy blocks these)
+
+                    // External map tiles / CDN resources.
                     val isMapTile = url.contains("tile.openstreetmap.org") ||
                         url.contains("basemaps.cartocdn.com") ||
                         url.contains("unpkg.com") ||
                         url.contains("cdn.jsdelivr.net") ||
                         url.contains("fonts.googleapis.com") ||
                         url.contains("fonts.gstatic.com")
-                    
+
                     if (!isLocalServer && !isMapTile) {
                         return super.shouldInterceptRequest(view, request)
                     }
-                    
-                    // For map tiles/CDN: route through sing-box proxy (HTTP or SOCKS).
-                    // The BYD head unit has no direct internet — all external requests
-                    // must go through the sing-box mixed proxy on port 8119.
-                    // Strategy: try HTTP proxy first, then SOCKS proxy, then direct, then
-                    // fall back to letting WebView handle it (which uses system proxy).
+
+                    // For map tiles / CDN: attempt a direct connection. There is no
+                    // proxy available, so if the head unit has no direct internet
+                    // route the request simply fails and we hand it back to WebView.
                     if (isMapTile) {
-                        val proxyAvailable = com.loabletech.bladewatch.mqtt.ProxyHelper.isProxyAvailable()
-                        
-                        // Build list of proxy strategies to try
-                        val strategies = mutableListOf<java.net.Proxy>()
-                        if (proxyAvailable) {
-                            // sing-box "mixed" inbound supports both HTTP and SOCKS5
-                            strategies.add(java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress("127.0.0.1", 8119)))
-                            strategies.add(java.net.Proxy(java.net.Proxy.Type.SOCKS, java.net.InetSocketAddress("127.0.0.1", 8119)))
-                        }
-                        strategies.add(java.net.Proxy.NO_PROXY) // direct as last resort
-                        
-                        for (proxy in strategies) {
-                            try {
-                                val connection = java.net.URL(url).openConnection(proxy) as java.net.HttpURLConnection
-                                connection.connectTimeout = if (proxy == java.net.Proxy.NO_PROXY) 3000 else 8000
-                                connection.readTimeout = 15000
-                                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 7.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0 Safari/537.36")
-                                request?.requestHeaders?.forEach { (key, value) ->
-                                    if (key != "User-Agent") connection.setRequestProperty(key, value)
-                                }
-                                connection.connect()
-                                
-                                if (connection.responseCode !in 200..399) {
-                                    connection.disconnect()
-                                    continue
-                                }
-                                
-                                val stream = connection.inputStream
-                                val rawContentType = connection.contentType ?: "application/octet-stream"
-                                val mime = rawContentType.split(";").first().trim()
-                                val encoding = if (rawContentType.contains("charset=")) {
-                                    rawContentType.substringAfter("charset=").trim()
-                                } else null
-                                
-                                val response = WebResourceResponse(mime, encoding, stream)
-                                response.setStatusCodeAndReasonPhrase(connection.responseCode, connection.responseMessage ?: "OK")
-                                
-                                val headers = mutableMapOf<String, String>()
-                                connection.headerFields?.forEach { (k, v) ->
-                                    if (k == null || v.isEmpty()) return@forEach
-                                    val lower = k.lowercase()
-                                    // Same filter as the localhost branch:
-                                    // Content-Encoding/Length and hop-by-hop
-                                    // headers describe the upstream
-                                    // connection, not the WebView one. CDNs
-                                    // commonly gzip; without this filter
-                                    // WebView re-decodes an already-decoded
-                                    // stream and the resource fails to
-                                    // render.
-                                    if (lower == "content-encoding" ||
-                                        lower == "content-length" ||
-                                        lower == "transfer-encoding" ||
-                                        lower == "connection" ||
-                                        lower == "keep-alive" ||
-                                        lower == "proxy-authenticate" ||
-                                        lower == "trailer" ||
-                                        lower == "te" ||
-                                        lower == "upgrade") return@forEach
-                                    headers[k] = v.last()
-                                }
-                                headers["Access-Control-Allow-Origin"] = "*"
-                                response.responseHeaders = headers
-                                
-                                android.util.Log.d("WebViewProxy", "CDN OK via ${proxy.type()}: $url")
-                                return response
-                            } catch (e: Exception) {
-                                android.util.Log.w("WebViewProxy", "CDN ${proxy.type()} failed for $url: ${e.message}")
-                                // Try next strategy
+                        try {
+                            val connection = java.net.URL(url).openConnection(java.net.Proxy.NO_PROXY) as java.net.HttpURLConnection
+                            connection.connectTimeout = 3000
+                            connection.readTimeout = 15000
+                            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 7.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0 Safari/537.36")
+                            request?.requestHeaders?.forEach { (key, value) ->
+                                if (key != "User-Agent") connection.setRequestProperty(key, value)
                             }
+                            connection.connect()
+
+                            if (connection.responseCode !in 200..399) {
+                                connection.disconnect()
+                                return super.shouldInterceptRequest(view, request)
+                            }
+
+                            val stream = connection.inputStream
+                            val rawContentType = connection.contentType ?: "application/octet-stream"
+                            val mime = rawContentType.split(";").first().trim()
+                            val encoding = if (rawContentType.contains("charset=")) {
+                                rawContentType.substringAfter("charset=").trim()
+                            } else null
+
+                            val response = WebResourceResponse(mime, encoding, stream)
+                            response.setStatusCodeAndReasonPhrase(connection.responseCode, connection.responseMessage ?: "OK")
+
+                            val headers = mutableMapOf<String, String>()
+                            connection.headerFields?.forEach { (k, v) ->
+                                if (k == null || v.isEmpty()) return@forEach
+                                val lower = k.lowercase()
+                                // Content-Encoding/Length and hop-by-hop headers
+                                // describe the upstream connection, not the WebView
+                                // one. CDNs commonly gzip; without this filter
+                                // WebView re-decodes an already-decoded stream and
+                                // the resource fails to render.
+                                if (lower == "content-encoding" ||
+                                    lower == "content-length" ||
+                                    lower == "transfer-encoding" ||
+                                    lower == "connection" ||
+                                    lower == "keep-alive" ||
+                                    lower == "proxy-authenticate" ||
+                                    lower == "trailer" ||
+                                    lower == "te" ||
+                                    lower == "upgrade") return@forEach
+                                headers[k] = v.last()
+                            }
+                            headers["Access-Control-Allow-Origin"] = "*"
+                            response.responseHeaders = headers
+
+                            android.util.Log.d("WebViewProxy", "CDN OK (direct): $url")
+                            return response
+                        } catch (e: Exception) {
+                            android.util.Log.w("WebViewProxy", "CDN direct fetch failed for $url: ${e.message}")
+                            // Let WebView try its own way.
+                            return super.shouldInterceptRequest(view, request)
                         }
-                        
-                        // All strategies failed — let WebView try its own way
-                        android.util.Log.e("WebViewProxy", "All CDN strategies failed for: $url")
-                        return super.shouldInterceptRequest(view, request)
                     }
 
                     // LOGGING: Check if we are seeing the video request
@@ -483,7 +461,7 @@ class WebViewFragment : Fragment() {
                     }
 
                     try {
-                        // 1. Force Direct Connection (Bypass sing-box)
+                        // 1. Force Direct Connection (NO_PROXY)
                         val connection = java.net.URL(url).openConnection(java.net.Proxy.NO_PROXY) as java.net.HttpURLConnection
                         connection.connectTimeout = 5000
                         connection.readTimeout = 30000
@@ -536,9 +514,9 @@ class WebViewFragment : Fragment() {
                         } else {
                             // 4xx/5xx — prefer the server's error body, but if
                             // there is none, surface a synthetic 503 instead of
-                            // returning null. Returning null falls back to the
-                            // system proxy (sing-box) for localhost, which
-                            // hangs without firing onReceivedError.
+                            // returning null. Returning null falls back to
+                            // WebView's default path for localhost, which can
+                            // hang without firing onReceivedError.
                             connection.errorStream
                                 ?: return synthesize503(
                                     "HTTP ${connection.responseCode} (no error body)"
@@ -618,9 +596,7 @@ class WebViewFragment : Fragment() {
                         android.util.Log.e("WebViewProxy", "Failed: $url - ${e.message}")
                         // CRITICAL: never return null for a 127.0.0.1 URL.
                         // Returning null tells WebView "fetch this yourself" —
-                        // and WebView's default path goes through the system
-                        // HTTP proxy (sing-box on :8119), which has no route
-                        // back to localhost. The request hangs without ever
+                        // and WebView's default path can hang without ever
                         // firing onReceivedError, so the loading overlay
                         // stays up forever. Synthesize a 503 instead so the
                         // WebView treats it as a real error and fires
@@ -634,7 +610,7 @@ class WebViewFragment : Fragment() {
                  * Build a 503 WebResourceResponse to return when a localhost
                  * fetch fails. Surfacing the failure to WebView lets
                  * onReceivedError fire and the user reach the retry overlay,
-                 * instead of hanging on the system proxy fallback.
+                 * instead of hanging on WebView's default fallback path.
                  */
                 private fun synthesize503(reason: String): WebResourceResponse {
                     val body = "{\"error\":\"daemon_unreachable\",\"reason\":${
@@ -789,7 +765,7 @@ class WebViewFragment : Fragment() {
 
     /**
      * Native bridge that JavaScript calls for ALL HTTP requests.
-     * Uses Proxy.NO_PROXY to bypass sing-box.
+     * Uses Proxy.NO_PROXY for a direct connection.
      * This is synchronous — called from JS via AndroidBridge.httpRequest().
      */
     inner class ProxyBypassBridge {

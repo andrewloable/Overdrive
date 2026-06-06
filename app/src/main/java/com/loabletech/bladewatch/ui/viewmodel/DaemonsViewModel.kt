@@ -27,21 +27,12 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
     private val daemonStatesLock = Any()
     private var daemonStatesSnapshot: Map<DaemonType, DaemonState> = emptyMap()
     
-    // Expose cloudflared controller for tunnel URL access
-    val cloudflaredController: CloudflaredController
-    
     // Expose zrok controller for tunnel URL access
     val zrokController: ZrokController
 
-    // Expose tailscale controller for tunnel URL access
-    val tailscaleController: TailscaleController
-    
     // Expose camera daemon controller for startup manager
     val cameraDaemonController: CameraDaemonController
-    
-    // Expose singbox controller for startup manager
-    val singboxController: SingboxController
-    
+
     // Reference to startup manager (set by Activity after creation)
     private var startupManager: DaemonStartupManager? = null
     
@@ -54,21 +45,14 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
     }
     
     init {
-        cloudflaredController = CloudflaredController(adbLauncher)
         zrokController = ZrokController(app, adbLauncher)
-        tailscaleController = TailscaleController(app, adbLauncher)
         cameraDaemonController = CameraDaemonController(app, adbLauncher)
-        singboxController = SingboxController(adbLauncher)
-        
+
         controllers = mapOf(
             DaemonType.CAMERA_DAEMON to cameraDaemonController,
             DaemonType.SENTRY_DAEMON to SentryDaemonController(adbLauncher),
             DaemonType.ACC_SENTRY_DAEMON to AccSentryDaemonController(adbLauncher),
-            DaemonType.SINGBOX_PROXY to singboxController,
-            DaemonType.CLOUDFLARED_TUNNEL to cloudflaredController,
-            DaemonType.ZROK_TUNNEL to zrokController,
-            DaemonType.TAILSCALE_TUNNEL to tailscaleController,
-            DaemonType.TELEGRAM_DAEMON to TelegramDaemonController(adbLauncher)
+            DaemonType.ZROK_TUNNEL to zrokController
         )
         
         // Initialize all states as stopped
@@ -86,9 +70,7 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(object : Runnable {
             override fun run() {
                 // Only refresh tunnel statuses periodically
-                refreshDaemonStatus(DaemonType.CLOUDFLARED_TUNNEL)
                 refreshDaemonStatus(DaemonType.ZROK_TUNNEL)
-                refreshDaemonStatus(DaemonType.TAILSCALE_TUNNEL)
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 30000)
             }
         }, 30000)
@@ -99,28 +81,7 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
         
         // Clear user-stopped flag so health check can manage this daemon
         DaemonStartupManager.clearUserStopped(type)
-        
-        // Cloudflared and Zrok are mutually exclusive - stop the other one first
-        if (type == DaemonType.CLOUDFLARED_TUNNEL) {
-            // Stop zrok if running before starting cloudflared
-            val zrokState = _daemonStates.value?.get(DaemonType.ZROK_TUNNEL)
-            if (zrokState?.status == DaemonStatus.RUNNING) {
-                LogManager.getInstance().info("Daemons", "Stopping Zrok (mutually exclusive with Cloudflared)")
-                stopDaemonSilent(DaemonType.ZROK_TUNNEL)
-                // Also update preference for zrok since we're stopping it
-                startupManager?.onDaemonToggled(DaemonType.ZROK_TUNNEL, false)
-            }
-        } else if (type == DaemonType.ZROK_TUNNEL) {
-            // Stop cloudflared if running before starting zrok
-            val cloudflaredState = _daemonStates.value?.get(DaemonType.CLOUDFLARED_TUNNEL)
-            if (cloudflaredState?.status == DaemonStatus.RUNNING) {
-                LogManager.getInstance().info("Daemons", "Stopping Cloudflared (mutually exclusive with Zrok)")
-                stopDaemonSilent(DaemonType.CLOUDFLARED_TUNNEL)
-                // Also update preference for cloudflared since we're stopping it
-                startupManager?.onDaemonToggled(DaemonType.CLOUDFLARED_TUNNEL, false)
-            }
-        }
-        
+
         // For optional daemons, save the enabled state so they auto-start on app restart
         if (type in DaemonStartupManager.OPTIONAL_DAEMONS) {
             startupManager?.onDaemonToggled(type, true)
@@ -135,23 +96,6 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
             
             override fun onError(error: String) {
                 updateState(type, DaemonStatus.ERROR, error)
-            }
-        })
-    }
-    
-    /**
-     * Stop daemon silently (used for mutual exclusion between tunnels).
-     * Doesn't update preferences or show stopping state.
-     */
-    private fun stopDaemonSilent(type: DaemonType) {
-        val controller = controllers[type] ?: return
-        controller.stop(object : DaemonCallback {
-            override fun onStatusChanged(status: DaemonStatus, message: String) {
-                updateState(type, status, message)
-            }
-            override fun onError(error: String) {
-                // Ignore errors for silent stop
-                updateState(type, DaemonStatus.STOPPED, "Stopped")
             }
         })
     }
@@ -203,23 +147,8 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
                 doRefreshDaemonStatus(type, controller, logResult)
             }
             return
-        } else if (type == DaemonType.TAILSCALE_TUNNEL) {
-            tailscaleController.needsLogin { needsLogin ->
-                if (needsLogin) {
-                    // No token configured - show needs config state
-                    updateTailscaleNeedsLogin("Not logged in. Tap to set up.")
-                    if (logResult) {
-                        LogManager.getInstance().debug("Daemons", "${type.name}: Not logged in")
-                    }
-                    return@needsLogin
-                }
-
-                // User logged in, proceed with normal status check
-                doRefreshDaemonStatus(type, controller, logResult)
-            }
-            return
         }
-        
+
         doRefreshDaemonStatus(type, controller, logResult)
     }
     
@@ -242,21 +171,8 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
                             SubprocessInfo(p.name, p.pid, p.uptime)
                         }
                         
-                        // For cloudflared, also fetch the tunnel URL
-                        if (type == DaemonType.CLOUDFLARED_TUNNEL) {
-                            cloudflaredController.refreshTunnelUrl { url ->
-                                val statusText = url ?: "Running"
-                                updateStateWithSubprocesses(type, DaemonStatus.RUNNING, statusText, uptime, subprocesses)
-                                if (logResult) {
-                                    val uptimeStr = uptime?.let { " (uptime: $it)" } ?: ""
-                                    LogManager.getInstance().info("Daemons", "${type.name}: Running$uptimeStr" + (url?.let { " - $it" } ?: ""))
-                                    subprocesses.forEach { sp ->
-                                        LogManager.getInstance().debug("Daemons", "  └─ ${sp.name} (PID: ${sp.pid}, uptime: ${sp.uptime})")
-                                    }
-                                }
-                            }
-                        } else if (type == DaemonType.ZROK_TUNNEL) {
-                            // For zrok, also fetch the tunnel URL
+                        // For zrok, also fetch the tunnel URL
+                        if (type == DaemonType.ZROK_TUNNEL) {
                             zrokController.refreshTunnelUrl { url ->
                                 val statusText = url ?: "Running"
                                 updateStateWithSubprocesses(type, DaemonStatus.RUNNING, statusText, uptime, subprocesses)
@@ -265,23 +181,6 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
                                     LogManager.getInstance().info("Daemons", "${type.name}: Running$uptimeStr" + (url?.let { " - $it" } ?: ""))
                                     subprocesses.forEach { sp ->
                                         LogManager.getInstance().debug("Daemons", "  └─ ${sp.name} (PID: ${sp.pid}, uptime: ${sp.uptime})")
-                                    }
-                                }
-                            }
-                        } else if (type == DaemonType.TAILSCALE_TUNNEL) {
-                            // For tailscale, also fetch the tunnel URL and proxy state
-                            tailscaleController.refreshTunnelUrl { url ->
-                                tailscaleController.isProxyEnabled { proxyOn ->
-                                    val base = url ?: "Running"
-                                    val statusText = if (proxyOn) "$base • Proxy: ON" else base
-                                    updateStateWithSubprocesses(type, DaemonStatus.RUNNING, statusText, uptime, subprocesses)
-                                    if (logResult) {
-                                        val uptimeStr = uptime?.let { " (uptime: $it)" } ?: ""
-                                        val proxyStr = if (proxyOn) " [proxy ON]" else ""
-                                        LogManager.getInstance().info("Daemons", "${type.name}: Running$uptimeStr$proxyStr" + (url?.let { " - $it" } ?: ""))
-                                        subprocesses.forEach { sp ->
-                                            LogManager.getInstance().debug("Daemons", "  └─ ${sp.name} (PID: ${sp.pid}, uptime: ${sp.uptime})")
-                                        }
                                     }
                                 }
                             }
@@ -311,11 +210,7 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
             DaemonType.CAMERA_DAEMON -> "byd_cam_daemon"
             DaemonType.SENTRY_DAEMON -> "sentry_daemon"
             DaemonType.ACC_SENTRY_DAEMON -> "acc_sentry_daemon"
-            DaemonType.SINGBOX_PROXY -> "sing-box"
-            DaemonType.CLOUDFLARED_TUNNEL -> "cloudflared tunnel"
             DaemonType.ZROK_TUNNEL -> "zrok share"
-            DaemonType.TAILSCALE_TUNNEL -> "tailscaled"
-            DaemonType.TELEGRAM_DAEMON -> "telegram_bot_daemon"
         }
     }
     
@@ -324,11 +219,7 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
             DaemonType.CAMERA_DAEMON -> listOf("byd_cam_daemon", "ffmpeg", "mediamtx")
             DaemonType.SENTRY_DAEMON -> listOf("sentry_daemon")
             DaemonType.ACC_SENTRY_DAEMON -> listOf("acc_sentry_daemon")
-            DaemonType.SINGBOX_PROXY -> listOf("sing-box")
-            DaemonType.CLOUDFLARED_TUNNEL -> listOf("cloudflared")
             DaemonType.ZROK_TUNNEL -> listOf("zrok")
-            DaemonType.TAILSCALE_TUNNEL -> listOf("tailscaled")
-            DaemonType.TELEGRAM_DAEMON -> listOf("telegram_bot_daemon")
         }
     }
     
@@ -376,13 +267,6 @@ class DaemonsViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun updateZrokNeedsConfig(message: String) {
         updateDaemonState(DaemonType.ZROK_TUNNEL, DaemonState.needsConfig(DaemonType.ZROK_TUNNEL, message))
-    }
-
-    /**
-     * Update Tailscale state to indicate needs login.
-     */
-    fun updateTailscaleNeedsLogin(message: String) {
-        updateDaemonState(DaemonType.TAILSCALE_TUNNEL, DaemonState.needsConfig(DaemonType.TAILSCALE_TUNNEL, message))
     }
 
     private fun updateDaemonState(type: DaemonType, state: DaemonState) {

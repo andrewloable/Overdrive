@@ -73,11 +73,7 @@ class ZrokLauncher(
                     && name.startsWith(UNIQUE_NAME_PREFIX)
                     && name.matches(Regex("^[a-z0-9]{4,32}$"))
         }
-        
-        // Proxy settings for sing-box (socks5 for zrok)
-        private const val PROXY_HOST = "127.0.0.1"
-        private const val PROXY_PORT = "8119"
-        
+
         /**
          * Generate a unique name for this device.
          * Format: bladewatch<6-char-random>
@@ -108,8 +104,6 @@ class ZrokLauncher(
      * Priority:
      * 1. If reservedShareToken is set, use reserved mode (permanent URL)
      * 2. Otherwise, use public mode (random URL)
-     * 
-     * NOTE: Zrok and Cloudflared are mutually exclusive - this will kill cloudflared first.
      */
     fun launchZrok(callback: ZrokCallback) {
         logManager.info(TAG, "Launching Zrok tunnel...")
@@ -124,32 +118,29 @@ class ZrokLauncher(
             }
             
             callback.onLog("Checking for existing tunnel...")
-            
-            // Kill cloudflared first (mutually exclusive)
-            killCloudflaredIfRunning {
-                // Then check if zrok tunnel is already running
-                isTunnelRunning { isRunning ->
-                    if (isRunning) {
-                        // Tunnel already running, try to get existing URL
-                        logManager.info(TAG, "Zrok already running, checking for URL...")
-                        callback.onLog("Tunnel already running, getting URL...")
-                        getTunnelUrl { existingUrl ->
-                            if (existingUrl != null) {
-                                logManager.info(TAG, "Reusing existing tunnel: $existingUrl")
-                                callback.onLog("Reusing existing tunnel")
-                                callback.onTunnelUrl(existingUrl)
-                            } else {
-                                // Running but no URL - wait for it
-                                logManager.info(TAG, "Tunnel running but no URL yet, waiting...")
-                                callback.onLog("Waiting for tunnel URL...")
-                                waitForTunnelUrl(callback, 1)
-                            }
+
+            // Check if zrok tunnel is already running
+            isTunnelRunning { isRunning ->
+                if (isRunning) {
+                    // Tunnel already running, try to get existing URL
+                    logManager.info(TAG, "Zrok already running, checking for URL...")
+                    callback.onLog("Tunnel already running, getting URL...")
+                    getTunnelUrl { existingUrl ->
+                        if (existingUrl != null) {
+                            logManager.info(TAG, "Reusing existing tunnel: $existingUrl")
+                            callback.onLog("Reusing existing tunnel")
+                            callback.onTunnelUrl(existingUrl)
+                        } else {
+                            // Running but no URL - wait for it
+                            logManager.info(TAG, "Tunnel running but no URL yet, waiting...")
+                            callback.onLog("Waiting for tunnel URL...")
+                            waitForTunnelUrl(callback, 1)
                         }
-                    } else {
-                        // Not running, check if binary is installed
-                        callback.onLog("Setting up zrok...")
-                        checkAndInstallZrok(callback)
                     }
+                } else {
+                    // Not running, check if binary is installed
+                    callback.onLog("Setting up zrok...")
+                    checkAndInstallZrok(callback)
                 }
             }
         }
@@ -166,25 +157,22 @@ class ZrokLauncher(
         reservedShareToken = shareToken
         logManager.info(TAG, "Launching Zrok in RESERVED mode...")
         callback.onLog("Starting reserved tunnel...")
-        
-        // Kill cloudflared first (mutually exclusive)
-        killCloudflaredIfRunning {
-            isTunnelRunning { isRunning ->
-                if (isRunning) {
-                    logManager.info(TAG, "Zrok already running")
-                    callback.onLog("Tunnel already running")
-                    // Even on the fast path, reconcile against the running
-                    // tunnel's actual URL — the zrok process from a previous
-                    // boot may have bound a name that disagrees with the
-                    // permanentUrl the app cached. Same drift case as the
-                    // fresh-launch path above.
-                    reconcileTunnelUrl(permanentUrl, attempt = 1) { actualUrl ->
-                        callback.onTunnelUrl(actualUrl)
-                    }
-                } else {
-                    callback.onLog("Setting up zrok...")
-                    checkAndInstallZrokForReserved(shareToken, permanentUrl, callback)
+
+        isTunnelRunning { isRunning ->
+            if (isRunning) {
+                logManager.info(TAG, "Zrok already running")
+                callback.onLog("Tunnel already running")
+                // Even on the fast path, reconcile against the running
+                // tunnel's actual URL — the zrok process from a previous
+                // boot may have bound a name that disagrees with the
+                // permanentUrl the app cached. Same drift case as the
+                // fresh-launch path above.
+                reconcileTunnelUrl(permanentUrl, attempt = 1) { actualUrl ->
+                    callback.onTunnelUrl(actualUrl)
                 }
+            } else {
+                callback.onLog("Setting up zrok...")
+                checkAndInstallZrokForReserved(shareToken, permanentUrl, callback)
             }
         }
     }
@@ -237,34 +225,12 @@ class ZrokLauncher(
     }
     
     private fun runReserveCommand(uniqueName: String, callback: ZrokCallback) {
-        // Check if sing-box proxy is running
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    executeReserveCommand(uniqueName, useProxy, callback)
-                }
-                
-                override fun onError(error: String) {
-                    executeReserveCommand(uniqueName, false, callback)
-                }
-            }
-        )
+        executeReserveCommand(uniqueName, callback)
     }
-    
-    private fun executeReserveCommand(uniqueName: String, useProxy: Boolean, callback: ZrokCallback) {
+
+    private fun executeReserveCommand(uniqueName: String, callback: ZrokCallback) {
         val cmd = buildString {
             append("HOME=$ZROK_HOME ")
-            
-            if (useProxy) {
-                val proxyUrl = "socks5h://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl ")
-                append("HTTP_PROXY=$proxyUrl ")
-                append("HTTPS_PROXY=$proxyUrl ")
-                append("NO_PROXY=localhost,127.0.0.1 ")
-            }
-            
             // Note: `zrok reserve` doesn't support --headless
             append("$ZROK_TMP_PATH reserve public http://localhost:8080 --unique-name $uniqueName 2>&1")
         }
@@ -411,35 +377,15 @@ class ZrokLauncher(
     }
     
     private fun enableZrokThenReserved(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    enableZrokWithConfigThenReserved(shareToken, permanentUrl, useProxy, callback)
-                }
-                
-                override fun onError(error: String) {
-                    enableZrokWithConfigThenReserved(shareToken, permanentUrl, false, callback)
-                }
-            }
-        )
-    }
-    
-    private fun enableZrokWithConfigThenReserved(shareToken: String, permanentUrl: String, useProxy: Boolean, callback: ZrokCallback) {
         // Check for token first
         if (zrokToken.isEmpty()) {
             logManager.error(TAG, "No enable token configured!")
             callback.onError("❌ No Zrok token configured. Please set your token in Daemons settings.")
             return
         }
-        
+
         val cmd = buildString {
             append("HOME=$ZROK_HOME ")
-            if (useProxy) {
-                val proxyUrl = "socks5://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl HTTP_PROXY=$proxyUrl HTTPS_PROXY=$proxyUrl NO_PROXY=localhost,127.0.0.1 ")
-            }
             append("$ZROK_TMP_PATH enable $zrokToken --headless 2>&1")
         }
         
@@ -466,49 +412,28 @@ class ZrokLauncher(
      */
     private fun launchZrokShareReserved(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
         callback.onLog("Starting reserved share...")
-        
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    startZrokShareReservedProcess(shareToken, permanentUrl, useProxy, callback)
-                }
-                
-                override fun onError(error: String) {
-                    startZrokShareReservedProcess(shareToken, permanentUrl, false, callback)
-                }
-            }
-        )
+        startZrokShareReservedProcess(shareToken, permanentUrl, callback)
     }
-    
-    private fun startZrokShareReservedProcess(shareToken: String, permanentUrl: String, useProxy: Boolean, callback: ZrokCallback) {
+
+    private fun startZrokShareReservedProcess(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
         // Clear old log
         adbShellExecutor.execute(
             command = "rm -f $ZROK_LOG",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
-                    launchReservedProcess(shareToken, permanentUrl, useProxy, callback)
+                    launchReservedProcess(shareToken, permanentUrl, callback)
                 }
                 override fun onError(error: String) {
-                    launchReservedProcess(shareToken, permanentUrl, useProxy, callback)
+                    launchReservedProcess(shareToken, permanentUrl, callback)
                 }
             }
         )
     }
-    
-    private fun launchReservedProcess(shareToken: String, permanentUrl: String, useProxy: Boolean, callback: ZrokCallback) {
+
+    private fun launchReservedProcess(shareToken: String, permanentUrl: String, callback: ZrokCallback) {
         val cmd = buildString {
             append("nohup sh -c '")
             append("HOME=$ZROK_HOME ")
-
-            if (useProxy) {
-                val proxyUrl = "socks5://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl ")
-                append("HTTP_PROXY=$proxyUrl ")
-                append("HTTPS_PROXY=$proxyUrl ")
-                append("NO_PROXY=localhost,127.0.0.1 ")
-            }
 
             // RESERVED mode: uses token instead of public
             append("$ZROK_TMP_PATH share reserved $shareToken --headless")
@@ -636,35 +561,6 @@ class ZrokLauncher(
             uniqueName = actualName
             saveUniqueName(actualName)
         }
-    }
-    
-    /**
-     * Kill cloudflared if running (mutual exclusion).
-     */
-    private fun killCloudflaredIfRunning(onComplete: () -> Unit) {
-        adbShellExecutor.execute(
-            command = "pgrep -f cloudflared",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    if (output.trim().isNotEmpty()) {
-                        logManager.info(TAG, "Killing cloudflared (mutually exclusive with zrok)")
-                        adbShellExecutor.execute(
-                            command = "killall -9 cloudflared 2>/dev/null; echo done",
-                            callback = object : AdbShellExecutor.ShellCallback {
-                                override fun onSuccess(o: String) {
-                                    Thread.sleep(300)
-                                    onComplete()
-                                }
-                                override fun onError(e: String) { onComplete() }
-                            }
-                        )
-                    } else {
-                        onComplete()
-                    }
-                }
-                override fun onError(error: String) { onComplete() }
-            }
-        )
     }
     
     private fun checkAndInstallZrok(callback: ZrokCallback) {
@@ -881,43 +777,20 @@ class ZrokLauncher(
      */
     private fun autoReserveAndLaunch(callback: ZrokCallback) {
         callback.onLog("Reserving: https://$uniqueName.share.zrok.io")
-        
-        // Check if sing-box proxy is running
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    executeAutoReserve(useProxy, callback, 0)
-                }
-                
-                override fun onError(error: String) {
-                    executeAutoReserve(false, callback, 0)
-                }
-            }
-        )
+        executeAutoReserve(callback, 0)
     }
-    
-    private fun executeAutoReserve(useProxy: Boolean, callback: ZrokCallback, retryCount: Int = 0) {
+
+    private fun executeAutoReserve(callback: ZrokCallback, retryCount: Int = 0) {
         if (retryCount > 3) {
             logManager.error(TAG, "Reserve failed after 3 retries")
             callback.onError("Failed to reserve URL after multiple attempts")
             return
         }
-        
+
         val cmd = buildString {
             // Use timeout to prevent hanging (30 seconds max)
             append("timeout 30 sh -c '")
             append("HOME=$ZROK_HOME ")
-            
-            if (useProxy) {
-                val proxyUrl = "socks5://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl ")
-                append("HTTP_PROXY=$proxyUrl ")
-                append("HTTPS_PROXY=$proxyUrl ")
-                append("NO_PROXY=localhost,127.0.0.1 ")
-            }
-            
             // Note: `zrok reserve` doesn't support --headless, only `zrok share` does
             append("$ZROK_TMP_PATH reserve public http://localhost:8080 --unique-name $uniqueName")
             append("' 2>&1")
@@ -936,7 +809,7 @@ class ZrokLauncher(
                     if (output.isEmpty() || output.contains("timeout")) {
                         logManager.warn(TAG, "Reserve command timed out, retrying...")
                         callback.onLog("⚠️ Timeout, retrying...")
-                        executeAutoReserve(useProxy, callback, retryCount + 1)
+                        executeAutoReserve(callback, retryCount + 1)
                         return
                     }
                     
@@ -963,7 +836,7 @@ class ZrokLauncher(
                         callback.onLog("⚠️ Name taken, trying new name...")
                         uniqueName = generateUniqueName(context)
                         saveUniqueName(uniqueName)
-                        executeAutoReserve(useProxy, callback, 0) // Reset retry count for new name
+                        executeAutoReserve(callback, 0) // Reset retry count for new name
                     } else if (output.contains("error") || output.contains("failed") || output.contains("ERROR")) {
                         logManager.error(TAG, "Reserve failed: $output")
                         callback.onError("Failed to reserve URL: $output")
@@ -979,7 +852,7 @@ class ZrokLauncher(
                     // Check if it's a timeout or network issue - retry
                     if (error.contains("timeout") || error.contains("connection")) {
                         callback.onLog("⚠️ Connection issue, retrying...")
-                        executeAutoReserve(useProxy, callback, retryCount + 1)
+                        executeAutoReserve(callback, retryCount + 1)
                     } else {
                         callback.onError("Reserve failed: $error")
                     }
@@ -990,54 +863,24 @@ class ZrokLauncher(
     
     /**
      * Enable zrok environment with token.
-     * Uses same proxy detection as cloudflared.
      */
     private fun enableZrokEnvironment(callback: ZrokCallback) {
         callback.onLog("Enabling zrok environment...")
-        
-        // Check if sing-box proxy is running (same as cloudflared)
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    if (useProxy) {
-                        logManager.info(TAG, "Sing-box detected, using socks5 proxy")
-                    }
-                    enableZrokWithConfig(callback, useProxy)
-                }
-                
-                override fun onError(error: String) {
-                    logManager.info(TAG, "Sing-box not running, enabling zrok without proxy")
-                    enableZrokWithConfig(callback, false)
-                }
-            }
-        )
+        enableZrokWithConfig(callback)
     }
-    
-    private fun enableZrokWithConfig(callback: ZrokCallback, useProxy: Boolean) {
+
+    private fun enableZrokWithConfig(callback: ZrokCallback) {
         // First ensure we have a token
         if (zrokToken.isEmpty()) {
             logManager.error(TAG, "No enable token configured!")
             callback.onError("❌ No Zrok token configured. Please set your token in Daemons settings.")
             return
         }
-        
+
+        callback.onLog("Direct connection (no proxy)...")
+
         val cmd = buildString {
             append("HOME=$ZROK_HOME ")
-            
-            if (useProxy) {
-                // Zrok uses socks5 proxy (different from cloudflared's http proxy)
-                val proxyUrl = "socks5://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl ")
-                append("HTTP_PROXY=$proxyUrl ")
-                append("HTTPS_PROXY=$proxyUrl ")
-                append("NO_PROXY=localhost,127.0.0.1 ")
-                callback.onLog("Using sing-box socks5 proxy...")
-            } else {
-                callback.onLog("Direct connection (no proxy)...")
-            }
-            
             append("$ZROK_TMP_PATH enable $zrokToken --headless 2>&1")
         }
         
@@ -1089,53 +932,28 @@ class ZrokLauncher(
      */
     private fun launchZrokShare(callback: ZrokCallback) {
         callback.onLog("Starting zrok share (unlimited restarts OK)...")
-        
-        // Check if sing-box proxy is running (same as cloudflared)
-        adbShellExecutor.execute(
-            command = "pgrep -f sing-box",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    val useProxy = output.trim().isNotEmpty()
-                    launchZrokShareWithConfig(callback, useProxy)
-                }
-                
-                override fun onError(error: String) {
-                    logManager.info(TAG, "Sing-box not running, launching zrok without proxy")
-                    launchZrokShareWithConfig(callback, false)
-                }
-            }
-        )
+        launchZrokShareWithConfig(callback)
     }
-    
-    private fun launchZrokShareWithConfig(callback: ZrokCallback, useProxy: Boolean) {
+
+    private fun launchZrokShareWithConfig(callback: ZrokCallback) {
         // Clear old log first
         adbShellExecutor.execute(
             command = "rm -f $ZROK_LOG",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
-                    startZrokShareProcess(callback, useProxy)
+                    startZrokShareProcess(callback)
                 }
                 override fun onError(error: String) {
-                    startZrokShareProcess(callback, useProxy)
+                    startZrokShareProcess(callback)
                 }
             }
         )
     }
-    
-    private fun startZrokShareProcess(callback: ZrokCallback, useProxy: Boolean) {
+
+    private fun startZrokShareProcess(callback: ZrokCallback) {
         val cmd = buildString {
             append("nohup sh -c '")
             append("HOME=$ZROK_HOME ")
-            
-            if (useProxy) {
-                // Zrok uses socks5 proxy
-                val proxyUrl = "socks5://$PROXY_HOST:$PROXY_PORT"
-                append("ALL_PROXY=$proxyUrl ")
-                append("HTTP_PROXY=$proxyUrl ")
-                append("HTTPS_PROXY=$proxyUrl ")
-                append("NO_PROXY=localhost,127.0.0.1 ")
-            }
-            
             append("$ZROK_TMP_PATH share public http://localhost:8080 --headless")
             append("' > $ZROK_LOG 2>&1 &")
         }
@@ -1194,14 +1012,6 @@ class ZrokLauncher(
                         logManager.info(TAG, "Tunnel established: $tunnelUrl")
                         callback.onLog("Tunnel established: $tunnelUrl")
                         callback.onTunnelUrl(tunnelUrl)
-                        return
-                    }
-                    
-                    // Check for proxy errors
-                    if (logContent.contains("proxyconnect") ||
-                        (logContent.contains("proxy") && logContent.contains("refused"))) {
-                        logManager.error(TAG, "Proxy error - is sing-box running?")
-                        callback.onError("Proxy Error: Is sing-box running on port $PROXY_PORT?\n${logContent.takeLast(200)}")
                         return
                     }
                     

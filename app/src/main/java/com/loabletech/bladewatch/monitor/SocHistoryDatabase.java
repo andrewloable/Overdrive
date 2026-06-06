@@ -75,10 +75,7 @@ public class SocHistoryDatabase {
     private long lastRecordTime = 0;
     private double lastRecordedSoc = -1;
     private double lastRecordedKwh = -1;
-    
-    // SohEstimator reference (set externally)
-    private volatile com.loabletech.bladewatch.abrp.SohEstimator sohEstimator;
-    
+
     private SocHistoryDatabase() {
         // Load the H2 JDBC driver (pure Java - always works)
         try {
@@ -409,53 +406,6 @@ public class SocHistoryDatabase {
                 logger.debug("Failed to get remaining kWh: " + e.getMessage());
             }
             
-            // Shape B: live formula drives SOH directly from this tick's
-            // remainKwh + SOC. Feed RAW vd.remainKwh, never the synthesized
-            // value from getBatteryRemainPowerKwh — the synthesizer falls
-            // back to (soc/100 × nominal × currentSoh/100) on PHEV / bad-BMS
-            // paths, which would loop currentSoh into itself and freeze
-            // the formula at its initial seed forever.
-            try {
-                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
-                if (sohEst != null) {
-                    if (sohEst.getNominalCapacityKwh() <= 0) {
-                        sohEst.autoDetectCarModel(
-                            com.loabletech.bladewatch.daemon.CameraDaemon.getAppContext());
-                    }
-                    if (sohEst.getNominalCapacityKwh() > 0 && !sohEst.hasEstimate()) {
-                        sohEst.seedInitialEstimate();
-                    }
-
-                    double rawRemainKwh = Double.NaN;
-                    double highCellV = Double.NaN;
-                    try {
-                        com.loabletech.bladewatch.byd.BydDataCollector col = com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
-                        if (col != null && col.isInitialized()) {
-                            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
-                            if (vd != null) {
-                                if (!Double.isNaN(vd.remainKwh)) rawRemainKwh = vd.remainKwh;
-                                if (!Double.isNaN(vd.highCellVoltage)) highCellV = vd.highCellVoltage;
-                            }
-                        }
-                    } catch (Exception ignored) { /* leave NaN */ }
-
-                    if (rawRemainKwh > 0 && soc > 0
-                            && sohEst.getNominalCapacityKwh() > 0) {
-                        double impliedCap = rawRemainKwh / (soc / 100.0);
-                        double nominal = sohEst.getNominalCapacityKwh();
-                        double ratio = impliedCap / nominal;
-                        // Skip when raw BMS reads outside 50-150% of nominal —
-                        // those are firmware-junk values, not real degradation.
-                        if (ratio >= 0.5 && ratio <= 1.5) {
-                            boolean atRest = isVehicleAtRest();
-                            sohEst.updateFromEnergy(rawRemainKwh, soc, highCellV, atRest);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                logger.debug("SOH update failed: " + e.getMessage());
-            }
-            
             // HV battery thermal data — from BydDataCollector (has real cell temps via Integer.TYPE)
             double hvTempHigh = -999, hvTempLow = -999, hvTempAvg = -999;
             double cellVoltHigh = -999, cellVoltLow = -999;
@@ -484,40 +434,11 @@ public class SocHistoryDatabase {
                 }
             }
             
-            // SOH from SohEstimator (via AbrpTelemetryService)
+            // SOH estimation has been removed (no BYD-local degradation source).
+            // Persist the sentinel so the soh_percent column stays well-formed and
+            // history queries that filter soh_percent > 0 simply skip these rows.
             double sohPercent = -999;
-            try {
-                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
-                if (sohEst != null && sohEst.hasEstimate()) {
-                    sohPercent = sohEst.getCurrentSoh();
-                    logger.debug("SOH from estimator: " + String.format("%.1f", sohPercent) + "%");
-                } else {
-                    // Fallback: read from persisted file
-                    logger.info("SOH estimator " + (sohEst == null ? "is null" : "has no estimate") + ", trying persisted file fallback");
-                    java.io.File sohFile = new java.io.File("/data/local/tmp/abrp_soh_estimate.properties");
-                    if (sohFile.exists()) {
-                        java.util.Properties props = new java.util.Properties();
-                        try (java.io.FileInputStream fis = new java.io.FileInputStream(sohFile)) {
-                            props.load(fis);
-                        }
-                        String sohStr = props.getProperty("soh_percent");
-                        if (sohStr != null) {
-                            double soh = Double.parseDouble(sohStr);
-                            if (soh > 0 && soh <= 100) {
-                                sohPercent = soh;
-                                logger.info("SOH from persisted file fallback: " + soh + "%");
-                            }
-                        }
-                    } else {
-                        // New installs and reset diagnostics legitimately start without a
-                        // persisted SOH estimate; keep that out of warning-focused logs.
-                        logger.debug("SOH persisted file absent at /data/local/tmp/abrp_soh_estimate.properties");
-                    }
-                }
-            } catch (Exception e) {
-                logger.debug("Failed to get SOH: " + e.getMessage());
-            }
-            
+
             long now = System.currentTimeMillis();
 
             // Record at least once every 10 minutes regardless of SOC change
@@ -631,20 +552,12 @@ public class SocHistoryDatabase {
                 double energyAdded = 0;
                 boolean isAcCharge = true; // Assume AC unless peak power > 20 kW
                 double packTemp = 25.0;    // Default — updated below if available
-                
-                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
-                double nominalKwh = sohEst != null ? sohEst.getNominalCapacityKwh() : 0;
-                
+
+                double nominalKwh = VehicleDataMonitor.getInstance().getNominalCapacityKwh();
+
                 if (nominalKwh > 0 && socDelta > 0) {
-                    // Energy added ≈ socDelta% × nominalKwh.
-                    //
-                    // The previous version applied a 0.95 multiplier "to
-                    // account for BYD hiding ~5% display reserve." That's an
-                    // NMC convention; on BYD Blade LFP packs the displayed
-                    // 0–100% range maps to ~100% of nominal usable energy,
-                    // so the correction is double-counting and biased every
-                    // calibration ~5% optimistic. updateFromCalibration() now
-                    // applies the correct chemistry-aware scale internally.
+                    // Energy added ≈ socDelta% × nominalKwh (BYD local nominal pack
+                    // capacity; SOH degradation is not modelled).
                     energyAdded = (socDelta / 100.0) * nominalKwh;
                 } else {
                     energyAdded = socDelta * 0.6; // Rough fallback
@@ -680,28 +593,6 @@ public class SocHistoryDatabase {
                     String.format("%.1f", energyAdded) + " kWh, " +
                     (isAcCharge ? "AC" : "DC") + ", " +
                     String.format("%.0f", packTemp) + "°C)");
-                
-                // Feed calibration data to SohEstimator for ongoing SOH tracking.
-                // Pass the highest cell voltage observed at session end so
-                // updateFromCalibration() can pick LFP vs NMC chemistry scale.
-                if (sohEst != null && socDelta > 0 && energyAdded > 0) {
-                    double highCellV = Double.NaN;
-                    try {
-                        com.loabletech.bladewatch.byd.BydDataCollector col =
-                            com.loabletech.bladewatch.byd.BydDataCollector.getInstance();
-                        if (col != null && col.isInitialized()) {
-                            com.loabletech.bladewatch.byd.BydVehicleData vd = col.getData();
-                            if (vd != null && !Double.isNaN(vd.highCellVoltage)) {
-                                highCellV = vd.highCellVoltage;
-                            }
-                        }
-                    } catch (Exception ignored) { /* keep NaN → defaults to LFP */ }
-                    try {
-                        sohEst.updateFromCalibration(energyAdded, socDelta, packTemp, isAcCharge, highCellV);
-                    } catch (Exception e) {
-                        logger.debug("SOH calibration update failed: " + e.getMessage());
-                    }
-                }
             }
             
             wasCharging = isCharging;
@@ -922,12 +813,7 @@ public class SocHistoryDatabase {
                 livePoint.put("range", rangeData != null ? rangeData.elecRangeKm : 0);
                 double liveKwh = monitor.getBatteryRemainPowerKwh();
                 if (liveKwh > 0) livePoint.put("kwh", Math.round(liveKwh * 10) / 10.0);
-                
-                com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
-                if (sohEst != null && sohEst.hasEstimate()) {
-                    livePoint.put("soh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
-                }
-                
+
                 history.put(livePoint);
             }
             
@@ -953,13 +839,6 @@ public class SocHistoryDatabase {
         }
         
         return report;
-    }
-    
-    /**
-     * Set the SohEstimator reference for recording SOH alongside battery data.
-     */
-    public void setSohEstimator(com.loabletech.bladewatch.abrp.SohEstimator estimator) {
-        this.sohEstimator = estimator;
     }
     
     /**
@@ -990,12 +869,8 @@ public class SocHistoryDatabase {
         }
     }
     
-    public com.loabletech.bladewatch.abrp.SohEstimator getSohEstimator() {
-        return sohEstimator;
-    }
-
     /**
-     * Conservative rest-state check used to gate the energy-based SOH source.
+     * Conservative rest-state check (retained for potential future at-rest gating).
      *
      * "At rest" means: speed=0, gear in P, AC compressor off, not charging,
      * and (when available) cell voltage spread within 30 mV. Each individual
@@ -1175,63 +1050,15 @@ public class SocHistoryDatabase {
                 current.put("thermalStatus", thermalData.getStatus());
             }
             
-            com.loabletech.bladewatch.abrp.SohEstimator sohEst = getSohEstimator();
-            double oemSoh = sohEst != null ? sohEst.getOemSohPercent() : -1;
-            if (sohEst != null && sohEst.hasEstimate()) {
-                current.put("soh", Math.round(sohEst.getCurrentSoh() * 10) / 10.0);
-                current.put("estimatedCapacityKwh", Math.round(sohEst.getEstimatedCapacityKwh() * 10) / 10.0);
-                current.put("nominalCapacityKwh", sohEst.getNominalCapacityKwh());
-                current.put("sohSource", "live");
-            } else if (sohEst != null && oemSoh > 0) {
-                // Use the recovered legacy app's OEM SOH signal for display
-                // only. It keeps Diagnostics useful on cars whose raw
-                // remain-kWh input is invalid, but sohSource="oem" makes clear
-                // that this is not the Shape B capacity estimate.
-                double nominal = sohEst.getNominalCapacityKwh();
-                current.put("soh", Math.round(oemSoh * 10) / 10.0);
-                if (nominal > 0) {
-                    current.put("estimatedCapacityKwh", Math.round((nominal * oemSoh / 100.0) * 10) / 10.0);
-                    current.put("nominalCapacityKwh", nominal);
-                }
-                current.put("sohSource", "oem");
-            } else if (sohEst != null && sohEst.getNominalCapacityKwh() > 0) {
-                // Some PHEV BYD SDK builds report raw remaining energy using a
-                // BEV-sized value. The estimator rejects that for real SOH, but
-                // the health card can still show a clearly-marked nominal
-                // baseline instead of looking broken.
-                double nominal = sohEst.getNominalCapacityKwh();
-                current.put("soh", 100.0);
-                current.put("estimatedCapacityKwh", Math.round(nominal * 10) / 10.0);
-                current.put("nominalCapacityKwh", nominal);
+            // SOH estimation has been removed. We can still surface a nominal
+            // pack-capacity baseline derived from BYD local data so the health
+            // card shows usable energy without a degradation figure.
+            double nominal = monitor.getNominalCapacityKwh();
+            if (nominal > 0) {
+                current.put("nominalCapacityKwh", Math.round(nominal * 10) / 10.0);
                 current.put("sohSource", "nominal");
-            } else {
-                // Fallback: read persisted SOH from file if estimator reference not wired yet
-                logger.info("SOH estimator " + (sohEst == null ? "is null" : "has no estimate") + " for health report, trying persisted file fallback");
-                try {
-                    java.io.File sohFile = new java.io.File("/data/local/tmp/abrp_soh_estimate.properties");
-                    if (sohFile.exists()) {
-                        java.util.Properties props = new java.util.Properties();
-                        try (java.io.FileInputStream fis = new java.io.FileInputStream(sohFile)) {
-                            props.load(fis);
-                        }
-                        String sohStr = props.getProperty("soh_percent");
-                        if (sohStr != null) {
-                            double soh = Double.parseDouble(sohStr);
-                            if (soh > 0 && soh <= 100) {
-                                current.put("soh", Math.round(soh * 10) / 10.0);
-                                logger.info("SOH from persisted file fallback (health report): " + soh + "%");
-                            }
-                        }
-                    } else {
-                        // A missing persisted estimate only means the health report should rely
-                        // on OEM SOH or calibration data when available.
-                        logger.debug("SOH persisted file absent for health report");
-                    }
-                } catch (Exception e) {
-                    logger.debug("Failed to read persisted SOH for health report: " + e.getMessage());
-                }
             }
-            
+
             double remainingKwh = monitor.getBatteryRemainPowerKwh();
             if (remainingKwh > 0) current.put("remainingKwh", Math.round(remainingKwh * 10) / 10.0);
             

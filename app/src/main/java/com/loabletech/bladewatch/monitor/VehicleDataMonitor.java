@@ -206,10 +206,8 @@ public class VehicleDataMonitor {
                 // Detector says CHARGING but no real kW signal arrived.
                 // Show a nominal-based hint so the UI doesn't say "Charging at 0 kW".
                 try {
-                    com.loabletech.bladewatch.abrp.SohEstimator soh =
-                        com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-                    if (soh != null && soh.getNominalCapacityKwh() > 0) {
-                        double nominal = soh.getNominalCapacityKwh();
+                    double nominal = getNominalCapacityKwh();
+                    if (nominal > 0) {
                         // < 30 kWh nominal pack → PHEV (3.3 kW AC); else BEV (7 kW AC)
                         data.updateChargingPower(nominal < 30 ? 3.3 : 7.0);
                         data.isEstimated = true;
@@ -252,50 +250,64 @@ public class VehicleDataMonitor {
         double soc = Double.isNaN(vd.socPercent) ? 0 : vd.socPercent;
         double rawKwh = Double.isNaN(vd.remainKwh) ? 0 : vd.remainKwh;
 
-        try {
-            com.loabletech.bladewatch.abrp.SohEstimator soh =
-                com.loabletech.bladewatch.monitor.SocHistoryDatabase.getInstance().getSohEstimator();
-            if (soh != null && soh.getNominalCapacityKwh() > 0 && soc > 0) {
-                double nominal = soh.getNominalCapacityKwh();
-                boolean isPhev = isPhevVehicle(nominal);
-                double sohPercent = soh.hasEstimate() ? soh.getCurrentSoh() : 100.0;
-                if (isPhev && !soh.hasEstimate()) {
-                    double oemSoh = soh.getOemSohPercent();
-                    if (oemSoh > 0) {
-                        // PHEV firmwares can report an impossible raw remain-kWh
-                        // value. When the recovered OEM SOH is available, use it
-                        // to compute an actual PHEV remaining-energy readout from
-                        // SOC × nominal capacity × vehicle SOH.
-                        sohPercent = oemSoh;
-                    }
-                }
-                double computedKwh = (soc / 100.0) * nominal * (sohPercent / 100.0);
-                
-                // Validate raw BMS value: if implied capacity is wildly off from nominal,
-                // the BMS is returning garbage (common on Seal, Han EV when ACC is off).
-                // Use computed value instead.
-                if (rawKwh > 0 && soc > 5) {
-                    double impliedCap = rawKwh / (soc / 100.0);
-                    double ratio = impliedCap / nominal;
-                    if (ratio < 0.5 || ratio > 1.5) {
-                        // Raw value is garbage — use computed
-                        return computedKwh;
-                    }
-                }
-                
-                if (isPhev) {
+        // Nominal pack capacity from BYD local data (charging device report or
+        // implied from a trustworthy raw remain-kWh reading).
+        double nominal = getNominalCapacityKwh();
+        if (nominal > 0 && soc > 0) {
+            boolean isPhev = isPhevVehicle(nominal);
+            // No SOH degradation source is available from BYD local data, so the
+            // pack is treated as healthy (100% SOH).
+            double computedKwh = (soc / 100.0) * nominal;
+
+            // Validate raw BMS value: if implied capacity is wildly off from nominal,
+            // the BMS is returning garbage (common on Seal, Han EV when ACC is off).
+            // Use computed value instead.
+            if (rawKwh > 0 && soc > 5) {
+                double impliedCap = rawKwh / (soc / 100.0);
+                double ratio = impliedCap / nominal;
+                if (ratio < 0.5 || ratio > 1.5) {
+                    // Raw value is garbage — use computed
                     return computedKwh;
                 }
-                // BEV with valid raw value: use it
-                if (rawKwh > 0) return rawKwh;
-                // BEV with no raw value: use computed
+            }
+
+            if (isPhev) {
                 return computedKwh;
             }
-        } catch (Exception e) { /* fall through to raw */ }
+            // BEV with valid raw value: use it
+            if (rawKwh > 0) return rawKwh;
+            // BEV with no raw value: use computed
+            return computedKwh;
+        }
 
-        // SohEstimator not ready: use raw BMS value if available
+        // No nominal capacity: use raw BMS value if available
         if (rawKwh > 0) return rawKwh;
 
+        return 0.0;
+    }
+
+    /**
+     * Derive nominal pack capacity (kWh) from BYD local vehicle data only.
+     *
+     * Source priority:
+     *   1. chargingDevice-reported pack capacity (BydVehicleData.chargingCapacityKwh)
+     *   2. implied capacity = remainKwh / (soc/100) when both are present and SOC
+     *      is high enough to be trustworthy
+     *
+     * Returns 0 when neither source is available. There is no SOH/degradation
+     * source in BYD local data — callers treat the pack as 100% healthy.
+     */
+    public double getNominalCapacityKwh() {
+        BydVehicleData vd = getVd();
+        if (vd == null) return 0.0;
+        if (!Double.isNaN(vd.chargingCapacityKwh) && vd.chargingCapacityKwh > 0) {
+            return vd.chargingCapacityKwh;
+        }
+        double soc = Double.isNaN(vd.socPercent) ? 0 : vd.socPercent;
+        double rawKwh = Double.isNaN(vd.remainKwh) ? 0 : vd.remainKwh;
+        if (rawKwh > 0 && soc > 5) {
+            return rawKwh / (soc / 100.0);
+        }
         return 0.0;
     }
 
@@ -345,7 +357,7 @@ public class VehicleDataMonitor {
             }
             
             // Charging state — single source of truth via getChargingState()
-            // so this JSON dump matches what SOC graph / ABRP / MQTT see. The
+            // so this JSON dump matches what the SOC graph sees. The
             // raw BMS field (vd.chargingState) is no longer surfaced standalone
             // because it's known to lag and to misreport on PHEVs.
             ChargingStateData cs = getChargingState();

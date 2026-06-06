@@ -186,7 +186,7 @@ body.ot-tabs-on .toast-container { bottom: calc(96px + var(--safe-bottom, 0px));
 
 /* Re-style the relocated #btnApply (it was a full-width primary button
    in .footer-bar; here it's a compact pill that fits the bar height).
-   The same pill applies to per-tab custom action buttons so MQTT's "Add"
+   The same pill applies to per-tab custom action buttons so a custom "Add"
    reads identical to surveillance's "Apply". */
 .bottom-tab-action .btn,
 .bottom-tab-action #btnApply,

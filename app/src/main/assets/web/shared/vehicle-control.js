@@ -40,7 +40,6 @@ var VC = {
         adas: { speedLimitWarning: false },
         soc: 0,
         rangeKm: 0,
-        cloudConfigured: false,
         acOn: false,
         acTemp: 22,
         acFan: 3,
@@ -107,12 +106,8 @@ var VC = {
         this.initColorPicker();
         this.bindControls();
         this.startStateSync();
-        this.checkCloudStatus();
-        this.requestCloudLockRefresh();
-        this.startCloudLockSync();
         this.animate();
         this.init3dButton();
-        this.initCloudModal();
         this.initSelectionPersistenceGuard();
 
         // Vehicle appearance (model + color) is stored unified server-side so AVN
@@ -1413,9 +1408,8 @@ var VC = {
     bindControls: function() {
         var self = this;
 
-        // Lock — routed (cloud-first; SDK has no door-lock primitive so cloud-only effectively).
+        // Lock — routed to the local SDK / CAN-bus path on the server.
         this.bindBtn('btnLock', function() {
-            if (!self.requireCloud()) return;
             self.setPending('btnLock', true);
             self.triggerLockVFX();
             self.apiPost('/api/vehicle/lock').then(function(result) {
@@ -1424,9 +1418,8 @@ var VC = {
             });
         });
 
-        // Unlock — routed (cloud-first).
+        // Unlock — routed to the local SDK / CAN-bus path on the server.
         this.bindBtn('btnUnlock', function() {
-            if (!self.requireCloud()) return;
             self.setPending('btnUnlock', true);
             self.triggerUnlockVFX();
             self.apiPost('/api/vehicle/unlock').then(function(result) {
@@ -1435,9 +1428,8 @@ var VC = {
             });
         });
 
-        // Trunk open — composite: cloud unlock → SDK tailgate motor.
+        // Trunk open — composite: unlock → SDK tailgate motor.
         this.bindBtn('btnTrunkOpen', function() {
-            if (!self.requireCloud()) return;
             self.setPending('btnTrunkOpen', true);
             self.toast(BYD.i18n.t('vehicle.unlocking_car'), 'info');
             self.triggerUnlockVFX();
@@ -1460,9 +1452,8 @@ var VC = {
             });
         });
 
-        // Flash lights — routed (cloud-only on this gen). Toast reads server-resolved message.
+        // Flash lights — routed. Toast reads server-resolved message.
         this.bindBtn('btnFlash', function() {
-            if (!self.requireCloud()) return;
             self.setPending('btnFlash', true);
             self.triggerFlashVFX();
             self.apiPost('/api/vehicle/flash').then(function(result) {
@@ -1471,10 +1462,8 @@ var VC = {
             });
         });
 
-        // Find car — routed cloud-first (cloud-only on this gen). Vehicle wakes,
-        // then horn + lights pulse.
+        // Find car — routed. Vehicle wakes, then horn + lights pulse.
         this.bindBtn('btnFindCar', function() {
-            if (!self.requireCloud()) return;
             self.setPending('btnFindCar', true);
             self.triggerFlashVFX();
             self.apiPost('/api/vehicle/find-car').then(function(result) {
@@ -1483,9 +1472,8 @@ var VC = {
             });
         });
 
-        // Battery preconditioning heat — cloud-only. We render the toggle
-        // optimistically; the server message resolves cloud-required prompt
-        // automatically when not connected (per memory: tap-to-discover).
+        // Battery preconditioning heat. We render the toggle optimistically;
+        // the server resolves availability and returns the localized message.
         this.bindBtn('btnBatteryHeat', function() {
             var current = !!(self.vehicleState && self.vehicleState.batteryHeat);
             var next = !current;
@@ -1621,7 +1609,6 @@ var VC = {
         }
         // Master switch — wraps changeChargeStatue.
         this.bindBtn('btnSmartChargeToggle', function() {
-            if (!self.requireCloud()) return;
             var cur = !!(self.vehicleState.chargingSchedule && self.vehicleState.chargingSchedule.enabled);
             var enable = !cur;
             self.apiPost('/api/vehicle/charging-schedule', { enabled: enable }).then(function(result) {
@@ -1702,7 +1689,6 @@ var VC = {
         // Save — writes saveOrUpdate. Schedule save carries its own status,
         // so the master toggle isn't a precondition.
         this.bindBtn('btnChargeScheduleSave', function() {
-            if (!self.requireCloud()) return;
             var s = self.vehicleState.chargingSchedule;
             var way = s.chargeWay || 'e';
             // Custom mode with no days picked is a no-op — refuse to send.
@@ -2129,125 +2115,6 @@ var VC = {
         });
     },
 
-    checkCloudStatus: function() {
-        var self = this;
-        fetch('/api/vehicle/cloud-status').then(function(resp) {
-            return resp.json();
-        }).then(function(data) {
-            self.vehicleState.cloudConfigured = data.configured && data.verified;
-            self.updateCloudIndicator();
-        }).catch(function(e) {
-            console.warn('[VC] Cloud status error:', e);
-        });
-    },
-
-    // Polls the cloud lock state. The server endpoint:
-    //   - returns the cached MQTT-derived lock state immediately,
-    //   - kicks off a one-shot REST refresh in the background if the cache
-    //     is stale (rate-limited server-side, so this is cheap to call).
-    // Used as a fallback for the lock-state UI: the CAN bus often returns
-    // "unknown" while the car is sleeping; the cloud knows the answer.
-    //
-    // The server's background REST refresh typically completes in 1-3s but
-    // its result lands in the next response, not this one. So when the
-    // payload comes back stale (or missing) and CAN didn't give us a valid
-    // value, we re-request after 3s to pick up the freshly-fetched data.
-    // _isFollowup prevents the 3s re-request from itself spawning more.
-    STALE_RESPONSE_AGE_S: 60,
-    FOLLOWUP_DELAY_MS: 3000,
-
-    requestCloudLockRefresh: function(_isFollowup) {
-        var self = this;
-        fetch('/api/vehicle/cloud-lock').then(function(resp) {
-            return resp.json();
-        }).then(function(data) {
-            if (!data || !data.success || !data.status) return;
-            var s = data.status;
-
-            // Prefer cloud lock state when CAN bus didn't give us a valid one.
-            // CAN bus sets self.vehicleState.locked = true/false; null = no
-            // valid reading yet. We only override null — if CAN said locked
-            // or unlocked, trust it (it's a few hundred ms fresh vs MQTT's
-            // potentially-minutes-old snapshot).
-            var canIsAuthoritative = self.vehicleState.locked === true || self.vehicleState.locked === false;
-            if (!canIsAuthoritative) {
-                if (s.lockState === 'locked') {
-                    self.vehicleState.locked = true;
-                    self.updateHUD();
-                    self.updateDoorIndicators();
-                    self.updateTabIndicators();
-                } else if (s.lockState === 'unlocked') {
-                    self.vehicleState.locked = false;
-                    self.updateHUD();
-                    self.updateDoorIndicators();
-                    self.updateTabIndicators();
-                }
-            }
-
-            // If the response is stale and CAN didn't give us a value,
-            // schedule one follow-up to pick up the result of the server's
-            // background REST refresh. Skipped if this is itself a follow-up
-            // call (avoids loops on persistently stale data).
-            var isStale = s.lockState === 'unknown'
-                    || s.lastMessageAge === -1
-                    || (typeof s.lastMessageAge === 'number' && s.lastMessageAge > self.STALE_RESPONSE_AGE_S);
-            if (!_isFollowup && isStale && !canIsAuthoritative) {
-                setTimeout(function() { self.requestCloudLockRefresh(true); }, self.FOLLOWUP_DELAY_MS);
-            }
-        }).catch(function(e) {
-            console.warn('[VC] Cloud lock refresh error:', e);
-        });
-    },
-
-    // Background poller for the cloud lock state. The cloud snapshot is the
-    // authoritative source while the car is sleeping (CAN returns -1 in
-    // that mode). 30s is plenty — MQTT pushes events the moment the car
-    // moves, this is just a heartbeat for the cold-cache case.
-    startCloudLockSync: function() {
-        var self = this;
-        this.cloudLockInterval = setInterval(function() {
-            self.requestCloudLockRefresh();
-        }, 30 * 1000);
-    },
-
-    // ==================== CLOUD MODAL ====================
-
-    initCloudModal: function() {
-        var self = this;
-        var dismissBtn = document.getElementById('cloudModalDismiss');
-        if (dismissBtn) {
-            dismissBtn.addEventListener('click', function() { self.hideCloudModal(); });
-        }
-        // Also dismiss on overlay click (outside the modal card)
-        var overlay = document.getElementById('cloudModal');
-        if (overlay) {
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) self.hideCloudModal();
-            });
-        }
-    },
-
-    /**
-     * Guard for cloud-requiring actions.
-     * Returns true if cloud is configured (action can proceed).
-     * Returns false and shows modal if cloud is not configured.
-     */
-    requireCloud: function() {
-        if (this.vehicleState.cloudConfigured) return true;
-        this.showCloudModal();
-        return false;
-    },
-
-    showCloudModal: function() {
-        var overlay = document.getElementById('cloudModal');
-        if (overlay) overlay.classList.add('visible');
-    },
-
-    hideCloudModal: function() {
-        var overlay = document.getElementById('cloudModal');
-        if (overlay) overlay.classList.remove('visible');
-    },
-
     // ==================== UI UPDATES ====================
 
     normalizeWindowPercent: function(value) {
@@ -2298,8 +2165,8 @@ var VC = {
         if (unlockBtn) { if (locked === false) unlockBtn.classList.add('on'); else unlockBtn.classList.remove('on'); }
         if (lockStatus) {
             // The head unit often reports -1 for lock state while the car is
-            // asleep or cloud fallback is unavailable. Use a vehicle-specific
-            // message instead of the generic "Unknown" pill.
+            // asleep. Use a vehicle-specific message instead of the generic
+            // "Unknown" pill.
             lockStatus.textContent = locked === true
                 ? BYD.i18n.t('vehicle.locked')
                 : (locked === false ? BYD.i18n.t('vehicle.unlocked') : BYD.i18n.t('vehicle.lock_status_unavailable'));
@@ -2493,20 +2360,6 @@ var VC = {
         glow.geo.dispose();
         glow.mat.dispose();
         delete this.stateGlows[key];
-    },
-
-    updateCloudIndicator: function() {
-        var textEl = document.getElementById('cloudStatusText');
-        var pillEl = document.getElementById('cloudStatus');
-        if (!pillEl) return;
-        var dot = pillEl.querySelector('.dot');
-        if (this.vehicleState.cloudConfigured) {
-            if (dot) dot.className = 'dot green';
-            if (textEl) textEl.textContent = BYD.i18n.t('vehicle.cloud_connected');
-        } else {
-            if (dot) dot.className = 'dot red';
-            if (textEl) textEl.textContent = BYD.i18n.t('vehicle.cloud_not_configured');
-        }
     },
 
     updateClimateUI: function() {
@@ -2746,10 +2599,9 @@ var VC = {
                 console.debug('[VC] charging-schedule GET failed', data);
                 return;
             }
-            // Tab stays visible even when cloud isn't configured — tapping
-            // surfaces the cloud-setup modal via requireCloud().
+            // Tab stays visible even when the schedule API is unavailable.
             if (data.supported === false) {
-                console.debug('[VC] charging-schedule cloud not ready — reason:', data.reason || 'unsupported');
+                console.debug('[VC] charging-schedule not ready — reason:', data.reason || 'unsupported');
                 return;
             }
             if (!self.vehicleState.chargingSchedule) self.vehicleState.chargingSchedule = {};

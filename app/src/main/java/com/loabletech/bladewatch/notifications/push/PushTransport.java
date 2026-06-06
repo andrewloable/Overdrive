@@ -1,17 +1,12 @@
 package com.loabletech.bladewatch.notifications.push;
 
-import com.loabletech.bladewatch.mqtt.ProxyHelper;
-
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * POSTs an encrypted Web Push payload to a subscription endpoint.
- *
- * <p>Honors the sing-box proxy via {@link ProxyHelper#getHttpProxy()} so push
- * traffic respects whatever proxy mode the user has configured — same
- * pattern as ABRP, BYD cloud, and MQTT.
+ * POSTs an encrypted Web Push payload to a subscription endpoint over a
+ * direct connection.
  */
 public final class PushTransport {
 
@@ -44,7 +39,7 @@ public final class PushTransport {
     public static Result send(String endpoint, String vapidJwt, String vapidPubKeyB64Url,
                               byte[] aes128gcmBody, int ttlSeconds) throws Exception {
         URL url = new URL(endpoint);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection(ProxyHelper.getHttpProxy());
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         try {
             conn.setRequestMethod("POST");
             conn.setConnectTimeout(15_000);
@@ -76,12 +71,6 @@ public final class PushTransport {
                     responseBody = new String(out.toByteArray(), "UTF-8");
                 }
             } catch (Exception ignored) {}
-
-            // Connectivity hiccup — ask ProxyHelper to re-probe next call.
-            // (Same discipline as BydCloudMqttSubscriber on connection errors.)
-            if (status >= 500 || status == 408 || status == 429) {
-                ProxyHelper.invalidateCache();
-            }
 
             int retryAfter = -1;
             String hdr = conn.getHeaderField("Retry-After");

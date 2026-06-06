@@ -127,8 +127,8 @@ class DaemonAdapter(
             subprocessContainer.visibility = if (isExpanded && hasSubprocesses) View.VISIBLE else View.GONE
             ivExpand.rotation = if (isExpanded) 180f else 0f
             
-            // Show configure icon for configurable daemons (always visible for Zrok and Tailscale)
-            val isConfigurable = (state.type == DaemonType.ZROK_TUNNEL || state.type == DaemonType.TAILSCALE_TUNNEL) && onConfigureClick != null
+            // Show configure icon for configurable daemons (always visible for Zrok)
+            val isConfigurable = state.type == DaemonType.ZROK_TUNNEL && onConfigureClick != null
             ivConfigure.visibility = if (isConfigurable) View.VISIBLE else View.GONE
             if (isConfigurable) {
                 ivConfigure.setOnClickListener {
@@ -209,11 +209,7 @@ class DaemonAdapter(
                 DaemonType.CAMERA_DAEMON -> "Camera Daemon"
                 DaemonType.SENTRY_DAEMON -> "Surveillance Daemon"
                 DaemonType.ACC_SENTRY_DAEMON -> "ACC Surveillance"
-                DaemonType.SINGBOX_PROXY -> "Sing-box Proxy"
-                DaemonType.CLOUDFLARED_TUNNEL -> "Cloudflared Tunnel"
                 DaemonType.ZROK_TUNNEL -> "Zrok Tunnel"
-                DaemonType.TAILSCALE_TUNNEL -> "Tailscale Tunnel"
-                DaemonType.TELEGRAM_DAEMON -> "Telegram Bot"
             }
         }
 
@@ -222,11 +218,7 @@ class DaemonAdapter(
             DaemonType.CAMERA_DAEMON -> R.drawable.ic_camera_select
             DaemonType.SENTRY_DAEMON -> R.drawable.ic_sentry
             DaemonType.ACC_SENTRY_DAEMON -> R.drawable.ic_directions_car
-            DaemonType.SINGBOX_PROXY -> R.drawable.ic_vpn_lock
-            DaemonType.CLOUDFLARED_TUNNEL -> R.drawable.ic_cloud
             DaemonType.ZROK_TUNNEL -> R.drawable.ic_link
-            DaemonType.TAILSCALE_TUNNEL -> R.drawable.ic_mqtt
-            DaemonType.TELEGRAM_DAEMON -> R.drawable.ic_telegram
         }
         
         private fun hasLogFile(type: DaemonType): Boolean {
@@ -244,11 +236,7 @@ class DaemonAdapter(
                 DaemonType.CAMERA_DAEMON -> "/data/local/tmp/cam_daemon.log"
                 DaemonType.SENTRY_DAEMON -> "/data/local/tmp/sentry_daemon.log"
                 DaemonType.ACC_SENTRY_DAEMON -> "/data/local/tmp/acc_sentry_daemon.log"
-                DaemonType.CLOUDFLARED_TUNNEL -> "/data/local/tmp/cloudflared.log"
                 DaemonType.ZROK_TUNNEL -> "/data/local/tmp/zrok.log"
-                DaemonType.TAILSCALE_TUNNEL -> "/data/local/tmp/.tailscale/tailscale.log"
-                DaemonType.SINGBOX_PROXY -> "/data/local/tmp/singbox.log"
-                DaemonType.TELEGRAM_DAEMON -> "/data/local/tmp/telegrambotdaemon.log"
             }
         }
     }

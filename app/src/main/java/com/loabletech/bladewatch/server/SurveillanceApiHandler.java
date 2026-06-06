@@ -200,13 +200,7 @@ public class SurveillanceApiHandler {
         JSONObject survConfig = com.loabletech.bladewatch.config.UnifiedConfigManager.getSurveillance();
         config.put("deterrentAction", survConfig.optString("deterrentAction", "silent"));
         config.put("deterrentCooldownSeconds", survConfig.optInt("deterrentCooldownSeconds", 60));
-        
-        // SOTA: BYD Cloud connection status
-        JSONObject bydCloud = com.loabletech.bladewatch.config.UnifiedConfigManager.getBydCloud();
-        config.put("bydCloudEnabled", bydCloud.optBoolean("enabled", false));
-        config.put("bydCloudUsername", bydCloud.optString("username", ""));
-        config.put("bydCloudVin", bydCloud.optString("vin", ""));
-        
+
         // V2 Pipeline settings
         if (sentryConfig != null) {
             config.put("environmentPreset", sentryConfig.getEnvironmentPreset());
@@ -512,10 +506,6 @@ public class SurveillanceApiHandler {
                     com.loabletech.bladewatch.config.UnifiedConfigManager.updateValues(
                             "surveillance", java.util.Collections.singletonMap("deterrentAction", action));
                     CameraDaemon.log("Deterrent action set to: " + action);
-                    // Reset deterrent so it picks up new config
-                    try {
-                        com.loabletech.bladewatch.byd.cloud.BydCloudDeterrent.getInstance().reset();
-                    } catch (Exception ignored) {}
                 }
             }
             

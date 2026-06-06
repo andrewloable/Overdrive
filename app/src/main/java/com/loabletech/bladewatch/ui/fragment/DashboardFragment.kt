@@ -290,9 +290,7 @@ class DashboardFragment : Fragment() {
             updateTunnelTile()
             refreshHeroChips()
         }
-        daemonsViewModel.cloudflaredController.tunnelUrl.observe(viewLifecycleOwner, rebuild)
         daemonsViewModel.zrokController.tunnelUrl.observe(viewLifecycleOwner, rebuild)
-        daemonsViewModel.tailscaleController.tunnelUrl.observe(viewLifecycleOwner, rebuild)
 
         // Recording state → live "● <count>" prefix on the recordings tile.
         // The numeric count itself comes from refreshMetricsTiles() below; this
@@ -407,8 +405,8 @@ class DashboardFragment : Fragment() {
      *
      * - OK   → primaryContainer (green wash, On*Container fg).
      * - ALERT → errorContainer (red wash) — only when at least one CORE daemon
-     *           is in a hard-failed state. Tunnels (cloudflared/zrok/tailscale)
-     *           and the Telegram bot are opt-in and never trigger ALERT.
+     *           is in a hard-failed state. The zrok tunnel is opt-in and never
+     *           triggers ALERT.
      * - UNKNOWN → neutral surface — used pre-bind / before the daemon-states
      *           LiveData has fired so a fresh install doesn't flash red.
      *
@@ -451,8 +449,8 @@ class DashboardFragment : Fragment() {
      * with STOPPED for tinting purposes since either way the daemon isn't
      * doing its job.
      *
-     * "Core" = Camera + Sentry + ACC Sentry. Sing-box, tunnels, and the
-     * Telegram bot are all opt-in — they don't gate the hero tint.
+     * "Core" = Camera + Sentry + ACC Sentry. The zrok tunnel is opt-in — it
+     * doesn't gate the hero tint.
      */
     private fun computeCoreHealth(states: Map<DaemonType, DaemonState>?): CoreHealth {
         if (states.isNullOrEmpty()) return CoreHealth.UNKNOWN
@@ -597,17 +595,11 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTunnelTile() {
-        val anyUrl = listOf(
-            daemonsViewModel.cloudflaredController.tunnelUrl.value,
-            daemonsViewModel.zrokController.tunnelUrl.value,
-            daemonsViewModel.tailscaleController.tunnelUrl.value
-        ).any { !it.isNullOrEmpty() }
+        val anyUrl = !daemonsViewModel.zrokController.tunnelUrl.value.isNullOrEmpty()
 
         val states = daemonsViewModel.daemonStates.value
         val anyStarting = states?.values?.any {
-            (it.type == DaemonType.CLOUDFLARED_TUNNEL ||
-                it.type == DaemonType.ZROK_TUNNEL ||
-                it.type == DaemonType.TAILSCALE_TUNNEL) &&
+            it.type == DaemonType.ZROK_TUNNEL &&
                 it.status == DaemonStatus.STARTING
         } == true
 
@@ -682,29 +674,19 @@ class DashboardFragment : Fragment() {
 
     private fun collectAvailableTunnels(): List<Pair<DaemonType, String>> {
         val list = mutableListOf<Pair<DaemonType, String>>()
-        daemonsViewModel.cloudflaredController.tunnelUrl.value
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { list.add(DaemonType.CLOUDFLARED_TUNNEL to it) }
         daemonsViewModel.zrokController.tunnelUrl.value
             ?.takeIf { it.isNotEmpty() }
             ?.let { list.add(DaemonType.ZROK_TUNNEL to it) }
-        daemonsViewModel.tailscaleController.tunnelUrl.value
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { list.add(DaemonType.TAILSCALE_TUNNEL to it) }
         return list
     }
 
     private fun urlFor(type: DaemonType): String? = when (type) {
-        DaemonType.CLOUDFLARED_TUNNEL -> daemonsViewModel.cloudflaredController.tunnelUrl.value
         DaemonType.ZROK_TUNNEL -> daemonsViewModel.zrokController.tunnelUrl.value
-        DaemonType.TAILSCALE_TUNNEL -> daemonsViewModel.tailscaleController.tunnelUrl.value
         else -> null
     }
 
     private fun labelFor(type: DaemonType): String = when (type) {
-        DaemonType.CLOUDFLARED_TUNNEL -> getString(R.string.tunnel_label_cloudflared)
         DaemonType.ZROK_TUNNEL -> getString(R.string.tunnel_label_zrok)
-        DaemonType.TAILSCALE_TUNNEL -> getString(R.string.tunnel_label_tailscale)
         else -> type.displayName
     }
 
@@ -739,16 +721,10 @@ class DashboardFragment : Fragment() {
 
     private fun getTunnelPlaceholderText(): String {
         val states = daemonsViewModel.daemonStates.value ?: return getString(R.string.dashboard_no_tunnel)
-        val cfState = states[DaemonType.CLOUDFLARED_TUNNEL]
         val zrokState = states[DaemonType.ZROK_TUNNEL]
-        val tailscaleState = states[DaemonType.TAILSCALE_TUNNEL]
         return when {
             zrokState?.status == DaemonStatus.STARTING -> getString(R.string.dashboard_starting_zrok)
-            cfState?.status == DaemonStatus.STARTING -> getString(R.string.dashboard_starting_cloudflared)
-            tailscaleState?.status == DaemonStatus.STARTING -> getString(R.string.dashboard_starting_tailscale)
             zrokState?.status == DaemonStatus.RUNNING -> getString(R.string.dashboard_waiting_url)
-            cfState?.status == DaemonStatus.RUNNING -> getString(R.string.dashboard_waiting_url)
-            tailscaleState?.status == DaemonStatus.RUNNING -> getString(R.string.dashboard_waiting_url)
             else -> getString(R.string.dashboard_no_tunnel)
         }
     }

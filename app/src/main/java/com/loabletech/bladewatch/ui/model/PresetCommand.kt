@@ -20,18 +20,15 @@ val PRESET_COMMANDS = PresetCommands.ALL
 object PresetCommands {
     val ALL = listOf(
         // Status commands
-        PresetCommand("Process Status", "ps -ef | grep -E 'daemon|proxy|sing-box|cloudflared'", "Status"),
-        PresetCommand("Port Status", "netstat -tlnp | grep -E '8080|8119|8554'", "Status"),
-        
+        PresetCommand("Process Status", "ps -ef | grep -E 'daemon|zrok'", "Status"),
+        PresetCommand("Port Status", "netstat -tlnp | grep -E '8080|8554'", "Status"),
+
         // Log commands
-        PresetCommand("Proxy Logs", "cat /data/local/tmp/singbox.log | tail -50", "Logs"),
-        PresetCommand("Tunnel Logs", "cat /data/local/tmp/cloudflared.log | tail -50", "Logs"),
+        PresetCommand("Zrok Logs", "cat /data/local/tmp/zrok.log | tail -50", "Logs"),
         PresetCommand("Camera Logs", "cat /data/local/tmp/byd_cam_daemon.log | tail -50", "Logs"),
         PresetCommand("Sentry Logs", "cat /data/local/tmp/sentry_daemon.log | tail -50", "Logs"),
-        
+
         // Control commands
-        PresetCommand("Kill Proxy", "pkill -9 -f sing-box", "Control"),
-        PresetCommand("Kill Tunnel", "pkill -9 -f cloudflared", "Control"),
         PresetCommand(
             "Kill Camera",
             // Kill the watchdog script FIRST so it can't respawn the daemon,

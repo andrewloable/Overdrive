@@ -2568,8 +2568,6 @@ BYD.performance = {
             trips: BYD.i18n.t('performance.cat_trips'),
             socHistory: BYD.i18n.t('performance.cat_soc_history'),
             soh: BYD.i18n.t('performance.cat_soh'),
-            abrpToken: BYD.i18n.t('performance.cat_abrp_token'),
-            bydCloud: BYD.i18n.t('performance.cat_byd_cloud'),
             mediaRecordings: BYD.i18n.t('performance.cat_recordings'),
             mediaSurveillance: BYD.i18n.t('performance.cat_sentry_events'),
             mediaProximity: BYD.i18n.t('performance.cat_proximity'),

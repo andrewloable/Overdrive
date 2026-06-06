@@ -46,8 +46,8 @@ public class SecretConfigStoreTest {
         SecretConfigStore store = new SecretConfigStore(storeFile);
 
         Assert.assertFalse(store.exists());
-        Assert.assertNull(store.getString("telegram", "botToken"));
-        Assert.assertNotNull(store.loadSection("telegram"));
+        Assert.assertNull(store.getString("zrok", "token"));
+        Assert.assertNotNull(store.loadSection("zrok"));
     }
 
     @Test
@@ -55,9 +55,9 @@ public class SecretConfigStoreTest {
         Files.write(storeFile.toPath(), "{not-json".getBytes(StandardCharsets.UTF_8));
 
         SecretConfigStore store = new SecretConfigStore(storeFile);
-        Assert.assertNull(store.getString("mqtt", "password"));
-        Assert.assertTrue(store.putString("mqtt", "password", "mqtt-secret"));
-        Assert.assertEquals("mqtt-secret", store.getString("mqtt", "password"));
+        Assert.assertNull(store.getString("zrok", "token"));
+        Assert.assertTrue(store.putString("zrok", "token", "zrok-secret"));
+        Assert.assertEquals("zrok-secret", store.getString("zrok", "token"));
     }
 
     @Test

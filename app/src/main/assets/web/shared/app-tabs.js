@@ -176,15 +176,15 @@
      *      keep firing. Hidden on tabs declared as `readOnly: true`.
      *   2. A per-tab custom action declared in the manifest as `action: {…}`.
      *      The action button replaces the Apply button while its tab is active,
-     *      so e.g. an MQTT "Add Connection" lives on the Connections tab and
-     *      a Telemetry-only tab gets nothing.
+     *      so e.g. an "Add" action lives on its tab and a read-only tab gets
+     *      nothing.
      *
      * Manifest action shape:
      *     { id: 'connections', …, action: {
      *         label: 'Add',
-     *         i18n:  'mqtt.add_connection',
+     *         i18n:  'some.add_action',
      *         svg:   '<line .../>',
-     *         onclick: function () { MQTT.showAddForm(); }
+     *         onclick: function () { SomeModule.showAddForm(); }
      *     }}
      *
      * Returns a function the tab-switch handler calls to update visibility
