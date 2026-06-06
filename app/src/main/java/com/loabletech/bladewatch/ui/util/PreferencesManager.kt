@@ -27,6 +27,7 @@ object PreferencesManager {
     private const val KEY_ZROK_ENABLE_TOKEN = "zrok_enable_token"
     private const val KEY_LOGS_EXPANDED = "logs_expanded"
     private const val KEY_AUTO_UPDATE_ENABLED = "auto_update_enabled"
+    private const val KEY_DRIVE_SIDE = "drive_side"
 
     private var prefs: SharedPreferences? = null
     // Held so theme-mode changes can poke the floating overlay service —
@@ -213,4 +214,13 @@ object PreferencesManager {
 
     /** Current access URL — always the last tunnel URL we saw. */
     fun getCurrentUrl(): String? = getLastTunnelUrl()
+
+    // Drive side — "left" (default), "right", or "auto" (detect via vehicle API).
+    fun getDriveSide(): String {
+        return requirePrefs().getString(KEY_DRIVE_SIDE, "left") ?: "left"
+    }
+
+    fun setDriveSide(side: String) {
+        requirePrefs().edit().putString(KEY_DRIVE_SIDE, side).apply()
+    }
 }

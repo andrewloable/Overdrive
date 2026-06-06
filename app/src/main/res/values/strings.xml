@@ -479,7 +479,6 @@
     <string name="rail_recordings">Recordings</string>
     <string name="rail_vehicle">Vehicle</string>
     <string name="rail_trips">Trips</string>
-    <string name="rail_integrations">Integrations</string>
     <string name="rail_diagnostics">Diagnostics</string>
     <string name="rail_settings">Settings</string>
 
@@ -554,6 +553,21 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_language_label">Language</string>
 
+    <!-- Drive side / nav rail position -->
+    <string name="settings_drive_side_label">Navigation Side</string>
+    <string name="settings_drive_side_subtitle">Choose which side of the screen the navigation menu appears on.</string>
+    <string name="settings_drive_side_left">Left</string>
+    <string name="settings_drive_side_left_hint">LHD · default</string>
+    <string name="settings_drive_side_right">Right</string>
+    <string name="settings_drive_side_right_hint">RHD vehicles</string>
+    <string name="settings_drive_side_auto">Auto</string>
+    <string name="settings_drive_side_auto_hint">Detect from vehicle</string>
+    <string name="settings_drive_side_caption_left">Navigation on left</string>
+    <string name="settings_drive_side_caption_right">Navigation on right</string>
+    <string name="settings_drive_side_caption_auto_left">Auto — vehicle reports left-hand drive</string>
+    <string name="settings_drive_side_caption_auto_right">Auto — vehicle reports right-hand drive</string>
+    <string name="settings_drive_side_caption_auto_unknown">Auto — vehicle unavailable, using left</string>
+
     <!-- Recordings page (header + segmented control + page actions) -->
     <string name="recordings_title">Recordings</string>
     <string name="recordings_segment_dashcam">Dashcam</string>
@@ -612,15 +626,6 @@
     <string name="diagnostics_battery_subtitle">Inspect cell SOH and pack stats.</string>
     <string name="diagnostics_settings_subtitle">App preferences, theme, and language.</string>
 
-    <!-- SOTA Integrations page -->
-    <string name="integrations_hero_title">Integrations</string>
-    <string name="integrations_hero_subtitle">Connect BladeWatch to your services.</string>
-    <string name="integrations_status_unknown">Tap to configure</string>
-    <string name="integrations_status_configured">Configured</string>
-    <string name="integrations_status_not_set_up">Not set up</string>
-    <string name="integrations_configure_button">Configure</string>
-    <string name="integrations_empty">No integrations are available.</string>
-
     <!-- Settings → About / Privacy actions (rows) -->
     <string name="settings_action_check_update">Check for updates</string>
     <string name="settings_action_reset_data">Reset data…</string>
@@ -675,6 +680,20 @@
     <string name="dashboard_tunnel_offline">Offline</string>
     <string name="dashboard_tunnel_online">Online</string>
     <string name="dashboard_tunnel_connecting">Connecting…</string>
+
+    <!-- Trip stats hero (dashboard top section) -->
+    <string name="dashboard_trips_this_week">This Week</string>
+    <string name="dashboard_trips_count">%1$d trips</string>
+    <string name="dashboard_trips_distance_km">%1$.1f km</string>
+    <string name="dashboard_trips_distance_mi">%1$.1f mi</string>
+    <string name="dashboard_trips_duration">%1$s</string>
+    <string name="dashboard_trips_label_trips">Trips</string>
+    <string name="dashboard_trips_label_distance">Distance</string>
+    <string name="dashboard_trips_label_time">Drive Time</string>
+    <string name="dashboard_trips_no_data">No trips recorded this week</string>
+    <string name="dashboard_trips_unavailable">Start driving to see stats</string>
+    <string name="dashboard_trips_loading">Loading…</string>
+    <string name="dashboard_trips_view_all">View all trips</string>
 
     <!-- Quick actions (now rendered as same-size tiles, not chips) -->
     <string name="dashboard_action_live">Live</string>

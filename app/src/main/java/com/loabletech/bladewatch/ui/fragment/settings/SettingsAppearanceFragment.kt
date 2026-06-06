@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.loabletech.bladewatch.R
 import com.loabletech.bladewatch.server.LocaleManager
+import com.loabletech.bladewatch.ui.MainActivity
 import com.loabletech.bladewatch.ui.dialog.LanguagePickerDialog
 import com.loabletech.bladewatch.ui.fragment.WebViewFragment
 import com.loabletech.bladewatch.ui.util.PreferencesManager
@@ -37,6 +38,11 @@ class SettingsAppearanceFragment : Fragment() {
     private var themeDark: View? = null
     private var tvCaption: TextView? = null
 
+    private var driveSideLeft: View? = null
+    private var driveSideRight: View? = null
+    private var driveSideAuto: View? = null
+    private var tvDriveSideCaption: TextView? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -46,6 +52,7 @@ class SettingsAppearanceFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupThemePicker(view)
+        setupDriveSidePicker(view)
         setupLanguagePicker(view)
     }
 
@@ -128,6 +135,55 @@ class SettingsAppearanceFragment : Fragment() {
                 else -> R.string.settings_theme_active_auto_caption
             }
         )
+    }
+
+    private fun setupDriveSidePicker(view: View) {
+        driveSideLeft = view.findViewById(R.id.driveSideLeft)
+        driveSideRight = view.findViewById(R.id.driveSideRight)
+        driveSideAuto = view.findViewById(R.id.driveSideAuto)
+        tvDriveSideCaption = view.findViewById(R.id.tvDriveSideCaption)
+
+        applyDriveSideSelection(PreferencesManager.getDriveSide())
+
+        driveSideLeft?.setOnClickListener { selectDriveSide("left") }
+        driveSideRight?.setOnClickListener { selectDriveSide("right") }
+        driveSideAuto?.setOnClickListener { selectDriveSide("auto") }
+    }
+
+    private fun selectDriveSide(side: String) {
+        PreferencesManager.setDriveSide(side)
+        applyDriveSideSelection(side)
+        (activity as? MainActivity)?.applyDriveSide()
+    }
+
+    private fun applyDriveSideSelection(side: String) {
+        driveSideLeft?.isSelected = (side == "left")
+        driveSideRight?.isSelected = (side == "right")
+        driveSideAuto?.isSelected = (side == "auto")
+        tvDriveSideCaption?.text = when (side) {
+            "right" -> getString(R.string.settings_drive_side_caption_right)
+            "auto" -> {
+                val detected = detectVehicleDriverSide()
+                when (detected) {
+                    "right" -> getString(R.string.settings_drive_side_caption_auto_right)
+                    "left" -> getString(R.string.settings_drive_side_caption_auto_left)
+                    else -> getString(R.string.settings_drive_side_caption_auto_unknown)
+                }
+            }
+            else -> getString(R.string.settings_drive_side_caption_left)
+        }
+    }
+
+    private fun detectVehicleDriverSide(): String {
+        return try {
+            val cls = Class.forName("android.widget.CustomVehicleConfig")
+            val getInstance = cls.getMethod("getInstance", android.content.Context::class.java)
+            val config = getInstance.invoke(null, requireContext().applicationContext)
+            val isRight = cls.getMethod("isRightDriver").invoke(config) as? Boolean
+            if (isRight == true) "right" else "left"
+        } catch (_: Throwable) {
+            "unknown"
+        }
     }
 
     private fun setupLanguagePicker(view: View) {

@@ -1,625 +1,712 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  SOTA Dashboard.
+  Dashboard — trip stats hero (top) + status + metric tiles + connect card (scrollable below).
 
-  Composition (top to bottom):
-   1. Hero — large greeting + subtitle, brand-tinted gradient surface.
-   2. Metric grid — 2×2 of big-number tiles (Recordings · Storage · Remote · Services).
-   3. Connect card — QR + tunnel chip group + access code (collapsed by default).
-   4. Quick action chips row.
-
-  Single ScrollView; uses ?attr/colorSurfaceContainer* tiers for layered depth
-  without elevation shadows. All colors via M3 attrs so light/dark flips cleanly.
+  Layout:
+   1. Trip Stats Hero — full-width card with weekly trip summary, fills top of viewport.
+   2. Scrollable section below (metric tiles + connect card).
 -->
-<androidx.core.widget.NestedScrollView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:fillViewport="true"
-    android:clipToPadding="false">
+    android:orientation="vertical"
+    android:background="?android:attr/colorBackground">
 
-    <LinearLayout
+    <!-- ================== TRIP STATS HERO ==================
+         Prominent full-width trip summary. Takes ~40% of screen height
+         so it's the first thing the driver sees. Does NOT scroll — it's
+         the anchor; everything below it scrolls.
+    -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/tripStatsCard"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:animateLayoutChanges="true"
-        android:paddingHorizontal="@dimen/page_padding_horizontal"
-        android:paddingTop="@dimen/page_padding_top"
-        android:paddingBottom="@dimen/page_padding_bottom">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="@dimen/page_padding_horizontal"
+        android:layout_marginEnd="@dimen/page_padding_horizontal"
+        android:layout_marginTop="@dimen/page_padding_top"
+        android:layout_marginBottom="8dp"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
+        app:cardCornerRadius="@dimen/card_radius_hero"
+        app:cardElevation="0dp">
 
-        <!-- ================== HERO ==================
-             Neutral surface tone (was primaryContainer = brand green, which
-             read as a "green overlay" across the hero card). Now uses a
-             tonal-elevation surface so the card sits with the rest of the
-             dashboard rather than dominating it. The brand logo previously
-             flattened to a solid shape under tint — removed; the headline
-             alone carries identity.
-        -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/heroCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/card_gap_vertical"
-            app:cardBackgroundColor="?attr/colorSurfaceContainer"
-            app:cardCornerRadius="@dimen/card_radius_hero"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/card_padding_hero">
-
-                <!-- Brand overline. Anchors identity inside a neutral hero
-                     surface without a heavy logo/gradient overlay. -->
-                <TextView
-                    android:id="@+id/heroOverline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:letterSpacing="0.10"
-                    android:text="@string/app_name"
-                    android:textAllCaps="true"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorPrimary" />
-
-                <TextView
-                    android:id="@+id/heroGreeting"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dashboard_hero_headline"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/heroSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dashboard_subtitle_all_systems"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <!--
-                  Hero status row. Three small tonal chips that summarize the
-                  health of the three at-a-glance signals (tunnel state,
-                  daemons running, recording state) right under the greeting,
-                  so the dashboard reads as identity-with-status, not as a
-                  flat surface. Each chip's text is owned by DashboardFragment.
-
-                  Existing IDs preserved (consumed by DashboardFragment.kt
-                  already where applicable); new chip IDs are namespaced
-                  under heroChip*.
-                -->
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/heroChipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    app:chipSpacingHorizontal="8dp"
-                    app:singleLine="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/heroChipTunnel"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="false"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/dashboard_tunnel_offline"
-                        app:chipIconTint="?attr/colorOnSurfaceVariant"
-                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
-                        app:chipStrokeWidth="0dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/heroChipServices"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="false"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/dashboard_daemons_running_default"
-                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
-                        app:chipStrokeWidth="0dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/heroChipRecording"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="false"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/dashboard_metric_recordings"
-                        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
-                        app:chipStrokeWidth="0dp" />
-                </com.google.android.material.chip.ChipGroup>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- ================== CONNECT CARD ================== -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/card_gap_vertical"
-            app:cardBackgroundColor="?attr/colorSurfaceContainer"
-            app:cardCornerRadius="@dimen/card_radius_hero"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/card_padding_hero">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="20dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/dashboard_scan_to_connect"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <TextView
-                        android:id="@+id/tvDeviceId"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="monospace"
-                        android:text="@string/dashboard_device_id_loading"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textIsSelectable="true" />
-                </LinearLayout>
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroupTunnels"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:visibility="gone"
-                    app:singleSelection="true"
-                    app:selectionRequired="true"
-                    app:chipSpacingHorizontal="8dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <FrameLayout
-                        android:id="@+id/qrCodeContainer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="?attr/colorSurfaceContainerLowest"
-                        android:padding="12dp"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:id="@+id/ivQrCode"
-                            android:layout_width="200dp"
-                            android:layout_height="200dp"
-                            android:background="@android:color/white"
-                            android:contentDescription="@string/cd_qr_code"
-                            android:padding="8dp"
-                            android:scaleType="fitCenter" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:id="@+id/tvQrPlaceholder"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:gravity="center"
-                        android:text="@string/dashboard_qr_waiting"
-                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvUrl"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:ellipsize="middle"
-                        android:fontFamily="monospace"
-                        android:maxWidth="320dp"
-                        android:singleLine="true"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorPrimary"
-                        android:textIsSelectable="true"
-                        android:visibility="gone" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginBottom="20dp"
-                    android:background="?attr/colorOutlineVariant" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/dashboard_access_code"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="?attr/colorSurfaceContainerLow"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="14dp">
-
-                    <TextView
-                        android:id="@+id/tvDeviceToken"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="monospace"
-                        android:letterSpacing="0.18"
-                        android:singleLine="true"
-                        android:text="@string/dashboard_token_masked"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <ImageView
-                        android:id="@+id/btnToggleToken"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginStart="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/cd_show_hide_token"
-                        android:padding="6dp"
-                        android:src="@android:drawable/ic_menu_view"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                    <ImageView
-                        android:id="@+id/btnCopyToken"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/cd_copy_token"
-                        android:padding="6dp"
-                        android:src="@drawable/ic_copy"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end"
-                    android:layout_marginTop="8dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSetPassword"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:layout_marginEnd="4dp"
-                        android:contentDescription="@string/cd_set_password"
-                        android:text="@string/dashboard_set_password"
-                        android:textAllCaps="false" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRegenerateToken"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:text="@string/dashboard_regenerate_token"
-                        android:textAllCaps="false" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!--
-          ================== METRIC TILES (uniform 2-up grid) ==================
-          All five tiles (Recordings, Tunnel, Services, Live, Settings)
-          share the SAME width (weight=1 in a 2-column row) and the same
-          minHeight token (grid_tile_min_height), so the grid reads as a
-          single rhythm. The Recordings tile is the COMBINED Recordings +
-          Storage one — count headline + storage line below. The
-          standalone Storage tile was removed (duplicated routing).
-          The Settings tile sits alone in the final row; it's still a
-          2-up cell with a transparent spacer on the right so its
-          rendered width matches the tiles above exactly.
-        -->
-
-        <!-- Row 1: Recordings | Tunnel -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="@dimen/card_gap_vertical"
-            android:baselineAligned="false">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding_hero"
+            android:gravity="center_vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/metricRecordings"
-                android:layout_width="0dp"
+            <!-- Header row: label + view-all button -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="@dimen/card_gap_horizontal_half"
-                android:minHeight="@dimen/grid_tile_min_height"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/card_padding_standard">
+                    android:layout_weight="1"
+                    android:text="@string/dashboard_trips_this_week"
+                    android:letterSpacing="0.10"
+                    android:textAllCaps="true"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
 
-                    <ImageView
-                        android:layout_width="@dimen/card_icon_standard"
-                        android:layout_height="@dimen/card_icon_standard"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_recording"
-                        app:tint="?attr/colorOnSurfaceVariant" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewAllTrips"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="@string/dashboard_trips_view_all"
+                    android:textAllCaps="false"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
+            </LinearLayout>
+
+            <!-- Primary trip headline (trips · distance combined) -->
+            <TextView
+                android:id="@+id/tvTripHeadline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/dashboard_trips_loading"
+                android:textAppearance="@style/TextAppearance.Material3.DisplaySmall"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textStyle="bold" />
+
+            <!-- Three sub-stats row: Trips | Distance | Drive Time -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="20dp"
+                android:baselineAligned="false">
+
+                <!-- Trips count -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/metricRecordingsValue"
+                        android:id="@+id/tvStatTrips"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
                         android:text="@string/dashboard_metric_value_pending"
-                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
                         android:textStyle="bold" />
 
-                    <!--
-                      Label line — storage figure (e.g. "Today · 8.4 GB used")
-                      is appended to this single label by DashboardFragment so
-                      the tile's vertical structure stays icon → value → label,
-                      identical to every other metric tile in the grid.
-                    -->
                     <TextView
-                        android:id="@+id/metricStorageValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="@string/dashboard_metric_recordings"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:text="@string/dashboard_trips_label_trips"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:alpha="0.7" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/metricTunnel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/card_gap_horizontal_half"
-                android:minHeight="@dimen/grid_tile_min_height"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
+                <!-- Divider -->
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_vertical"
+                    android:background="?attr/colorOnPrimaryContainer"
+                    android:alpha="0.2" />
 
+                <!-- Distance -->
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:padding="@dimen/card_padding_standard">
+                    android:paddingStart="16dp">
+
+                    <TextView
+                        android:id="@+id/tvStatDistance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_metric_value_pending"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/dashboard_trips_label_distance"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:alpha="0.7" />
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_vertical"
+                    android:background="?attr/colorOnPrimaryContainer"
+                    android:alpha="0.2" />
+
+                <!-- Drive Time -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp">
+
+                    <TextView
+                        android:id="@+id/tvStatDriveTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_metric_value_pending"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/dashboard_trips_label_time"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:alpha="0.7" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ================== SCROLLABLE BOTTOM SECTION ==================
+         Metric tiles + connect card. Scrolls independently so the trip
+         stats hero stays locked to the top.
+    -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:animateLayoutChanges="true"
+            android:paddingHorizontal="@dimen/page_padding_horizontal"
+            android:paddingBottom="@dimen/page_padding_bottom">
+
+            <!-- Status chips row (compact, no card wrapper) -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/heroChipGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:chipSpacingHorizontal="8dp"
+                app:singleLine="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/heroChipTunnel"
+                    style="@style/Widget.Material3.Chip.Assist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="false"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:text="@string/dashboard_tunnel_offline"
+                    app:chipIconTint="?attr/colorOnSurfaceVariant"
+                    app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:chipStrokeWidth="0dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/heroChipServices"
+                    style="@style/Widget.Material3.Chip.Assist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="false"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:text="@string/dashboard_daemons_running_default"
+                    app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:chipStrokeWidth="0dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/heroChipRecording"
+                    style="@style/Widget.Material3.Chip.Assist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="false"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:text="@string/dashboard_metric_recordings"
+                    app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:chipStrokeWidth="0dp" />
+            </com.google.android.material.chip.ChipGroup>
+
+            <!-- Row 1: Recordings | Tunnel -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="@dimen/card_gap_vertical"
+                android:baselineAligned="false">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/metricRecordings"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="@dimen/card_gap_horizontal_half"
+                    android:minHeight="@dimen/grid_tile_min_height"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding_standard">
 
                         <ImageView
                             android:layout_width="@dimen/card_icon_standard"
                             android:layout_height="@dimen/card_icon_standard"
                             android:contentDescription="@null"
-                            android:src="@drawable/ic_dashboard"
+                            android:src="@drawable/ic_recording"
                             app:tint="?attr/colorOnSurfaceVariant" />
 
-                        <View
-                            android:layout_width="0dp"
-                            android:layout_height="1dp"
-                            android:layout_weight="1" />
+                        <TextView
+                            android:id="@+id/metricRecordingsValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/dashboard_metric_value_pending"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
 
-                        <View
-                            android:id="@+id/tunnelStateDot"
-                            android:layout_width="10dp"
-                            android:layout_height="10dp"
-                            android:background="@drawable/status_dot_offline" />
+                        <TextView
+                            android:id="@+id/metricStorageValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/dashboard_metric_recordings"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
-                        android:id="@+id/metricTunnelValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="@string/dashboard_tunnel_offline"
-                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/dashboard_metric_tunnel"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
-        <!-- Row 2: Services | Live -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="@dimen/card_gap_vertical"
-            android:baselineAligned="false">
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardDaemons"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="@dimen/card_gap_horizontal_half"
-                android:minHeight="@dimen/grid_tile_min_height"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/metricTunnel"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/card_padding_standard">
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/card_gap_horizontal_half"
+                    android:minHeight="@dimen/grid_tile_min_height"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
 
-                    <ImageView
-                        android:layout_width="@dimen/card_icon_standard"
-                        android:layout_height="@dimen/card_icon_standard"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_services"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvDaemonsStatus"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="@string/dashboard_daemons_running_default"
-                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold" />
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding_standard">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/dashboard_metric_services"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/quickLive"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/card_gap_horizontal_half"
-                android:minHeight="@dimen/grid_tile_min_height"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:cardCornerRadius="@dimen/card_radius_standard"
-                app:cardElevation="0dp">
+                            <ImageView
+                                android:layout_width="@dimen/card_icon_standard"
+                                android:layout_height="@dimen/card_icon_standard"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_dashboard"
+                                app:tint="?attr/colorOnSurfaceVariant" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/card_padding_standard">
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="1dp"
+                                android:layout_weight="1" />
 
-                    <ImageView
-                        android:layout_width="@dimen/card_icon_standard"
-                        android:layout_height="@dimen/card_icon_standard"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_live"
-                        app:tint="?attr/colorOnSurfaceVariant" />
+                            <View
+                                android:id="@+id/tunnelStateDot"
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:background="@drawable/status_dot_offline" />
+                        </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="@string/dashboard_action_live"
-                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold" />
+                        <TextView
+                            android:id="@+id/metricTunnelValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/dashboard_tunnel_offline"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/dashboard_action_live_subtitle"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/dashboard_metric_tunnel"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
-        <!-- Row 3: Vehicle tile spans the full width of two cells (replaces the
-             previous Settings + Vehicle pairing — Settings remains reachable from
-             the nav rail). The Vehicle tile is the only controllable car-state
-             surface on the dashboard, so it earns the wider canvas to show the
-             selected model + capacity inline rather than truncating. -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/metricVehicle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/card_gap_vertical"
-            android:minHeight="@dimen/grid_tile_min_height"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-            app:cardCornerRadius="@dimen/card_radius_standard"
-            app:cardElevation="0dp">
-
+            <!-- Row 2: Services | Live -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/card_padding_standard">
+                android:orientation="horizontal"
+                android:layout_marginBottom="@dimen/card_gap_vertical"
+                android:baselineAligned="false">
 
-                <ImageView
-                    android:layout_width="@dimen/card_icon_standard"
-                    android:layout_height="@dimen/card_icon_standard"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_vehicle_control"
-                    app:tint="?attr/colorOnSurfaceVariant" />
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDaemons"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="@dimen/card_gap_horizontal_half"
+                    android:minHeight="@dimen/grid_tile_min_height"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
 
-                <TextView
-                    android:id="@+id/metricVehicleValue"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding_standard">
+
+                        <ImageView
+                            android:layout_width="@dimen/card_icon_standard"
+                            android:layout_height="@dimen/card_icon_standard"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_services"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:id="@+id/tvDaemonsStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/dashboard_daemons_running_default"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/dashboard_metric_services"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/quickLive"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/card_gap_horizontal_half"
+                    android:minHeight="@dimen/grid_tile_min_height"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                    app:cardCornerRadius="@dimen/card_radius_standard"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding_standard">
+
+                        <ImageView
+                            android:layout_width="@dimen/card_icon_standard"
+                            android:layout_height="@dimen/card_icon_standard"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_live"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/dashboard_action_live"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/dashboard_action_live_subtitle"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Row 3: Vehicle tile (full width) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/metricVehicle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/card_gap_vertical"
+                android:minHeight="@dimen/grid_tile_min_height"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                app:cardCornerRadius="@dimen/card_radius_standard"
+                app:cardElevation="0dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/dashboard_vehicle_tap_to_set"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="@dimen/card_padding_standard">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                    <ImageView
+                        android:layout_width="@dimen/card_icon_standard"
+                        android:layout_height="@dimen/card_icon_standard"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_vehicle_control"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/metricVehicleValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/dashboard_vehicle_tap_to_set"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/dashboard_metric_vehicle"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ================== CONNECT CARD ================== -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/card_gap_vertical"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="@dimen/card_radius_hero"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/dashboard_metric_vehicle"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    android:orientation="vertical"
+                    android:padding="@dimen/card_padding_hero">
 
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="20dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/dashboard_scan_to_connect"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <TextView
+                            android:id="@+id/tvDeviceId"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="@string/dashboard_device_id_loading"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textIsSelectable="true" />
+                    </LinearLayout>
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupTunnels"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:visibility="gone"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:chipSpacingHorizontal="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <FrameLayout
+                            android:id="@+id/qrCodeContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/colorSurfaceContainerLowest"
+                            android:padding="12dp"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:id="@+id/ivQrCode"
+                                android:layout_width="200dp"
+                                android:layout_height="200dp"
+                                android:background="@android:color/white"
+                                android:contentDescription="@string/cd_qr_code"
+                                android:padding="8dp"
+                                android:scaleType="fitCenter" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tvQrPlaceholder"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:gravity="center"
+                            android:text="@string/dashboard_qr_waiting"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:id="@+id/tvUrl"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:ellipsize="middle"
+                            android:fontFamily="monospace"
+                            android:maxWidth="320dp"
+                            android:singleLine="true"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textColor="?attr/colorPrimary"
+                            android:textIsSelectable="true"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="20dp"
+                        android:background="?attr/colorOutlineVariant" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/dashboard_access_code"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/colorSurfaceContainerLow"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvDeviceToken"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="monospace"
+                            android:letterSpacing="0.18"
+                            android:singleLine="true"
+                            android:text="@string/dashboard_token_masked"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <ImageView
+                            android:id="@+id/btnToggleToken"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/cd_show_hide_token"
+                            android:padding="6dp"
+                            android:src="@android:drawable/ic_menu_view"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <ImageView
+                            android:id="@+id/btnCopyToken"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="4dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/cd_copy_token"
+                            android:padding="6dp"
+                            android:src="@drawable/ic_copy"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="end"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetPassword"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="4dp"
+                            android:contentDescription="@string/cd_set_password"
+                            android:text="@string/dashboard_set_password"
+                            android:textAllCaps="false" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRegenerateToken"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="@string/dashboard_regenerate_token"
+                            android:textAllCaps="false" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

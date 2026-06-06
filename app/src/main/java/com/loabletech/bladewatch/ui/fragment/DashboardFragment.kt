@@ -24,9 +24,6 @@ import com.google.android.material.chip.ChipGroup
 import com.loabletech.bladewatch.R
 import com.loabletech.bladewatch.auth.AuthManager
 import com.loabletech.bladewatch.client.CameraDaemonClient
-import com.loabletech.bladewatch.ui.dashboard.DashboardInsight
-import com.loabletech.bladewatch.ui.dashboard.DashboardInsightProvider
-import com.loabletech.bladewatch.ui.model.DaemonState
 import com.loabletech.bladewatch.ui.model.DaemonStatus
 import com.loabletech.bladewatch.ui.model.DaemonType
 import com.loabletech.bladewatch.ui.util.QrCodeGenerator
@@ -54,12 +51,15 @@ class DashboardFragment : Fragment() {
     private val daemonsViewModel: DaemonsViewModel by activityViewModels()
     private val recordingViewModel: RecordingViewModel by activityViewModels()
 
-    // Hero
-    private lateinit var heroCard: MaterialCardView
-    private lateinit var heroGreeting: TextView
-    private lateinit var heroSubtitle: TextView
-    // Hero status chips (3): tunnel state, services running, recording state.
-    // Bound lazily (chipGroup may be absent on landscape variant).
+    // Trip stats hero — top of dashboard
+    private lateinit var tripStatsCard: MaterialCardView
+    private lateinit var tvTripHeadline: TextView
+    private lateinit var tvStatTrips: TextView
+    private lateinit var tvStatDistance: TextView
+    private lateinit var tvStatDriveTime: TextView
+    private var btnViewAllTrips: com.google.android.material.button.MaterialButton? = null
+
+    // Status chips (compact row below trip stats)
     private var heroChipTunnel: com.google.android.material.chip.Chip? = null
     private var heroChipServices: com.google.android.material.chip.Chip? = null
     private var heroChipRecording: com.google.android.material.chip.Chip? = null
@@ -114,28 +114,6 @@ class DashboardFragment : Fragment() {
     // own cadence) can re-render without re-walking the disk.
     @Volatile private var todayClipCount: Int = 0
 
-    // ============== Hero subtitle insights carousel ==============
-    //
-    // Tesla/Polestar-tier rotating data line. Each insight is computed on a
-    // worker thread (DB + filesystem), then posted back to fade through the
-    // existing heroSubtitle TextView. We deliberately reuse the existing view
-    // — no layout changes — and just animate its text content.
-    private var insightsProvider: DashboardInsightProvider? = null
-    private var insights: List<DashboardInsight> = emptyList()
-    private var insightIndex: Int = 0
-    private var rotationPaused: Boolean = false
-    private var firstVisitCount: Int = -1
-    // Track the running daemon-summary so we can show it as the bottom-of-the-
-    // ladder fallback only when no real insights are available.
-    private var lastDaemonRunning: Int = 0
-    private var lastDaemonTotal: Int = 0
-
-    private val insightRotateRunnable = Runnable { rotateInsight() }
-    private val insightResumeRunnable = Runnable {
-        rotationPaused = false
-        scheduleNextInsight()
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -149,27 +127,12 @@ class DashboardFragment : Fragment() {
         wireClicks()
         observeViewModels()
 
-        // Hero headline is a static brand statement, not a time-of-day greeting.
-        // The "Good morning / Good night" line read as concierge UI; an
-        // infotainment cockpit benefits more from a stable identity headline
-        // paired with the live status row of chips below it. See
-        // dashboard_hero_headline (default: "Cockpit").
-        heroGreeting.setText(R.string.dashboard_hero_headline)
         tvDeviceId.text = DeviceIdGenerator.generateDeviceId(requireContext())
         loadAuthState()
 
-        // First paint of the metric tiles. onResume will refresh on every return.
         refreshMetricsTiles()
         refreshVehicleTile()
-
-        // Insights carousel — initialize provider once; bump visit counter so
-        // the welcome-on-first-install insight is exclusive to visit #0.
-        if (insightsProvider == null) {
-            val provider = DashboardInsightProvider(requireContext().applicationContext)
-            insightsProvider = provider
-            firstVisitCount = provider.recordDashboardVisit()
-        }
-        wireSubtitleTouchPause()
+        refreshTripStats()
     }
 
     override fun onResume() {
@@ -185,11 +148,7 @@ class DashboardFragment : Fragment() {
         RecordingScanner.invalidateCache()
         refreshMetricsTiles()
         refreshVehicleTile()
-        // Always rebuild the insight list on resume — data may have changed
-        // while we were backgrounded (new clips, finished charging session,
-        // SOC delta from a parking session that ended off-screen, etc.).
-        rotationPaused = false
-        rebuildInsightsAsync()
+        refreshTripStats()
         // Re-read the access code on every resume. On a fresh install the
         // app process initializes AuthManager with an in-memory secret
         // before the daemon writes the canonical one to /data/local/tmp/;
@@ -199,23 +158,20 @@ class DashboardFragment : Fragment() {
         loadAuthState()
     }
 
-    override fun onPause() {
-        super.onPause()
-        cancelInsightCallbacks()
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
-        cancelInsightCallbacks()
         metricsExecutor?.shutdownNow()
         metricsExecutor = null
     }
 
     private fun bindViews(view: View) {
-        heroCard = view.findViewById(R.id.heroCard)
-        heroGreeting = view.findViewById(R.id.heroGreeting)
-        heroSubtitle = view.findViewById(R.id.heroSubtitle)
-        // Hero status chips — present in portrait, may be absent in landscape.
+        tripStatsCard = view.findViewById(R.id.tripStatsCard)
+        tvTripHeadline = view.findViewById(R.id.tvTripHeadline)
+        tvStatTrips = view.findViewById(R.id.tvStatTrips)
+        tvStatDistance = view.findViewById(R.id.tvStatDistance)
+        tvStatDriveTime = view.findViewById(R.id.tvStatDriveTime)
+        btnViewAllTrips = view.findViewById(R.id.btnViewAllTrips)
+
         heroChipTunnel = view.findViewById(R.id.heroChipTunnel)
         heroChipServices = view.findViewById(R.id.heroChipServices)
         heroChipRecording = view.findViewById(R.id.heroChipRecording)
@@ -250,10 +206,10 @@ class DashboardFragment : Fragment() {
     }
 
     private fun wireClicks() {
-        // Tile taps deep-link to peer rail destinations. Use the same M3
-        // fade-through motion the rail itself uses so the user can't tell
-        // whether they tapped the tile or the rail icon.
         val fadeThrough = com.loabletech.bladewatch.ui.util.NavOptionsExt.m3FadeThrough()
+        btnViewAllTrips?.setOnClickListener {
+            findNavController().navigate(R.id.tripsFragment, null, fadeThrough)
+        }
         metricRecordings.setOnClickListener {
             findNavController().navigate(R.id.recordingsFragment, null, fadeThrough)
         }
@@ -280,11 +236,6 @@ class DashboardFragment : Fragment() {
             val running = states.values.count { it.status == DaemonStatus.RUNNING }
             val total = states.size
             tvDaemonsStatus.text = getString(R.string.dashboard_daemons_running, running, total)
-            // Hero tile alert vs. ok is driven only by *core* daemons — tunnels
-            // and bots are opt-in services and missing them shouldn't paint the
-            // dashboard red. STARTING counts as ok so the hero flips green the
-            // moment a daemon is being launched, without waiting for RUNNING.
-            updateHeroSubtitle(running, total, computeCoreHealth(states))
             rebuildTunnelChips()
             refreshHeroChips()
         }
@@ -396,216 +347,6 @@ class DashboardFragment : Fragment() {
             getString(R.string.dashboard_recordings_value_live, todayClipCount)
         } else {
             todayClipCount.toString()
-        }
-    }
-
-    private fun updateHeroSubtitle(running: Int, total: Int, coreHealth: CoreHealth) {
-        // Cache the daemon summary so the carousel can fall through to it when
-        // no real insights have data. This keeps the legacy "X of Y services
-        // online" line as the safety net the user has always seen.
-        lastDaemonRunning = running
-        lastDaemonTotal = total
-        // If insights are already populated, the carousel owns the subtitle.
-        // Otherwise show the daemon-summary fallback immediately so the line
-        // doesn't read stale text while we wait for the first build to finish.
-        if (insights.isEmpty()) {
-            heroSubtitle.text = daemonFallbackText(running, total)
-        }
-        applyGreetingTint(coreHealth)
-    }
-
-    /**
-     * Tint the hero card by *core* daemon health. Uses M3 Container tones so
-     * the wash is soft rather than the saturated colorPrimary/Error.
-     *
-     * - OK   → primaryContainer (green wash, On*Container fg).
-     * - ALERT → errorContainer (red wash) — only when at least one CORE daemon
-     *           is in a hard-failed state. The zrok tunnel is opt-in and never
-     *           triggers ALERT.
-     * - UNKNOWN → neutral surface — used pre-bind / before the daemon-states
-     *           LiveData has fired so a fresh install doesn't flash red.
-     *
-     * STARTING is treated as OK (not ALERT) so the hero flips green the
-     * instant a daemon is being launched, instead of waiting for RUNNING.
-     */
-    private fun applyGreetingTint(coreHealth: CoreHealth) {
-        if (!::heroCard.isInitialized) return
-        val ctx = context ?: return
-        val (bgAttr, fgAttr, subAttr) = when (coreHealth) {
-            CoreHealth.UNKNOWN -> Triple(
-                com.google.android.material.R.attr.colorSurfaceContainer,
-                com.google.android.material.R.attr.colorOnSurface,
-                com.google.android.material.R.attr.colorOnSurfaceVariant
-            )
-            CoreHealth.OK -> Triple(
-                com.google.android.material.R.attr.colorPrimaryContainer,
-                com.google.android.material.R.attr.colorOnPrimaryContainer,
-                com.google.android.material.R.attr.colorOnPrimaryContainer
-            )
-            CoreHealth.ALERT -> Triple(
-                com.google.android.material.R.attr.colorErrorContainer,
-                com.google.android.material.R.attr.colorOnErrorContainer,
-                com.google.android.material.R.attr.colorOnErrorContainer
-            )
-        }
-        resolveAttrColor(ctx, bgAttr)?.let { heroCard.setCardBackgroundColor(it) }
-        resolveAttrColor(ctx, fgAttr)?.let { heroGreeting.setTextColor(it) }
-        resolveAttrColor(ctx, subAttr)?.let { heroSubtitle.setTextColor(it) }
-    }
-
-    private enum class CoreHealth { UNKNOWN, OK, ALERT }
-
-    /**
-     * Reduce the daemon-state map to a tri-state for the hero tint.
-     *
-     * Rule: green when every core daemon is started (RUNNING / STARTING /
-     * STOPPING — anything that means a process exists or is being managed),
-     * red when at least one core daemon is STOPPED. ERROR is folded in
-     * with STOPPED for tinting purposes since either way the daemon isn't
-     * doing its job.
-     *
-     * "Core" = Camera + Sentry + ACC Sentry. The zrok tunnel is opt-in — it
-     * doesn't gate the hero tint.
-     */
-    private fun computeCoreHealth(states: Map<DaemonType, DaemonState>?): CoreHealth {
-        if (states.isNullOrEmpty()) return CoreHealth.UNKNOWN
-        val core = setOf(
-            DaemonType.CAMERA_DAEMON,
-            DaemonType.SENTRY_DAEMON,
-            DaemonType.ACC_SENTRY_DAEMON
-        )
-        var sawCore = false
-        for ((type, state) in states) {
-            if (type !in core) continue
-            sawCore = true
-            if (state.status == DaemonStatus.STOPPED || state.status == DaemonStatus.ERROR) {
-                return CoreHealth.ALERT
-            }
-        }
-        return if (sawCore) CoreHealth.OK else CoreHealth.UNKNOWN
-    }
-
-    private fun resolveAttrColor(ctx: Context, attr: Int): Int? {
-        val tv = android.util.TypedValue()
-        return if (ctx.theme.resolveAttribute(attr, tv, true)) tv.data else null
-    }
-
-    private fun daemonFallbackText(running: Int, total: Int): CharSequence = when {
-        total == 0 -> getString(R.string.dashboard_subtitle_no_tunnel)
-        running == total -> getString(R.string.dashboard_subtitle_all_systems)
-        else -> getString(R.string.dashboard_subtitle_some_offline, running, total)
-    }
-
-    // ============== Insights carousel ==============
-
-    /**
-     * Re-build the insight list off the main thread. Posts the result back to
-     * the UI which restarts the rotation from index 0.
-     */
-    private fun rebuildInsightsAsync() {
-        val provider = insightsProvider ?: return
-        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
-            .also { metricsExecutor = it }
-        val visitCount = if (firstVisitCount >= 0) firstVisitCount else 0
-        executor.execute {
-            val built = try {
-                provider.build(visitCount)
-            } catch (_: Throwable) {
-                emptyList()
-            }
-            mainHandler.post {
-                if (!isAdded || view == null) return@post
-                applyInsightList(built)
-            }
-        }
-    }
-
-    private fun applyInsightList(built: List<DashboardInsight>) {
-        cancelInsightCallbacks()
-        insights = built
-        insightIndex = 0
-        if (built.isEmpty()) {
-            // Static fallback — no rotation. The daemon-summary observer keeps
-            // this line accurate as services flip online/offline.
-            heroSubtitle.text = daemonFallbackText(lastDaemonRunning, lastDaemonTotal)
-            return
-        }
-        // Show the first insight immediately (no fade — we want it instant on
-        // dashboard open / resume). Subsequent transitions cross-fade.
-        heroSubtitle.alpha = 0.78f
-        heroSubtitle.text = built[0].text
-        if (built.size > 1) {
-            scheduleNextInsight()
-        }
-    }
-
-    private fun scheduleNextInsight() {
-        if (rotationPaused) return
-        if (insights.size <= 1) return
-        mainHandler.removeCallbacks(insightRotateRunnable)
-        mainHandler.postDelayed(insightRotateRunnable, INSIGHT_HOLD_MS)
-    }
-
-    private fun rotateInsight() {
-        if (!isAdded || view == null) return
-        if (rotationPaused) return
-        if (insights.size <= 1) return
-        val nextIdx = (insightIndex + 1) % insights.size
-        val next = insights[nextIdx]
-        // 250ms cross-fade: fade current to alpha=0, swap text, fade back to
-        // the resting 0.78 the layout uses for the subtitle. M3 standard
-        // easing is the AccelerateDecelerateInterpolator default on animate().
-        heroSubtitle.animate()
-            .alpha(0f)
-            .setDuration(INSIGHT_FADE_MS)
-            .withEndAction {
-                if (!isAdded || view == null) return@withEndAction
-                heroSubtitle.text = next.text
-                heroSubtitle.animate()
-                    .alpha(0.78f)
-                    .setDuration(INSIGHT_FADE_MS)
-                    .start()
-                insightIndex = nextIdx
-                scheduleNextInsight()
-            }
-            .start()
-    }
-
-    private fun cancelInsightCallbacks() {
-        mainHandler.removeCallbacks(insightRotateRunnable)
-        mainHandler.removeCallbacks(insightResumeRunnable)
-        // Cancel any in-flight fade so onPause / onDestroyView don't leave a
-        // dangling animation that targets a TextView whose host is gone.
-        if (::heroSubtitle.isInitialized) {
-            heroSubtitle.animate().cancel()
-            heroSubtitle.alpha = 0.78f
-        }
-    }
-
-    /**
-     * Long-press on the subtitle pauses the rotation; release resumes it after
-     * a 5 s grace period so the user has time to actually read the line they
-     * paused on. We use ACTION_DOWN / ACTION_UP (not OnLongClick) so the
-     * pause kicks in immediately, not after the system long-press timeout.
-     */
-    @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun wireSubtitleTouchPause() {
-        if (!::heroSubtitle.isInitialized) return
-        heroSubtitle.setOnTouchListener { _, ev ->
-            when (ev.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    rotationPaused = true
-                    mainHandler.removeCallbacks(insightRotateRunnable)
-                    mainHandler.removeCallbacks(insightResumeRunnable)
-                }
-                android.view.MotionEvent.ACTION_UP,
-                android.view.MotionEvent.ACTION_CANCEL -> {
-                    mainHandler.removeCallbacks(insightResumeRunnable)
-                    mainHandler.postDelayed(insightResumeRunnable, INSIGHT_RESUME_AFTER_MS)
-                }
-            }
-            // Don't consume — let click-through still work for accessibility.
-            false
         }
     }
 
@@ -987,6 +728,82 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    // ============== Trip stats hero ==============
+
+    private fun refreshTripStats() {
+        if (!::tvTripHeadline.isInitialized) return
+        tvTripHeadline.text = getString(R.string.dashboard_trips_loading)
+        tvStatTrips.text = getString(R.string.dashboard_metric_value_pending)
+        tvStatDistance.text = getString(R.string.dashboard_metric_value_pending)
+        tvStatDriveTime.text = getString(R.string.dashboard_metric_value_pending)
+
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            var tripCount = 0
+            var totalDistanceKm = 0.0
+            var totalDurationSeconds = 0
+            var dataAvailable = false
+
+            try {
+                val conn = com.loabletech.bladewatch.util.DaemonHttpClient.open(
+                    "/api/trips/summary?days=7", "GET", 3000, 5000)
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    conn.disconnect()
+                    val json = org.json.JSONObject(body)
+                    val summaryArray = json.optJSONArray("summary")
+                    if (summaryArray != null) {
+                        for (i in 0 until summaryArray.length()) {
+                            val week = summaryArray.getJSONObject(i)
+                            tripCount += week.optInt("tripCount", 0)
+                            totalDistanceKm += week.optDouble("totalDistanceKm", 0.0)
+                            totalDurationSeconds += week.optInt("totalDurationSeconds", 0)
+                        }
+                        dataAvailable = true
+                    }
+                } else {
+                    conn.disconnect()
+                }
+            } catch (_: Throwable) { }
+
+            mainHandler.post {
+                if (!isAdded || view == null) return@post
+                if (!dataAvailable) {
+                    tvTripHeadline.text = getString(R.string.dashboard_trips_unavailable)
+                    tvStatTrips.text = getString(R.string.dashboard_metric_value_pending)
+                    tvStatDistance.text = getString(R.string.dashboard_metric_value_pending)
+                    tvStatDriveTime.text = getString(R.string.dashboard_metric_value_pending)
+                    return@post
+                }
+                if (tripCount == 0) {
+                    tvTripHeadline.text = getString(R.string.dashboard_trips_no_data)
+                    tvStatTrips.text = "0"
+                    tvStatDistance.text = "0 km"
+                    tvStatDriveTime.text = "0m"
+                    return@post
+                }
+                val distanceStr = if (totalDistanceKm >= 1000)
+                    String.format("%.0f km", totalDistanceKm)
+                else
+                    String.format("%.1f km", totalDistanceKm)
+                tvTripHeadline.text = "$tripCount trips · $distanceStr"
+                tvStatTrips.text = tripCount.toString()
+                tvStatDistance.text = distanceStr
+                tvStatDriveTime.text = formatDuration(totalDurationSeconds)
+            }
+        }
+    }
+
+    private fun formatDuration(seconds: Int): String {
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        return when {
+            h > 0 -> "${h}h ${m}m"
+            else -> "${m}m"
+        }
+    }
+
     /**
      * Dialog with capacity input + model dropdown. POSTs to
      * /api/performance/soh/nominal and /api/models/selected.
@@ -1307,12 +1124,4 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    companion object {
-        // Hero-subtitle insights carousel timing.
-        // 5 s hold matches Tesla / Polestar style; 250 ms cross-fade is M3
-        // "duration-medium2" (close enough for a one-line text swap).
-        private const val INSIGHT_HOLD_MS = 5_000L
-        private const val INSIGHT_FADE_MS = 250L
-        private const val INSIGHT_RESUME_AFTER_MS = 5_000L
-    }
 }

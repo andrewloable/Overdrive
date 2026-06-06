@@ -70,6 +70,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusIndicator: View
     private lateinit var urlStatusDot: View
     private lateinit var btnCopyUrl: ImageButton
+    private lateinit var shellContainer: LinearLayout
+    private lateinit var mainStage: View
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         }.start()
         
         initViews()
+        applyDriveSide()
         setupNavigation(savedInstanceState)
         setupCopyButton()
         setupLogListener()
@@ -661,7 +664,9 @@ class MainActivity : AppCompatActivity() {
         statusIndicator = findViewById(R.id.statusIndicator)
         urlStatusDot = findViewById(R.id.urlStatusDot)
         btnCopyUrl = findViewById(R.id.btnCopyUrl)
-        
+        shellContainer = findViewById(R.id.shellContainer)
+        mainStage = findViewById(R.id.mainStage)
+
         // Brand version + device id used to live in the drawer header; in the
         // rail-based shell they're surfaced on the Dashboard card instead.
     }
@@ -681,7 +686,6 @@ class MainActivity : AppCompatActivity() {
                 R.id.recordingsFragment,
                 R.id.vehicleControlFragment,
                 R.id.tripsFragment,
-                R.id.integrationsFragment,
                 R.id.diagnosticsFragment,
                 R.id.settingsFragment,
                 R.id.settingsAboutFragment
@@ -716,8 +720,6 @@ class MainActivity : AppCompatActivity() {
                 R.drawable.ic_vehicle_control, R.string.rail_vehicle),
             RailItem(R.id.railDestTrips, R.id.tripsFragment,
                 R.drawable.ic_trips, R.string.rail_trips),
-            RailItem(R.id.railDestIntegrations, R.id.integrationsFragment,
-                R.drawable.ic_integrations, R.string.rail_integrations),
             RailItem(R.id.railDestDiagnostics, R.id.diagnosticsFragment,
                 R.drawable.ic_diagnostics, R.string.rail_diagnostics),
             RailItem(R.id.railDestSettings, R.id.settingsFragment,
@@ -877,6 +879,53 @@ class MainActivity : AppCompatActivity() {
         urlStatusDot.setBackgroundResource(drawableRes)
     }
     
+    /**
+     * Read the drive-side preference and reposition the navigation rail.
+     * "left" (default): rail on left, main stage on right.
+     * "right": main stage on left, rail on right.
+     * "auto": detect via BYD vehicle API; fall back to left on failure.
+     *
+     * Safe to call any time the preference changes — detects the current
+     * arrangement before touching the view tree so redundant calls are no-ops.
+     */
+    fun applyDriveSide() {
+        val pref = PreferencesManager.getDriveSide()
+        val railOnRight = when (pref) {
+            "right" -> true
+            "auto" -> detectVehicleRailOnRight()
+            else -> false
+        }
+
+        val rail = shellContainer.getChildAt(0)
+        val currentRailOnRight = rail?.id != R.id.navigationRailScroll
+        if (currentRailOnRight == railOnRight) return  // already correct
+
+        val railScroll = shellContainer.findViewById<android.view.View>(R.id.navigationRailScroll)
+            ?: return
+        val stage = shellContainer.findViewById<android.view.View>(R.id.mainStage) ?: return
+
+        shellContainer.removeAllViews()
+        if (railOnRight) {
+            shellContainer.addView(stage)
+            shellContainer.addView(railScroll)
+        } else {
+            shellContainer.addView(railScroll)
+            shellContainer.addView(stage)
+        }
+    }
+
+    private fun detectVehicleRailOnRight(): Boolean {
+        return try {
+            val cls = Class.forName("android.widget.CustomVehicleConfig")
+            val getInstance = cls.getMethod("getInstance", android.content.Context::class.java)
+            val config = getInstance.invoke(null, applicationContext)
+            val isRight = cls.getMethod("isRightDriver").invoke(config) as? Boolean
+            isRight == true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }

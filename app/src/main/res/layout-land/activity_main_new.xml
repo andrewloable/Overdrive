@@ -32,6 +32,7 @@
     tools:context=".ui.MainActivity">
 
     <LinearLayout
+        android:id="@+id/shellContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal">
@@ -90,11 +91,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
                 <include
-                    android:id="@+id/railDestIntegrations"
-                    layout="@layout/item_rail_destination"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-                <include
                     android:id="@+id/railDestDiagnostics"
                     layout="@layout/item_rail_destination"
                     android:layout_width="match_parent"
@@ -125,6 +121,7 @@
         <!--  Main stage — toolbar (compact) → URL bar → fragment host.     -->
         <!-- ============================================================== -->
         <LinearLayout
+            android:id="@+id/mainStage"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"

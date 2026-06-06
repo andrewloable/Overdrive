@@ -79,13 +79,6 @@
             android:defaultValue="/trips" />
     </fragment>
 
-    <!-- Integrations -->
-    <fragment
-        android:id="@+id/integrationsFragment"
-        android:name="com.loabletech.bladewatch.ui.fragment.IntegrationsFragment"
-        android:label="@string/rail_integrations"
-        tools:layout="@layout/fragment_integrations" />
-
     <!-- Diagnostics: logs + ADB console + utilities -->
     <fragment
         android:id="@+id/diagnosticsFragment"

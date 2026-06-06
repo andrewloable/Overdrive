@@ -26,10 +26,6 @@
         android:icon="@drawable/ic_trips"
         android:title="@string/rail_trips" />
     <item
-        android:id="@+id/integrationsFragment"
-        android:icon="@drawable/ic_integrations"
-        android:title="@string/rail_integrations" />
-    <item
         android:id="@+id/diagnosticsFragment"
         android:icon="@drawable/ic_diagnostics"
         android:title="@string/rail_diagnostics" />
