@@ -925,8 +925,8 @@ public class HttpServer {
         File file = new File(WEB_ROOT, relativePath);
         if (!file.exists() || !file.isFile()) {
             // Fall back to the persistent models cache for GLBs that were downloaded
-            // at runtime. The bundled default (seal.glb) lives in WEB_ROOT; everything
-            // else is fetched on demand into ModelsApiHandler.MODELS_DIR.
+            // at runtime. All shipped models live in WEB_ROOT (bundled in APK assets);
+            // any future downloadable models are fetched on demand into ModelsApiHandler.MODELS_DIR.
             if (relativePath.startsWith("shared/models/") && relativePath.endsWith(".glb")) {
                 String fileName = relativePath.substring("shared/models/".length());
                 File cached = ModelsApiHandler.cachedModelFile(fileName);
