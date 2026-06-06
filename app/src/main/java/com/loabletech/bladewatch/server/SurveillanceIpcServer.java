@@ -2,6 +2,7 @@ package net.bladewatch.app.server;
 
 import net.bladewatch.app.daemon.CameraDaemon;
 import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.server.IpcTokenManager;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -87,7 +88,16 @@ public class SurveillanceIpcServer implements Runnable {
     
     private JSONObject handleCommand(JSONObject request) {
         JSONObject response = new JSONObject();
-        
+
+        // Require shared-secret token on every request
+        if (!IpcTokenManager.isValid(request.optString("token", ""))) {
+            try {
+                response.put("success", false);
+                response.put("error", "Unauthorized");
+            } catch (Exception ignored) {}
+            return response;
+        }
+
         try {
             String command = request.optString("command", "");
             

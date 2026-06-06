@@ -18,6 +18,8 @@ import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
+import net.bladewatch.app.server.IpcTokenManager;
+
 import org.json.JSONObject;
 
 /**
@@ -391,6 +393,8 @@ public class LocationSidecarService extends Service implements LocationListener 
                 json.put("accuracy", accuracy);
                 json.put("altitude", altitude);
                 json.put("time", System.currentTimeMillis());
+                String token = IpcTokenManager.getToken();
+                if (token != null) json.put("token", token);
                 
                 socket = new java.net.Socket();
                 socket.connect(new java.net.InetSocketAddress("127.0.0.1", 19877), 1000);

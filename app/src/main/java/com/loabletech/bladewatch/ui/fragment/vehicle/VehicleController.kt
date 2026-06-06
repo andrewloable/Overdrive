@@ -37,6 +37,7 @@ class VehicleController(private val context: Context) {
     private var acOn = false; private var setpointC = 22; private var fanLevel = 3; private var maxCooling = false
 
     private val running = AtomicBoolean(false)
+    private val inFlight = AtomicBoolean(false)
     private var pollExecutor: ScheduledExecutorService? = null
     private val lastClick = mutableMapOf<String, Long>()
 
@@ -109,7 +110,6 @@ class VehicleController(private val context: Context) {
         outerLayout.addView(tabRow)
 
         root.addView(outerLayout)
-        renderTabContent()
     }
 
     private fun buildStatusCard(): LinearLayout {
@@ -644,27 +644,51 @@ class VehicleController(private val context: Context) {
         Thread({
             // Initial charge cap probe
             client.fetchChargeCap()?.let { cap ->
-                vehicleState = vehicleState.copy(chargeCap = cap)
+                root.post { vehicleState = vehicleState.copy(chargeCap = cap) }
             }
 
             val sched = Executors.newSingleThreadScheduledExecutor()
             pollExecutor = sched
+            var failCount = 0
             sched.scheduleAtFixedRate({
                 if (!running.get()) { sched.shutdownNow(); return@scheduleAtFixedRate }
-                val state = client.fetchState() ?: return@scheduleAtFixedRate
-                vehicleState = state.copy(chargeCap = vehicleState.chargeCap)
-                root.post { if (running.get()) applyStateToViews() }
+                val state = client.fetchState()
+                if (state == null) {
+                    failCount++
+                    if (failCount >= 3) root.post {
+                        if (running.get()) showErrorState("Vehicle data unavailable. Check daemon status.")
+                    }
+                    return@scheduleAtFixedRate
+                }
+                failCount = 0
+                root.post {
+                    if (running.get()) {
+                        vehicleState = state.copy(chargeCap = vehicleState.chargeCap)
+                        applyStateToViews()
+                    }
+                }
             }, 0, 3, TimeUnit.SECONDS)
         }, "VehiclePollInit").apply { isDaemon = true; start() }
+    }
+
+    private fun showErrorState(message: String) {
+        (lockStatusDot?.background as? GradientDrawable)?.setColor(Color.GRAY)
+        lockStatusText?.text = message
     }
 
     // ─── Action helper ───────────────────────────────────────────────────────
 
     private fun doVehicleAction(key: String, action: () -> Boolean) {
         if (!debounce(key)) return
+        if (!inFlight.compareAndSet(false, true)) return
+        renderTabContent()
         Thread({
             val ok = action()
-            if (!ok) root.post { toast("Action failed. Check vehicle connection.") }
+            inFlight.set(false)
+            root.post {
+                if (!ok) toast("Action failed. Check vehicle connection.")
+                renderTabContent()
+            }
         }, "VehicleAction-$key").apply { isDaemon = true; start() }
     }
 
@@ -712,6 +736,7 @@ class VehicleController(private val context: Context) {
         setTextColor(Color.WHITE)
         setPadding(dp(12), dp(14), dp(12), dp(14))
         background = GradientDrawable().apply { setColor(color); cornerRadius = dp(8).toFloat() }
+        alpha = if (inFlight.get()) 0.5f else 1.0f
         setOnClickListener { onClick() }
     }
 

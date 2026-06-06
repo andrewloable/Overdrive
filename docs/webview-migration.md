@@ -1,123 +1,61 @@
 # WebView Migration
 
 Findings and reference for the WebView-backed screens in the BladeWatch Android
-app: where they are, how the WebView host is implemented, how they talk to the
-daemon, and what it takes to migrate each one to native.
+app: where they were, how the WebView host is implemented, and how each screen
+was migrated to native.
 
-> Status as of this document: **Live View was just migrated to native**
-> (`LiveViewFragment` + `LiveViewController` + `LiveStreamClient`, H.264 over
-> WebSocket). The screens below are the **remaining WebView destinations**.
+> **Status: Migration complete.** All WebView destinations have been migrated to
+> native. This document is retained for historical reference and as a guide to
+> the `WebViewFragment` architecture, which is still present for the remote
+> tunnel / browser UI path.
 
 ---
 
 ## 1. The big picture
 
-BladeWatch is a hybrid app. The UI shell, navigation rail, and an increasing
-number of screens are **native** (Kotlin Fragments). The remaining screens are
-rendered by an embedded **WebView** that loads static pages served by the
-daemon's HTTP server on `http://127.0.0.1:8080`.
+BladeWatch is a hybrid app. The UI shell, navigation rail, and all primary
+screens are **native** (Kotlin Fragments). The daemon's HTTP server on
+`http://127.0.0.1:8080` still serves static assets for remote browser/tunnel
+clients, but all in-app screens now use native implementations.
 
-The whole app is on a slow migration from WebView → native. Screens that have
-already been migrated: Dashboard, Recordings, Location (OSMDroid), Live View
-(native camera). Settings → Appearance is native; Settings → Recording and
-Settings → Surveillance are **not** native — their `Settings*Fragment`s are thin
-wrappers that embed a `WebViewFragment` as a child (see §2).
+Migrated screens (complete list):
 
-The WebView pages are the same static assets that also serve remote
-tunnel/browser clients, so they carry a lot of "works in a desktop browser AND
-in a Chrome 58 head-unit WebView" baggage.
-
----
-
-## 2. Remaining WebView destinations
-
-All are instances of the single `WebViewFragment` class, differing only by the
-`page_path` navigation argument. Defined in
-[nav_graph.xml](../app/src/main/res/navigation/nav_graph.xml).
-
-| Nav destination ID | `page_path` | Daemon route → file | How it's reached | Screenshot |
-|---|---|---|---|---|
-| `vehicleControlFragment` | `/vehicle-control` | `local/vehicle-control.html` | **Rail item "Vehicle"** (`MainActivity` rail) | `screenshots/04_vehicle.png` |
-| `tripsFragment` | `/trips` | `local/trips.html` | **Rail item "Trips"** + Dashboard shortcut | `screenshots/05_trips_list.png`, `05a_trips_stats.png`, `05b_trips_storage.png` |
-| `performanceFragment` | `/performance` | `local/performance.html` | **Diagnostics → Performance** (drill-down) | (sub-page of `07_diagnostics.png`) |
-| `recordingSettingsWebFragment` | `/recording` | `local/recording.html` | **Portrait Settings hub card** (`cardSectionRecording`) + **Recordings → Settings ↗** (Dashcam) | `screenshots/11*_settings_recording_*.png` |
-| `surveillanceSettingsWebFragment` | `/surveillance` | `local/surveillance.html` | **Portrait Settings hub card** (`cardSectionSurveillance`) + **Recordings → Settings ↗** (Surveillance) | `screenshots/12*_settings_surveillance_*.png` |
-
-Notes on reachability:
-
-- **Vehicle** and **Trips** are top-level navigation rail items
-  ([MainActivity.kt:719-721](../app/src/main/java/com/loabletech/bladewatch/ui/MainActivity.kt#L719-L721)),
-  so they are the most user-visible WebViews.
-- **Performance** is a child of Diagnostics
-  ([DiagnosticsFragment.kt:107](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/DiagnosticsFragment.kt#L107)) —
-  surfaced as a diagnostics child so the rail stays on Diagnostics, not Live.
-- **Recording / Surveillance settings are WebView in BOTH orientations.**
-  - In **landscape**, the Settings sub-rail detail pane hosts
-    `SettingsRecordingFragment` / `SettingsSurveillanceFragment` — but these are
-    **thin wrappers** (~50 lines each) that create a `FrameLayout` and
-    `commitNow` a child `WebViewFragment` pointed at `/recording` / `/surveillance`.
-    They are **not** native reimplementations. See
-    [SettingsRecordingFragment.kt](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/settings/SettingsRecordingFragment.kt)
-    and
-    [SettingsSurveillanceFragment.kt](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/settings/SettingsSurveillanceFragment.kt).
-  - In **portrait**, the Settings hub cards
-    ([SettingsFragment.kt:281-286](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/SettingsFragment.kt#L281-L286))
-    drill down to the full-screen `recordingSettingsWebFragment` /
-    `surveillanceSettingsWebFragment` destinations.
-  - The **Recordings → Settings ↗** button also drills down to these web
-    destinations
-    ([RecordingsFragment.kt:542-543](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/RecordingsFragment.kt#L542-L543)).
-  - **Implication:** migrating these requires a **full native build** of the
-    settings UI plus rewiring three call sites (the two wrapper fragments, the
-    portrait hub cards, and the Recordings ↗ button), then deleting the web
-    routes. There is no native reference implementation to start from.
-
-Other daemon pages exist but are **not** wired as nav destinations:
-`about.html`, `notifications.html`, `events.html`, `index.html`,
-`login.html`, `vehicle-control-3d-test.html`. `index.html` is the page the old
-Live View used (a map-first dashboard) — now replaced by the native Live View.
-`events.html` links are intercepted and rerouted to the native Recordings page
-(see §4, `shouldOverrideUrlLoading`).
+| Screen | Native implementation |
+|---|---|
+| Dashboard | `DashboardFragment` / `DashboardController` |
+| Live View | `LiveViewFragment` / `LiveViewController` + `LiveStreamClient` (H.264/WebSocket) |
+| Recordings | `RecordingsFragment` |
+| Location | `LocationFragment` (OSMDroid) |
+| Vehicle | `VehicleFragment` / `VehicleController` |
+| Trips | `TripsFragment` / `TripsController` |
+| Performance | `PerformanceFragment` / `PerformanceController` |
+| Recording Settings | `SettingsRecordingFragment` / `RecordingSettingsController` |
+| Surveillance Settings | `SettingsSurveillanceFragment` / `SurveillanceSettingsController` |
 
 ---
 
-## 3. UI/UX observed from screenshots
+## 2. Previously: WebView destinations
 
-The native shell is always present around every WebView:
+All were instances of the single `WebViewFragment` class, differing only by the
+`page_path` navigation argument. These destinations have all been replaced with
+native fragments (see table above).
 
-- **Top app bar**: BYD head-unit status strip (clock, Radio, GPS/BT/Wi-Fi,
-  notifications, profile) above an in-app title bar with the page title and a
-  green **"Connecting…"** connection pill on the right.
-- **Left navigation rail**: Dashboard, Live, Recordings, Vehicle, Trips,
-  Integrations, Diagnostics, Settings, About — this is the MainActivity-level
-  rail and frames every screen.
-- **Bottom**: BYD's own climate/HVAC control strip (not part of our app).
+| Former nav destination ID | `page_path` | Status |
+|---|---|---|
+| `vehicleControlFragment` | `/vehicle-control` | ✓ Migrated → `VehicleController` |
+| `tripsFragment` | `/trips` | ✓ Migrated → `TripsController` |
+| `performanceFragment` | `/performance` | ✓ Migrated → `PerformanceController` |
+| `recordingSettingsWebFragment` | `/recording` | ✓ Migrated → `RecordingSettingsController` |
+| `surveillanceSettingsWebFragment` | `/surveillance` | ✓ Migrated → `SurveillanceSettingsController` |
 
-The WebView fills the area between, and the page's own chrome is suppressed by
-injected CSS (§4). Per-page content:
-
-- **Vehicle** (`04_vehicle.png`): a 3D car model viewport ("Loading model…"),
-  a top row of paint-color swatches + "BYD Seal" selector, and a bottom pill-tab
-  bar: **Security · Trunk · Climate · Windows · Lights · Rear · Charging**.
-  This page controls the physical car (BYD cloud APIs) — highest risk.
-- **Trips** (`05_trips_list.png`): date-range filters (Select Date / 7 / 14 /
-  30 Days), an empty-state ("No trips recorded yet"), a "Period Summary" card
-  (Trips, km, Hours, Avg Score, kWh, kWh/100km), and a bottom pill-tab bar:
-  **Trips · Stats · Storage**.
-- **Recording settings** (`11_*`): "Recording Status" card (Current State,
-  Recordings Today) with a bottom pill-tab bar: **Status · Capture · Quality ·
-  Storage**.
-- **Surveillance settings** (`12_*`): "Surveillance Mode" toggle + "Surveillance
-  Schedule" cards with a bottom pill-tab bar: **General · Detection · Recording
-  · Storage · Advanced**, plus an **"Apply Changes"** action.
-
-The pill-tab bar at the bottom of these pages is the web `.bottom-tabs`
-component; the injected CSS in the host specifically restyles and de-focuses it
-(Chrome 58 leaves a stuck focus ring).
+Other daemon pages that were never wired as nav destinations remain available for
+remote access: `about.html`, `notifications.html`, `events.html`, `index.html`,
+`login.html`. `events.html` links are intercepted and rerouted to the native
+Recordings page (see §4, `shouldOverrideUrlLoading`).
 
 ---
 
-## 4. How the WebView host is implemented
+## 3. How the WebView host is implemented
 
 Single class:
 [WebViewFragment.kt](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt),
@@ -165,7 +103,6 @@ otherwise break localhost calls. Key behaviors:
   tweaks.
 - Hides page-internal nav (`.sidebar`, `.mobile-header`, `.page-header`,
   `.pip-container`) since the native shell already provides rail + title bar.
-  This is the fix for the Live View "map + overlap" the old `index.html` showed.
 - Many narrow-landscape layout fixes and a Chrome-58 focus-ring killer
   (`.bottom-tab` blur on tap).
 - **Patches `window.fetch`**: routes **POST/PUT/DELETE** (writes) through the
@@ -218,49 +155,11 @@ maps each route to a static file under `assets/web/local/` (extracted to
 
 ---
 
-## 5. The WebView ↔ daemon contract (what a native port must replicate)
+## 4. Migration pattern (for reference)
 
-Any native replacement must talk to the same daemon API the web page uses:
+The pattern used for all migrations, proven across Live View, Recordings,
+Location, Vehicle, Trips, Performance, and Settings:
 
-| Page | Primary API namespace | Notes |
-|---|---|---|
-| Vehicle | (BYD cloud control via daemon) + `/status` | Physical car control — test conservatively; see `byd-integrations.md` |
-| Trips | `/api/trips...` | Date-range queries, stats, storage |
-| Performance | `/api/performance...` | Live metrics dashboard, polls `/status` |
-| Recording settings | `/api/recording/mode`, recording config | No native impl — `SettingsRecordingFragment` just wraps a WebView |
-| Surveillance settings | `/api/surveillance...`, `/api/surveillance/safe-locations` | No native impl — `SettingsSurveillanceFragment` just wraps a WebView |
-
-All mutating calls require the JWT auth cookie/header (see
-[AuthMiddleware.java](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java)).
-A native screen can mint a JWT directly via `AuthManager.generateJwt()` and call
-the daemon over `HttpURLConnection`/OkHttp with `Proxy.NO_PROXY` — exactly what
-`LiveStreamClient` does for the migrated Live View.
-
----
-
-## 6. Migration considerations (per screen)
-
-Ordered roughly by value-to-effort:
-
-1. **Recording / Surveillance settings → native.** *Lowest physical risk* (no
-   car control), but a **full native build** — there is no existing native
-   implementation; the current `SettingsRecordingFragment` /
-   `SettingsSurveillanceFragment` only wrap a WebView. Work = build the native
-   settings UI (tabs, toggles, pickers wired to the daemon config API), swap the
-   two wrapper fragments to render native content, repoint the portrait hub
-   cards and the Recordings ↗ button, then delete the web routes.
-2. **Trips → native.** Medium effort. Pure data UI (lists, filters, summary
-   cards, 3 tabs) over `/api/trips`. No physical-control risk. Good candidate
-   to follow the Recordings native pattern.
-3. **Performance → native.** Medium. Live metrics dashboard; mostly polling
-   `/api/performance` + `/status` and rendering charts/gauges. Consider whether
-   it's worth it given it's a buried diagnostics child.
-4. **Vehicle → native.** *Highest effort and risk.* Includes a 3D car model
-   (WebGL) and controls that drive the **physical car** via BYD cloud APIs. A
-   native port needs a 3D solution (or a simplified 2D control surface) and very
-   careful testing of every control. Migrate last, if at all.
-
-General pattern proven by Live View, Recordings, Location:
 - New `XxxFragment` (thin) → `XxxController` (programmatic views or layout) →
   data/client class hitting the daemon API with `AuthManager.generateJwt()` +
   `NO_PROXY`.
@@ -269,13 +168,17 @@ General pattern proven by Live View, Recordings, Location:
   `onConfigurationChanged`.
 - Update [nav_graph.xml](../app/src/main/res/navigation/nav_graph.xml) to point
   the destination at the new fragment; remove the `page_path` argument.
+- All mutating calls require JWT auth (see
+  [AuthMiddleware.java](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java)).
+  Native screens mint a JWT directly via `AuthManager.generateJwt()` and call
+  the daemon over `HttpURLConnection` with `Proxy.NO_PROXY`.
 
 ---
 
-## 7. Gotchas carried by the WebView host (do not regress)
+## 5. Gotchas carried by the WebView host (do not regress)
 
-These are hard-won fixes encoded in `WebViewFragment`. If you keep any WebView
-page, preserve them; if you port to native, you simply stop needing them:
+These are hard-won fixes encoded in `WebViewFragment`. If you ever add a new
+WebView page, preserve them:
 
 - **Proxy bypass is mandatory** — head units may have a system HTTP proxy that
   breaks localhost. All localhost + CDN traffic uses `Proxy.NO_PROXY`.
@@ -294,7 +197,7 @@ page, preserve them; if you port to native, you simply stop needing them:
 
 ---
 
-## 8. File reference
+## 6. File reference
 
 - Host fragment: [WebViewFragment.kt](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt)
 - Host layout: [fragment_webview.xml](../app/src/main/res/layout/fragment_webview.xml)
@@ -302,5 +205,4 @@ page, preserve them; if you port to native, you simply stop needing them:
 - Route handling: [HttpServer.java](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java)
 - Auth: [AuthManager.java](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java), [AuthMiddleware.java](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java)
 - Web assets: [app/src/main/assets/web/local/](../app/src/main/assets/web/local/)
-- Native migration exemplars: `LiveViewFragment`/`LiveViewController`/`LiveStreamClient` (liveview), `RecordingsFragment`, `LocationFragment`
-- Screenshots: [screenshots/](../screenshots/) — `04_vehicle.png`, `05_trips_list.png`, `05a_trips_stats.png`, `05b_trips_storage.png`, `11*_settings_recording_*.png`, `12*_settings_surveillance_*.png`
+- Native migration exemplars: `LiveViewFragment`/`LiveViewController`/`LiveStreamClient`, `RecordingsFragment`, `LocationFragment`, `VehicleController`, `TripsController`, `PerformanceController`, `RecordingSettingsController`, `SurveillanceSettingsController`

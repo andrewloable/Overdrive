@@ -2,6 +2,8 @@ package net.bladewatch.app.client;
 
 import android.util.Log;
 
+import net.bladewatch.app.server.IpcTokenManager;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -53,6 +55,16 @@ public class CameraDaemonClient {
             writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
             
             connected = true;
+
+            // Send auth token as the first message; server rejects without it
+            String token = IpcTokenManager.getToken();
+            if (token != null) {
+                JSONObject auth = new JSONObject();
+                auth.put("token", token);
+                writer.println(auth.toString());
+                writer.flush();
+            }
+
             Log.d(TAG, "Connected to CameraDaemon on " + HOST + ":" + PORT);
             return true;
         } catch (Exception e) {

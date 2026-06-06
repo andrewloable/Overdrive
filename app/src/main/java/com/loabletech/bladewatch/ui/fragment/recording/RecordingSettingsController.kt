@@ -35,11 +35,12 @@ class RecordingSettingsController(private val context: Context) {
     private var selectedLimitMb = 500L
     private var loadedState: RecordingSettingsLoadState? = null
     private var dirty = false
+    private var loadedOnce = false
 
     init { buildView(); loadData() }
 
     val view: View get() = root
-    fun onResume() { loadData() }
+    fun onResume() { if (loadedOnce) loadData() }
     fun onPause() {}
     fun onDestroy() {}
     fun onConfigurationChanged() { applyTheme(); renderCurrentTab() }
@@ -129,7 +130,7 @@ class RecordingSettingsController(private val context: Context) {
             loadedState = RecordingSettingsLoadState.Loaded(
                 RecordingAllSettings(status, quality, storage, mode))
             dirty = false
-            root.post { renderCurrentTab() }
+            root.post { renderCurrentTab(); loadedOnce = true }
         }, "RecSettingsLoad").apply { isDaemon = true; start() }
     }
 

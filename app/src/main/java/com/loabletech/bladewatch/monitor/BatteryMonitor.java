@@ -1,6 +1,7 @@
 package net.bladewatch.app.monitor;
 
 import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.server.IpcTokenManager;
 
 import org.json.JSONObject;
 
@@ -48,8 +49,12 @@ public class BatteryMonitor {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             
-            // Send GET_VEHICLE_DATA command to get all data
-            writer.println("{\"command\":\"GET_VEHICLE_DATA\"}");
+            // Send GET_VEHICLE_DATA command with auth token
+            JSONObject req = new JSONObject();
+            req.put("command", "GET_VEHICLE_DATA");
+            String token = IpcTokenManager.getToken();
+            if (token != null) req.put("token", token);
+            writer.println(req.toString());
             
             String response = reader.readLine();
             if (response != null) {

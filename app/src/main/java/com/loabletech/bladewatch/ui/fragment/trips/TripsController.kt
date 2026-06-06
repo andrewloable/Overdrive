@@ -11,7 +11,7 @@ import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
 import net.bladewatch.app.ui.util.PreferencesManager
@@ -38,7 +38,7 @@ class TripsController(private val context: Context) {
     private var loadedState: TripsLoadState? = null
 
     // Storage tab – mutable controls
-    private var analyticsSwitch: Switch? = null
+    private var analyticsSwitch: SwitchCompat? = null
     private var rateInput: android.widget.EditText? = null
     private var currencyInput: android.widget.EditText? = null
     private var distanceUnitKmBtn: TextView? = null
@@ -50,6 +50,11 @@ class TripsController(private val context: Context) {
     private var editConfig: TripsConfig? = null
     private var editStorage: TripsStorage? = null
 
+    // Selected values for storage tab (tracked explicitly to avoid GradientDrawable constantState comparison)
+    private var selectedDistUnit = "km"
+    private var selectedStorageType = "INTERNAL"
+    private var loadedOnce = false
+
     init {
         buildView()
         loadData()
@@ -57,7 +62,7 @@ class TripsController(private val context: Context) {
 
     val view: View get() = root
 
-    fun onResume() { loadData() }
+    fun onResume() { if (loadedOnce) loadData() }
     fun onPause() {}
     fun onDestroy() {}
 
@@ -166,23 +171,16 @@ class TripsController(private val context: Context) {
                 val storage = client.fetchStorage()
                 editConfig = config
                 editStorage = storage
-                val state = if (trips.isEmpty()) {
-                    TripsLoadState.Loaded(
-                        trips = emptyList(), summary = summary,
-                        dna = dna, range = range, config = config, storage = storage
-                    )
-                } else {
-                    TripsLoadState.Loaded(
-                        trips = trips, summary = summary,
-                        dna = dna, range = range, config = config, storage = storage
-                    )
-                }
+                val state = TripsLoadState.Loaded(
+                    trips = trips, summary = summary,
+                    dna = dna, range = range, config = config, storage = storage
+                )
                 loadedState = state
-                root.post { renderCurrentTab() }
+                root.post { renderCurrentTab(); loadedOnce = true }
             } catch (e: Exception) {
                 val err = TripsLoadState.Error(e.message ?: "Load failed")
                 loadedState = err
-                root.post { renderCurrentTab() }
+                root.post { renderCurrentTab(); loadedOnce = true }
             }
         }, "TripsLoad").apply { isDaemon = true; start() }
     }
@@ -427,9 +425,19 @@ class TripsController(private val context: Context) {
         val fraction = score.coerceIn(0, 100) / 100f
         val fill = View(context).apply {
             background = pillBackground(Color.parseColor("#4CAF50"))
-            layoutParams = FrameLayout.LayoutParams((fraction * 1000).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+            layoutParams = FrameLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
         }
         barBg.addView(fill)
+        barBg.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                barBg.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                fill.layoutParams = FrameLayout.LayoutParams(
+                    (fraction * barBg.width).toInt(),
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                fill.requestLayout()
+            }
+        })
         val scoreLabel = TextView(context).apply {
             text = "$score"
             textSize = 12f
@@ -446,6 +454,8 @@ class TripsController(private val context: Context) {
         val isDark = isDark()
         val cfg = state.config ?: editConfig
         val storage = state.storage ?: editStorage
+        selectedDistUnit = cfg?.distanceUnit ?: "km"
+        selectedStorageType = storage?.storageType ?: "INTERNAL"
 
         val card = makeCard()
         card.addView(labelText("Trip Storage"))
@@ -462,7 +472,7 @@ class TripsController(private val context: Context) {
             setTextColor(if (isDark) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val sw = Switch(context).apply {
+        val sw = SwitchCompat(context).apply {
             isChecked = cfg?.enabled ?: false
         }
         analyticsSwitch = sw
@@ -507,12 +517,14 @@ class TripsController(private val context: Context) {
         val distUnit = cfg?.distanceUnit ?: "km"
         val distRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val kmBtn = makeSegmentButton("km", distUnit == "km") {
+            selectedDistUnit = "km"
             distanceUnitKmBtn?.background = pillBackground(Color.parseColor("#4CAF50")); distanceUnitKmBtn?.setTextColor(Color.WHITE)
             distanceUnitMiBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
             distanceUnitMiBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
         }
         distanceUnitKmBtn = kmBtn
         val miBtn = makeSegmentButton("mi", distUnit == "mi") {
+            selectedDistUnit = "mi"
             distanceUnitMiBtn?.background = pillBackground(Color.parseColor("#4CAF50")); distanceUnitMiBtn?.setTextColor(Color.WHITE)
             distanceUnitKmBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
             distanceUnitKmBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
@@ -529,6 +541,7 @@ class TripsController(private val context: Context) {
         val storType = storage?.storageType ?: "INTERNAL"
         val locRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val intBtn = makeSegmentButton("Internal", storType == "INTERNAL") {
+            selectedStorageType = "INTERNAL"
             storageInternalBtn?.background = pillBackground(Color.parseColor("#4CAF50")); storageInternalBtn?.setTextColor(Color.WHITE)
             storageSdBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
             storageSdBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
@@ -537,6 +550,7 @@ class TripsController(private val context: Context) {
         val sdAvail = storage?.sdCardAvailable ?: false
         val sdBtn = makeSegmentButton("SD Card${if (!sdAvail) " (N/A)" else ""}", storType == "SD_CARD") {
             if (sdAvail) {
+                selectedStorageType = "SD_CARD"
                 storageSdBtn?.background = pillBackground(Color.parseColor("#4CAF50")); storageSdBtn?.setTextColor(Color.WHITE)
                 storageInternalBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
                 storageInternalBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
@@ -590,16 +604,8 @@ class TripsController(private val context: Context) {
         val rateStr = rateInput?.text?.toString() ?: "0"
         val currency = currencyInput?.text?.toString() ?: "USD"
         val rate = rateStr.toDoubleOrNull() ?: 0.0
-        val distUnit = when {
-            distanceUnitMiBtn?.background?.constantState ==
-                pillBackground(Color.parseColor("#4CAF50")).constantState -> "mi"
-            else -> "km"
-        }
-        val storType = when {
-            storageSdBtn?.let { it.isEnabled && it.background?.constantState ==
-                pillBackground(Color.parseColor("#4CAF50")).constantState } == true -> "SD_CARD"
-            else -> "INTERNAL"
-        }
+        val distUnit = selectedDistUnit
+        val storType = selectedStorageType
         Thread({
             client.saveConfig(enabled, rate, currency, distUnit)
             val currentStorage = editStorage

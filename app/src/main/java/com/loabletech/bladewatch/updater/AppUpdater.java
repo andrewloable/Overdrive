@@ -45,6 +45,10 @@ public class AppUpdater {
 
     private static final String TAG = "AppUpdater";
     private static final String GITHUB_REPO = "yash-srivastava/BladeWatch-release";
+    // TODO: populate with actual SHA-256 once the release keystore is created.
+    // Run: apksigner verify --print-certs app-release.apk | grep SHA-256
+    // or:  keytool -list -v -keystore release.keystore | grep SHA256
+    private static final String EXPECTED_SIGNING_CERT_SHA256 = "";
     private static final String PREFS_NAME = "app_updater";
     private static final String PREF_LAST_UPDATE_TIME = "last_update_timestamp";
     private static final String PREF_JUST_UPDATED = "just_updated";
@@ -762,7 +766,11 @@ public class AppUpdater {
             }
             String certSha256 = bytesToHex(MessageDigest.getInstance("SHA-256")
                     .digest(signatures[0].toByteArray()));
-            return manifest.signingCertSha256.equalsIgnoreCase(certSha256);
+            if (EXPECTED_SIGNING_CERT_SHA256.isEmpty()) {
+                Log.w(TAG, "EXPECTED_SIGNING_CERT_SHA256 not set — skipping cert pin check");
+                return true;
+            }
+            return EXPECTED_SIGNING_CERT_SHA256.equalsIgnoreCase(certSha256);
         } catch (Exception e) {
             Log.w(TAG, "Archive metadata verification failed: " + e.getMessage());
             return false;

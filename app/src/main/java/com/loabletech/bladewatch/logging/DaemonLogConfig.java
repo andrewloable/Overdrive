@@ -32,7 +32,7 @@ public final class DaemonLogConfig {
      * 
      * When true, proguard log stripping is FULLY DISABLED (see proguard-rules.pro).
      */
-    public static final boolean ENABLE_ALL = true;
+    public static final boolean ENABLE_ALL = false;
 
     // ==================== DAEMON PROCESSES ====================
     

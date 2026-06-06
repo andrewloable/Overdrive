@@ -6,6 +6,7 @@ import android.os.Looper;
 import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.monitor.AccMonitor;
 import net.bladewatch.app.server.HttpServer;
+import net.bladewatch.app.server.IpcTokenManager;
 import net.bladewatch.app.server.SurveillanceIpcServer;
 import net.bladewatch.app.server.TcpCommandServer;
 
@@ -324,6 +325,9 @@ public class CameraDaemon {
         // Camera scan disabled — opening/closing all camera IDs can briefly
         // disrupt the BYD dashcam. Camera ID is auto-detected in GpuSurveillancePipeline.init()
         // scanCameras();
+
+        // Generate IPC shared-secret before starting servers
+        IpcTokenManager.generate();
 
         // Start servers
         tcpServer = new TcpCommandServer(TCP_PORT);

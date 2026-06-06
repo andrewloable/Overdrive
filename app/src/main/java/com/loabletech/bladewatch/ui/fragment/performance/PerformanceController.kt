@@ -83,7 +83,7 @@ class PerformanceController(private val context: Context) {
     private fun connectAndStart() {
         Thread({
             val connectResp = httpPostJson("/api/performance/connect", """{"clientId":"bladewatch-native-${System.currentTimeMillis()}"}""")
-            clientId = connectResp?.optString("clientId")
+            clientId = connectResp?.optString("clientId")?.takeIf { it.isNotEmpty() }
 
             val sched = Executors.newSingleThreadScheduledExecutor()
             scheduler = sched

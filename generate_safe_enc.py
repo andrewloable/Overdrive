@@ -5,6 +5,15 @@ Encrypt strings for use with Safe.s() in BladeWatch.
 Uses the same AES-256-CBC key and IV as Safe.java to produce
 Base64-encoded ciphertext that Safe.s() can decrypt at runtime.
 
+IMPORTANT: Safe.s() is for NON-SECRET obfuscation only (internal paths,
+service names, shell commands, package names). The AES key is embedded in
+the APK and can be recovered by decompiling — so Safe.s() provides light
+obfuscation against casual inspection, NOT real confidentiality.
+
+Do NOT use Safe.s() for secrets (credentials, proxy addresses, tokens,
+API keys). Secrets must be stored in bladewatch_secrets.json via
+SecretConfigStore, written at runtime by the daemon process (UID 2000).
+
 Usage:
     python3 generate_safe_enc.py "your plaintext string"
     python3 generate_safe_enc.py              # interactive mode

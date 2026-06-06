@@ -11,7 +11,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatDelegate
 import net.bladewatch.app.ui.util.PreferencesManager
@@ -57,6 +57,7 @@ class SurveillanceSettingsController(private val context: Context) {
     private var currentLng = 0.0
 
     private var mapView: MapView? = null
+    private var loadedOnce = false
 
     init {
         OsmConfig.getInstance().userAgentValue = context.packageName
@@ -65,7 +66,7 @@ class SurveillanceSettingsController(private val context: Context) {
     }
 
     val view: View get() = root
-    fun onResume() { loadData(); mapView?.onResume() }
+    fun onResume() { if (loadedOnce) loadData(); mapView?.onResume() }
     fun onPause() { mapView?.onPause() }
     fun onDestroy() { mapView?.onDetach(); mapView = null }
     fun onConfigurationChanged() { applyTheme(); renderCurrentTab() }
@@ -165,7 +166,7 @@ class SurveillanceSettingsController(private val context: Context) {
 
             loadedState = SurveillanceSettingsLoadState.Loaded(
                 SurveillanceAllSettings(config, status, storage, safeLoc))
-            root.post { renderCurrentTab() }
+            root.post { renderCurrentTab(); loadedOnce = true }
         }, "SurvSettingsLoad").apply { isDaemon = true; start() }
     }
 
@@ -205,7 +206,7 @@ class SurveillanceSettingsController(private val context: Context) {
             setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val sw = Switch(context).apply { isChecked = editEnabled }
+        val sw = SwitchCompat(context).apply { isChecked = editEnabled }
         sw.setOnCheckedChangeListener { _, checked ->
             editEnabled = checked
             Thread({
@@ -243,7 +244,7 @@ class SurveillanceSettingsController(private val context: Context) {
             setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val safeSwitch = Switch(context).apply { isChecked = safeLocFeatureEnabled }
+        val safeSwitch = SwitchCompat(context).apply { isChecked = safeLocFeatureEnabled }
         safeSwitch.setOnCheckedChangeListener { _, checked ->
             safeLocFeatureEnabled = checked
             Thread({ client.toggleSafeLocations(checked); root.post { loadData() } }, "SafeLocToggle").apply { isDaemon = true; start() }
@@ -381,7 +382,7 @@ class SurveillanceSettingsController(private val context: Context) {
                 text = label; textSize = 13f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val sw2 = Switch(context).apply {
+            val sw2 = SwitchCompat(context).apply {
                 isChecked = getter()
                 setOnCheckedChangeListener { _, checked ->
                     when (idx) { 0 -> editDetectPerson = checked; 1 -> editDetectCar = checked; 2 -> editDetectBike = checked }
@@ -479,7 +480,7 @@ class SurveillanceSettingsController(private val context: Context) {
                 text = label; textSize = 13f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
-            val sw = Switch(context).apply {
+            val sw = SwitchCompat(context).apply {
                 isChecked = getter()
                 setOnCheckedChangeListener { _, checked ->
                     when (idx) { 0 -> editCameraFront = checked; 1 -> editCameraRight = checked; 2 -> editCameraRear = checked; 3 -> editCameraLeft = checked }
@@ -501,7 +502,7 @@ class SurveillanceSettingsController(private val context: Context) {
             text = "AI Detection"; textSize = 14f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val aiSw = Switch(context).apply {
+        val aiSw = SwitchCompat(context).apply {
             isChecked = editAiEnabled
             setOnCheckedChangeListener { _, checked -> editAiEnabled = checked }
         }
@@ -514,7 +515,7 @@ class SurveillanceSettingsController(private val context: Context) {
             text = "Night Mode"; textSize = 14f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val nightSw = Switch(context).apply {
+        val nightSw = SwitchCompat(context).apply {
             isChecked = editNightMode
             setOnCheckedChangeListener { _, checked -> editNightMode = checked }
         }

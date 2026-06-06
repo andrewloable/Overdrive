@@ -9,6 +9,7 @@ import android.os.PowerManager;
 
 import net.bladewatch.app.daemon.proxy.Safe;
 import net.bladewatch.app.logging.DaemonLogger;
+import net.bladewatch.app.server.IpcTokenManager;
 import net.bladewatch.app.monitor.BatteryPowerData;
 import net.bladewatch.app.monitor.BatteryVoltageData;
 import net.bladewatch.app.monitor.ChargingStateData;
@@ -2068,6 +2069,12 @@ public class AccSentryDaemon {
 
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // Attach shared-secret token required by SurveillanceIpcServer
+            String token = IpcTokenManager.getToken();
+            if (token != null) {
+                try { command.put("token", token); } catch (Exception ignored) {}
+            }
 
             writer.println(command.toString());
             String responseLine = reader.readLine();

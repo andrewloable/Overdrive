@@ -58,9 +58,9 @@ internal class LiveStreamClient {
     fun stop() {
         running.set(false)
         runCatching { activeSocket?.close() }
-        worker?.join(2_000L)
+        val w = worker
         worker = null
-        releaseCodec()
+        Thread({ w?.join(2_000L); releaseCodec() }, "LiveStop").apply { isDaemon = true; start() }
     }
 
     private fun releaseCodec() {
@@ -160,7 +160,6 @@ internal class LiveStreamClient {
         } finally {
             running.set(false)
             runCatching { activeSocket?.close() }
-            releaseCodec()
         }
     }
 
@@ -256,6 +255,7 @@ internal class LiveStreamClient {
         }
 
         val mask = if (masked) ByteArray(4) { inp.read().toByte() } else null
+        if (payloadLen > 4 * 1024 * 1024L) throw java.io.IOException("WS frame too large: $payloadLen bytes")
         val payload = ByteArray(payloadLen.toInt())
         var offset = 0
         while (offset < payload.size) {

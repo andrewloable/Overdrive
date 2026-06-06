@@ -87,6 +87,18 @@ public class TcpCommandServer {
             BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(client.getOutputStream()), true);
 
+            // Require auth as the first message: {"token": "<value>"}
+            String authLine = reader.readLine();
+            if (authLine == null) return;
+            JSONObject authMsg = new JSONObject(authLine);
+            if (!IpcTokenManager.isValid(authMsg.optString("token", ""))) {
+                JSONObject err = new JSONObject();
+                err.put("status", "error");
+                err.put("message", "Unauthorized");
+                writer.println(err.toString());
+                return;
+            }
+
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
