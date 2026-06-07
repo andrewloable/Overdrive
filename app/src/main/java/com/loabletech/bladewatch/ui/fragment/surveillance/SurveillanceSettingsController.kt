@@ -49,6 +49,11 @@ class SurveillanceSettingsController(private val context: Context) {
     private var editDeterrentCooldown = 60
     private var editStorageType = "INTERNAL"
     private var editStorageLimitMb = 500L
+    private var storageMinLimitMb = 100L
+    private var storageMaxLimitMb = 100000L
+    private var storageMaxLimitMbSdCard = 100000L
+    private var storageInternalTotalMb = 0L
+    private var storageSdCardTotalMb = 0L
 
     // Format external drive state (Storage tab)
     private var formatConfirmPending = false
@@ -162,7 +167,14 @@ class SurveillanceSettingsController(private val context: Context) {
                 editCameraRear = config.cameraRear; editCameraLeft = config.cameraLeft
                 editDeterrent = config.deterrentAction; editDeterrentCooldown = config.deterrentCooldownSeconds
             }
-            if (storage != null) { editStorageType = storage.storageType; editStorageLimitMb = storage.limitMb }
+            if (storage != null) {
+                editStorageType = storage.storageType; editStorageLimitMb = storage.limitMb
+                storageMinLimitMb = storage.minLimitMb
+                storageMaxLimitMb = storage.maxLimitMb
+                storageMaxLimitMbSdCard = storage.maxLimitMbSdCard
+                storageInternalTotalMb = storage.internalTotalMb
+                storageSdCardTotalMb = storage.sdCardTotalMb
+            }
             if (safeLoc != null) {
                 safeLocFeatureEnabled = safeLoc.featureEnabled
                 safeZones = safeLoc.zones
@@ -459,6 +471,38 @@ class SurveillanceSettingsController(private val context: Context) {
         card.addView(locRow)
         card.addView(spacer(dp(12)))
 
+        // Storage limit slider (auto-delete oldest when reached) — restored from
+        // the pre-native-migration web UI, which had this MB-cap control.
+        // Cap the slider at the total physical capacity of the selected volume;
+        // fall back to the daemon's configured max if the size is unknown (0).
+        val totalMb = if (editStorageType == "SD_CARD") storageSdCardTotalMb else storageInternalTotalMb
+        val daemonMax = if (editStorageType == "SD_CARD") storageMaxLimitMbSdCard else storageMaxLimitMb
+        val maxMb = (if (totalMb > 0L) totalMb else daemonMax).coerceAtLeast(storageMinLimitMb + 100L)
+        val minMb = storageMinLimitMb.coerceAtLeast(100L)
+        editStorageLimitMb = editStorageLimitMb.coerceIn(minMb, maxMb)
+        card.addView(fieldLabel("Storage Limit — auto-deletes oldest when reached"))
+        card.addView(spacer(dp(4)))
+        val limitValue = TextView(context).apply {
+            text = formatMb(editStorageLimitMb); textSize = 14f
+            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        card.addView(limitValue)
+        val seek = android.widget.SeekBar(context).apply {
+            max = (((maxMb - minMb) / 100L).toInt()).coerceAtLeast(1)
+            progress = (((editStorageLimitMb - minMb) / 100L).toInt()).coerceIn(0, max)
+            setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: android.widget.SeekBar, p: Int, fromUser: Boolean) {
+                    editStorageLimitMb = (minMb + p.toLong() * 100L).coerceIn(minMb, maxMb)
+                    limitValue.text = formatMb(editStorageLimitMb)
+                }
+                override fun onStartTrackingTouch(sb: android.widget.SeekBar) {}
+                override fun onStopTrackingTouch(sb: android.widget.SeekBar) {}
+            })
+        }
+        card.addView(seek)
+        card.addView(spacer(dp(12)))
+
         if (storage != null) {
             val sizeMb = storage.surveillanceSize / (1024.0 * 1024.0)
             card.addView(infoRow("Storage Usage", "%.1f MB used / ${storage.limitMb} MB limit".format(sizeMb)))
@@ -745,4 +789,7 @@ class SurveillanceSettingsController(private val context: Context) {
     }
     private fun spacer(h: Int) = View(context).apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h) }
     private fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun formatMb(mb: Long): String =
+        if (mb >= 1024) String.format("%.1f GB", mb / 1024.0) else "$mb MB"
 }

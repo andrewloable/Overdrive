@@ -52,6 +52,11 @@ internal class SurveillanceSettingsClient {
             surveillanceCount = json.optLong("surveillanceCount", 0),
             sdCardAvailable = json.optBoolean("sdCardAvailable", false),
             path = json.optString("surveillancePath", ""),
+            minLimitMb = json.optLong("minLimitMb", 100),
+            maxLimitMb = json.optLong("maxLimitMb", 100000),
+            maxLimitMbSdCard = json.optLong("maxLimitMbSdCard", 100000),
+            internalTotalMb = json.optLong("internalTotalSpace", 0) / (1024L * 1024L),
+            sdCardTotalMb = json.optLong("sdCardTotalSpace", 0) / (1024L * 1024L),
         )
     }
 

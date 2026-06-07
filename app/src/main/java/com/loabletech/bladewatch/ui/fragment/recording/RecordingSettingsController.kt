@@ -34,6 +34,11 @@ class RecordingSettingsController(private val context: Context) {
     private var selectedLimit = RecordingLimit.FIVE
     private var selectedStorageType = "INTERNAL"
     private var selectedLimitMb = 500L
+    private var storageMinLimitMb = 100L
+    private var storageMaxLimitMb = 100000L
+    private var storageMaxLimitMbSdCard = 100000L
+    private var storageInternalTotalMb = 0L
+    private var storageSdCardTotalMb = 0L
     private var loadedState: RecordingSettingsLoadState? = null
     private var dirty = false
     private var loadedOnce = false
@@ -135,7 +140,14 @@ class RecordingSettingsController(private val context: Context) {
                 selectedQuality = quality.quality; selectedCodec = quality.codec
                 selectedLimit = RecordingLimit.fromMinutes(quality.segmentMinutes)
             }
-            if (storage != null) { selectedStorageType = storage.storageType; selectedLimitMb = storage.limitMb }
+            if (storage != null) {
+                selectedStorageType = storage.storageType; selectedLimitMb = storage.limitMb
+                storageMinLimitMb = storage.minLimitMb
+                storageMaxLimitMb = storage.maxLimitMb
+                storageMaxLimitMbSdCard = storage.maxLimitMbSdCard
+                storageInternalTotalMb = storage.internalTotalMb
+                storageSdCardTotalMb = storage.sdCardTotalMb
+            }
             loadedState = RecordingSettingsLoadState.Loaded(
                 RecordingAllSettings(status, quality, storage, mode))
             dirty = false
@@ -318,6 +330,39 @@ class RecordingSettingsController(private val context: Context) {
         if (!sdAvail) sdBtn.alpha = 0.5f
         locRow.addView(sdBtn)
         card.addView(locRow)
+        card.addView(spacer(dp(12)))
+
+        // Storage limit slider (auto-delete oldest when reached) — restored from
+        // the pre-native-migration web UI, which had this MB-cap control.
+        // Cap the slider at the total physical capacity of the selected volume;
+        // fall back to the daemon's configured max if the size is unknown (0).
+        val totalMb = if (selectedStorageType == "SD_CARD") storageSdCardTotalMb else storageInternalTotalMb
+        val daemonMax = if (selectedStorageType == "SD_CARD") storageMaxLimitMbSdCard else storageMaxLimitMb
+        val maxMb = (if (totalMb > 0L) totalMb else daemonMax).coerceAtLeast(storageMinLimitMb + 100L)
+        val minMb = storageMinLimitMb.coerceAtLeast(100L)
+        selectedLimitMb = selectedLimitMb.coerceIn(minMb, maxMb)
+        card.addView(fieldLabel("Storage Limit — auto-deletes oldest when reached"))
+        card.addView(spacer(dp(4)))
+        val limitValue = TextView(context).apply {
+            text = formatMb(selectedLimitMb); textSize = 14f
+            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        card.addView(limitValue)
+        val seek = android.widget.SeekBar(context).apply {
+            max = (((maxMb - minMb) / 100L).toInt()).coerceAtLeast(1)
+            progress = (((selectedLimitMb - minMb) / 100L).toInt()).coerceIn(0, max)
+            setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: android.widget.SeekBar, p: Int, fromUser: Boolean) {
+                    selectedLimitMb = (minMb + p.toLong() * 100L).coerceIn(minMb, maxMb)
+                    limitValue.text = formatMb(selectedLimitMb)
+                    if (fromUser) dirty = true
+                }
+                override fun onStartTrackingTouch(sb: android.widget.SeekBar) {}
+                override fun onStopTrackingTouch(sb: android.widget.SeekBar) {}
+            })
+        }
+        card.addView(seek)
         card.addView(spacer(dp(12)))
 
         // Storage info
@@ -549,4 +594,7 @@ class RecordingSettingsController(private val context: Context) {
     }
 
     private fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun formatMb(mb: Long): String =
+        if (mb >= 1024) String.format("%.1f GB", mb / 1024.0) else "$mb MB"
 }

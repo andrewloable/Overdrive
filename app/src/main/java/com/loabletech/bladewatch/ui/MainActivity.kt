@@ -281,6 +281,9 @@ class MainActivity : AppCompatActivity() {
         intent?.let { handleLocationStartIntent(it) }
     }
     
+    /** Guards the one-shot "SD not detected — restart" prompt per process. */
+    private var sdRestartPromptShown = false
+
     override fun onResume() {
         super.onResume()
         // Try to start overlay if permission was just granted (user returned from settings)
@@ -290,6 +293,66 @@ class MainActivity : AppCompatActivity() {
         // JWTs ("Camera unavailable") until force-stopped; invalidating here lets
         // the next authenticated call pull the daemon's current secret over IPC.
         net.bladewatch.app.auth.AuthManager.refresh()
+        // Re-detect the SD card if it isn't currently available. After a fresh
+        // install the removable SD volume isn't yet registered for the new app
+        // UID, so the initial scan falls back to internal storage and recordings
+        // show 0 until an app restart. Re-detecting on resume recovers it without
+        // a restart once the volume becomes accessible.
+        try {
+            val sm = net.bladewatch.app.storage.StorageManager.getInstance()
+            if (!sm.isSdCardAvailable()) sm.refreshSdCard()
+        } catch (_: Throwable) {}
+        scheduleSdAvailabilityCheck()
+    }
+
+    /**
+     * After a fresh install the removable SD volume can take a few seconds to
+     * become accessible to the app UID; if SD storage is selected but the card
+     * still isn't detected after a grace period, inform the user and offer to
+     * restart the app (a fresh process re-runs detection once the volume is
+     * ready — the only reliable recovery for the cached detection state).
+     */
+    private fun scheduleSdAvailabilityCheck() {
+        if (sdRestartPromptShown) return
+        val root = window?.decorView ?: return
+        root.postDelayed({
+            if (sdRestartPromptShown || isFinishing) return@postDelayed
+            try {
+                val sm = net.bladewatch.app.storage.StorageManager.getInstance()
+                val usesSd = sm.getRecordingsStorageType() ==
+                    net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD
+                if (usesSd && !sm.isSdCardAvailable()) {
+                    sm.refreshSdCard()  // one more attempt
+                    if (!sm.isSdCardAvailable()) {
+                        sdRestartPromptShown = true
+                        showSdRestartDialog()
+                    }
+                }
+            } catch (_: Throwable) {}
+        }, 12_000L)
+    }
+
+    private fun showSdRestartDialog() {
+        if (isFinishing) return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("SD Card Not Detected")
+            .setMessage("The SD card wasn't available at startup (common right after " +
+                "installing or updating). Restart the app to access SD card storage " +
+                "for recordings.")
+            .setCancelable(false)
+            .setPositiveButton("Restart") { _, _ -> restartApp() }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
+    /** Relaunch the app from scratch so SD detection re-runs in a fresh process. */
+    private fun restartApp() {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        if (intent != null) startActivity(intent)
+        finish()
+        Runtime.getRuntime().exit(0)
     }
     
     /**

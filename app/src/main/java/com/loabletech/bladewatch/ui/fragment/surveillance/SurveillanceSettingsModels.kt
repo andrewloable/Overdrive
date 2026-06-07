@@ -42,6 +42,13 @@ data class SurveillanceStorageSettings(
     val surveillanceCount: Long,
     val sdCardAvailable: Boolean,
     val path: String,
+    val minLimitMb: Long = 100,
+    val maxLimitMb: Long = 100000,
+    val maxLimitMbSdCard: Long = 100000,
+    // Total capacity (MB) of each volume — used to cap the limit slider at the
+    // physical size of the selected storage location. 0 = unknown.
+    val internalTotalMb: Long = 0,
+    val sdCardTotalMb: Long = 0,
 )
 
 data class SafeLocationsState(

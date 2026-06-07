@@ -54,8 +54,23 @@ the exact stop-daemons → uninstall → install sequence. Key points:
 - Kill the `start_*.sh` watcher scripts FIRST, or they respawn the daemons.
 - Use the grep bracket trick (`start_[c]am_daemon`) so the kill command does not
   match and terminate its own adb shell.
+- `killall` is unreliable on this head unit (BYD toybox) — kill daemons by PID
+  (enumerate with `ps -A -o PID,NAME,ARGS` then `kill -9 <pid>`), not `killall`.
 - Killing daemons can briefly drop the ADB-over-TCP link — reconnect with an
   `until [ "$(adb ... get-state)" = device ]` loop before continuing.
+
+### Clean up debug artifacts when done
+
+Screenshots and pulled logs created while developing/debugging must be removed
+from BOTH the device and the dev machine when finished — never leave them lying
+around:
+- **Device**: `adb -s 192.168.0.251:5555 shell rm -f /sdcard/*.png` (the
+  `screencap -p` outputs land in `/sdcard` root) plus any pulled copies like
+  `/sdcard/*.gz` / `/sdcard/*.jsonl*`. Do NOT touch `/sdcard/BladeWatch/**`
+  (real recordings/trips) or `/sdcard/Pictures/**` (user media).
+- **Dev machine**: remove the pulled screenshots/logs (e.g. `rm -f /tmp/bw_*.png
+  /tmp/*.jsonl* /tmp/bwcfg.json` and any temp venv such as `/tmp/safeenv`).
+- Never commit screenshots, pulled logs, or `*.jsonl.gz` telemetry dumps.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker

@@ -746,19 +746,25 @@ class DashboardFragment : Fragment() {
             var dataAvailable = false
 
             try {
+                // Aggregate from the trips table (/api/trips) — the SAME source
+                // the Trips list reads — so the dashboard "This Week" count and
+                // the Trips list can never disagree. (Previously this read the
+                // separate weekly_rollups table, which could drift from the
+                // trips table and show e.g. "1 trip" on the dashboard while the
+                // Trips list showed none.)
                 val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/trips/summary?days=7", "GET", 3000, 5000)
+                    "/api/trips?days=7&limit=100", "GET", 3000, 5000)
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
                     conn.disconnect()
                     val json = org.json.JSONObject(body)
-                    val summaryArray = json.optJSONArray("summary")
-                    if (summaryArray != null) {
-                        for (i in 0 until summaryArray.length()) {
-                            val week = summaryArray.getJSONObject(i)
-                            tripCount += week.optInt("tripCount", 0)
-                            totalDistanceKm += week.optDouble("totalDistanceKm", 0.0)
-                            totalDurationSeconds += week.optInt("totalDurationSeconds", 0)
+                    val tripsArray = json.optJSONArray("trips")
+                    if (tripsArray != null) {
+                        tripCount = tripsArray.length()
+                        for (i in 0 until tripsArray.length()) {
+                            val trip = tripsArray.getJSONObject(i)
+                            totalDistanceKm += trip.optDouble("distanceKm", 0.0)
+                            totalDurationSeconds += trip.optInt("durationSeconds", 0)
                         }
                         dataAvailable = true
                     }
@@ -787,7 +793,8 @@ class DashboardFragment : Fragment() {
                     String.format("%.0f km", totalDistanceKm)
                 else
                     String.format("%.1f km", totalDistanceKm)
-                tvTripHeadline.text = "$tripCount trips · $distanceStr"
+                val tripWord = if (tripCount == 1) "trip" else "trips"
+                tvTripHeadline.text = "$tripCount $tripWord · $distanceStr"
                 tvStatTrips.text = tripCount.toString()
                 tvStatDistance.text = distanceStr
                 tvStatDriveTime.text = formatDuration(totalDurationSeconds)
