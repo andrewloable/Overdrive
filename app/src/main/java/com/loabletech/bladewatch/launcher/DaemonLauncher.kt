@@ -2,6 +2,7 @@ package net.bladewatch.app.launcher
 
 import android.content.Context
 import android.provider.Settings
+import net.bladewatch.app.config.UnifiedConfigManager
 import net.bladewatch.app.logging.LogManager
 
 /**
@@ -45,6 +46,20 @@ class DaemonLauncher(
         private var accSentryLaunchInProgress = false
         @Volatile
         private var cameraLaunchInProgress = false
+
+        // Startup timing — epoch ms when each launch was initiated
+        @Volatile var cameraLaunchStartMs = 0L
+        @Volatile var sentryLaunchStartMs = 0L
+        @Volatile var accSentryLaunchStartMs = 0L
+    }
+
+    private fun cameraElapsed() = System.currentTimeMillis() - cameraLaunchStartMs
+    private fun sentryElapsed() = System.currentTimeMillis() - sentryLaunchStartMs
+    private fun accSentryElapsed() = System.currentTimeMillis() - accSentryLaunchStartMs
+
+    private fun logTiming(msg: String) {
+        if (!UnifiedConfigManager.isTimingLogsEnabled()) return
+        logManager.info(TAG, msg)
     }
     
     interface LaunchCallback {
@@ -98,16 +113,21 @@ class DaemonLauncher(
             return
         }
         cameraLaunchInProgress = true
-        
+
+        cameraLaunchStartMs = System.currentTimeMillis()
+
+        logTiming("[LAUNCH CameraDaemon +0ms] starting")
         logManager.info(TAG, "Launching CameraDaemon...")
         callback.onLog("Launching CameraDaemon...")
-        
+
         // Check if already running using isDaemonRunning (handles zombies properly)
         isDaemonRunning(CAMERA_DAEMON_PROCESS) { isRunning ->
+            logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] isDaemonRunning=$isRunning")
             if (isRunning) {
                 // Process exists in ps — verify it's actually responsive on the TCP command port.
                 // A stale/crashed daemon shows up in ps but doesn't accept connections.
                 isCameraDaemonResponsive { responsive ->
+                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] isResponsive=$responsive")
                     if (responsive) {
                         logManager.info(TAG, "CameraDaemon already running and responsive")
                         callback.onLog("CameraDaemon already running")
@@ -117,13 +137,16 @@ class DaemonLauncher(
                         logManager.warn(TAG, "CameraDaemon in ps but not responsive — killing stale process and relaunching")
                         callback.onLog("Stale CameraDaemon detected, relaunching...")
                         killStaleCameraDaemon {
+                            logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] stale kill done, launching internal")
                             launchCameraDaemonInternal(outputDir, nativeLibDir, object : LaunchCallback {
                                 override fun onLog(message: String) = callback.onLog(message)
                                 override fun onLaunched() {
+                                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] onLaunched")
                                     cameraLaunchInProgress = false
                                     callback.onLaunched()
                                 }
                                 override fun onError(error: String) {
+                                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] onError: $error")
                                     cameraLaunchInProgress = false
                                     callback.onError(error)
                                 }
@@ -135,10 +158,12 @@ class DaemonLauncher(
                 launchCameraDaemonInternal(outputDir, nativeLibDir, object : LaunchCallback {
                     override fun onLog(message: String) = callback.onLog(message)
                     override fun onLaunched() {
+                        logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] onLaunched")
                         cameraLaunchInProgress = false
                         callback.onLaunched()
                     }
                     override fun onError(error: String) {
+                        logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] onError: $error")
                         cameraLaunchInProgress = false
                         callback.onError(error)
                     }
@@ -151,7 +176,8 @@ class DaemonLauncher(
         val apkPath = context.applicationInfo.sourceDir
         val proxyArgs = getProxyArgs()
         val scriptPath = "/data/local/tmp/start_cam_daemon.sh"
-        
+
+        logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] launchCameraDaemonInternal begin")
         logManager.debug(TAG, "Deploying CameraDaemon watchdog script...")
         callback.onLog("Deploying watchdog script...")
         
@@ -177,18 +203,20 @@ class DaemonLauncher(
             command = cleanupCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] cleanup done")
                     callback.onLog("Old processes cleaned up, writing script...")
                     writeCamDaemonScript(apkPath, proxyArgs, outputDir, nativeLibDir, scriptPath, callback)
                 }
-                
+
                 override fun onError(error: String) {
+                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] cleanup error (continuing)")
                     callback.onLog("Writing script...")
                     writeCamDaemonScript(apkPath, proxyArgs, outputDir, nativeLibDir, scriptPath, callback)
                 }
             }
         )
     }
-    
+
     private fun writeCamDaemonScript(
         apkPath: String, proxyArgs: String, outputDir: String, nativeLibDir: String,
         scriptPath: String, callback: LaunchCallback
@@ -271,12 +299,14 @@ class DaemonLauncher(
             command = writeCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] script written")
                     logManager.info(TAG, "CameraDaemon script written successfully")
                     callback.onLog("Script ready, launching...")
                     launchCamDaemonScript(scriptPath, callback)
                 }
-                
+
                 override fun onError(error: String) {
+                    logManager.error(TAG, "[LAUNCH CameraDaemon +${cameraElapsed()}ms] script write failed: $error")
                     logManager.error(TAG, "Failed to write daemon script: $error")
                     callback.onLog("Script write failed, using fallback...")
                     launchCamDaemonFallback(callback)
@@ -287,20 +317,23 @@ class DaemonLauncher(
     
     private fun launchCamDaemonScript(scriptPath: String, callback: LaunchCallback) {
         val launchCmd = "nohup sh $scriptPath > /dev/null 2>&1 &"
-        
+
         adbShellExecutor.execute(
             command = launchCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] script launched, waiting 1500ms to verify")
                     logManager.info(TAG, "CameraDaemon watchdog launched")
                     callback.onLog("Watchdog active. Verifying daemon...")
-                    
+
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        logTiming("[LAUNCH CameraDaemon +${cameraElapsed()}ms] verifyDaemonRunning begin")
                         verifyDaemonRunning(CAMERA_DAEMON_PROCESS, "CameraDaemon", CAMERA_DAEMON_LOG, callback)
                     }, 1500)
                 }
-                
+
                 override fun onError(error: String) {
+                    logManager.error(TAG, "[LAUNCH CameraDaemon +${cameraElapsed()}ms] script launch error: $error")
                     logManager.error(TAG, "Failed to launch watchdog: $error")
                     callback.onLog("Watchdog launch failed, using fallback...")
                     launchCamDaemonFallback(callback)
@@ -357,6 +390,8 @@ class DaemonLauncher(
      * Monitors ACC state and manages recording/location services.
      */
     fun launchSentryDaemon(callback: LaunchCallback) {
+        sentryLaunchStartMs = System.currentTimeMillis()
+        logTiming("[LAUNCH SentryDaemon +0ms] starting")
         logManager.info(TAG, "Launching SentryDaemon...")
         callback.onLog("Launching SentryDaemon...")
         
@@ -365,6 +400,7 @@ class DaemonLauncher(
             command = "ps -A | grep -w $SENTRY_DAEMON_PROCESS | grep -v grep | grep -v acc_",
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] isRunning check done, running=${output.trim().isNotEmpty()}")
                     if (output.trim().isNotEmpty()) {
                         logManager.info(TAG, "SentryDaemon already running: ${output.trim()}")
                         callback.onLog("SentryDaemon already running")
@@ -373,17 +409,20 @@ class DaemonLauncher(
                     }
                     launchSentryDaemonInternal(callback)
                 }
-                
+
                 override fun onError(error: String) {
+                    logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] isRunning check error, proceeding")
                     launchSentryDaemonInternal(callback)
                 }
             }
         )
     }
-    
+
     private fun launchSentryDaemonInternal(callback: LaunchCallback) {
+        logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] launchSentryDaemonInternal begin")
         callback.onLog("Granting bodywork permissions...")
         grantBodyworkPermissions(callback) {
+            logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] bodywork permissions granted")
             val apkPath = context.applicationInfo.sourceDir
             val proxyArgs = getProxyArgs()
             
@@ -482,21 +521,25 @@ class DaemonLauncher(
      * Fallback method when privileged shell is not available.
      */
     private fun launchSentryDaemonViaAdb(cmd: String, callback: LaunchCallback) {
+        logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] launchSentryDaemonViaAdb executing command")
         logManager.debug(TAG, "Executing SentryDaemon via ADB: $cmd")
-        
+
         adbShellExecutor.execute(
             command = cmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] launch command sent, waiting 2000ms to verify")
                     logManager.info(TAG, "SentryDaemon launch command sent via ADB")
                     callback.onLog("Launch command sent via ADB shell (UID 2000), verifying...")
-                    
+
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] verifySentryDaemonRunning begin")
                         verifySentryDaemonRunning(callback)
                     }, 2000)
                 }
-                
+
                 override fun onError(error: String) {
+                    logManager.error(TAG, "[LAUNCH SentryDaemon +${sentryElapsed()}ms] launch command error: $error")
                     logManager.error(TAG, "Failed to launch SentryDaemon: $error")
                     callback.onError("Launch failed: $error")
                 }
@@ -527,16 +570,19 @@ class DaemonLauncher(
                             else -> "uid=$uid"
                         }
                         
+                        logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] onLaunched PID=$pid UID=$uid ($uidName)")
                         logManager.info(TAG, "SentryDaemon running with PID: $pid, UID: $uid ($uidName)")
                         callback.onLog("SentryDaemon running with PID: $pid as $uidName")
                         callback.onLaunched()
                     } else {
                         // Process not found, check logs
+                        logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] process not found, checking logs")
                         checkSentryDaemonLogs(callback)
                     }
                 }
-                
+
                 override fun onError(error: String) {
+                    logTiming("[LAUNCH SentryDaemon +${sentryElapsed()}ms] verify error, checking logs")
                     checkSentryDaemonLogs(callback)
                 }
             }
@@ -590,7 +636,9 @@ class DaemonLauncher(
             return
         }
         accSentryLaunchInProgress = true
-        
+        accSentryLaunchStartMs = System.currentTimeMillis()
+
+        logTiming("[LAUNCH AccSentryDaemon +0ms] starting")
         logManager.info(TAG, "Launching AccSentryDaemon (UID 2000)...")
         callback.onLog("Launching AccSentryDaemon (UID 2000 for screen control)...")
         
@@ -601,7 +649,8 @@ class DaemonLauncher(
                 override fun onSuccess(output: String) {
                     val hasDaemon = output.contains(ACC_SENTRY_DAEMON_PROCESS)
                     val hasWatchdog = output.contains("start_acc_sentry")
-                    
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] isRunning check done hasDaemon=$hasDaemon hasWatchdog=$hasWatchdog")
+
                     if (hasDaemon) {
                         logManager.info(TAG, "AccSentryDaemon already running")
                         callback.onLog("AccSentryDaemon already running")
@@ -609,7 +658,7 @@ class DaemonLauncher(
                         accSentryLaunchInProgress = false
                         return
                     }
-                    
+
                     if (hasWatchdog) {
                         logManager.info(TAG, "Watchdog process running - daemon will spawn")
                         callback.onLog("Watchdog active, daemon will respawn")
@@ -617,23 +666,25 @@ class DaemonLauncher(
                         accSentryLaunchInProgress = false
                         return
                     }
-                    
+
                     launchAccSentryDaemonInternal(callback)
                 }
-                
+
                 override fun onError(error: String) {
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] isRunning check error, proceeding")
                     launchAccSentryDaemonInternal(callback)
                 }
             }
         )
     }
-    
+
     private fun launchAccSentryDaemonInternal(callback: LaunchCallback) {
         val apkPath = context.applicationInfo.sourceDir
         val proxyArgs = getProxyArgs()
         val watchdogScriptPath = "/data/local/tmp/start_acc_sentry.sh"
         val lockFilePath = "/data/local/tmp/acc_sentry_daemon.lock"
-        
+
+        logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] launchAccSentryDaemonInternal begin")
         logManager.debug(TAG, "Deploying Immortal Watchdog Script for AccSentryDaemon...")
         callback.onLog("Deploying watchdog script via ADB (UID 2000)...")
         
@@ -655,12 +706,14 @@ class DaemonLauncher(
             command = cleanupCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] cleanup done")
                     callback.onLog("Old processes cleaned up, writing watchdog script...")
                     writeWatchdogScript(apkPath, proxyArgs, watchdogScriptPath, callback)
                 }
-                
+
                 override fun onError(error: String) {
                     // pkill returns error if no process found - that's OK
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] cleanup error (continuing)")
                     callback.onLog("Writing watchdog script...")
                     writeWatchdogScript(apkPath, proxyArgs, watchdogScriptPath, callback)
                 }
@@ -750,12 +803,14 @@ class DaemonLauncher(
             command = writeCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] script written")
                     logManager.info(TAG, "Watchdog script written successfully")
                     callback.onLog("Watchdog script ready, launching...")
                     launchWatchdogScript(scriptPath, callback)
                 }
-                
+
                 override fun onError(error: String) {
+                    logManager.error(TAG, "[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] script write failed: $error")
                     logManager.error(TAG, "Failed to write watchdog script: $error")
                     callback.onLog("Watchdog script failed, using fallback...")
                     launchAccSentryDaemonFallback(callback)
@@ -763,23 +818,25 @@ class DaemonLauncher(
             }
         )
     }
-    
+
     /**
      * Launch the watchdog script in background using nohup.
      */
     private fun launchWatchdogScript(scriptPath: String, callback: LaunchCallback) {
         val launchCmd = "nohup sh $scriptPath > /dev/null 2>&1 &"
-        
+
         adbShellExecutor.execute(
             command = launchCmd,
             callback = object : AdbShellExecutor.ShellCallback {
                 override fun onSuccess(output: String) {
+                    logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] script launched, waiting 8000ms to verify")
                     logManager.info(TAG, "Watchdog script launched successfully")
                     callback.onLog("Watchdog active. Verifying daemon...")
-                    
+
                     // Watchdog has 5-second delay after boot wait before starting daemon
                     // Wait 8 seconds to ensure daemon has time to start
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] verifyAccSentryDaemonRunning begin")
                         verifyAccSentryDaemonRunning(callback)
                     }, 8000)
                 }
@@ -852,11 +909,13 @@ class DaemonLauncher(
                             else -> "uid=$uid"
                         }
                         
+                        logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] onLaunched PID=$pid UID=$uid ($uidName)")
                         logManager.info(TAG, "AccSentryDaemon running with PID: $pid, UID: $uid ($uidName)")
                         callback.onLog("AccSentryDaemon running with PID: $pid as $uidName")
                         callback.onLaunched()
                     } else {
                         // Check logs
+                        logTiming("[LAUNCH AccSentryDaemon +${accSentryElapsed()}ms] process not found, checking logs")
                         adbShellExecutor.execute(
                             command = "cat $ACC_SENTRY_DAEMON_LOG 2>/dev/null | tail -30",
                             callback = object : AdbShellExecutor.ShellCallback {
@@ -868,7 +927,7 @@ class DaemonLauncher(
                                         callback.onError("AccSentryDaemon not found and no log")
                                     }
                                 }
-                                
+
                                 override fun onError(error: String) {
                                     callback.onError("AccSentryDaemon not found")
                                 }

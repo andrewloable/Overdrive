@@ -78,6 +78,13 @@ public class CameraDaemon {
     
     // ==================== LOGGING ====================
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
+
+    // ==================== STARTUP TIMING ====================
+    private static long _startTime;
+    private static void logT(String step) {
+        if (!net.bladewatch.app.config.UnifiedConfigManager.isTimingLogsEnabled()) return;
+        log("[STARTUP +" + (System.currentTimeMillis() - _startTime) + "ms] " + step);
+    }
     
     // ==================== SERVERS ====================
     private static TcpCommandServer tcpServer;
@@ -234,23 +241,27 @@ public class CameraDaemon {
     private static java.nio.channels.FileLock fileLock;
 
     public static void main(String[] args) {
+        _startTime = System.currentTimeMillis();
         initFileLogging();
-        
+        logT("initFileLogging done");
+
         // CRITICAL: Acquire singleton lock FIRST - exit if another instance is running
         if (!acquireSingletonLock()) {
             log("ERROR: Another CameraDaemon instance is already running. Exiting.");
             System.exit(1);
             return;
         }
-        
+        logT("singletonLock acquired");
+
         // Enable daemon logging for StorageManager (uses DaemonLogger instead of android.util.Log)
         net.bladewatch.app.storage.StorageManager.enableDaemonLogging();
-        
+
         // SOTA: Fix storage permissions so UI app can read recordings
         // Note: StorageManager constructor will auto-mount SD card if configured
         net.bladewatch.app.storage.StorageManager storageManager =
             net.bladewatch.app.storage.StorageManager.getInstance();
         storageManager.fixAllPermissions();
+        logT("StorageManager.fixAllPermissions done");
 
         // Start the SD-card mount watchdog at daemon boot (instead of only on
         // ACC OFF). The watchdog no-ops when no storage type is set to SD, so
@@ -260,6 +271,7 @@ public class CameraDaemon {
         // a hole where the HTTP server returned empty recordings until the
         // user cycled ACC OFF→ON.
         storageManager.startSdCardWatchdog();
+        logT("startSdCardWatchdog done");
 
         // Touch the OEM-dashcam cleaner singleton so its constructor runs
         // and (if enabled in saved config) auto-starts the periodic monitor.
@@ -267,6 +279,7 @@ public class CameraDaemon {
         // meaning a fresh boot with `enabled=true` in config never actually
         // begins reserving SD space until the user opens a settings screen.
         net.bladewatch.app.storage.ExternalStorageCleaner.getInstance();
+        logT("ExternalStorageCleaner.getInstance done");
 
         // Periodic cleanup of our own recordings/surveillance dirs — runs
         // continuously instead of only while a recording is active. This
@@ -275,12 +288,14 @@ public class CameraDaemon {
         // was recording. Cost: one directory walk every 30s; the threshold
         // check exits early if usage is below 90%.
         storageManager.startPeriodicCleanup();
-        
+        logT("startPeriodicCleanup done");
+
         log("=== CAMERA DAEMON STARTING ===");
         log("PID: " + android.os.Process.myPid() + ", UID: " + android.os.Process.myUid());
 
         // Grant all manifest permissions via shell (supplements PermissionBypassContext)
         PermissionGranter.grantAllPermissions(APP_PACKAGE_NAME());
+        logT("PermissionGranter.grantAllPermissions done");
 
         // Global exception handler - NEVER let the daemon die from uncaught exceptions
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
@@ -303,32 +318,35 @@ public class CameraDaemon {
 
         // Parse arguments (sets outputDir if provided)
         parseArguments(args);
-        
+
         // Initialize outputDir if not set by arguments
         if (outputDir == null) {
             outputDir = PATH_CAMERA_OUTPUT_DIR();
         }
-        
+
         // Load native libraries
         loadNativeLibraries();
-        
+        logT("loadNativeLibraries done");
+
         // Create directories
         new File(outputDir).mkdirs();
         new File(STREAM_DIR()).mkdirs();
         new File(APP_STREAM_DIR).mkdirs();
-        
+
         // Generate device ID
         generateDeviceId();
-        
+        logT("generateDeviceId done");
+
         log("Output dir: " + outputDir);
         log("Device ID: " + deviceId);
-        
+
         // Camera scan disabled — opening/closing all camera IDs can briefly
         // disrupt the BYD dashcam. Camera ID is auto-detected in GpuSurveillancePipeline.init()
         // scanCameras();
 
         // Generate IPC shared-secret before starting servers
         IpcTokenManager.generate();
+        logT("IpcTokenManager.generate done");
 
         // Start servers
         tcpServer = new TcpCommandServer(TCP_PORT);
@@ -342,6 +360,7 @@ public class CameraDaemon {
                 sharedAppContext = createAppContext();
             } catch (Throwable ignored) {}
         }
+        logT("createAppContext done");
 
         // Notifications subsystem — registry, push subscriptions, sinks.
         // Lives in this process because HttpServer (where the API routes bind)
@@ -355,13 +374,16 @@ public class CameraDaemon {
                 log("Notifications init failed: " + e.getMessage());
             }
         }, "NotificationsInit").start();
-        
+        logT("NotificationsInit thread started (async)");
+
         // SOTA: Initialize unified config manager (handles migration from legacy configs)
         net.bladewatch.app.config.UnifiedConfigManager.init();
-        
+        logT("UnifiedConfigManager.init done");
+
         // Load persisted quality settings BEFORE initializing surveillance
         // This ensures the encoder is created with the correct settings
         HttpServer.loadPersistedSettings();
+        logT("HttpServer.loadPersistedSettings done");
         
         // Note: we deliberately don't seed the version file here. The
         // updater writes it after a successful install with the actual
@@ -396,12 +418,15 @@ public class CameraDaemon {
         }
 
         // Initialize surveillance module (will use loaded settings)
+        logT("initSurveillance BEGIN");
         initSurveillance();
+        logT("initSurveillance done");
 
         // Apply persisted settings to GPU pipeline (for runtime changes)
         // Note: Codec/bitrate are already applied during init, but this ensures
         // the config object is in sync and handles any settings that need runtime application
         applyPersistedSettings();
+        logT("applyPersistedSettings done");
 
         // If ACC went OFF before pipeline was ready, apply it now
         // RACE CONDITION FIX: Also verify ACC is still OFF before applying.
@@ -421,22 +446,29 @@ public class CameraDaemon {
         new Thread(httpServer::start, "HttpServer").start();
         new Thread(ipcServer, "SurveillanceIPC").start();
         new Thread(accMonitor::start, "AccMonitor").start();
-        
+        logT("server threads started (TcpServer, HttpServer, SurveillanceIPC, AccMonitor)");
+
         // Initialize GPS monitor with app context for standard LocationManager access
         initGpsMonitor();
+        logT("initGpsMonitor done");
 
         // Initialize Safe Location Manager (geofence zones)
         net.bladewatch.app.surveillance.SafeLocationManager.getInstance().init();
+        logT("SafeLocationManager.init done");
 
         // Initialize Vehicle Data Monitor + BydDataCollector
+        logT("initVehicleDataMonitor BEGIN");
         initVehicleDataMonitor();
+        logT("initVehicleDataMonitor done");
 
         // Initialize Trip Analytics
         try {
             log("Initializing Trip Analytics...");
+            logT("TripAnalyticsManager.init BEGIN");
             tripAnalyticsManager = new net.bladewatch.app.trips.TripAnalyticsManager();
             tripAnalyticsManager.init(sharedAppContext, telemetryDataCollector);
             log("Trip Analytics initialized (enabled=" + tripAnalyticsManager.isEnabled() + ")");
+            logT("TripAnalyticsManager.init done");
 
             // Media catalog (H2 index of recordings/surveillance/proximity).
             // No boot-time reconcile — a large initial scan would block daemon
@@ -445,6 +477,7 @@ public class CameraDaemon {
                 mediaCatalogManager = new net.bladewatch.app.media.MediaCatalogManager();
                 mediaCatalogManager.init();
                 log("Media catalog initialized (available=" + mediaCatalogManager.isAvailable() + ")");
+                logT("MediaCatalogManager.init done");
             } catch (Exception e) {
                 log("Media catalog init failed: " + e.getMessage());
             }
@@ -502,9 +535,11 @@ public class CameraDaemon {
         } catch (Exception e) {
             log("OdometerReader init error: " + e.getMessage());
         }
+        logT("OdometerReader.init done");
 
         // Restore stream mode from previous session
         loadStreamMode();
+        logT("loadStreamMode done");
 
         // RECOVERY: Probe ACC state directly from hardware.
         // If CameraDaemon was restarted (e.g., EGL crash watchdog) while ACC was off,
@@ -519,8 +554,10 @@ public class CameraDaemon {
         } catch (Exception e) {
             log("ACC hardware probe error: " + e.getMessage());
         }
+        logT("ACC hardware probe done");
 
         log("Daemon ready on TCP:" + TCP_PORT + " HTTP:" + HTTP_PORT);
+        logT("=== CAMERA DAEMON READY ===");
         
         // RESILIENT LOOPER: BYD framework listeners (gearbox, bodywork, etc.) can throw
         // uncaught exceptions from their internal processing (e.g., learningEPB → CarSettings

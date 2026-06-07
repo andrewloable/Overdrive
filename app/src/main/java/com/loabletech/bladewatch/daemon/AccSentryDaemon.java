@@ -102,6 +102,13 @@ public class AccSentryDaemon {
     
     // Daemon start time for uptime tracking
     private static long startTime = 0;
+
+    // ==================== STARTUP TIMING ====================
+    private static long _startTime;
+    private static void logT(String step) {
+        if (!net.bladewatch.app.config.UnifiedConfigManager.isTimingLogsEnabled()) return;
+        log("[STARTUP +" + (System.currentTimeMillis() - _startTime) + "ms] " + step);
+    }
     
     // Handler for periodic status checks
     private static android.os.Handler statusHandler = null;
@@ -338,6 +345,7 @@ public class AccSentryDaemon {
     private static java.nio.channels.FileLock fileLock;
 
     public static void main(String[] args) {
+        _startTime = System.currentTimeMillis();
         int myUid = android.os.Process.myUid();
 
         // Configure DaemonLogger for daemon context (enable stdout for app_process)
@@ -347,13 +355,15 @@ public class AccSentryDaemon {
             .withConsoleLog(true));
 
         logger = DaemonLogger.getInstance(TAG, PATH_DATA_LOCAL_TMP());
-        
+        logT("logger initialized");
+
         // CRITICAL: Acquire singleton lock FIRST - exit if another instance is running
         if (!acquireSingletonLock()) {
             log("ERROR: Another AccSentryDaemon instance is already running. Exiting.");
             System.exit(1);
             return;
         }
+        logT("singletonLock acquired");
 
         log("=== ACC Sentry Daemon Starting ===");
         log("UID: " + myUid + " (expected: 2000 shell)");
@@ -368,6 +378,7 @@ public class AccSentryDaemon {
         } catch (Exception e) {
             log("UnifiedConfigManager.init() failed: " + e.getMessage());
         }
+        logT("UnifiedConfigManager.init done");
 
         // Record start time for uptime tracking
         startTime = System.currentTimeMillis();
@@ -379,16 +390,18 @@ public class AccSentryDaemon {
         if (Looper.myLooper() == null) {
             Looper.prepare();
         }
-        
+
         // Create handler for periodic status checks
         statusHandler = new android.os.Handler(Looper.myLooper());
 
         try {
+            logT("createAppContext BEGIN");
             Context context = createAppContext();
             if (context == null) {
                 log("createAppContext failed, trying getSystemContext...");
                 context = getSystemContext();
             }
+            logT("createAppContext done");
 
             if (context != null) {
                 log("Got context: " + context);
@@ -401,38 +414,42 @@ public class AccSentryDaemon {
                 //dumpPowerManagerMethods();
                 //dumpBydPowerDeviceMethods();
                 //dumpBydSettingDeviceMethods();
-                
+
                 // Dump all BYD device methods for discovery
                 //dumpAllBydDeviceMethods();
-                
+
                 // Test instrument device (charging power)
                 //testInstrumentDevice();
 
                 // Acquire WakeLock for guaranteed CPU cycles
                 acquireWakeLock();
+                logT("acquireWakeLock done");
                 //forceSmartSleepReflection();
-                
+
                 // CRITICAL: Whitelist our app from ACC power management killing
                 whitelistAppPackageOld();
+                logT("whitelistAppPackageOld done");
 
                 // CRITICAL: Whitelist app UID with BYD background data-cache services.
                 // BgDataCacheService accepts shell UID (2000), so this only succeeds
                 // when called from the daemon — not from MainActivity (UID 10xxx).
                 applyDataCacheWhitelist();
+                logT("applyDataCacheWhitelist done");
 
                 // Install shutdown hook for debugging process termination
                 installShutdownHook();
-                
+
                 // Log initial memory status
                 logMemoryStatus();
-                
+
                 // Start periodic status monitoring
                 startStatusMonitoring();
-                
+                logT("startStatusMonitoring done");
+
                 // Disable BYD traffic monitor app (consumes data/battery in background)
                 // NOTE: Removed automatic disable — user can now toggle this from the app drawer menu
                 // disableBydTrafficMonitor();
-                
+
                 // Note: VehicleDataMonitor is initialized in CameraDaemon (separate process)
                 // which handles the HTTP API for vehicle data
             } else {
@@ -440,13 +457,16 @@ public class AccSentryDaemon {
             }
 
             // Register bodywork listener for ACC state changes
+            logT("registerBodyworkListener BEGIN");
             boolean registered = registerBodyworkListener(context);
+            logT("registerBodyworkListener done (registered=" + registered + ")");
 
             if (!registered) {
                 log("Bodywork listener failed - ACC monitoring unavailable");
             }
 
             log("Daemon running, entering persistence loop...");
+            logT("=== ACC SENTRY DAEMON READY ===");
             
             // UNKILLABLE LOOP WRAPPER - Crash-proof main loop
             // Automatically restarts logic if a random crash occurs

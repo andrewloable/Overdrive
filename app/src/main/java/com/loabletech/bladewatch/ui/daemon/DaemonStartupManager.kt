@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.daemon
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import net.bladewatch.app.config.UnifiedConfigManager
 import net.bladewatch.app.launcher.AdbDaemonLauncher
 import net.bladewatch.app.launcher.AdbShellExecutor
 import net.bladewatch.app.launcher.ZrokLauncher
@@ -18,6 +19,13 @@ class DaemonStartupManager(
     private val log = LogManager.getInstance()
     private val handler = Handler(Looper.getMainLooper())
     private val adbLauncher = AdbDaemonLauncher(context)
+
+    private var initStartTime = 0L
+    private fun elapsed() = System.currentTimeMillis() - initStartTime
+    private fun logT(step: String) {
+        if (!UnifiedConfigManager.isTimingLogsEnabled()) return
+        log.info(TAG, "[STARTUP +${elapsed()}ms] $step")
+    }
 
     companion object {
         private const val TAG = "DaemonStartup"
@@ -62,21 +70,33 @@ class DaemonStartupManager(
     }
 
     fun initializeOnAppLaunch() {
+        initStartTime = System.currentTimeMillis()
         log.info(TAG, "=== Initializing daemon startup on app launch ===")
         log.info(TAG, "Waiting 45 seconds before starting daemons (system stabilization)...")
+        logT("initializeOnAppLaunch begin")
 
         // Reset user-stopped flags on app launch (fresh start = auto-manage)
         userStoppedDaemons.clear()
 
         // Enable AccessibilityService keep-alive immediately (doesn't need delay)
         enableAccessibilityKeepAlive()
+        logT("enableAccessibilityKeepAlive done")
 
         // Wait 45 seconds for system to fully stabilize before starting any daemons
-        handler.postDelayed({ startCoreDaemons() }, 45000)
-        handler.postDelayed({ startOptionalDaemonsFromPreferences() }, 60000)
+        handler.postDelayed({
+            logT("startCoreDaemons firing (expected +45000ms)")
+            startCoreDaemons()
+        }, 45000)
+        handler.postDelayed({
+            logT("startOptionalDaemons firing (expected +60000ms)")
+            startOptionalDaemonsFromPreferences()
+        }, 60000)
 
         // Start periodic health check after initial daemons have had time to start
-        handler.postDelayed({ startDaemonHealthCheck() }, 90000)
+        handler.postDelayed({
+            logT("startDaemonHealthCheck firing (expected +90000ms)")
+            startDaemonHealthCheck()
+        }, 90000)
     }
 
     /**
@@ -112,21 +132,33 @@ class DaemonStartupManager(
     }*/
 
     private fun initializeOnBoot() {
+        initStartTime = System.currentTimeMillis()
         log.info(TAG, "=== Initializing daemon startup on boot ===")
         log.info(TAG, "Waiting 45 seconds before starting daemons (system stabilization)...")
-        
+        logT("initializeOnBoot begin")
+
         // Reset user-stopped flags on boot
         userStoppedDaemons.clear()
-        
+
         // Enable AccessibilityService keep-alive immediately on boot
         enableAccessibilityKeepAlive()
-        
+        logT("enableAccessibilityKeepAlive done")
+
         // Wait 45 seconds for system to fully stabilize before starting any daemons
-        handler.postDelayed({ startCoreDaemonsViaAdb() }, 45000)
-        handler.postDelayed({ startOptionalDaemonsViaAdb() }, 60000)
+        handler.postDelayed({
+            logT("startCoreDaemonsViaAdb firing (expected +45000ms)")
+            startCoreDaemonsViaAdb()
+        }, 45000)
+        handler.postDelayed({
+            logT("startOptionalDaemonsViaAdb firing (expected +60000ms)")
+            startOptionalDaemonsViaAdb()
+        }, 60000)
 
         // Start periodic health check after initial daemons have had time to start
-        handler.postDelayed({ startDaemonHealthCheck() }, 90000)
+        handler.postDelayed({
+            logT("startDaemonHealthCheck firing (expected +90000ms)")
+            startDaemonHealthCheck()
+        }, 90000)
     }
 
 
@@ -148,19 +180,23 @@ class DaemonStartupManager(
             return
         }
         log.info(TAG, "Starting core daemons (Camera first, then Sentry daemons)...")
-        
+
         // Start Camera Daemon FIRST
         log.info(TAG, "Starting Camera Daemon...")
+        logT("startDaemon(CAMERA_DAEMON) begin")
         vm.startDaemon(DaemonType.CAMERA_DAEMON)
-        
+        logT("startDaemon(CAMERA_DAEMON) dispatched")
+
         // Start Sentry Daemon after Camera Daemon has time to initialize
         handler.postDelayed({
+            logT("startDaemon(SENTRY_DAEMON) firing (expected +5000ms after core start)")
             log.info(TAG, "Starting Sentry Daemon...")
             vm.startDaemon(DaemonType.SENTRY_DAEMON)
         }, 5000)
-        
+
         // Start ACC Sentry Daemon last
         handler.postDelayed({
+            logT("startDaemon(ACC_SENTRY_DAEMON) firing (expected +10000ms after core start)")
             log.info(TAG, "Starting ACC Sentry Daemon...")
             vm.startDaemon(DaemonType.ACC_SENTRY_DAEMON)
         }, 10000)
@@ -168,38 +204,50 @@ class DaemonStartupManager(
 
     private fun startCoreDaemonsViaAdb() {
         log.info(TAG, "Starting core daemons via ADB (Camera first, then Sentry daemons)...")
-        
+
         // Start Camera Daemon FIRST
+        logT("isDaemonRunning(camera_daemon) check begin")
         adbLauncher.isDaemonRunning("camera_daemon") { running ->
+            logT("isDaemonRunning(camera_daemon) result=$running")
             if (!running) {
                 log.info(TAG, "Boot: Starting Camera Daemon...")
                 val nativeLibDir = context.applicationInfo.nativeLibraryDir
                 val outputDir = context.getExternalFilesDir(null)?.absolutePath ?: context.filesDir.absolutePath
-                adbLauncher.launchDaemon(outputDir, nativeLibDir, createLogCallback("CameraDaemon"))
+                logT("launchDaemon(CameraDaemon) begin")
+                adbLauncher.launchDaemon(outputDir, nativeLibDir, createTimedLogCallback("CameraDaemon"))
             } else {
                 log.info(TAG, "Boot: Camera Daemon already running")
             }
         }
-        
+
         // Start Sentry Daemon after Camera Daemon has time to initialize
         handler.postDelayed({
+            logT("isSentryDaemonRunning check firing (expected +5000ms after core start)")
             adbLauncher.isSentryDaemonRunning { running ->
+                logT("isSentryDaemonRunning result=$running")
                 if (!running) {
                     log.info(TAG, "Boot: Starting Sentry Daemon...")
-                    adbLauncher.launchSentryDaemon(createLogCallback("SentryDaemon"))
+                    logT("launchSentryDaemon begin")
+                    adbLauncher.launchSentryDaemon(createTimedLogCallback("SentryDaemon"))
                 } else {
                     log.info(TAG, "Boot: Sentry Daemon already running")
                 }
             }
         }, 5000)
-        
+
         // Start ACC Sentry Daemon last
         handler.postDelayed({
+            logT("isDaemonRunning(acc_sentry_daemon) check firing (expected +10000ms after core start)")
             adbLauncher.isDaemonRunning("acc_sentry_daemon") { running ->
+                logT("isDaemonRunning(acc_sentry_daemon) result=$running")
                 if (!running) {
                     log.info(TAG, "Boot: Starting ACC Sentry Daemon...")
+                    logT("launchAccSentryDaemon begin")
                     adbLauncher.launchAccSentryDaemon(
-                        onSuccess = { log.info(TAG, "Boot: ACC Sentry Daemon started") },
+                        onSuccess = {
+                            logT("launchAccSentryDaemon onLaunched")
+                            log.info(TAG, "Boot: ACC Sentry Daemon started")
+                        },
                         onError = { error -> log.error(TAG, "Boot: ACC Sentry error: $error") }
                     )
                 } else {
@@ -317,6 +365,20 @@ class DaemonStartupManager(
             override fun onLog(message: String) { log.debug(TAG, "[$name] $message") }
             override fun onLaunched() { log.info(TAG, "[$name] Started successfully") }
             override fun onError(error: String) { log.error(TAG, "[$name] Error: $error") }
+        }
+    }
+
+    private fun createTimedLogCallback(name: String): AdbDaemonLauncher.LaunchCallback {
+        return object : AdbDaemonLauncher.LaunchCallback {
+            override fun onLog(message: String) { log.debug(TAG, "[$name] $message") }
+            override fun onLaunched() {
+                logT("[$name] onLaunched (daemon started successfully)")
+                log.info(TAG, "[$name] Started successfully")
+            }
+            override fun onError(error: String) {
+                logT("[$name] onError: $error")
+                log.error(TAG, "[$name] Error: $error")
+            }
         }
     }
 

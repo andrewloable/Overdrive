@@ -581,6 +581,24 @@ object UnifiedConfigManager {
     }
 
     /**
+     * Check whether daemon startup timing logs are enabled.
+     * Default is false — timing logs are a dev/diagnostic tool and are off
+     * in normal operation to keep logcat uncluttered.
+     */
+    @JvmStatic
+    fun isTimingLogsEnabled(): Boolean {
+        return loadConfig().optJSONObject("developerOptions")?.optBoolean("timingLogsEnabled", true) ?: true
+    }
+
+    /**
+     * Update daemon startup timing logs flag.
+     */
+    @JvmStatic
+    fun setTimingLogsEnabled(enabled: Boolean): Boolean {
+        return updateValues("developerOptions", mapOf("timingLogsEnabled" to enabled))
+    }
+
+    /**
      * Get vehicle appearance config section (selected 3D model + body color).
      */
     @JvmStatic

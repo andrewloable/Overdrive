@@ -10,7 +10,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.switchmaterial.SwitchMaterial
 import net.bladewatch.app.R
+import net.bladewatch.app.config.UnifiedConfigManager
 import net.bladewatch.app.ui.MainActivity
 import net.bladewatch.app.ui.util.RecordingScanner
 import java.util.Locale
@@ -55,7 +57,19 @@ class SettingsPrivacyFragment : Fragment() {
         view.findViewById<MaterialButton>(R.id.btnResetData).setOnClickListener {
             (activity as? MainActivity)?.invokeResetDataDialog()
         }
+        setupTimingLogsSwitch(view)
         populateStorage(view)
+    }
+
+    private fun setupTimingLogsSwitch(root: View) {
+        val sw = root.findViewById<SwitchMaterial>(R.id.swTimingLogs) ?: return
+        sw.isChecked = UnifiedConfigManager.isTimingLogsEnabled()
+        root.findViewById<View>(R.id.rowTimingLogs).setOnClickListener {
+            sw.isChecked = !sw.isChecked
+        }
+        sw.setOnCheckedChangeListener { _, checked ->
+            UnifiedConfigManager.setTimingLogsEnabled(checked)
+        }
     }
 
     override fun onResume() {

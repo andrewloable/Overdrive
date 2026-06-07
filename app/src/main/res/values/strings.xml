@@ -760,6 +760,9 @@
     <string name="settings_privacy_storage_count_format">%1$d clip</string>
     <string name="settings_privacy_storage_count_format_plural">%1$d clips</string>
     <string name="settings_privacy_reset_subtitle">Choose categories: recordings, events, daemon configs, cached telemetry…</string>
+    <string name="settings_developer_overline">DEVELOPER</string>
+    <string name="settings_developer_timing_logs_title">Daemon timing logs</string>
+    <string name="settings_developer_timing_logs_subtitle">Log elapsed-time markers during daemon startup. Disable in normal use to keep logcat clean.</string>
 
     <!-- ============================================================== -->
     <!-- Diagnostics health-tile values (Camera + Battery)                -->

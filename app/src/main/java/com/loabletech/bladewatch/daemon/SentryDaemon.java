@@ -28,10 +28,17 @@ import java.lang.reflect.Method;
  * UID 1000 (system) has android.permission.DEVICE_ACC which is required for ACC Lock!
  */
 public class SentryDaemon {
-    
+
     private static final String TAG = "SentryDaemon";
     private static DaemonLogger logger;
     private static PowerManager.WakeLock wakeLock;
+
+    // ==================== STARTUP TIMING ====================
+    private static long _startTime;
+    private static void logT(String step) {
+        if (!net.bladewatch.app.config.UnifiedConfigManager.isTimingLogsEnabled()) return;
+        log("[STARTUP +" + (System.currentTimeMillis() - _startTime) + "ms] " + step);
+    }
 
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
@@ -59,78 +66,89 @@ public class SentryDaemon {
     private static Context appContext = null;
     
     public static void main(String[] args) {
+        _startTime = System.currentTimeMillis();
         int myUid = android.os.Process.myUid();
-        
+
         // Configure DaemonLogger for daemon context (enable stdout for app_process)
         DaemonLogger.configure(DaemonLogger.Config.defaults()
             .withStdoutLog(true)
             .withFileLog(true)
             .withConsoleLog(true));
-        
+
         // Initialize logger based on UID
-        String logDir = (myUid == 1000) 
-            ? PATH_DATA_SYSTEM_SETTINGS() 
+        String logDir = (myUid == 1000)
+            ? PATH_DATA_SYSTEM_SETTINGS()
             : PATH_DATA_LOCAL_TMP();
         logger = DaemonLogger.getInstance(TAG, logDir);
-        
+        logT("logger initialized");
+
         // CRITICAL: Check if another instance is already running BEFORE doing anything else
         if (isDaemonRunning()) {
             log("ERROR: Another SentryDaemon instance is already running. Exiting.");
             System.exit(1);
             return;
         }
-        
+        logT("singletonCheck done");
+
         log("=== Sentry Daemon Starting ===");
         log("UID: " + myUid + " (" + uidToName(myUid) + ")");
         log("PID: " + android.os.Process.myPid());
-        
+
         if (myUid == 1000) {
             log("*** RUNNING AS SYSTEM - CAN ACQUIRE ACC LOCK! ***");
         }
-        
+
         if (Looper.myLooper() == null) {
             Looper.prepare();
         }
-        
+
         try {
+            logT("createAppContext BEGIN");
             Context context = createAppContext();
             if (context == null) {
                 log("createAppContext failed, trying getSystemContext...");
                 context = getSystemContext();
             }
-            
+            logT("createAppContext done");
+
             if (context != null) {
                 log("Got context: " + context);
                 appContext = context;
-                
+
                 // Write PID file for external kill
                 writePidFile();
-                
+                logT("writePidFile done");
+
                 // Start control socket for clean shutdown
                 startControlSocket();
-                
+                logT("startControlSocket done");
+
                 // ACC whitelist and protection DISABLED - causes BYD default dashcam
                 // to lose video signal when running as privileged (UID 1000).
                 // The setPkg2AccWhiteList call elevates our app's camera priority
                 // above the BYD dashcam, stealing its AVMCamera feed.
                 // whitelistAppPackageOld();
                 // protectDaemon(context);
-                
+
                 // Keep WiFi enabled
                 enableWifi();
+                logT("enableWifi done");
             } else {
                 log("WARNING: Running without context - using shell fallbacks");
                 writePidFile();
                 startControlSocket();
                 // protectDaemonViaShell(); // DISABLED - same reason as above
                 enableWifi();
+                logT("fallback setup done (no context)");
             }
-            
+
             log("=== Setup complete, daemon running ===");
-            
+            logT("=== SENTRY DAEMON READY ===");
+
             // Start Location Sidecar monitor to keep GPS service alive when app is killed
             startLocationMonitor();
-            
+            logT("startLocationMonitor done");
+
             // Keep daemon alive
             Looper.loop();
             
