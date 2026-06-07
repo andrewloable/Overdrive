@@ -6,6 +6,8 @@ import java.net.HttpURLConnection
 import java.net.Proxy
 import java.net.URL
 
+internal data class TripSyncResult(val success: Boolean, val message: String)
+
 internal class TripsClient {
 
     fun fetchTrips(days: Int): List<TripItem> {
@@ -181,6 +183,30 @@ internal class TripsClient {
             put("storageLimitMb", limitMb)
         }.toString()
         return httpPost("/api/trips/storage", body, jwt) == 200
+    }
+
+    fun syncDatabase(): TripSyncResult {
+        val jwt = getJwt() ?: return TripSyncResult(false, "Not authenticated")
+        return runCatching {
+            val conn = URL("http://127.0.0.1:8080/api/trips/sync")
+                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 120_000
+            val responseBody = try { conn.inputStream.bufferedReader().readText() }
+                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
+            val json = JSONObject(responseBody)
+            if (json.optBoolean("success", false)) {
+                val added = json.optInt("added", 0)
+                val removed = json.optInt("removed", 0)
+                val total = json.optInt("total", 0)
+                TripSyncResult(true, "Synced: +$added -$removed ($total total)")
+            } else {
+                val error = json.optString("error", "Unknown error")
+                TripSyncResult(false, "Sync failed: $error")
+            }
+        }.getOrElse { e -> TripSyncResult(false, e.message ?: "Network error") }
     }
 
     private fun getJwt(): String? = runCatching {

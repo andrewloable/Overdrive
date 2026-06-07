@@ -64,6 +64,10 @@ class TripsController(private val context: Context) {
     private var selectedStorageType = "INTERNAL"
     private var loadedOnce = false
 
+    // Sync catalog state
+    private var syncRunning = false
+    private var syncResultMessage: String? = null
+
     init {
         buildView()
         loadData()
@@ -218,6 +222,9 @@ class TripsController(private val context: Context) {
     // ──────────────────────────────── RENDER ────────────────────────────────
 
     private fun renderCurrentTab() {
+        if (activeTab != TripsTab.STORAGE) {
+            syncRunning = false; syncResultMessage = null
+        }
         applyTheme()
         updateTabSelection()
         contentArea.removeAllViews()
@@ -645,6 +652,64 @@ class TripsController(private val context: Context) {
         card.addView(applyBtn)
 
         contentArea.addView(card)
+        contentArea.addView(spacer(dp(12)))
+        contentArea.addView(buildTripsSyncCard())
+    }
+
+    private fun buildTripsSyncCard(): android.view.View {
+        val isDark = isDark()
+        val card = makeCard()
+        card.addView(labelText("Database Catalog"))
+        card.addView(spacer(dp(6)))
+        card.addView(TextView(context).apply {
+            text = "Reconcile the trips index with telemetry files on disk."
+            textSize = 12f
+            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+        })
+        card.addView(spacer(dp(12)))
+        when {
+            syncResultMessage != null -> {
+                val isError = !syncResultMessage!!.startsWith("Synced")
+                card.addView(TextView(context).apply {
+                    text = syncResultMessage
+                    textSize = 13f
+                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                })
+                card.addView(spacer(dp(8)))
+                card.addView(TextView(context).apply {
+                    text = "Dismiss"
+                    textSize = 13f; gravity = Gravity.CENTER
+                    setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                    setPadding(0, dp(4), 0, dp(4))
+                    setOnClickListener { syncResultMessage = null; renderCurrentTab() }
+                })
+            }
+            syncRunning -> card.addView(centeredText("Syncing…", 13f))
+            else -> card.addView(TextView(context).apply {
+                text = "Sync Database"
+                textSize = 13f; gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = pillBackground(Color.parseColor("#4CAF50"))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                setOnClickListener { executeTripsSyncDatabase() }
+            })
+        }
+        return card
+    }
+
+    private fun executeTripsSyncDatabase() {
+        syncRunning = true
+        renderCurrentTab()
+        Thread({
+            val result = client.syncDatabase()
+            root.post {
+                syncRunning = false
+                syncResultMessage = result.message
+                renderCurrentTab()
+            }
+        }, "TripsDbSync").apply { isDaemon = true; start() }
     }
 
     private fun saveStorageSettings() {

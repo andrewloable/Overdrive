@@ -529,6 +529,32 @@ const TRIPS = {
         } catch (e) { console.warn('[Trips] CDR cleanup failed:', e); }
     },
 
+    async syncDatabase() {
+        const btn = document.getElementById('btnSyncTripsDb');
+        const label = document.getElementById('btnSyncTripsDbLabel');
+        if (btn) btn.disabled = true;
+        if (label) label.textContent = 'Syncing…';
+        try {
+            const resp = await fetch('/api/trips/sync', { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+                const msg = `Synced: +${data.added} -${data.removed} (${data.total} total)`;
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, 'success');
+                this.loadTrips(this.currentDays, 0);
+            } else if (data.error === 'sync_in_progress') {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync already in progress', 'info');
+            } else {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(data.error || 'Sync failed', 'error');
+            }
+        } catch (e) {
+            if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync failed', 'error');
+            console.warn('[Trips] syncDatabase failed:', e);
+        } finally {
+            if (btn) btn.disabled = false;
+            if (label) label.textContent = 'Sync Database';
+        }
+    },
+
     async loadCdrInfo() {
         try {
             const resp = await fetch('/api/storage/external');

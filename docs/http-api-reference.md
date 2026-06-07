@@ -55,6 +55,9 @@ Handled by `RecordingsApiHandler`:
 - `/video/*`.
 - `/thumb/*`.
 - `/api/events/*`.
+- `POST /api/recordings/sync` — reconcile the media catalog DB against the filesystem.
+  Empty body. Returns `{success:true, added, updated, removed, total}` or
+  `{success:false, error:"sync_in_progress"}` if a reconcile is already running.
 
 The server also supports snapshot-style routes such as:
 
@@ -73,6 +76,8 @@ Handled by `SurveillanceApiHandler` and `SafeLocationApiHandler`:
 - `GET /api/surveillance/snapshot/{quadrant}`.
 - `GET /api/surveillance/filterlog`.
 - `/api/surveillance/safe-locations`.
+- `POST /api/surveillance/sync` — alias for `POST /api/recordings/sync`; reconciles
+  the shared media catalog for all clip types. Same response shape.
 
 ## Streaming
 
@@ -133,6 +138,9 @@ Handled by `TripApiHandler`:
 - `POST /api/trips/config`.
 - `GET /api/trips/storage`.
 - `POST /api/trips/storage`.
+- `POST /api/trips/sync` — reconcile the trips DB against telemetry files on disk.
+  Empty body. Returns `{success:true, added, removed, total}` or
+  `{success:false, error:...}`.
 
 ## Audio Test
 

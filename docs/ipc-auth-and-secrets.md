@@ -54,6 +54,38 @@ App needs deviceSecret
 - `TcpCommandServer` (19876) and `SurveillanceIpcServer` (19877) require a valid IPC token on every request (added in the *IPC token management* change).
 - The IPC token is the **bootstrap**: if the app can't read the token file, the entire fallback path is dead, so secrets/JWTs are unavailable.
 
+## Caller-UID gate (defence in depth on top of the token)
+
+Because `bladewatch_ipc_token` is **world-readable by design** (the app UID must
+read it), the token alone is not a trust boundary: any local process that can
+read it could otherwise drive privileged IPC — `shell` (arbitrary command exec
+as UID 2000) and `secret_get/put/delete` on 19876, and `GET_VEHICLE_DATA`,
+`UPDATE_GPS`, `INSTALL_UPDATE` on 19877.
+
+Both servers therefore verify the **connecting socket's owning UID** before
+processing any command, in addition to the token check:
+
+```
+accept() → PeerCredentials.resolvePeerUid(socket)   // map (clientPort, serverPort) → UID
+         → PeerCredentials.isTrusted(uid)?
+               ├─ no  → close socket, log "rejected untrusted peer uid=…", no command runs
+               └─ yes → proceed to token check → command dispatch
+```
+
+- **Allow-list:** root (0), system (1000), shell/daemon (2000), and the
+  BladeWatch app UID (resolved lazily from the app's package context and cached;
+  matched on the per-user base app-id). Every other UID — including other
+  installed apps — is rejected.
+- **Transport:** a Java TCP `Socket` can't read `SO_PEERCRED`, so
+  [PeerCredentials.java](../app/src/main/java/com/loabletech/bladewatch/server/PeerCredentials.java)
+  locates the client's row in `/proc/net/tcp` / `/proc/net/tcp6` by its
+  `(localPort, remotePort)` pair (unique for an established loopback connection)
+  and reads the owning UID. The daemon runs as shell (2000), which retains read
+  access to those procfs tables on Android 10+. An unresolved UID is **not**
+  trusted (fail-closed, after a brief retry to absorb the accept→procfs race).
+- This is what gates the privileged `shell` / `secret_*` / GPS / update commands
+  — the 644 token is **not** loosened or changed.
+
 ## JWT + live-view flow
 
 ```
@@ -78,6 +110,7 @@ LiveStreamClient.runStream()                          // native live view
 |---|---|---|
 | "Camera unavailable / Auth unavailable" | app can't read `bladewatch_ipc_token` (mode 600) → IPC secret fetch fails | `ls -la /data/local/tmp/bladewatch_ipc_token` → must be `-rw-r--r--` |
 | "Camera unavailable / Auth unavailable" | daemon rejecting IPC token | daemon log: no `Processing command: secret_get` arriving |
+| "Camera unavailable / Auth unavailable" | daemon rejecting the caller's UID | daemon log: `rejected untrusted peer uid=…`; if the app UID is wrongly rejected, app context wasn't ready so `PeerCredentials` couldn't resolve it — check `getAppContext()` is non-null |
 | "Camera unavailable / Daemon not running" | nothing listening on 8080 | `cat /proc/net/tcp6 \| grep 1F90` |
 | CameraDaemon crashes on boot (`UnsatisfiedLinkError`) | JNI symbol names don't match the runtime package after a package rename | `grep -r Java_<pkg> app/src/main/cpp/` must match `applicationId` |
 | "Another CameraDaemon instance is already running" | stale lock from a hung daemon | kill daemon + `rm /data/local/tmp/camera_daemon.lock` (see CLAUDE.md clean reinstall) |
@@ -86,6 +119,7 @@ LiveStreamClient.runStream()                          // native live view
 
 1. **Any file the app must read from `/data/local/tmp` must be world- or group-readable.** Never rely on a bare `FileWriter`/`FileOutputStream` for such files — they default to mode `600`. chmod (`setReadable(true, false)` or `Files.setPosixFilePermissions`) immediately after writing.
 2. **Secrets the app must NOT read directly stay `600`** and are fetched over IPC (the token-gated `secret_get` path). Don't loosen `bladewatch_secrets.json`.
-3. **The IPC token must be readable by the app** — it is the bootstrap for the whole secret/JWT chain.
+3. **The IPC token must be readable by the app** — it is the bootstrap for the whole secret/JWT chain. Keep it `644`; the real trust boundary is the caller-UID gate below, **not** the token.
+6. **Don't weaken the caller-UID gate.** Both IPC servers reject any peer whose UID is not root/system/shell/app (`PeerCredentials.isTrusted`). If you add a new local client (another daemon UID), add it to the allow-list rather than removing the check. The gate must stay fail-closed on an unresolved UID.
 4. **JNI symbol names must track `applicationId`.** A package rename (e.g. `com.loabletech.bladewatch` → `net.bladewatch.app`) requires renaming every `Java_<pkg>_…` symbol in `app/src/main/cpp/`, or the daemon dies with `UnsatisfiedLinkError` at startup and the camera is unavailable.
 5. **Rebuild AND clean-reinstall after native or daemon changes** — shell-launched daemons survive an `install -r`; a stale daemon with the old `.so` keeps running. See the clean-reinstall block in `CLAUDE.md`.

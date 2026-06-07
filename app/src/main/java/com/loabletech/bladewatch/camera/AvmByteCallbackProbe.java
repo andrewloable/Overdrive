@@ -877,6 +877,16 @@ public final class AvmByteCallbackProbe {
                 logger.warn("Could not rename " + tmp + " → " + finalFile
                     + " — keeping .tmp visible");
                 outputPath = tmp.getAbsolutePath();
+            } else if (finalFile.getName().endsWith(".mp4")) {
+                // Live-index the finalized normal recording into the media
+                // catalog so it appears in the UI without waiting for a sync.
+                try {
+                    net.bladewatch.app.media.MediaCatalogManager mcm =
+                            net.bladewatch.app.daemon.CameraDaemon.getMediaCatalogManager();
+                    if (mcm != null) mcm.indexRecording(finalFile);
+                } catch (Throwable t) {
+                    logger.warn("media index (promote) failed: " + t.getMessage());
+                }
             }
         }
     }

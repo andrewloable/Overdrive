@@ -66,6 +66,20 @@ public class SurveillanceIpcServer implements Runnable {
             // exhaust the pool and the IPC server stops accepting commands.
             // 5s is plenty for localhost JSON traffic.
             client.setSoTimeout(5000);
+
+            // Defence in depth: the IPC token is world-readable (644) by design,
+            // so verify the connecting process's UID before handling any command.
+            // GET_VEHICLE_DATA (telemetry), UPDATE_GPS (GPS spoofing) and
+            // INSTALL_UPDATE are sensitive — only root/system/shell-daemon and the
+            // BladeWatch app may reach them. Reject everything else.
+            int peerUid = PeerCredentials.resolvePeerUid(client);
+            if (!PeerCredentials.isTrusted(peerUid)) {
+                logger.warn("Surveillance IPC rejected untrusted peer uid=" + peerUid
+                        + " from " + client.getRemoteSocketAddress());
+                try { client.close(); } catch (Exception ignored) {}
+                return;
+            }
+
             BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             PrintWriter out = new PrintWriter(client.getOutputStream(), true);
 

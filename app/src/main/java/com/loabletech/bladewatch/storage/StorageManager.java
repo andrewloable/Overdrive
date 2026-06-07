@@ -2169,6 +2169,19 @@ public class StorageManager {
         } else if (path.contains(TRIPS_SUBDIR)) {
             onTripFileSaved();
         }
+
+        // 4. Live-index into the media catalog (best-effort). Covers event +
+        // proximity recordings, which finalize through this path. Non-.mp4 and
+        // unrecognised filenames are ignored by the manager.
+        if (file.getName().endsWith(".mp4")) {
+            try {
+                net.bladewatch.app.media.MediaCatalogManager mcm =
+                        net.bladewatch.app.daemon.CameraDaemon.getMediaCatalogManager();
+                if (mcm != null) mcm.indexRecording(file);
+            } catch (Throwable t) {
+                logWarn("media index (onFileSaved) failed: " + t.getMessage());
+            }
+        }
     }
     
     /**

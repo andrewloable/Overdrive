@@ -84,6 +84,18 @@ public class TcpCommandServer {
 
     private void handleClient(Socket client) {
         try {
+            // Defence in depth: the IPC token is world-readable (644) by design,
+            // so verify the connecting process's UID before doing anything. Only
+            // root/system/shell-daemon and the BladeWatch app may drive commands
+            // (notably 'shell' and 'secret_*'). Reject everything else.
+            int peerUid = PeerCredentials.resolvePeerUid(client);
+            if (!PeerCredentials.isTrusted(peerUid)) {
+                CameraDaemon.log("WARN: TCP IPC rejected untrusted peer uid=" + peerUid
+                        + " from " + client.getRemoteSocketAddress());
+                try { client.close(); } catch (Exception e) {}
+                return;
+            }
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(client.getOutputStream()), true);
 

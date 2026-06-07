@@ -35,6 +35,24 @@ public class SurveillanceApiHandler {
             sendConfig(out);
             return true;
         }
+        // Reconcile the media catalog DB against the files on disk. Shares the
+        // single media DB with recordings, so this runs the same full reconcile
+        // (covers normal + sentry + proximity). Lives in the surveillance
+        // namespace so the surveillance settings page has its own Sync button.
+        if (cleanPath.equals("/api/surveillance/sync") && method.equals("POST")) {
+            net.bladewatch.app.media.MediaCatalogManager mcm =
+                    net.bladewatch.app.daemon.CameraDaemon.getMediaCatalogManager();
+            org.json.JSONObject response;
+            if (mcm == null || !mcm.isAvailable()) {
+                response = new org.json.JSONObject();
+                response.put("success", false);
+                response.put("error", "catalog_unavailable");
+            } else {
+                response = mcm.reconcile();
+            }
+            HttpResponse.sendJson(out, response.toString());
+            return true;
+        }
         if (cleanPath.equals("/api/surveillance/config") && method.equals("POST")) {
             handleConfigPost(out, body);
             return true;

@@ -135,6 +135,7 @@ public class CameraDaemon {
     
     // ==================== TRIP ANALYTICS ====================
     private static net.bladewatch.app.trips.TripAnalyticsManager tripAnalyticsManager;
+    private static net.bladewatch.app.media.MediaCatalogManager mediaCatalogManager;
     
     // ==================== TELEMETRY DATA COLLECTOR ====================
     private static net.bladewatch.app.telemetry.TelemetryDataCollector telemetryDataCollector;
@@ -436,6 +437,17 @@ public class CameraDaemon {
             tripAnalyticsManager = new net.bladewatch.app.trips.TripAnalyticsManager();
             tripAnalyticsManager.init(sharedAppContext, telemetryDataCollector);
             log("Trip Analytics initialized (enabled=" + tripAnalyticsManager.isEnabled() + ")");
+
+            // Media catalog (H2 index of recordings/surveillance/proximity).
+            // No boot-time reconcile — a large initial scan would block daemon
+            // start; the catalog auto-rebuilds lazily on the first empty read.
+            try {
+                mediaCatalogManager = new net.bladewatch.app.media.MediaCatalogManager();
+                mediaCatalogManager.init();
+                log("Media catalog initialized (available=" + mediaCatalogManager.isAvailable() + ")");
+            } catch (Exception e) {
+                log("Media catalog init failed: " + e.getMessage());
+            }
 
             // ONE-TIME migration: Clear poisoned consumption buckets if this is a PHEV
             // and the migration hasn't been done yet. Old trips may have been recorded
@@ -840,6 +852,7 @@ public class CameraDaemon {
         
         // Stop services
         if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
+        if (mediaCatalogManager != null) mediaCatalogManager.shutdown();
         if (tcpServer != null) tcpServer.stop();
         if (httpServer != null) httpServer.stop();
         if (ipcServer != null) ipcServer.stop();
@@ -1038,9 +1051,12 @@ public class CameraDaemon {
                     net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop();
                 } catch (Exception e) { /* may not be initialized */ }
                 
-                // 5. Stop services (Trip Analytics)
+                // 5. Stop services (Trip Analytics + Media catalog)
                 try {
                     if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
+                } catch (Exception e) { /* ignore */ }
+                try {
+                    if (mediaCatalogManager != null) mediaCatalogManager.shutdown();
                 } catch (Exception e) { /* ignore */ }
                 
                 // 6. Stop servers (TCP, HTTP, IPC)
@@ -1127,6 +1143,10 @@ public class CameraDaemon {
     
     public static net.bladewatch.app.trips.TripAnalyticsManager getTripAnalyticsManager() {
         return tripAnalyticsManager;
+    }
+
+    public static net.bladewatch.app.media.MediaCatalogManager getMediaCatalogManager() {
+        return mediaCatalogManager;
     }
     
     // ==================== SURVEILLANCE CONTROL ====================

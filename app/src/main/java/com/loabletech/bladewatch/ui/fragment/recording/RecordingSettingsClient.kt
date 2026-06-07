@@ -8,6 +8,7 @@ import java.net.URL
 
 internal data class FormattableVolume(val volumeId: String, val uuid: String?, val mountPath: String?)
 internal data class FormatDriveResult(val success: Boolean, val message: String, val mountPath: String?)
+internal data class SyncResult(val success: Boolean, val message: String)
 
 internal class RecordingSettingsClient {
 
@@ -132,6 +133,32 @@ internal class RecordingSettingsClient {
                 mountPath = json.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
             )
         }.getOrElse { e -> FormatDriveResult(false, e.message ?: "Network error", null) }
+    }
+
+    fun syncCatalog(): SyncResult {
+        val jwt = getJwt() ?: return SyncResult(false, "Not authenticated")
+        return runCatching {
+            val conn = URL("http://127.0.0.1:8080/api/recordings/sync")
+                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 120_000
+            val responseBody = try { conn.inputStream.bufferedReader().readText() }
+                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
+            val json = JSONObject(responseBody)
+            if (json.optBoolean("success", false)) {
+                val added = json.optInt("added", 0)
+                val updated = json.optInt("updated", 0)
+                val removed = json.optInt("removed", 0)
+                val total = json.optInt("total", 0)
+                SyncResult(true, "Synced: +$added ~$updated -$removed ($total total)")
+            } else {
+                val error = json.optString("error", "Unknown error")
+                if (error == "sync_in_progress") SyncResult(false, "Sync already in progress")
+                else SyncResult(false, "Sync failed: $error")
+            }
+        }.getOrElse { e -> SyncResult(false, e.message ?: "Network error") }
     }
 
     private fun getJwt(): String? = runCatching {

@@ -1652,6 +1652,23 @@
                     </div>
                 </div>
 
+                <!-- Sync Database -->
+                <div class="settings-section">
+                    <div class="section-header">
+                        <span>Database</span>
+                    </div>
+                    <div class="settings-group">
+                        <div class="setting-row">
+                            <div class="setting-name">Sync Database</div>
+                            <div class="setting-desc">Reconcile the trips index with telemetry files on disk — adds orphan trips, removes entries for deleted files.</div>
+                        </div>
+                        <button class="btn btn-secondary" id="btnSyncTripsDb" style="width:100%;margin-top:12px;" onclick="TRIPS.syncDatabase()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            <span id="btnSyncTripsDbLabel">Sync Database</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- ========== TRIP DETAIL VIEW ========== -->
                 <div class="trip-detail" id="tripDetail">
                     <div class="detail-header">

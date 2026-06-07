@@ -242,6 +242,126 @@ public class TripAnalyticsManager {
         }
     }
 
+    // ==================== SYNC / RECONCILE ====================
+
+    /**
+     * Manual trips sync: prune trips whose telemetry file is gone, then
+     * re-index any orphan telemetry files into basic trip rows (start/end,
+     * duration, distance + GPS endpoints derived from the samples). Per the
+     * agreed scope this does NOT recompute DNA/efficiency scores or SoC — the
+     * telemetry samples don't carry SoC, so those stay 0 for reconstructed
+     * trips.
+     *
+     * <p>Synchronized for single-flight. The trip DB connection is otherwise
+     * daemon-thread confined; this runs on an HTTP worker, the same concurrency
+     * posture as the existing read endpoints.
+     *
+     * @return {success, added, removed, total} or {success:false, error:...}.
+     */
+    public synchronized org.json.JSONObject reconcileTrips() {
+        java.util.Map<String, Object> m = new java.util.HashMap<>();
+        if (database == null || !database.isAvailable()) {
+            m.put("success", false);
+            m.put("error", "trips_unavailable");
+            return new org.json.JSONObject(m);
+        }
+        try {
+            int removed = database.deleteTripsWithMissingTelemetry();
+
+            java.util.Set<String> known = new java.util.HashSet<>(database.getAllTelemetryPaths());
+            int added = 0;
+            for (File dir : StorageManager.getInstance().getAllTripsDirs()) {
+                if (dir == null || !dir.exists() || !dir.canRead()) continue;
+                File[] files = dir.listFiles((d, name) -> name.endsWith(".jsonl.gz"));
+                if (files == null) continue;
+                for (File f : files) {
+                    if (!f.canRead() || f.length() <= 0) continue;
+                    if (known.contains(f.getAbsolutePath())) continue;
+                    List<TelemetrySample> samples = TelemetryStore.readFromFile(f);
+                    if (samples == null || samples.isEmpty()) continue;
+                    if (samples.size() == 1) {
+                        // A single-sample file cannot produce a valid trip (no distance, no duration).
+                        // Skip the DB insert; leave the file on disk.
+                        logger.warn("Skipping single-sample telemetry file: " + f.getName());
+                        continue;
+                    }
+                    TripRecord t = buildBasicTrip(samples, f.getAbsolutePath());
+                    if (database.insertTrip(t) > 0) {
+                        added++;
+                        known.add(f.getAbsolutePath());
+                    }
+                }
+            }
+
+            int total = database.getTripCount();
+            m.put("success", true);
+            m.put("added", added);
+            m.put("removed", removed);
+            m.put("total", total);
+            logger.info("Trips sync: +" + added + " -" + removed + " (total=" + total + ")");
+        } catch (Exception e) {
+            logger.error("Trips reconcile failed", e);
+            m.put("success", false);
+            m.put("error", e.getMessage());
+        }
+        return new org.json.JSONObject(m);
+    }
+
+    /**
+     * Reconstruct a minimal TripRecord from telemetry samples — start/end,
+     * duration, GPS-derived distance and endpoints, speed stats. No scores or
+     * SoC (not derivable from telemetry samples).
+     */
+    private TripRecord buildBasicTrip(List<TelemetrySample> samples, String telemetryPath) {
+        TripRecord t = new TripRecord();
+        TelemetrySample first = samples.get(0);
+        TelemetrySample last = samples.get(samples.size() - 1);
+        t.startTime = first.timestampMs;
+        t.endTime = last.timestampMs;
+        t.durationSeconds = (int) Math.max(0, (t.endTime - t.startTime) / 1000);
+
+        double distanceKm = 0;
+        double lastLat = 0, lastLon = 0;
+        boolean hasLast = false;
+        int maxSpeed = 0;
+        long speedSum = 0, speedCount = 0;
+        double startLat = 0, startLon = 0, endLat = 0, endLon = 0;
+        boolean haveStart = false;
+        for (TelemetrySample s : samples) {
+            if (s.speedKmh > maxSpeed) maxSpeed = s.speedKmh;
+            speedSum += s.speedKmh;
+            speedCount++;
+            if (s.lat != 0 && s.lon != 0) {
+                if (!haveStart) { startLat = s.lat; startLon = s.lon; haveStart = true; }
+                endLat = s.lat; endLon = s.lon;
+                if (hasLast) {
+                    double d = haversineKm(lastLat, lastLon, s.lat, s.lon);
+                    if (d < 0.5) distanceKm += d;  // filter GPS jumps (matches recorder)
+                }
+                lastLat = s.lat; lastLon = s.lon; hasLast = true;
+            }
+        }
+        t.distanceKm = distanceKm;
+        t.maxSpeedKmh = maxSpeed;
+        t.avgSpeedKmh = speedCount > 0 ? (double) speedSum / speedCount : 0;
+        t.startLat = startLat;
+        t.startLon = startLon;
+        t.endLat = endLat;
+        t.endLon = endLon;
+        t.telemetryFilePath = telemetryPath;
+        return t;
+    }
+
+    private static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
+        double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     // ==================== PRIVATE ====================
 
     /**

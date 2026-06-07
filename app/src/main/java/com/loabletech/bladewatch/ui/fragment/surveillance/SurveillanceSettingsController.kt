@@ -60,6 +60,10 @@ class SurveillanceSettingsController(private val context: Context) {
     private var formatRunning = false
     private var formatResultMessage: String? = null
 
+    // Sync catalog state
+    private var syncRunning = false
+    private var syncResultMessage: String? = null
+
     private var loadedState: SurveillanceSettingsLoadState? = null
     private var safeLocFeatureEnabled = false
     private var safeZones = listOf<SafeZone>()
@@ -192,6 +196,7 @@ class SurveillanceSettingsController(private val context: Context) {
     private fun renderCurrentTab() {
         if (activeTab != SurveillanceSettingsTab.STORAGE) {
             formatConfirmPending = false; formatRunning = false; formatResultMessage = null
+            syncRunning = false; syncResultMessage = null
         }
         applyTheme(); updateTabs()
         mapView?.let { root.post { it.onPause(); it.onDetach() } }
@@ -522,6 +527,9 @@ class SurveillanceSettingsController(private val context: Context) {
             contentArea.addView(spacer(dp(12)))
             contentArea.addView(buildFormatCard())
         }
+
+        contentArea.addView(spacer(dp(12)))
+        contentArea.addView(buildSyncCard())
     }
 
     // ─────────────────────────── FORMAT ──────────────────────────────────
@@ -620,6 +628,59 @@ class SurveillanceSettingsController(private val context: Context) {
                 loadData()
             }
         }, "SurvFormatDrive").apply { isDaemon = true; start() }
+    }
+
+    // ─────────────────────────── SYNC ────────────────────────────────────
+
+    private fun buildSyncCard(): View {
+        val card = makeCard()
+        card.addView(sectionLabel("Database Catalog"))
+        card.addView(spacer(dp(6)))
+        card.addView(fieldLabel("Reconcile the surveillance index with files on disk."))
+        card.addView(spacer(dp(12)))
+        when {
+            syncResultMessage != null -> {
+                val isError = !syncResultMessage!!.startsWith("Synced")
+                card.addView(TextView(context).apply {
+                    text = syncResultMessage
+                    textSize = 13f
+                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                })
+                card.addView(spacer(dp(8)))
+                card.addView(TextView(context).apply {
+                    text = "Dismiss"
+                    textSize = 13f; gravity = Gravity.CENTER
+                    setTextColor(mutedTextColor())
+                    setPadding(0, dp(4), 0, dp(4))
+                    setOnClickListener { syncResultMessage = null; renderCurrentTab() }
+                })
+            }
+            syncRunning -> card.addView(centeredText("Syncing…", 13f))
+            else -> card.addView(TextView(context).apply {
+                text = "Sync Database"
+                textSize = 13f; gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = pill(accentColor())
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                setOnClickListener { executeSyncDatabase() }
+            })
+        }
+        return card
+    }
+
+    private fun executeSyncDatabase() {
+        syncRunning = true
+        renderCurrentTab()
+        Thread({
+            val result = client.syncCatalog()
+            root.post {
+                syncRunning = false
+                syncResultMessage = result.message
+                renderCurrentTab()
+            }
+        }, "SurvDbSync").apply { isDaemon = true; start() }
     }
 
     // ─────────────────────────── ADVANCED ─────────────────────────────────

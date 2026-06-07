@@ -98,8 +98,15 @@ The collector reads initial values, registers listeners, and polls at different 
 Main config path:
 
 ```text
-/data/local/tmp/bladewatch_config.json
+/storage/emulated/0/BladeWatch/data/bladewatch_config.json
 ```
+
+This lives under the user-visible BladeWatch tree (not app-scoped external
+files), so it survives app uninstall/reinstall and updates. A `/data/local/tmp/bladewatch_config.json`
+mirror is still written for older hardcoded readers (`StorageManager`,
+`SurveillanceConfigManager`). On first run after the relocation, a prior
+unified config at `/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_config.json`
+or the `/data/local/tmp` mirror is promoted to the new path rather than rebuilt.
 
 `UnifiedConfigManager` is the main config source. It stores app and daemon settings for:
 
@@ -224,6 +231,65 @@ Telemetry and GPS inputs
 ```
 
 Trip APIs expose lists, details, telemetry, similar trips, GPS traces, summary, driving DNA, range analytics, config, and storage management.
+
+Trip catalog, rollups, and consumption buckets are persisted in an H2 embedded
+database under the user-visible BladeWatch tree so trip history survives app
+uninstall/reinstall and updates:
+
+```text
+/storage/emulated/0/BladeWatch/data/bladewatch_trips_h2.mv.db
+```
+
+`TripDatabase` migrates an existing database from the old `/data/local/tmp/bladewatch_trips_h2.mv.db`
+location once, on first init after the relocation. Trip telemetry sample files
+remain under the `trips` media subdirectory and are governed by `StorageManager`.
+
+A manual reconcile (`POST /api/trips/sync`) prunes trip rows whose telemetry
+`.jsonl.gz` file is missing (legacy rows with no `telemetry_file_path` are
+preserved), then re-indexes orphan telemetry files as minimal trip records
+(start/end/duration/distance derived from GPS; SOC and driving-DNA scores set to 0
+because telemetry samples carry no SOC field).
+
+## Media Catalog (Recordings + Surveillance + Proximity)
+
+Recordings, surveillance clips, and proximity clips are indexed in a second H2 database:
+
+```text
+/storage/emulated/0/BladeWatch/data/bladewatch_media_h2.mv.db
+```
+
+Owned by `MediaCatalogManager` (initialized by `CameraDaemon` alongside the trips
+DB). The single `recordings` table stores one row per `.mp4` clip; the natural key
+is the absolute file path. Indexes on `timestamp_ms` and `type` make the common
+list-by-type-and-date queries fast.
+
+### Live indexing
+
+Clips are indexed the moment they are finalized:
+
+- Normal cam recordings — `AvmByteCallbackProbe.promoteFile()` after the
+  `tmp→final` rename.
+- Event / proximity recordings — `StorageManager.onFileSaved()` at the finalize
+  convergence point.
+- Sidecar enrichment — `EventTimelineCollector.writeJsonSidecar()` triggers a
+  second upsert (MERGE by path) so the row is enriched with actor/severity data as
+  soon as the `.json` sidecar is written; the two-phase upsert is idempotent.
+
+### DB-first reads with lazy auto-rebuild
+
+`RecordingsApiHandler` reads from the DB for list, dates, and stats queries. If the
+DB is empty (fresh install, DB wipe, or pre-existing clips), one reconcile fires
+automatically (`MediaCatalogManager.ensureIndexedOnce`) so the UI is never blank.
+The filesystem scan stays as both the rebuild mechanism and the fallback if the DB
+is unavailable.
+
+### Manual sync
+
+`POST /api/recordings/sync` (and the alias `POST /api/surveillance/sync`) run a
+full reconcile: scan all recording/surveillance/proximity directories, diff against
+`getAllPathState()` (path→[size, mtime, sidecar-mtime]), add/update/remove as
+needed. Returns `{success, added, updated, removed, total}`. A concurrent call
+returns `{success:false, error:"sync_in_progress"}` without blocking.
 
 ## Notification Data Flow
 

@@ -30,11 +30,19 @@ import java.util.concurrent.atomic.AtomicLong
 object UnifiedConfigManager {
     private const val TAG = "UnifiedConfig"
     
-    // Single source of truth. /data/local/tmp can be recreated across BYD
-    // head-unit restarts, so persistent config lives under app external files.
-    private const val CONFIG_PATH = "/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_config.json"
+    // Single source of truth. Config lives under the user-visible BladeWatch
+    // tree (NOT app-scoped external files), so it survives app uninstall /
+    // reinstall and updates — a fresh install picks the existing config back
+    // up instead of starting from defaults. /data/local/tmp can be recreated
+    // across BYD head-unit restarts, and app-scoped files are wiped on
+    // uninstall, so neither is suitable as the persistent home.
+    private const val CONFIG_PATH = "/storage/emulated/0/BladeWatch/data/bladewatch_config.json"
     private const val LEGACY_CONFIG_PATH = "/data/local/tmp/bladewatch_config.json"
-    
+    // Prior persistent home (pre-BladeWatch/data). Older installs kept the
+    // unified config in app-scoped external files; promote it on first run
+    // so existing user settings are preserved rather than rebuilt.
+    private const val LEGACY_APP_FILES_CONFIG = "/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_config.json"
+
     // Legacy paths for migration
     private const val LEGACY_SENTRY_CONFIG = "/data/local/tmp/sentry_config.json"
     private const val LEGACY_CAMERA_SETTINGS = "/data/local/tmp/camera_settings.json"
@@ -58,14 +66,26 @@ object UnifiedConfigManager {
     @JvmStatic
     fun init() {
         val configFile = File(CONFIG_PATH)
-        
-        if (!configFile.exists()) {
-            Log.i(TAG, "Unified config not found, migrating from legacy configs...")
-            migrateFromLegacy()
-        } else {
+
+        if (configFile.exists()) {
             Log.i(TAG, "Unified config exists at $CONFIG_PATH")
             loadConfig()
+            return
         }
+
+        // A prior install may already hold a complete unified config at the
+        // old app-files home or the /data/local/tmp mirror. Promote it to the
+        // new persistent location via loadConfig() (which re-saves to
+        // CONFIG_PATH) instead of rebuilding from the much older per-feature
+        // legacy configs and losing user settings.
+        if (File(LEGACY_APP_FILES_CONFIG).exists() || File(LEGACY_CONFIG_PATH).exists()) {
+            Log.i(TAG, "Promoting prior unified config to $CONFIG_PATH")
+            loadConfig()
+            return
+        }
+
+        Log.i(TAG, "Unified config not found, migrating from legacy configs...")
+        migrateFromLegacy()
     }
     
     /**
@@ -266,8 +286,9 @@ object UnifiedConfigManager {
     @JvmStatic
     fun loadConfig(): JSONObject {
         val configFile = File(CONFIG_PATH)
+        val legacyAppFilesConfigFile = File(LEGACY_APP_FILES_CONFIG)
         val legacyConfigFile = File(LEGACY_CONFIG_PATH)
-        
+
         // Check if file changed since last load
         if (cachedConfig != null && configFile.exists()) {
             val fileModified = configFile.lastModified()
@@ -275,11 +296,16 @@ object UnifiedConfigManager {
                 return cachedConfig!!
             }
         }
-        
+
         return synchronized(this) {
             try {
+                // Prefer the new persistent home, then the old app-files home,
+                // then the /data/local/tmp mirror. When the source is not the
+                // canonical file, it is re-saved to CONFIG_PATH below (one-time
+                // migration), which also re-creates the /data/local/tmp mirror.
                 val sourceFile = when {
                     configFile.exists() -> configFile
+                    legacyAppFilesConfigFile.exists() -> legacyAppFilesConfigFile
                     legacyConfigFile.exists() -> legacyConfigFile
                     else -> null
                 }
@@ -804,7 +830,9 @@ object UnifiedConfigManager {
      * Check if config file exists.
      */
     @JvmStatic
-    fun configExists(): Boolean = File(CONFIG_PATH).exists() || File(LEGACY_CONFIG_PATH).exists()
+    fun configExists(): Boolean = File(CONFIG_PATH).exists() ||
+        File(LEGACY_APP_FILES_CONFIG).exists() ||
+        File(LEGACY_CONFIG_PATH).exists()
     
     /**
      * Get last modified timestamp.
@@ -813,6 +841,8 @@ object UnifiedConfigManager {
     fun getLastModified(): Long {
         val primary = File(CONFIG_PATH)
         if (primary.exists()) return primary.lastModified()
+        val appFiles = File(LEGACY_APP_FILES_CONFIG)
+        if (appFiles.exists()) return appFiles.lastModified()
         val legacy = File(LEGACY_CONFIG_PATH)
         return if (legacy.exists()) legacy.lastModified() else 0L
     }

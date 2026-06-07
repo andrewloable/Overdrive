@@ -34,7 +34,7 @@ Each detailed document includes a `Source References` section. References use `f
 - Local daemon command TCP: `127.0.0.1:19876`.
 - Surveillance IPC TCP: `127.0.0.1:19877`.
 - Embedded web server: `127.0.0.1:8080` by default, or `0.0.0.0:8080` only when LAN HTTP is explicitly enabled.
-- Main shared config: `/data/local/tmp/bladewatch_config.json`.
+- Main shared config: `/storage/emulated/0/BladeWatch/data/bladewatch_config.json` (mirrored to `/data/local/tmp/bladewatch_config.json` for legacy readers).
 - Shared daemon secret store: `/data/local/tmp/bladewatch_secrets.json`.
 - Media base directory: `/storage/emulated/0/BladeWatch`.
 

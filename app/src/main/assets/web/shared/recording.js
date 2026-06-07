@@ -601,6 +601,34 @@ BYD.recording = {
         }
     },
     
+    async syncDatabase() {
+        const btn = document.getElementById('btnSyncRecordingsDb');
+        const label = document.getElementById('btnSyncRecordingsDbLabel');
+        if (btn) btn.disabled = true;
+        if (label) label.textContent = 'Syncing…';
+        try {
+            const resp = await fetch('/api/recordings/sync', { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+                const msg = `Synced: +${data.added} ~${data.updated} -${data.removed} (${data.total} total)`;
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, 'success');
+                if (BYD.recording && BYD.recording.loadRecordings) BYD.recording.loadRecordings();
+                if (BYD.recording && BYD.recording.loadDatesWithRecordings) BYD.recording.loadDatesWithRecordings();
+                if (BYD.recording && BYD.recording.loadStorageStats) BYD.recording.loadStorageStats();
+            } else if (data.error === 'sync_in_progress') {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync already in progress', 'info');
+            } else {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(data.error || 'Sync failed', 'error');
+            }
+        } catch (e) {
+            if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync failed', 'error');
+            console.warn('syncDatabase failed:', e);
+        } finally {
+            if (btn) btn.disabled = false;
+            if (label) label.textContent = 'Sync Database';
+        }
+    },
+
     updateRecLimit(value) {
         this.config.recordingsLimitMb = parseInt(value);
         const v = parseInt(value);

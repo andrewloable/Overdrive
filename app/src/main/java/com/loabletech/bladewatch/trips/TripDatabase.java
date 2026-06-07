@@ -21,7 +21,15 @@ public class TripDatabase {
     private static final String TAG = "TripDatabase";
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
-    private static final String DB_PATH = "/data/local/tmp/bladewatch_trips_h2";
+    // Persistent home under the user-visible BladeWatch tree so the trip
+    // history survives app uninstall/reinstall and updates (the old
+    // /data/local/tmp location can be recreated across head-unit resets).
+    // Both writers run as the shell daemon UID; the app reads via the daemon
+    // API, so external-storage POSIX-permission limits don't apply here.
+    // H2-on-external is already proven by SocHistoryDatabase.
+    private static final String DB_PATH = "/storage/emulated/0/BladeWatch/data/bladewatch_trips_h2";
+    // Old DB home, migrated once on first init (see migrateLegacyDbIfNeeded).
+    private static final String LEGACY_DB_PATH = "/data/local/tmp/bladewatch_trips_h2";
     // DB_CLOSE_ON_EXIT=FALSE: avoid H2's JVM shutdown hook racing the
     // daemon's explicit close path. Without this we hit the same orphaned-
     // lock-file pattern as SocHistoryDatabase, which blocks the next
@@ -43,6 +51,11 @@ public class TripDatabase {
         if (isInitialized) return;
 
         logger.info("Initializing H2 trip database at: " + DB_PATH);
+
+        // Ensure the persistent directory exists and pull forward any
+        // existing trip history from the old /data/local/tmp location.
+        ensureDbDir();
+        migrateLegacyDbIfNeeded();
 
         // Load H2 JDBC driver
         try {
@@ -138,6 +151,59 @@ public class TripDatabase {
             } catch (Exception e2) {
                 return false;
             }
+        }
+    }
+
+    /**
+     * Ensure the parent directory of the H2 database exists. H2 creates the
+     * DB files but not intermediate directories, so the first init on a clean
+     * device would otherwise fail to open the connection.
+     */
+    private void ensureDbDir() {
+        try {
+            java.io.File parent = new java.io.File(DB_PATH).getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                logger.warn("Failed to create trip DB directory: " + parent.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            logger.warn("ensureDbDir failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * One-time migration of the H2 trip database from the old
+     * /data/local/tmp home to the persistent BladeWatch/data home. Runs only
+     * when the new database file does not yet exist and the old one does, so
+     * existing trip history is preserved across the relocation. The old file
+     * is removed after a successful copy to keep a single source of truth.
+     *
+     * H2's default MVStore engine keeps all data in a single "{path}.mv.db"
+     * file; FILE_LOCK=SOCKET means there is no on-disk lock file to carry
+     * over. The .trace.db (diagnostics) file is intentionally not migrated.
+     */
+    private void migrateLegacyDbIfNeeded() {
+        try {
+            java.io.File newDb = new java.io.File(DB_PATH + ".mv.db");
+            if (newDb.exists()) return; // already migrated, or fresh install
+            java.io.File oldDb = new java.io.File(LEGACY_DB_PATH + ".mv.db");
+            if (!oldDb.exists()) return; // nothing to migrate
+
+            java.nio.file.Files.copy(
+                    oldDb.toPath(),
+                    newDb.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            logger.info("Migrated trip DB from " + oldDb.getAbsolutePath()
+                    + " to " + newDb.getAbsolutePath());
+
+            // Single source of truth: drop the old data file once the copy
+            // succeeds. Best-effort — a leftover old file is harmless because
+            // init() never points at it again.
+            if (!oldDb.delete()) {
+                logger.debug("Could not delete old trip DB after migration: " + oldDb.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            // Non-fatal: fall through to opening (a possibly empty) new DB.
+            logger.warn("Trip DB migration skipped: " + e.getMessage());
         }
     }
 
@@ -1200,5 +1266,64 @@ public class TripDatabase {
      */
     public boolean isAvailable() {
         return isInitialized && connection != null;
+    }
+
+    // ==================== SYNC / RECONCILE ====================
+
+    /**
+     * All non-empty telemetry file paths currently referenced by trip rows.
+     * Used by the manual trips sync to detect orphan telemetry files on disk.
+     */
+    public java.util.List<String> getAllTelemetryPaths() {
+        java.util.List<String> paths = new ArrayList<>();
+        if (!ensureConnection()) return paths;
+        String sql = "SELECT telemetry_file_path FROM trips " +
+                "WHERE telemetry_file_path IS NOT NULL AND telemetry_file_path <> ''";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String p = rs.getString(1);
+                if (p != null && !p.isEmpty()) paths.add(p);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to read telemetry paths", e);
+            reconnect();
+        }
+        return paths;
+    }
+
+    /**
+     * Delete trips whose referenced telemetry file no longer exists on disk.
+     * Trips with a null/empty telemetry path are left alone — legacy history
+     * predating telemetry-path storage must NOT be pruned. Returns the number
+     * of rows removed.
+     */
+    public int deleteTripsWithMissingTelemetry() {
+        if (!ensureConnection()) return 0;
+        java.util.List<Long> toDelete = new ArrayList<>();
+        String sql = "SELECT id, telemetry_file_path FROM trips " +
+                "WHERE telemetry_file_path IS NOT NULL AND telemetry_file_path <> ''";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                long id = rs.getLong(1);
+                String p = rs.getString(2);
+                if (p != null && !p.isEmpty() && !new java.io.File(p).exists()) {
+                    toDelete.add(id);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to scan trips for missing telemetry", e);
+            reconnect();
+            return 0;
+        }
+        int removed = 0;
+        for (long id : toDelete) {
+            if (deleteTrip(id)) removed++;
+        }
+        if (removed > 0) {
+            logger.info("Trips sync: pruned " + removed + " trip(s) with missing telemetry");
+        }
+        return removed;
     }
 }

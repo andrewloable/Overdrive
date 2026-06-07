@@ -212,6 +212,33 @@ internal class SurveillanceSettingsClient {
         }
     }
 
+    fun syncCatalog(): net.bladewatch.app.ui.fragment.recording.SyncResult {
+        val jwt = getJwt()
+            ?: return net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Not authenticated")
+        return runCatching {
+            val conn = URL("http://127.0.0.1:8080/api/surveillance/sync")
+                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 120_000
+            val responseBody = try { conn.inputStream.bufferedReader().readText() }
+                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
+            val json = JSONObject(responseBody)
+            if (json.optBoolean("success", false)) {
+                val added = json.optInt("added", 0)
+                val updated = json.optInt("updated", 0)
+                val removed = json.optInt("removed", 0)
+                val total = json.optInt("total", 0)
+                net.bladewatch.app.ui.fragment.recording.SyncResult(true, "Synced: +$added ~$updated -$removed ($total total)")
+            } else {
+                val error = json.optString("error", "Unknown error")
+                if (error == "sync_in_progress") net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync already in progress")
+                else net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync failed: $error")
+            }
+        }.getOrElse { e -> net.bladewatch.app.ui.fragment.recording.SyncResult(false, e.message ?: "Network error") }
+    }
+
     fun formatVolume(volumeId: String): net.bladewatch.app.ui.fragment.recording.FormatDriveResult {
         val jwt = getJwt()
             ?: return net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, "Not authenticated", null)

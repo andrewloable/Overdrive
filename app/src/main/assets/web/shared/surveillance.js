@@ -604,6 +604,32 @@ BYD.surveillance = {
         }
     },
     
+    async syncDatabase() {
+        const btn = document.getElementById('btnSyncSurveillanceDb');
+        const label = document.getElementById('btnSyncSurveillanceDbLabel');
+        if (btn) btn.disabled = true;
+        if (label) label.textContent = 'Syncing…';
+        try {
+            const resp = await fetch('/api/surveillance/sync', { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+                const msg = `Synced: +${data.added} ~${data.updated} -${data.removed} (${data.total} total)`;
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(msg, 'success');
+                if (BYD.events && BYD.events.loadRecordings) BYD.events.loadRecordings();
+            } else if (data.error === 'sync_in_progress') {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync already in progress', 'info');
+            } else {
+                if (BYD.utils && BYD.utils.toast) BYD.utils.toast(data.error || 'Sync failed', 'error');
+            }
+        } catch (e) {
+            if (BYD.utils && BYD.utils.toast) BYD.utils.toast('Sync failed', 'error');
+            console.warn('syncDatabase failed:', e);
+        } finally {
+            if (btn) btn.disabled = false;
+            if (label) label.textContent = 'Sync Database';
+        }
+    },
+
     updateSurvLimit(value) {
         this.config.surveillanceLimitMb = parseInt(value);
         const v = parseInt(value);

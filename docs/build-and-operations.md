@@ -170,7 +170,8 @@ Project instructions require a completed session to:
 
 Important runtime files:
 
-- `/data/local/tmp/bladewatch_config.json`.
+- `/storage/emulated/0/BladeWatch/data/bladewatch_config.json` (persistent config; mirrored to `/data/local/tmp/bladewatch_config.json`).
+- `/storage/emulated/0/BladeWatch/data/bladewatch_trips_h2.mv.db` (persistent trip database).
 - `/data/local/tmp/bladewatch_secrets.json`.
 - `/data/local/tmp/zrok.log`.
 - `/storage/emulated/0/BladeWatch`.

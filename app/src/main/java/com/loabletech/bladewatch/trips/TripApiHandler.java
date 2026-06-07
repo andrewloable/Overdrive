@@ -97,6 +97,12 @@ public class TripApiHandler {
                 if ("POST".equals(method)) return handlePostStorage(body);
             }
 
+            // Route: POST /api/trips/sync — reconcile trips DB with telemetry
+            // files on disk (prune missing, re-index orphans; no recompute).
+            if (path.equals("/api/trips/sync") && "POST".equals(method)) {
+                return manager.reconcileTrips();
+            }
+
             // Route: GET /api/trips/{id}/telemetry
             Matcher telemetryMatcher = TRIP_TELEMETRY_PATTERN.matcher(path);
             if (telemetryMatcher.matches() && "GET".equals(method)) {

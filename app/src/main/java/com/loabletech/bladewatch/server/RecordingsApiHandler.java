@@ -179,6 +179,14 @@ public class RecordingsApiHandler {
             return true;
         }
 
+        // Reconcile the media catalog DB against the files on disk. Covers
+        // normal + sentry + proximity (single media DB, one scan). Used by the
+        // "Sync database" button on the recordings/surveillance settings pages.
+        if (path.equals("/api/recordings/sync") && method.equals("POST")) {
+            syncCatalog(out);
+            return true;
+        }
+
         // In-flight recording probe — used by events.js to show a pinned
         // "Recording in progress" placeholder when the user taps a fresh
         // notification before the .mp4.tmp has been finalized to .mp4.
@@ -580,40 +588,12 @@ public class RecordingsApiHandler {
                                        int page, int pageSize,
                                        String classFilter, String severityFilter,
                                        String proximityFilter) throws Exception {
-        List<JSONObject> recordings = new ArrayList<>();
-        StorageManager sm = StorageManager.getInstance();
-        
-        // Scan normal recordings from ALL locations (active + alternate + legacy)
-        if (typeFilter == null || typeFilter.equals("normal")) {
-            for (File dir : sm.getAllRecordingsDirs()) {
-                scanDirectory(dir, "normal", recordings, dateFilter);
-            }
-            // Also scan legacy location for backward compatibility
-            File legacyDir = new File(LEGACY_RECORDINGS_DIR);
-            if (legacyDir.exists()) {
-                scanDirectory(legacyDir, "normal", recordings, dateFilter);
-            }
-        }
-        
-        // Scan sentry events from ALL locations (active + alternate + legacy)
-        if (typeFilter == null || typeFilter.equals("sentry")) {
-            for (File dir : sm.getAllSurveillanceDirs()) {
-                scanDirectory(dir, "sentry", recordings, dateFilter);
-            }
-            // Also scan legacy location for backward compatibility
-            File legacySentryDir = new File(LEGACY_SENTRY_DIR);
-            if (legacySentryDir.exists()) {
-                scanDirectory(legacySentryDir, "sentry", recordings, dateFilter);
-            }
-        }
-        
-        // Scan proximity events from ALL locations (active + alternate)
-        if (typeFilter == null || typeFilter.equals("proximity")) {
-            for (File dir : sm.getAllProximityDirs()) {
-                scanDirectory(dir, "proximity", recordings, dateFilter);
-            }
-        }
-        
+        // DB-first: serve from the media catalog when available, falling back
+        // to a live filesystem scan (which is also the catalog's rebuild
+        // source). The remaining post-processing (sort, dedup, filter,
+        // paginate) is identical regardless of source.
+        List<JSONObject> recordings = gatherRecordings(typeFilter, dateFilter);
+
         // Sort by timestamp descending (newest first)
         recordings.sort((a, b) -> Long.compare(
             b.optLong("timestamp", 0), 
@@ -690,6 +670,166 @@ public class RecordingsApiHandler {
         HttpResponse.sendJson(out, response.toString());
     }
     
+    // ==================== MEDIA CATALOG (H2) INTEGRATION ====================
+
+    /**
+     * The media catalog DB, or null when the daemon/manager isn't up yet.
+     */
+    private static net.bladewatch.app.media.RecordingsDatabase mediaDb() {
+        net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+        return mcm != null ? mcm.getDatabase() : null;
+    }
+
+    /**
+     * Parse one recording (mp4 + optional sidecar) into the API JSON shape,
+     * bypassing the in-memory list cache. Used by MediaCatalogManager to index
+     * a clip into the H2 catalog — one parser keeps live indexing and the
+     * filesystem rebuild in lockstep (no schema drift).
+     */
+    public static JSONObject parseForIndex(File file, String type) {
+        return parseRecordingUncached(file, type);
+    }
+
+    /**
+     * Scan every recording storage root (active + alternate + legacy) and
+     * return absolute-path -&gt; type for each readable, non-empty .mp4. Single
+     * source of truth for "what files exist", shared by the reconcile/sync and
+     * the filesystem fallback so they always agree.
+     */
+    public static Map<String, String> scanAllMp4s() {
+        Map<String, String> present = new HashMap<>();
+        StorageManager sm = StorageManager.getInstance();
+        for (File dir : sm.getAllRecordingsDirs()) collectMp4s(dir, "normal", present);
+        collectMp4s(new File(LEGACY_RECORDINGS_DIR), "normal", present);
+        for (File dir : sm.getAllSurveillanceDirs()) collectMp4s(dir, "sentry", present);
+        collectMp4s(new File(LEGACY_SENTRY_DIR), "sentry", present);
+        for (File dir : sm.getAllProximityDirs()) collectMp4s(dir, "proximity", present);
+        return present;
+    }
+
+    private static void collectMp4s(File dir, String type, Map<String, String> present) {
+        if (dir == null || !dir.exists() || !dir.isDirectory() || !dir.canRead()) return;
+        File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+        if (files == null) return;
+        for (File f : files) {
+            if (!f.canRead() || f.length() <= 0) continue;
+            // First writer wins per absolute path; type derives from the dir.
+            present.putIfAbsent(f.getAbsolutePath(), type);
+        }
+    }
+
+    /**
+     * Inclusive-exclusive [start, end) epoch-ms window for a YYYY-MM-DD filter,
+     * or the full range when no filter is supplied.
+     *
+     * <p>Returns {0L, 0L} (empty range → zero results) for a malformed filter
+     * so the caller receives an empty list rather than the entire recording
+     * library. This makes the bad-input case visible to the client.
+     */
+    private static long[] dateRangeMs(String dateFilter) {
+        if (dateFilter == null || dateFilter.trim().isEmpty()) {
+            return new long[]{0L, Long.MAX_VALUE};
+        }
+        try {
+            String[] parts = dateFilter.trim().split("-");
+            if (parts.length != 3) {
+                CameraDaemon.log("Invalid date filter (expected YYYY-MM-DD): " + dateFilter);
+                return new long[]{0L, 0L};
+            }
+            Calendar cal = Calendar.getInstance();
+            cal.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1,
+                    Integer.parseInt(parts[2]), 0, 0, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            long start = cal.getTimeInMillis();
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+            return new long[]{start, cal.getTimeInMillis()};
+        } catch (Exception e) {
+            CameraDaemon.log("Invalid date filter: " + dateFilter);
+            return new long[]{0L, 0L};
+        }
+    }
+
+    /**
+     * Gather recordings DB-first (with lazy auto-rebuild when empty), falling
+     * back to a live filesystem scan.
+     */
+    private static List<JSONObject> gatherRecordings(String typeFilter, String dateFilter) {
+        net.bladewatch.app.media.RecordingsDatabase db = mediaDb();
+        if (db != null && db.isAvailable()) {
+            net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+            // Trigger background reconcile on first call (no-op after that).
+            // Handles both fully-empty DB and partial-index cases.
+            if (mcm != null) mcm.ensureIndexedOnce();
+            if (db.getCount() > 0) {
+                long[] range = dateRangeMs(dateFilter);
+                List<JSONObject> result = db.getRecordings(typeFilter, range[0], range[1]);
+                // Remove phantom entries whose physical file has been deleted but whose
+                // DB row wasn't pruned (e.g. deleteByPath threw after file.delete()).
+                result.removeIf(o -> {
+                    String p = o.optString("path", "");
+                    return !p.isEmpty() && !new File(p).exists();
+                });
+                return result;
+            }
+        }
+        return gatherFromFilesystem(typeFilter, dateFilter);
+    }
+
+    /**
+     * Live filesystem scan (the catalog rebuild source + ultimate fallback).
+     */
+    private static List<JSONObject> gatherFromFilesystem(String typeFilter, String dateFilter) {
+        List<JSONObject> recordings = new ArrayList<>();
+        StorageManager sm = StorageManager.getInstance();
+
+        // Scan normal recordings from ALL locations (active + alternate + legacy)
+        if (typeFilter == null || typeFilter.equals("normal")) {
+            for (File dir : sm.getAllRecordingsDirs()) {
+                scanDirectory(dir, "normal", recordings, dateFilter);
+            }
+            File legacyDir = new File(LEGACY_RECORDINGS_DIR);
+            if (legacyDir.exists()) {
+                scanDirectory(legacyDir, "normal", recordings, dateFilter);
+            }
+        }
+
+        // Scan sentry events from ALL locations (active + alternate + legacy)
+        if (typeFilter == null || typeFilter.equals("sentry")) {
+            for (File dir : sm.getAllSurveillanceDirs()) {
+                scanDirectory(dir, "sentry", recordings, dateFilter);
+            }
+            File legacySentryDir = new File(LEGACY_SENTRY_DIR);
+            if (legacySentryDir.exists()) {
+                scanDirectory(legacySentryDir, "sentry", recordings, dateFilter);
+            }
+        }
+
+        // Scan proximity events from ALL locations (active + alternate)
+        if (typeFilter == null || typeFilter.equals("proximity")) {
+            for (File dir : sm.getAllProximityDirs()) {
+                scanDirectory(dir, "proximity", recordings, dateFilter);
+            }
+        }
+        return recordings;
+    }
+
+    /**
+     * POST /api/recordings/sync — reconcile the media catalog DB with the
+     * files on disk (add/update/remove) so the DB is exactly 1:1 with storage.
+     */
+    private static void syncCatalog(OutputStream out) throws Exception {
+        net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+        JSONObject response;
+        if (mcm == null || !mcm.isAvailable()) {
+            response = new JSONObject();
+            response.put("success", false);
+            response.put("error", "catalog_unavailable");
+        } else {
+            response = mcm.reconcile();
+        }
+        HttpResponse.sendJson(out, response.toString());
+    }
+
     private static void scanDirectory(File dir, String type, List<JSONObject> recordings, String dateFilter) {
         if (!dir.exists() || !dir.isDirectory()) return;
 
@@ -701,18 +841,9 @@ public class RecordingsApiHandler {
 
         long filterStart = 0, filterEnd = 0;
         if (dateFilter != null && !dateFilter.isEmpty()) {
-            try {
-                // Parse date filter (YYYY-MM-DD format)
-                String[] parts = dateFilter.split("-");
-                Calendar cal = Calendar.getInstance();
-                cal.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, Integer.parseInt(parts[2]), 0, 0, 0);
-                cal.set(Calendar.MILLISECOND, 0);
-                filterStart = cal.getTimeInMillis();
-                cal.add(Calendar.DAY_OF_MONTH, 1);
-                filterEnd = cal.getTimeInMillis();
-            } catch (Exception e) {
-                CameraDaemon.log("Invalid date filter: " + dateFilter);
-            }
+            long[] range = dateRangeMs(dateFilter);
+            filterStart = range[0];
+            filterEnd = range[1];
         }
 
         for (File file : files) {
@@ -903,31 +1034,11 @@ public class RecordingsApiHandler {
         Set<String> dates = new HashSet<>();
         Map<String, Integer> countByDate = new HashMap<>();
         Map<String, Boolean> hasSentryByDate = new HashMap<>();
-        StorageManager sm = StorageManager.getInstance();
-        
-        // Scan normal recordings from ALL locations (active + alternate + legacy)
-        for (File dir : sm.getAllRecordingsDirs()) {
-            scanDatesInDirectory(dir, false, dates, countByDate, hasSentryByDate);
+
+        if (!datesFromDb(dates, countByDate, hasSentryByDate)) {
+            datesFromFilesystem(dates, countByDate, hasSentryByDate);
         }
-        File legacyDir = new File(LEGACY_RECORDINGS_DIR);
-        if (legacyDir.exists()) {
-            scanDatesInDirectory(legacyDir, false, dates, countByDate, hasSentryByDate);
-        }
-        
-        // Scan sentry events from ALL locations (active + alternate + legacy)
-        for (File dir : sm.getAllSurveillanceDirs()) {
-            scanDatesInDirectory(dir, true, dates, countByDate, hasSentryByDate);
-        }
-        File legacySentryDir = new File(LEGACY_SENTRY_DIR);
-        if (legacySentryDir.exists()) {
-            scanDatesInDirectory(legacySentryDir, true, dates, countByDate, hasSentryByDate);
-        }
-        
-        // Scan proximity events from ALL locations (active + alternate)
-        for (File dir : sm.getAllProximityDirs()) {
-            scanDatesInDirectory(dir, false, dates, countByDate, hasSentryByDate);
-        }
-        
+
         JSONArray datesArray = new JSONArray();
         for (String date : dates) {
             JSONObject dateObj = new JSONObject();
@@ -944,7 +1055,58 @@ public class RecordingsApiHandler {
         HttpResponse.sendJson(out, response.toString());
     }
     
-    private static void scanDatesInDirectory(File dir, boolean isSentry, Set<String> dates, 
+    /**
+     * Populate the calendar maps from the media catalog DB. Returns false when
+     * the DB is unavailable or empty (after a lazy auto-rebuild attempt).
+     */
+    private static boolean datesFromDb(Set<String> dates, Map<String, Integer> countByDate,
+                                       Map<String, Boolean> hasSentryByDate) {
+        net.bladewatch.app.media.RecordingsDatabase db = mediaDb();
+        if (db == null || !db.isAvailable()) return false;
+        net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+        if (mcm != null) mcm.ensureIndexedOnce();  // no-op after first call
+        if (db.getCount() == 0) return false;
+
+        SimpleDateFormat ymd = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        // getDateRows() returns [timestamp_ms, isSentry] — no json CLOB, no JSONObject allocation.
+        for (long[] row : db.getDateRows()) {
+            String formattedDate = ymd.format(new Date(row[0]));
+            dates.add(formattedDate);
+            countByDate.merge(formattedDate, 1, Integer::sum);
+            if (row[1] == 1) hasSentryByDate.put(formattedDate, true);
+        }
+        return true;
+    }
+
+    /**
+     * Filesystem scan of recording dates (catalog rebuild source + fallback).
+     */
+    private static void datesFromFilesystem(Set<String> dates, Map<String, Integer> countByDate,
+                                            Map<String, Boolean> hasSentryByDate) {
+        StorageManager sm = StorageManager.getInstance();
+
+        for (File dir : sm.getAllRecordingsDirs()) {
+            scanDatesInDirectory(dir, false, dates, countByDate, hasSentryByDate);
+        }
+        File legacyDir = new File(LEGACY_RECORDINGS_DIR);
+        if (legacyDir.exists()) {
+            scanDatesInDirectory(legacyDir, false, dates, countByDate, hasSentryByDate);
+        }
+
+        for (File dir : sm.getAllSurveillanceDirs()) {
+            scanDatesInDirectory(dir, true, dates, countByDate, hasSentryByDate);
+        }
+        File legacySentryDir = new File(LEGACY_SENTRY_DIR);
+        if (legacySentryDir.exists()) {
+            scanDatesInDirectory(legacySentryDir, true, dates, countByDate, hasSentryByDate);
+        }
+
+        for (File dir : sm.getAllProximityDirs()) {
+            scanDatesInDirectory(dir, false, dates, countByDate, hasSentryByDate);
+        }
+    }
+
+    private static void scanDatesInDirectory(File dir, boolean isSentry, Set<String> dates,
             Map<String, Integer> countByDate, Map<String, Boolean> hasSentryByDate) {
         if (!dir.exists() || !dir.isDirectory() || !dir.canRead()) return;
         
@@ -992,107 +1154,22 @@ public class RecordingsApiHandler {
      */
     private static void getStorageStats(OutputStream out) throws Exception {
         StorageManager storage = StorageManager.getInstance();
-        
-        long normalSize = 0, normalCount = 0;
-        long sentrySize = 0, sentryCount = 0;
-        long proximitySize = 0, proximityCount = 0;
-        
-        long normalTodayCount = 0;
-        long sentryTodayCount = 0;
-        long proximityTodayCount = 0;
-        
+
         String todayStr = new SimpleDateFormat("yyyyMMdd", Locale.US).format(new Date());
-        
-        // Track seen filenames to avoid double-counting files that exist in both locations
-        Set<String> seenNormal = new HashSet<>();
-        Set<String> seenSentry = new HashSet<>();
-        Set<String> seenProximity = new HashSet<>();
-        
-        // Normal recordings from ALL locations
-        for (File dir : storage.getAllRecordingsDirs()) {
-            if (!dir.exists() || !dir.canRead()) continue;
-            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
-            if (files == null) continue;
-            for (File f : files) {
-                if (!f.canRead() || f.length() <= 0) continue;
-                if (seenNormal.contains(f.getName())) continue;
-                seenNormal.add(f.getName());
-                normalSize += f.length();
-                normalCount++;
-                if (isFileFromToday(f.getName(), todayStr, CAM_PATTERN, 2)) {
-                    normalTodayCount++;
-                }
-            }
+
+        // [normalSize, normalCount, sentrySize, sentryCount, proximitySize,
+        //  proximityCount, normalToday, sentryToday, proximityToday]
+        long[] agg = new long[9];
+        if (!aggregateStatsFromDb(agg, todayStr)) {
+            aggregateStatsFromFilesystem(storage, agg, todayStr);
         }
-        // Legacy location
-        File legacyDir = new File(LEGACY_RECORDINGS_DIR);
-        if (legacyDir.exists() && legacyDir.canRead()) {
-            File[] files = legacyDir.listFiles((d, name) -> name.endsWith(".mp4"));
-            if (files != null) {
-                for (File f : files) {
-                    if (!f.canRead() || f.length() <= 0) continue;
-                    if (seenNormal.contains(f.getName())) continue;
-                    seenNormal.add(f.getName());
-                    normalSize += f.length();
-                    normalCount++;
-                    if (isFileFromToday(f.getName(), todayStr, CAM_PATTERN, 2)) {
-                        normalTodayCount++;
-                    }
-                }
-            }
-        }
-        
-        // Sentry events from ALL locations
-        for (File dir : storage.getAllSurveillanceDirs()) {
-            if (!dir.exists() || !dir.canRead()) continue;
-            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
-            if (files == null) continue;
-            for (File f : files) {
-                if (!f.canRead() || f.length() <= 0) continue;
-                if (seenSentry.contains(f.getName())) continue;
-                seenSentry.add(f.getName());
-                sentrySize += f.length();
-                sentryCount++;
-                if (isFileFromToday(f.getName(), todayStr, EVENT_PATTERN, 1)) {
-                    sentryTodayCount++;
-                }
-            }
-        }
-        // Legacy sentry location
-        File legacySentryDir = new File(LEGACY_SENTRY_DIR);
-        if (legacySentryDir.exists() && legacySentryDir.canRead()) {
-            File[] files = legacySentryDir.listFiles((d, name) -> name.endsWith(".mp4"));
-            if (files != null) {
-                for (File f : files) {
-                    if (!f.canRead() || f.length() <= 0) continue;
-                    if (seenSentry.contains(f.getName())) continue;
-                    seenSentry.add(f.getName());
-                    sentrySize += f.length();
-                    sentryCount++;
-                    if (isFileFromToday(f.getName(), todayStr, EVENT_PATTERN, 1)) {
-                        sentryTodayCount++;
-                    }
-                }
-            }
-        }
-        
-        // Proximity events from ALL locations
-        for (File dir : storage.getAllProximityDirs()) {
-            if (!dir.exists() || !dir.canRead()) continue;
-            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
-            if (files == null) continue;
-            for (File f : files) {
-                if (!f.canRead() || f.length() <= 0) continue;
-                if (seenProximity.contains(f.getName())) continue;
-                seenProximity.add(f.getName());
-                proximitySize += f.length();
-                proximityCount++;
-                if (isFileFromToday(f.getName(), todayStr, PROXIMITY_PATTERN, 1)) {
-                    proximityTodayCount++;
-                }
-            }
-        }
-        
+        long normalSize = agg[0], normalCount = agg[1];
+        long sentrySize = agg[2], sentryCount = agg[3];
+        long proximitySize = agg[4], proximityCount = agg[5];
+        long normalTodayCount = agg[6];
+        long sentryTodayCount = agg[7];
+        long proximityTodayCount = agg[8];
+
         // Get available space from the active recordings directory
         File activeRecDir = storage.getRecordingsDir();
         long availableSpace = activeRecDir.exists() ? activeRecDir.getFreeSpace() : 0;
@@ -1140,6 +1217,101 @@ public class RecordingsApiHandler {
         HttpResponse.sendJson(out, response.toString());
     }
     
+    /**
+     * Aggregate per-type counts/sizes/today-counts from the media catalog DB.
+     * Dedups by filename per type (a clip on SD + internal counts once), exactly
+     * like the filesystem aggregation. Returns false when the DB is unavailable
+     * or empty (after a lazy auto-rebuild attempt) so the caller falls back.
+     */
+    private static boolean aggregateStatsFromDb(long[] agg, String todayStr) {
+        net.bladewatch.app.media.RecordingsDatabase db = mediaDb();
+        if (db == null || !db.isAvailable()) return false;
+        net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+        if (mcm != null) mcm.ensureIndexedOnce();  // no-op after first call
+        if (db.getCount() == 0) return false;
+
+        // Convert "yyyyMMdd" todayStr to an inclusive-exclusive epoch range.
+        String dateFmt = todayStr.substring(0, 4) + "-" + todayStr.substring(4, 6)
+                + "-" + todayStr.substring(6, 8);
+        long[] todayRange = dateRangeMs(dateFmt);
+        // aggregateForStats uses live File.length() for sizes; no json CLOB scanned.
+        db.aggregateForStats(agg, todayRange[0], todayRange[1]);
+        return agg[1] > 0 || agg[3] > 0 || agg[5] > 0;
+    }
+
+    /**
+     * Filesystem aggregation (catalog rebuild source + fallback). Scans ALL
+     * locations via StorageManager, deduplicating by filename per type.
+     */
+    private static void aggregateStatsFromFilesystem(StorageManager storage, long[] agg, String todayStr) {
+        Set<String> seenNormal = new HashSet<>();
+        Set<String> seenSentry = new HashSet<>();
+        Set<String> seenProximity = new HashSet<>();
+
+        // Normal recordings from ALL locations
+        for (File dir : storage.getAllRecordingsDirs()) {
+            if (!dir.exists() || !dir.canRead()) continue;
+            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.canRead() || f.length() <= 0) continue;
+                if (!seenNormal.add(f.getName())) continue;
+                agg[0] += f.length(); agg[1]++;
+                if (isFileFromToday(f.getName(), todayStr, CAM_PATTERN, 2)) agg[6]++;
+            }
+        }
+        File legacyDir = new File(LEGACY_RECORDINGS_DIR);
+        if (legacyDir.exists() && legacyDir.canRead()) {
+            File[] files = legacyDir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files != null) {
+                for (File f : files) {
+                    if (!f.canRead() || f.length() <= 0) continue;
+                    if (!seenNormal.add(f.getName())) continue;
+                    agg[0] += f.length(); agg[1]++;
+                    if (isFileFromToday(f.getName(), todayStr, CAM_PATTERN, 2)) agg[6]++;
+                }
+            }
+        }
+
+        // Sentry events from ALL locations
+        for (File dir : storage.getAllSurveillanceDirs()) {
+            if (!dir.exists() || !dir.canRead()) continue;
+            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.canRead() || f.length() <= 0) continue;
+                if (!seenSentry.add(f.getName())) continue;
+                agg[2] += f.length(); agg[3]++;
+                if (isFileFromToday(f.getName(), todayStr, EVENT_PATTERN, 1)) agg[7]++;
+            }
+        }
+        File legacySentryDir = new File(LEGACY_SENTRY_DIR);
+        if (legacySentryDir.exists() && legacySentryDir.canRead()) {
+            File[] files = legacySentryDir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files != null) {
+                for (File f : files) {
+                    if (!f.canRead() || f.length() <= 0) continue;
+                    if (!seenSentry.add(f.getName())) continue;
+                    agg[2] += f.length(); agg[3]++;
+                    if (isFileFromToday(f.getName(), todayStr, EVENT_PATTERN, 1)) agg[7]++;
+                }
+            }
+        }
+
+        // Proximity events from ALL locations
+        for (File dir : storage.getAllProximityDirs()) {
+            if (!dir.exists() || !dir.canRead()) continue;
+            File[] files = dir.listFiles((d, name) -> name.endsWith(".mp4"));
+            if (files == null) continue;
+            for (File f : files) {
+                if (!f.canRead() || f.length() <= 0) continue;
+                if (!seenProximity.add(f.getName())) continue;
+                agg[4] += f.length(); agg[5]++;
+                if (isFileFromToday(f.getName(), todayStr, PROXIMITY_PATTERN, 1)) agg[8]++;
+            }
+        }
+    }
+
     /**
      * Check if a filename matches today's date based on the pattern.
      * @param filename The filename to check
@@ -1289,6 +1461,22 @@ public class RecordingsApiHandler {
         // Invalidate the in-memory parse cache so the next /api/recordings
         // call doesn't return a phantom entry for the just-deleted file.
         RECORDING_CACHE.remove(mp4File.getAbsolutePath());
+
+        // Prune the media catalog row too, otherwise the DB-first list keeps a
+        // phantom entry until the next sync.
+        try {
+            net.bladewatch.app.media.MediaCatalogManager mcm = CameraDaemon.getMediaCatalogManager();
+            if (mcm != null && mcm.getDatabase() != null) {
+                boolean removed = mcm.getDatabase().deleteByPath(mp4File.getAbsolutePath());
+                if (!removed) {
+                    CameraDaemon.log("WARN: deleteByPath returned false for "
+                            + mp4File.getName() + " — phantom entry may persist until next Sync");
+                }
+            }
+        } catch (Exception e) {
+            CameraDaemon.log("WARN: deleteByPath threw for " + mp4File.getName()
+                    + ": " + e.getMessage() + " — phantom entry may persist until next Sync");
+        }
 
         // JSON event timeline
         String jsonName = filename.replace(".mp4", ".json");

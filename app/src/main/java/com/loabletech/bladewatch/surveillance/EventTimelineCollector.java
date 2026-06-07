@@ -733,6 +733,17 @@ public class EventTimelineCollector {
             logger.info(String.format("Timeline saved (v3): %s (%d spans, %d actors, dur=%ds)",
                     jsonFile.getName(), count, actorsArr.length(), durationMs / 1000));
 
+            // Re-index the recording now that the enriched sidecar exists, so
+            // the catalog row carries severity/actors. Idempotent (MERGE by
+            // path) and runs on the writer executor, off the encoder thread.
+            try {
+                net.bladewatch.app.media.MediaCatalogManager mcm =
+                        net.bladewatch.app.daemon.CameraDaemon.getMediaCatalogManager();
+                if (mcm != null) mcm.indexRecording(mp4File);
+            } catch (Throwable t) {
+                logger.warn("media index (sidecar) failed: " + t.getMessage());
+            }
+
         } catch (Exception e) {
             logger.error("Failed to write timeline JSON: " + e.getMessage(), e);
         }
