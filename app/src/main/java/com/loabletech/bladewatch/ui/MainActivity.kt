@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     // activity instance after recreate.
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var updateCheckRunnable: Runnable? = null
+    private var setupGuideShown = false
 
     // UI elements
     private lateinit var toolbar: MaterialToolbar
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCopyUrl: ImageButton
     private lateinit var shellContainer: LinearLayout
     private lateinit var mainStage: View
+    private var navigationRailScrollContainer: View? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -269,11 +271,9 @@ class MainActivity : AppCompatActivity() {
             logsViewModel.info("Overlay", "Status overlay service started")
         }
 
-        // showIfNeeded is no-op when the seen install-time matches the current
-        // PackageInfo.lastUpdateTime, so it's safe to call on every launch.
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            net.bladewatch.app.overlay.SetupGuideDialog.showIfNeeded(this)
-        }, 2000)
+        // Setup guide is deferred until all daemons are confirmed running.
+        // It is shown from the destination-changed listener when the nav
+        // controller first lands on dashboardFragment (see setupCustomRail).
     }
     
     override fun onNewIntent(intent: android.content.Intent?) {
@@ -281,9 +281,6 @@ class MainActivity : AppCompatActivity() {
         intent?.let { handleLocationStartIntent(it) }
     }
     
-    /** Guards the one-shot "SD not detected — restart" prompt per process. */
-    private var sdRestartPromptShown = false
-
     override fun onResume() {
         super.onResume()
         // Try to start overlay if permission was just granted (user returned from settings)
@@ -293,66 +290,10 @@ class MainActivity : AppCompatActivity() {
         // JWTs ("Camera unavailable") until force-stopped; invalidating here lets
         // the next authenticated call pull the daemon's current secret over IPC.
         net.bladewatch.app.auth.AuthManager.refresh()
-        // Re-detect the SD card if it isn't currently available. After a fresh
-        // install the removable SD volume isn't yet registered for the new app
-        // UID, so the initial scan falls back to internal storage and recordings
-        // show 0 until an app restart. Re-detecting on resume recovers it without
-        // a restart once the volume becomes accessible.
         try {
             val sm = net.bladewatch.app.storage.StorageManager.getInstance()
             if (!sm.isSdCardAvailable()) sm.refreshSdCard()
         } catch (_: Throwable) {}
-        scheduleSdAvailabilityCheck()
-    }
-
-    /**
-     * After a fresh install the removable SD volume can take a few seconds to
-     * become accessible to the app UID; if SD storage is selected but the card
-     * still isn't detected after a grace period, inform the user and offer to
-     * restart the app (a fresh process re-runs detection once the volume is
-     * ready — the only reliable recovery for the cached detection state).
-     */
-    private fun scheduleSdAvailabilityCheck() {
-        if (sdRestartPromptShown) return
-        val root = window?.decorView ?: return
-        root.postDelayed({
-            if (sdRestartPromptShown || isFinishing) return@postDelayed
-            try {
-                val sm = net.bladewatch.app.storage.StorageManager.getInstance()
-                val usesSd = sm.getRecordingsStorageType() ==
-                    net.bladewatch.app.storage.StorageManager.StorageType.SD_CARD
-                if (usesSd && !sm.isSdCardAvailable()) {
-                    sm.refreshSdCard()  // one more attempt
-                    if (!sm.isSdCardAvailable()) {
-                        sdRestartPromptShown = true
-                        showSdRestartDialog()
-                    }
-                }
-            } catch (_: Throwable) {}
-        }, 12_000L)
-    }
-
-    private fun showSdRestartDialog() {
-        if (isFinishing) return
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("SD Card Not Detected")
-            .setMessage("The SD card wasn't available at startup (common right after " +
-                "installing or updating). Restart the app to access SD card storage " +
-                "for recordings.")
-            .setCancelable(false)
-            .setPositiveButton("Restart") { _, _ -> restartApp() }
-            .setNegativeButton("Later", null)
-            .show()
-    }
-
-    /** Relaunch the app from scratch so SD detection re-runs in a fresh process. */
-    private fun restartApp() {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        if (intent != null) startActivity(intent)
-        finish()
-        Runtime.getRuntime().exit(0)
     }
     
     /**
@@ -734,6 +675,7 @@ class MainActivity : AppCompatActivity() {
         btnCopyUrl = findViewById(R.id.btnCopyUrl)
         shellContainer = findViewById(R.id.shellContainer)
         mainStage = findViewById(R.id.mainStage)
+        navigationRailScrollContainer = shellContainer.findViewById(R.id.navigationRailScroll)
 
         // Brand version + device id used to live in the drawer header; in the
         // rail-based shell they're surfaced on the Dashboard card instead.
@@ -812,6 +754,19 @@ class MainActivity : AppCompatActivity() {
         // Selection sync — light up the row whose destinationId matches
         // the current nav destination (or any of its ancestors).
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            val isStartup = destination.id == R.id.startupFragment
+            val shellVisibility = if (isStartup) View.GONE else View.VISIBLE
+            navigationRailScrollContainer?.visibility = shellVisibility
+            toolbar.visibility = shellVisibility
+            // Show the "Getting Started" setup guide the first time the dashboard
+            // is reached — which only happens after StartupFragment confirms all
+            // daemons are running. One-shot per session.
+            if (destination.id == R.id.dashboardFragment && !setupGuideShown) {
+                setupGuideShown = true
+                mainHandler.postDelayed({
+                    net.bladewatch.app.overlay.SetupGuideDialog.showIfNeeded(this@MainActivity)
+                }, 1000)
+            }
             var node: androidx.navigation.NavDestination? = destination
             while (node != null) {
                 val match = items.firstOrNull { it.destinationId == node!!.id }
