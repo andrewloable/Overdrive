@@ -1522,10 +1522,19 @@ public class GpuSurveillancePipeline {
                     public void run() {
                         try {
                             self.disableStreaming();
-                            // Only stop pipeline if surveillance is not active
-                            if (currentMode != Mode.SURVEILLANCE && running) {
+                            // Keep the pipeline alive if surveillance is active OR a
+                            // dashcam/drive recording is in progress. Previously this
+                            // only checked surveillance, so closing the live view
+                            // while driving (ACC ON, CONTINUOUS/DRIVE_MODE) stopped
+                            // the whole pipeline and silently killed the dashcam
+                            // recording — the drive went unrecorded. Only stop to save
+                            // resources when nothing is actually recording.
+                            boolean dashcamRecording = isRecording() || isNormalRecordingMode();
+                            if (currentMode != Mode.SURVEILLANCE && !dashcamRecording && running) {
                                 logger.info("Surveillance not active - stopping pipeline to save resources");
                                 self.stop();
+                            } else if (currentMode != Mode.SURVEILLANCE && dashcamRecording) {
+                                logger.info("Live stream idle but dashcam recording active — keeping pipeline running");
                             }
                         } catch (Exception e) {
                             logger.error("Error during idle shutdown", e);

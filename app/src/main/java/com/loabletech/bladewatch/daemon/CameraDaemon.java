@@ -37,7 +37,7 @@ public class CameraDaemon {
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
     /** net.bladewatch.app */
-    private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
+    private static String APP_PACKAGE_NAME() { return Safe.s("b+URlanuKqV+a8w43uR6VwE1hpEbteNkkdukhTGHkdY="); }
     /** /data/local/tmp/cam_stream */
     private static String PATH_CAMERA_STREAM_DIR() { return Safe.s("ZHx6IP38aGV/Q7iMCCcxzxuq9ag7mKGoQaOvzuwMDqM="); }
     /** /sdcard/DCIM/BYDCam */

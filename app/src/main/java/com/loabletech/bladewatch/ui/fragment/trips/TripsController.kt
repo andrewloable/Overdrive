@@ -50,6 +50,15 @@ class TripsController(private val context: Context) {
     private var editConfig: TripsConfig? = null
     private var editStorage: TripsStorage? = null
 
+    // Trip detail overlay (shown on top of the list when a row is tapped)
+    private var detailController: TripDetailController? = null
+
+    /**
+     * Notified when the detail overlay opens (true) or closes (false) so the
+     * host fragment can enable/disable its back-press interception.
+     */
+    var onDetailVisibilityChanged: ((Boolean) -> Unit)? = null
+
     // Selected values for storage tab (tracked explicitly to avoid GradientDrawable constantState comparison)
     private var selectedDistUnit = "km"
     private var selectedStorageType = "INTERNAL"
@@ -62,13 +71,29 @@ class TripsController(private val context: Context) {
 
     val view: View get() = root
 
-    fun onResume() { if (loadedOnce) loadData() }
-    fun onPause() {}
-    fun onDestroy() {}
+    fun onResume() {
+        detailController?.onResume()
+        if (loadedOnce && detailController == null) loadData()
+    }
+    fun onPause() { detailController?.onPause() }
+    fun onDestroy() {
+        detailController?.onDestroy()
+        detailController = null
+    }
 
     fun onConfigurationChanged() {
         applyTheme()
         renderCurrentTab()
+        detailController?.onConfigurationChanged()
+    }
+
+    /** Returns true if a back press was consumed (detail overlay closed). */
+    fun onBackPressed(): Boolean {
+        if (detailController != null) {
+            hideDetail()
+            return true
+        }
+        return false
     }
 
     // ──────────────────────────────── BUILD ────────────────────────────────
@@ -318,6 +343,8 @@ class TripsController(private val context: Context) {
             orientation = LinearLayout.VERTICAL
             background = cardBackground(isDark)
             setPadding(dp(12), dp(10), dp(12), dp(10))
+            isClickable = true
+            setOnClickListener { showDetail(trip.id, config) }
         }
         val row1 = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val dateView = TextView(context).apply {
@@ -357,6 +384,27 @@ class TripsController(private val context: Context) {
         card.addView(spacer(dp(4)))
         card.addView(row2)
         return card
+    }
+
+    // ──────────────────────── TRIP DETAIL OVERLAY ──────────────────────────
+
+    private fun showDetail(tripId: Long, config: TripsConfig?) {
+        if (detailController != null) return
+        val controller = TripDetailController(context, client, onClose = { hideDetail() })
+        detailController = controller
+        root.addView(controller.view)
+        controller.onResume()
+        controller.load(tripId, config)
+        onDetailVisibilityChanged?.invoke(true)
+    }
+
+    private fun hideDetail() {
+        val controller = detailController ?: return
+        controller.onPause()
+        controller.onDestroy()
+        root.removeView(controller.view)
+        detailController = null
+        onDetailVisibilityChanged?.invoke(false)
     }
 
     // ──────────────────────── STATS TAB ────────────────────────────────────

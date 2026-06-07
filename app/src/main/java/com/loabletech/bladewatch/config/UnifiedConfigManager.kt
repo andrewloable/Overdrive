@@ -212,7 +212,9 @@ object UnifiedConfigManager {
         if (!recording.has("recordingQuality")) recording.put("recordingQuality", "STANDARD")
         if (!recording.has("quality")) recording.put("quality", recording.optString("recordingQuality", "STANDARD"))
         if (!recording.has("codec")) recording.put("codec", "H264")
-        
+        // Per-file recording limit in minutes (segment rotation). Options 1/5/10.
+        if (!recording.has("segmentMinutes")) recording.put("segmentMinutes", 5)
+
         // Streaming defaults
         if (!streaming.has("quality")) streaming.put("quality", "MEDIUM")
 

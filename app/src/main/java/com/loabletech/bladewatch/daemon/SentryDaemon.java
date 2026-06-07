@@ -36,7 +36,7 @@ public class SentryDaemon {
     // ==================== ENCRYPTED CONSTANTS (SOTA Java obfuscation) ====================
     // Decrypted at runtime via Safe.s() - AES-256-CBC with stack-based key reconstruction
     /** net.bladewatch.app */
-    private static String APP_PACKAGE_NAME() { return Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8="); }
+    private static String APP_PACKAGE_NAME() { return Safe.s("b+URlanuKqV+a8w43uR6VwE1hpEbteNkkdukhTGHkdY="); }
     /** accmodemanager */
     private static String SERVICE_ACCMODE() { return Safe.s("tr877WU3+MV4zFtCjanWUw=="); }
     /** byd_datacached */

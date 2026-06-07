@@ -1,6 +1,7 @@
 package net.bladewatch.app.server;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.security.SecureRandom;
@@ -13,6 +14,17 @@ import java.security.SecureRandom;
  *   - CameraDaemon calls generate() once at startup; writes token to disk.
  *   - Servers call isValid() to verify each incoming connection/request.
  *   - Clients call getToken() to read the token before connecting.
+ *
+ * IMPORTANT — file permissions: the daemon runs as the shell UID (2000) but the
+ * Android app runs as a distinct app UID (e.g. 10085). The app is a *client*: it
+ * must read this token to authenticate its IPC calls (e.g. fetching the device
+ * secret for live-view JWTs). FileWriter creates files mode 600 (shell-only) by
+ * default, which the app cannot read — that silently breaks every app→daemon IPC
+ * call (symptom: "Camera unavailable" / "Auth unavailable" in the UI). We
+ * therefore make the token world-readable after writing. This is acceptable:
+ * the token only gates loopback (127.0.0.1) IPC, and the unified config already
+ * lives world-readable in the same directory. Do NOT revert this to a bare
+ * FileWriter without restoring an equivalent chmod.
  */
 public final class IpcTokenManager {
 
@@ -35,6 +47,15 @@ public final class IpcTokenManager {
             fw.write(token);
         } catch (Exception e) {
             // Non-fatal: servers will reject all connections until a valid token is written.
+        }
+        // Make the token readable by the app UID (client). Without this the file
+        // is mode 600 (shell-only) and the app cannot authenticate its IPC calls.
+        // setReadable(true, false) grants read to group+other → rw-r--r-- (644).
+        try {
+            File f = new File(TOKEN_FILE);
+            f.setReadable(true, false);
+        } catch (Exception ignored) {
+            // Non-fatal: app-side IPC will fail until perms are corrected.
         }
         cachedToken = token;
         return token;

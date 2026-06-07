@@ -38,6 +38,25 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+## Device Deployment (BYD head unit @ 192.168.0.251:5555)
+
+**ALWAYS stop all running BladeWatch daemons and uninstall the old app BEFORE
+installing a new APK.** The shell-launched daemons (`byd_cam_daemon`,
+`sentry_daemon`, `acc_sentry_daemon`, tunnels, etc.) run as detached
+`app_process` processes that are NOT tied to the package manager — they survive
+both `uninstall` and `install -r`, leaving stale daemons holding an old native
+`.so` and lock files. A stale CameraDaemon will block the new build with
+"Another CameraDaemon instance is already running" and the live view shows
+"Camera unavailable".
+
+See the **clean reinstall** block in `CLAUDE.md` (Build Commands → Install) for
+the exact stop-daemons → uninstall → install sequence. Key points:
+- Kill the `start_*.sh` watcher scripts FIRST, or they respawn the daemons.
+- Use the grep bracket trick (`start_[c]am_daemon`) so the kill command does not
+  match and terminate its own adb shell.
+- Killing daemons can briefly drop the ADB-over-TCP link — reconnect with an
+  `until [ "$(adb ... get-state)" = device ]` loop before continuing.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
 

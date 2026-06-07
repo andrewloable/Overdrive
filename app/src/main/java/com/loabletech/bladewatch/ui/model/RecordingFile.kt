@@ -55,6 +55,23 @@ data class RecordingFile(
     
     val formattedTime: String
         get() = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+
+    /** Start as "07-JUN-2026 12:59:59" (uppercased month, fixed-width). */
+    val formattedStartDateTime: String
+        get() = SimpleDateFormat("dd-MMM-yyyy HH:mm:ss", Locale.getDefault())
+            .format(Date(timestamp)).uppercase(Locale.getDefault())
+
+    /**
+     * Start datetime plus the end clock time for the given clip duration, e.g.
+     * "07-JUN-2026 12:59:59 to 13:04:59". When the duration is unknown (0) only
+     * the start datetime is returned.
+     */
+    fun formattedDateTimeRange(knownDurationMs: Long): String {
+        if (knownDurationMs <= 0) return formattedStartDateTime
+        val end = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+            .format(Date(timestamp + knownDurationMs))
+        return "$formattedStartDateTime to $end"
+    }
     
     val formattedDuration: String
         get() {

@@ -30,6 +30,11 @@ class SettingsAboutFragment : Fragment() {
         view.findViewById<View>(R.id.cardLicense).setOnClickListener {
             showLicenseDialog()
         }
+
+        // Re-show the first-launch Getting Started guide on demand.
+        view.findViewById<View>(R.id.cardSetupGuide)?.setOnClickListener {
+            context?.let { net.bladewatch.app.overlay.SetupGuideDialog.show(it) }
+        }
     }
 
     private fun showLicenseDialog() {

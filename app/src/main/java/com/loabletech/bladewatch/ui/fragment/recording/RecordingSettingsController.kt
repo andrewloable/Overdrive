@@ -31,6 +31,7 @@ class RecordingSettingsController(private val context: Context) {
     private var selectedMode = RecordingMode.NONE
     private var selectedQuality = RecordingQuality.STANDARD
     private var selectedCodec = "H264"
+    private var selectedLimit = RecordingLimit.FIVE
     private var selectedStorageType = "INTERNAL"
     private var selectedLimitMb = 500L
     private var loadedState: RecordingSettingsLoadState? = null
@@ -130,7 +131,10 @@ class RecordingSettingsController(private val context: Context) {
             val storage = client.fetchStorage()
             val mode = status?.currentMode ?: "NONE"
             selectedMode = RecordingMode.values().find { it.value == mode } ?: RecordingMode.NONE
-            if (quality != null) { selectedQuality = quality.quality; selectedCodec = quality.codec }
+            if (quality != null) {
+                selectedQuality = quality.quality; selectedCodec = quality.codec
+                selectedLimit = RecordingLimit.fromMinutes(quality.segmentMinutes)
+            }
             if (storage != null) { selectedStorageType = storage.storageType; selectedLimitMb = storage.limitMb }
             loadedState = RecordingSettingsLoadState.Loaded(
                 RecordingAllSettings(status, quality, storage, mode))
@@ -192,6 +196,28 @@ class RecordingSettingsController(private val context: Context) {
             card.addView(spacer(dp(8)))
         }
         contentArea.addView(card)
+
+        // Recording limit — max length per file before the recording rotates
+        // into a new file. Keeps individual clips manageable and makes storage
+        // cleanup more granular.
+        contentArea.addView(spacer(dp(12)))
+        val limitCard = makeCard()
+        limitCard.addView(sectionLabel("Recording Limit"))
+        limitCard.addView(spacer(dp(4)))
+        limitCard.addView(fieldDesc("Maximum length per file. Recordings split into new files at this interval."))
+        limitCard.addView(spacer(dp(12)))
+        val limitRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        RecordingLimit.values().forEach { limit ->
+            val btn = makeSegmentBtn(limit.label, selectedLimit == limit) {
+                selectedLimit = limit; dirty = true; renderCurrentTab()
+            }
+            limitRow.addView(btn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(0, 0, dp(4), 0)
+            })
+        }
+        limitCard.addView(limitRow)
+        contentArea.addView(limitCard)
+
         contentArea.addView(spacer(dp(12)))
         contentArea.addView(buildApplyButton())
     }
@@ -438,7 +464,10 @@ class RecordingSettingsController(private val context: Context) {
     private fun applyChanges() {
         Thread({
             when (activeTab) {
-                RecordingSettingsTab.CAPTURE -> client.saveMode(selectedMode.value)
+                RecordingSettingsTab.CAPTURE -> {
+                    client.saveMode(selectedMode.value)
+                    client.saveRecordingLimit(selectedLimit.minutes)
+                }
                 RecordingSettingsTab.QUALITY -> client.saveQuality(selectedQuality.value, selectedCodec)
                 RecordingSettingsTab.STORAGE -> client.saveStorage(selectedStorageType, selectedLimitMb)
                 RecordingSettingsTab.STATUS -> { /* no-op */ }

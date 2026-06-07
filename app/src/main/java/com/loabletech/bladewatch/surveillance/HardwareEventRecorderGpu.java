@@ -243,7 +243,12 @@ public class HardwareEventRecorderGpu {
     
     // Segment rotation
     private long segmentStartTime = 0;
-    private static final long SEGMENT_DURATION_MS = 2 * 60 * 1000;  // 2 minutes
+    // Per-file recording limit. User-configurable via Settings > Recording >
+    // Capture (recording.segmentMinutes in unified config; options 1/5/10).
+    // Loaded from config at each recording start so changes apply to the next
+    // recording. Default 5 minutes.
+    private static final long DEFAULT_SEGMENT_DURATION_MS = 5 * 60 * 1000L;
+    private long segmentDurationMs = DEFAULT_SEGMENT_DURATION_MS;
     private int segmentNumber = 0;
     private String segmentBasePath = null;  // Base path for segment rotation (without .mp4)
     
@@ -855,6 +860,7 @@ public class HardwareEventRecorderGpu {
 
             // Reset state
             startTimeNs = System.nanoTime();
+            segmentDurationMs = loadSegmentDurationMs();  // Pick up the user's per-file limit
             segmentStartTime = System.currentTimeMillis();  // Enable segment rotation for long events
             segmentNumber = 0;
             segmentBasePath = outputPath.replaceAll("\\.mp4$", "");  // Store base path for segment rotation
@@ -1510,7 +1516,7 @@ public class HardwareEventRecorderGpu {
         // stranded muxer. Skip in that case.
         if (isWritingToFile && segmentStartTime > 0 && drainerRunning && diskWriterRunning) {
             long elapsed = System.currentTimeMillis() - segmentStartTime;
-            if (elapsed >= SEGMENT_DURATION_MS) {
+            if (elapsed >= segmentDurationMs) {
                 logger.info("Segment duration reached (" + (elapsed / 1000) + "s), rotating to new file...");
                 rotateSegment();
             }
@@ -1615,8 +1621,27 @@ public class HardwareEventRecorderGpu {
     }
     
     /**
+     * Reads the user-configured per-file recording limit (minutes) from the
+     * unified config (recording.segmentMinutes; options 1/5/10) and converts it
+     * to milliseconds. Falls back to the default (5 min) on any error or an
+     * unexpected value, so a bad config can never disable rotation entirely.
+     */
+    private long loadSegmentDurationMs() {
+        try {
+            int mins = net.bladewatch.app.config.UnifiedConfigManager
+                .getRecording().optInt("segmentMinutes", 5);
+            if (mins == 1 || mins == 5 || mins == 10) {
+                return mins * 60_000L;
+            }
+        } catch (Exception e) {
+            logger.warn("Could not read recording.segmentMinutes, using default: " + e.getMessage());
+        }
+        return DEFAULT_SEGMENT_DURATION_MS;
+    }
+
+    /**
      * Rotates to a new segment file.
-     * 
+     *
      * Closes current file and starts new segment WITHOUT flushing pre-record buffer
      * (since we're continuing the same event, not starting a new one).
      */

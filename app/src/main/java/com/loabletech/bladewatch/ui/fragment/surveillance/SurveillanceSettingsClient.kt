@@ -187,4 +187,50 @@ internal class SurveillanceSettingsClient {
         conn.connectTimeout = 5_000; conn.readTimeout = 10_000
         conn.responseCode
     }.getOrDefault(-1)
+
+    // ── Format external drive ── Shared with the Recording storage view; both
+    // use the generic /api/storage/format endpoint (formats the physical SD/USB
+    // drive, which both recordings and surveillance share). Reuses the
+    // FormattableVolume / FormatDriveResult types from the recording package.
+    fun listFormattableVolumes(): List<net.bladewatch.app.ui.fragment.recording.FormattableVolume> {
+        val jwt = getJwt() ?: return emptyList()
+        val json = httpGet("/api/storage/format", jwt) ?: return emptyList()
+        val arr = json.optJSONArray("volumes") ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val v = arr.optJSONObject(i) ?: return@mapNotNull null
+            if (!v.optBoolean("mounted", false)) return@mapNotNull null
+            net.bladewatch.app.ui.fragment.recording.FormattableVolume(
+                volumeId = v.optString("volumeId"),
+                uuid = v.optString("uuid").takeIf { it != "null" && it.isNotEmpty() },
+                mountPath = v.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
+            )
+        }
+    }
+
+    fun formatVolume(volumeId: String): net.bladewatch.app.ui.fragment.recording.FormatDriveResult {
+        val jwt = getJwt()
+            ?: return net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, "Not authenticated", null)
+        val body = JSONObject().apply { put("volumeId", volumeId) }.toString()
+        return runCatching {
+            val conn = URL("http://127.0.0.1:8080/api/storage/format")
+                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.connectTimeout = 5_000
+            conn.readTimeout = 60_000  // format can take up to 30s
+            conn.outputStream.use { it.write(body.toByteArray()) }
+            val responseBody = try { conn.inputStream.bufferedReader().readText() }
+                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
+            val json = JSONObject(responseBody)
+            net.bladewatch.app.ui.fragment.recording.FormatDriveResult(
+                success = json.optBoolean("success", false),
+                message = json.optString("message", json.optString("error", "Unknown result")),
+                mountPath = json.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
+            )
+        }.getOrElse { e ->
+            net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, e.message ?: "Network error", null)
+        }
+    }
 }

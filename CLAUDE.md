@@ -45,7 +45,32 @@ Always pass `-s 192.168.0.251:5555` to every `adb` command to avoid ambiguity if
 ./gradlew :app:extractWebAssets
 
 # Install debug APK to device (ABI split produces arm64-v8a-specific filename)
-adb -s 192.168.0.251:5555 install -r app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+#
+# IMPORTANT: Always STOP all running BladeWatch daemons and UNINSTALL the old
+# app BEFORE installing a new APK. The shell-launched daemons run as detached
+# `app_process` processes (NOT bound to the package manager), so they keep
+# running after an uninstall and a plain `install -r` — leaving stale daemons
+# with an old native `.so`/lock that block the fresh build (e.g. "Another
+# CameraDaemon instance is already running"). Clean reinstall:
+adb -s 192.168.0.251:5555 shell '
+  # Kill watcher launcher scripts first so they do not respawn daemons.
+  # Bracket trick (start_[c]am_daemon) prevents the grep from matching this
+  # very command line, which would kill the adb shell itself.
+  for p in $(ps -A -o PID,ARGS 2>/dev/null | grep -E "start_[c]am_daemon|start_[a]cc_sentry|start_[s]entry|net.bladewatch.[a]pp.daemon" | awk "{print \$1}"); do kill -9 $p 2>/dev/null; done
+  sleep 1
+  # Kill the renamed daemon processes by exact name (killall matches comm,
+  # so it will NOT match the adb shell).
+  killall -9 byd_cam_daemon sentry_daemon acc_sentry_daemon 2>/dev/null
+  am force-stop net.bladewatch.app
+  # Remove launcher scripts + stale locks/sentinels so nothing relaunches.
+  rm -f /data/local/tmp/start_*.sh /data/local/tmp/camera_daemon.lock /data/local/tmp/*sentry*.lock /data/local/tmp/*sentry*.pid 2>/dev/null
+  sleep 1
+  ps -A -o PID,NAME 2>/dev/null | grep -E "byd_cam_daemon|sentry_daemon|acc_sentry" | grep -v grep || echo "all daemons stopped"
+'
+# NOTE: killing daemons can briefly drop the ADB-over-TCP connection; if so,
+# reconnect: until [ "$(adb -s 192.168.0.251:5555 get-state)" = device ]; do adb connect 192.168.0.251:5555; sleep 3; done
+adb -s 192.168.0.251:5555 uninstall net.bladewatch.app
+adb -s 192.168.0.251:5555 install app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
 
 # View live logcat (filter to BladeWatch tags)
 adb -s 192.168.0.251:5555 logcat -s BladeWatch:V CameraDaemon:V SentryDaemon:V AccSentryDaemon:V
@@ -156,11 +181,13 @@ When changing route handlers, daemon ports, config paths, startup timing, tunnel
 - Tunnel/proxy/network changes → `networking-and-tunnels.md`
 - BYD local or cloud changes → `byd-integrations.md`
 - Storage/config/media changes → `data-flow-and-storage.md`
+- Auth / IPC token / secret store / cross-process file permission changes → `ipc-auth-and-secrets.md`
 - User-facing changes → `features.md`
 
 ## Security Notes
 
-- `/data/local/tmp/bladewatch_secrets.json` contains device tokens, tunnel tokens, cloud credentials. Never log or copy these values.
+- `/data/local/tmp/bladewatch_secrets.json` contains device tokens, tunnel tokens, cloud credentials. Never log or copy these values. It is mode `600` (shell-only); the app fetches values it needs over token-gated IPC, not by reading this file.
+- `/data/local/tmp/bladewatch_ipc_token` MUST stay world-readable (`644`). It is the bootstrap token the app uses to authenticate IPC to the daemon; if it reverts to `600`, every app→daemon secret fetch fails and the UI shows "Camera unavailable". See `docs/ipc-auth-and-secrets.md`.
 - LAN HTTP (`http://<car-ip>:8080`) is disabled by default and must remain opt-in. The server binds to `127.0.0.1` by default.
 - Tunnel URLs are only safe when paired with JWT token auth.
 - BYD cloud vehicle control APIs affect the physical car — test conservatively.

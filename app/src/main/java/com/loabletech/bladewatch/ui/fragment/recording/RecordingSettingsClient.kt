@@ -31,10 +31,14 @@ internal class RecordingSettingsClient {
         val jwt = getJwt() ?: return null
         val json = httpGet("/api/settings/quality", jwt) ?: return null
         val q = json.optString("recordingQuality", json.optString("quality", "STANDARD"))
-        val codec = json.optString("codec", "H264")
+        // Daemon GET returns the codec under "recordingCodec" (see
+        // QualitySettingsApiHandler.sendQualitySettings). Reading "codec" here
+        // always missed it and silently fell back to H264.
+        val codec = json.optString("recordingCodec", json.optString("codec", "H264"))
         return RecordingQualitySettings(
             quality = RecordingQuality.fromValue(q),
             codec = codec,
+            segmentMinutes = json.optInt("recordingSegmentMinutes", 5),
         )
     }
 
@@ -63,8 +67,17 @@ internal class RecordingSettingsClient {
         val jwt = getJwt() ?: return false
         val body = JSONObject().apply {
             put("recordingQuality", quality)
-            put("codec", codec)
+            // Daemon POST handler reads "recordingCodec" (not "codec"), so
+            // sending "codec" meant the codec change was silently dropped and
+            // H265 never persisted.
+            put("recordingCodec", codec)
         }.toString()
+        return httpPost("/api/settings/quality", body, jwt) == 200
+    }
+
+    fun saveRecordingLimit(segmentMinutes: Int): Boolean {
+        val jwt = getJwt() ?: return false
+        val body = JSONObject().apply { put("recordingSegmentMinutes", segmentMinutes) }.toString()
         return httpPost("/api/settings/quality", body, jwt) == 200
     }
 

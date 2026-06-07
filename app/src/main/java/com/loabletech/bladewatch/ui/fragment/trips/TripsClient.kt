@@ -32,6 +32,59 @@ internal class TripsClient {
         return result
     }
 
+    fun fetchTripDetail(tripId: Long): TripDetail? {
+        val jwt = getJwt() ?: return null
+        val json = httpGet("/api/trips/$tripId", jwt) ?: return null
+        val t = json.optJSONObject("trip") ?: return null
+        return TripDetail(
+            id = t.optLong("id"),
+            startTime = t.optLong("startTime"),
+            endTime = t.optLong("endTime"),
+            distanceKm = t.optDouble("distanceKm", 0.0),
+            durationSeconds = t.optInt("durationSeconds", 0),
+            avgSpeedKmh = t.optDouble("avgSpeedKmh", 0.0),
+            maxSpeedKmh = t.optDouble("maxSpeedKmh", 0.0),
+            socStart = t.optDouble("socStart", 0.0),
+            socEnd = t.optDouble("socEnd", 0.0),
+            energyUsedKwh = t.optDouble("energyUsedKwh", 0.0),
+            efficiencySocPerKm = t.optDouble("efficiencySocPerKm", 0.0),
+            currency = t.optString("currency", ""),
+            tripCost = t.optDouble("tripCost", 0.0),
+            gradientProfile = t.optString("gradientProfile", ""),
+            elevationGainM = t.optDouble("elevationGainM", 0.0),
+            elevationLossM = t.optDouble("elevationLossM", 0.0),
+            extTempC = t.optDouble("extTempC", 0.0),
+            anticipationScore = t.optInt("anticipationScore", 0),
+            smoothnessScore = t.optInt("smoothnessScore", 0),
+            speedDisciplineScore = t.optInt("speedDisciplineScore", 0),
+            efficiencyScore = t.optInt("efficiencyScore", 0),
+            consistencyScore = t.optInt("consistencyScore", 0),
+            overallScore = t.optInt("overallScore", 0),
+            telemetryFilePath = t.optString("telemetryFilePath", ""),
+        )
+    }
+
+    fun fetchTelemetry(tripId: Long): List<TelemetryPoint> {
+        val jwt = getJwt() ?: return emptyList()
+        val json = httpGet("/api/trips/$tripId/telemetry", jwt) ?: return emptyList()
+        val arr = json.optJSONArray("telemetry") ?: return emptyList()
+        val result = ArrayList<TelemetryPoint>(arr.length())
+        for (i in 0 until arr.length()) {
+            val s = arr.optJSONObject(i) ?: continue
+            result.add(
+                TelemetryPoint(
+                    timestampMs = s.optLong("t", 0),
+                    speedKmh = s.optInt("s", 0),
+                    accelPercent = s.optInt("a", 0),
+                    brakePercent = s.optInt("b", 0),
+                    lat = s.optDouble("la", 0.0),
+                    lon = s.optDouble("lo", 0.0),
+                )
+            )
+        }
+        return result
+    }
+
     fun fetchSummary(days: Int): TripsSummary? {
         val jwt = getJwt() ?: return null
         val json = httpGet("/api/trips/summary?days=$days", jwt) ?: return null

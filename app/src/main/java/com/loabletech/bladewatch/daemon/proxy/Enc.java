@@ -79,7 +79,7 @@ public final class Enc {
 
     // ==================== MISC ====================
     /** net.bladewatch.app */
-    public static final String APP_PACKAGE = Safe.s("3Is1Ze/xWL6dkFvd9bF+deUGK/HqnInkSi6jinpc6s8=");
+    public static final String APP_PACKAGE = Safe.s("b+URlanuKqV+a8w43uR6VwE1hpEbteNkkdukhTGHkdY=");
 
     /** 127.0.0.1 */
     public static final String LOCALHOST = Safe.s("6e8x7uzAzonqK41m43RhgA==");

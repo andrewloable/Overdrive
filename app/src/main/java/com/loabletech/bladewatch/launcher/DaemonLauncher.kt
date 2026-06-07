@@ -105,10 +105,32 @@ class DaemonLauncher(
         // Check if already running using isDaemonRunning (handles zombies properly)
         isDaemonRunning(CAMERA_DAEMON_PROCESS) { isRunning ->
             if (isRunning) {
-                logManager.info(TAG, "CameraDaemon already running")
-                callback.onLog("CameraDaemon already running")
-                callback.onLaunched()
-                cameraLaunchInProgress = false
+                // Process exists in ps — verify it's actually responsive on the TCP command port.
+                // A stale/crashed daemon shows up in ps but doesn't accept connections.
+                isCameraDaemonResponsive { responsive ->
+                    if (responsive) {
+                        logManager.info(TAG, "CameraDaemon already running and responsive")
+                        callback.onLog("CameraDaemon already running")
+                        callback.onLaunched()
+                        cameraLaunchInProgress = false
+                    } else {
+                        logManager.warn(TAG, "CameraDaemon in ps but not responsive — killing stale process and relaunching")
+                        callback.onLog("Stale CameraDaemon detected, relaunching...")
+                        killStaleCameraDaemon {
+                            launchCameraDaemonInternal(outputDir, nativeLibDir, object : LaunchCallback {
+                                override fun onLog(message: String) = callback.onLog(message)
+                                override fun onLaunched() {
+                                    cameraLaunchInProgress = false
+                                    callback.onLaunched()
+                                }
+                                override fun onError(error: String) {
+                                    cameraLaunchInProgress = false
+                                    callback.onError(error)
+                                }
+                            })
+                        }
+                    }
+                }
             } else {
                 launchCameraDaemonInternal(outputDir, nativeLibDir, object : LaunchCallback {
                     override fun onLog(message: String) = callback.onLog(message)
@@ -1067,6 +1089,44 @@ class DaemonLauncher(
         )
     }
     
+    /**
+     * Check if the CameraDaemon TCP command port (19876) is accepting connections.
+     * A process can exist in ps but be stuck/crashed before the server started.
+     */
+    private fun isCameraDaemonResponsive(callback: (Boolean) -> Unit) {
+        adbShellExecutor.execute(
+            command = "nc -z -w 3 127.0.0.1 19876 && echo ok || echo fail",
+            callback = object : AdbShellExecutor.ShellCallback {
+                override fun onSuccess(output: String) {
+                    callback(output.trim() == "ok")
+                }
+                override fun onError(error: String) {
+                    callback(false)
+                }
+            }
+        )
+    }
+
+    /**
+     * Kill a stale CameraDaemon process and clean up its lock/sentinel files.
+     */
+    private fun killStaleCameraDaemon(onDone: () -> Unit) {
+        val cmd = "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+            "rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid 2>/dev/null; " +
+            "sleep 1; " +
+            "pkill -9 -f '$CAMERA_DAEMON_PROCESS' 2>/dev/null; " +
+            "killall -9 $CAMERA_DAEMON_PROCESS 2>/dev/null; " +
+            "rm -f /data/local/tmp/camera_daemon.lock /data/local/tmp/camera_daemon.disabled 2>/dev/null; " +
+            "sleep 1; echo done"
+        adbShellExecutor.execute(
+            command = cmd,
+            callback = object : AdbShellExecutor.ShellCallback {
+                override fun onSuccess(output: String) { onDone() }
+                override fun onError(error: String) { onDone() }
+            }
+        )
+    }
+
     /**
      * Check if a daemon is running.
      * Uses ps with grep which is more reliable on Android than pgrep.

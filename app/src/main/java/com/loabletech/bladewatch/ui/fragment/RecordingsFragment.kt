@@ -71,13 +71,12 @@ class RecordingsFragment : Fragment() {
     private val calendar = Calendar.getInstance()
     private var selectedDay = calendar.get(Calendar.DAY_OF_MONTH)
     /**
-     * Whether the visible list is narrowed to a single day. False until the
-     * user explicitly picks a date or taps prev/next-day. The default
-     * "today" date stored in [calendar] / [selectedDay] is just the picker
-     * pre-selection; without this flag the page would silently filter every
-     * recording that wasn't captured today.
+     * Whether the visible list is narrowed to a single day. Defaults to true so
+     * the page opens on Today's recordings ([calendar] / [selectedDay] are
+     * pre-set to today); the user can tap "Today" / the date card to widen to
+     * all days. Set false by the "show all days" action.
      */
-    private var dateNarrowed: Boolean = false
+    private var dateNarrowed: Boolean = true
     private val dayHeaderFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
 
     // -------- Playlist for inline player prev/next --------
@@ -146,7 +145,7 @@ class RecordingsFragment : Fragment() {
                 calendar.set(y, m, 1)
                 selectedDay = d
             }
-            dateNarrowed = state.getBoolean(KEY_DATE_NARROWED, false)
+            dateNarrowed = state.getBoolean(KEY_DATE_NARROWED, true)
             playerFullscreen = state.getBoolean(KEY_PLAYER_FULLSCREEN, false)
         }
 

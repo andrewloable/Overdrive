@@ -707,11 +707,14 @@ class MainActivity : AppCompatActivity() {
      * code-driven nav also light up the right rail item.
      */
     private fun setupCustomRail() {
-        // Order matches the previous rail_menu.xml so user's mental model
-        // stays the same.
+        // Visual order is defined by the <include> order in
+        // activity_main_new.xml; this list only maps each row to its
+        // destination, icon, and label (kept in the same order for clarity).
         val items = listOf(
             RailItem(R.id.railDestDashboard, R.id.dashboardFragment,
                 R.drawable.ic_dashboard, R.string.rail_dashboard),
+            RailItem(R.id.railDestLocation, R.id.locationFragment,
+                R.drawable.ic_location, R.string.rail_location),
             RailItem(R.id.railDestLive, R.id.liveViewFragment,
                 R.drawable.ic_live, R.string.rail_live),
             RailItem(R.id.railDestRecordings, R.id.recordingsFragment,
@@ -720,8 +723,6 @@ class MainActivity : AppCompatActivity() {
                 R.drawable.ic_vehicle_control, R.string.rail_vehicle),
             RailItem(R.id.railDestTrips, R.id.tripsFragment,
                 R.drawable.ic_trips, R.string.rail_trips),
-            RailItem(R.id.railDestLocation, R.id.locationFragment,
-                R.drawable.ic_location, R.string.rail_location),
             RailItem(R.id.railDestDiagnostics, R.id.diagnosticsFragment,
                 R.drawable.ic_diagnostics, R.string.rail_diagnostics),
             RailItem(R.id.railDestSettings, R.id.settingsFragment,

@@ -26,7 +26,8 @@
     'use strict';
 
     /*
-     * Sidebar nav layout MIRRORS rail_menu.xml exactly:
+     * Sidebar nav layout mirrors the native rail (defined by the
+     * <include> order in activity_main_new.xml):
      *   Live → Recordings → Vehicle → Trips → Integrations cluster →
      *   Diagnostics → Settings cluster → About.
      *

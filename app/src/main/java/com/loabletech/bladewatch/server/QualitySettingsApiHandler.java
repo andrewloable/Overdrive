@@ -573,6 +573,16 @@ public class QualitySettingsApiHandler {
         } catch (Exception e) { /* use default */ }
         response.put("cameraFps", currentFps);
 
+        // Per-file recording limit (minutes). Drives segment rotation in
+        // HardwareEventRecorderGpu — recordings are split into files of this
+        // length. Options: 1, 5, 10. Default 5.
+        int segMinutes = 5;
+        try {
+            segMinutes = net.bladewatch.app.config.UnifiedConfigManager
+                .getRecording().optInt("segmentMinutes", 5);
+        } catch (Exception e) { /* use default */ }
+        response.put("recordingSegmentMinutes", segMinutes);
+
         // Surface measured FPS so the UI can show actualFps when HAL clamps
         // below requested (e.g., user picks 30, HAL emits ~26 panoramic on
         // this device). 0 means "not measured yet" — the renderLoop only
@@ -717,6 +727,26 @@ public class QualitySettingsApiHandler {
                 }
             }
             
+            if (settings.has("recordingSegmentMinutes")) {
+                int mins = settings.getInt("recordingSegmentMinutes");
+                if (mins == 1 || mins == 5 || mins == 10) {
+                    try {
+                        org.json.JSONObject rec = net.bladewatch.app.config.UnifiedConfigManager
+                            .loadConfig().optJSONObject("recording");
+                        if (rec == null) rec = new org.json.JSONObject();
+                        rec.put("segmentMinutes", mins);
+                        net.bladewatch.app.config.UnifiedConfigManager.updateSection("recording", rec);
+                        CameraDaemon.log("Recording segment limit set to: " + mins + " min "
+                            + "(applies to the next recording)");
+                    } catch (Exception e) {
+                        CameraDaemon.log("Failed to save recordingSegmentMinutes: " + e.getMessage());
+                    }
+                } else {
+                    CameraDaemon.log("Rejecting recordingSegmentMinutes=" + mins
+                        + " — must be 1, 5, or 10");
+                }
+            }
+
             if (settings.has("cameraFps")) {
                 int fps = settings.getInt("cameraFps");
                 if (fps < 10 || fps > 30) {

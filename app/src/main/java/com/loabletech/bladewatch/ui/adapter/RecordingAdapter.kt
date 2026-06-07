@@ -41,6 +41,11 @@ class RecordingAdapter(
     private val thumbnailCache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
+
+    // Clip durations (ms) extracted lazily via MediaMetadataRetriever, keyed by
+    // path. The scanner leaves durationMs=0 (it would need to open every file),
+    // so we resolve it on demand to render the end of the time range.
+    private val durationCache = java.util.concurrent.ConcurrentHashMap<String, Long>()
     
     // Multi-select state
     var selectMode = false
@@ -107,7 +112,13 @@ class RecordingAdapter(
             tvRecordingTime.text = recording.formattedTime
             tvDuration.text = if (recording.durationMs > 0) recording.formattedDuration else "--:--"
             tvSize.text = recording.formattedSize
-            tvFilename?.text = recording.file.name
+            // Replace the filename with the recording's date + time range
+            // (e.g. "07-JUN-2026 12:59:59 to 13:04:59"). The end time needs the
+            // clip duration, which is resolved lazily below when unknown.
+            val knownDuration = if (recording.durationMs > 0) recording.durationMs
+                                else durationCache[recording.path] ?: 0L
+            tvFilename?.text = recording.formattedDateTimeRange(knownDuration)
+            if (knownDuration <= 0L) loadDuration(recording)
 
             // Severity badge + stripe (item 7) — only when v3 sidecar provided severity
             when (recording.peakSeverity?.uppercase()) {
@@ -223,6 +234,33 @@ class RecordingAdapter(
                         ivThumbnail.setImageBitmap(thumbnail)
                     }
                 }
+            }
+        }
+
+        private fun loadDuration(recording: RecordingFile) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val durationMs = extractDurationMs(recording.path)
+                if (durationMs > 0) durationCache[recording.path] = durationMs
+                withContext(Dispatchers.Main) {
+                    if (durationMs > 0 &&
+                        bindingAdapterPosition != RecyclerView.NO_POSITION &&
+                        getItem(bindingAdapterPosition).path == recording.path
+                    ) {
+                        tvFilename?.text = recording.formattedDateTimeRange(durationMs)
+                    }
+                }
+            }
+        }
+
+        private fun extractDurationMs(path: String): Long {
+            return try {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(path)
+                val v = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                retriever.release()
+                v?.toLongOrNull() ?: 0L
+            } catch (e: Exception) {
+                0L
             }
         }
 

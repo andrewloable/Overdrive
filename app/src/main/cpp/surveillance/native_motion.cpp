@@ -104,13 +104,13 @@ static inline uint8_t rgbToHue(uint8_t r, uint8_t g, uint8_t b) {
 
 // Forward declarations
 extern "C" JNIEXPORT jint JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotion(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeEdgeMotion(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity, jint flashImmunity);
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotionSOTA(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeEdgeMotionSOTA(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity, 
@@ -123,7 +123,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotionSOTA(
  * Target: <0.5ms for 320x240 RGB (230,400 bytes).
  */
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeSAD(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeSAD(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height) {
@@ -187,7 +187,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeSAD(
  * Uses NEON for vectorized computation when available.
  */
 extern "C" JNIEXPORT void JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_updateReference(
+Java_net_bladewatch_app_surveillance_NativeMotion_updateReference(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jfloat alpha) {
@@ -290,13 +290,13 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_updateReference(
  * Returns: Packed int32 with activeBlocks in lower 16 bits, isFlash flag in bit 16
  */
 extern "C" JNIEXPORT jint JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeGridMotionChroma(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeGridMotionChroma(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity) {
     
     // Call the new edge-based function with default flash immunity (MEDIUM)
-    return Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotion(
+    return Java_net_bladewatch_app_surveillance_NativeMotion_computeEdgeMotion(
         env, clazz, currentBuffer, referenceBuffer, width, height, blockSize, sensitivity, 2);
 }
 
@@ -306,7 +306,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeGridMotionChroma
  * @param flashImmunity 0=OFF, 1=LOW, 2=MEDIUM, 3=HIGH
  */
 extern "C" JNIEXPORT jint JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotion(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeEdgeMotion(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity, jint flashImmunity) {
@@ -518,7 +518,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotion(
  * @param useChroma IGNORED in grayscale mode (kept for API compatibility)
  */
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeEdgeMotionSOTA(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeEdgeMotionSOTA(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity, 
@@ -782,7 +782,7 @@ static void __removed_edge_detection_placeholder() {
  * Reset temporal history (call when surveillance is enabled/disabled)
  */
 extern "C" JNIEXPORT void JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_resetTemporalHistory(
+Java_net_bladewatch_app_surveillance_NativeMotion_resetTemporalHistory(
     JNIEnv* env, jclass clazz) {
     g_historyInitialized = false;
     LOGD("Temporal history reset");
@@ -818,7 +818,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_resetTemporalHistory(
  * - Bit 0-15:  rawActiveBlocks
  */
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeGrayscaleGrid(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeGrayscaleGrid(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height,
@@ -997,7 +997,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeGrayscaleGrid(
  * Performance: <1ms with stride-2 subsampling on ARM64
  */
 extern "C" JNIEXPORT jint JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeGridMotion(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeGridMotion(
     JNIEnv* env, jclass clazz,
     jobject currentBuffer, jobject referenceBuffer,
     jint width, jint height, jint blockSize, jfloat sensitivity) {
@@ -1130,7 +1130,7 @@ static float checkMotionOverlap(int x, int y, int w, int h, int frameW, int fram
  * Check if MOG2 is available.
  */
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_isMog2Available(
+Java_net_bladewatch_app_surveillance_NativeMotion_isMog2Available(
     JNIEnv* env, jclass clazz) {
     #if HAVE_OPENCV
         return JNI_TRUE;
@@ -1143,7 +1143,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_isMog2Available(
  * Check if object detection is available.
  */
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_isObjectDetectionAvailable(
+Java_net_bladewatch_app_surveillance_NativeMotion_isObjectDetectionAvailable(
     JNIEnv* env, jclass clazz) {
     #if HAVE_NCNN
         // Check if YOLO model files exist in assets
@@ -1158,7 +1158,7 @@ Java_com_loabletech_bladewatch_surveillance_NativeMotion_isObjectDetectionAvaila
  * Returns motion mask via output parameter for overlap checking.
  */
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_loabletech_bladewatch_surveillance_NativeMotion_computeMOG2(
+Java_net_bladewatch_app_surveillance_NativeMotion_computeMOG2(
     JNIEnv* env, jclass clazz,
     jobject rgbBuffer, jint width, jint height,
     jbyteArray roiMask, jfloat learningRate) {

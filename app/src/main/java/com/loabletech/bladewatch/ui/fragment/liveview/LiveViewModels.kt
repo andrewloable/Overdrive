@@ -22,8 +22,9 @@ data class LiveViewState(
     val status: LiveStreamStatus = LiveStreamStatus.Idle,
 )
 
-internal data class WsFrame(val opcode: Int, val payload: ByteArray) {
+internal data class WsFrame(val opcode: Int, val payload: ByteArray, val fin: Boolean = true) {
     companion object {
+        const val OPCODE_CONTINUATION = 0x0
         const val OPCODE_BINARY = 0x2
         const val OPCODE_CLOSE = 0x8
         const val OPCODE_PING = 0x9

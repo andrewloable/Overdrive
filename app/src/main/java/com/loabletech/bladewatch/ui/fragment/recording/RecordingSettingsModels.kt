@@ -14,6 +14,13 @@ enum class RecordingQuality(val value: String) {
     companion object { fun fromValue(v: String) = values().find { it.value == v.uppercase() } ?: STANDARD }
 }
 
+// Per-file recording limit (segment rotation). Recordings are split into files
+// of this length while driving. Must mirror the daemon's accepted values.
+enum class RecordingLimit(val minutes: Int, val label: String) {
+    ONE(1, "1 min"), FIVE(5, "5 min"), TEN(10, "10 min");
+    companion object { fun fromMinutes(m: Int) = values().find { it.minutes == m } ?: FIVE }
+}
+
 data class RecordingStatus(
     val currentMode: String,
     val isRecording: Boolean,
@@ -24,6 +31,7 @@ data class RecordingStatus(
 data class RecordingQualitySettings(
     val quality: RecordingQuality,
     val codec: String,
+    val segmentMinutes: Int = 5,
 )
 
 data class RecordingStorageSettings(

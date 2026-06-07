@@ -117,6 +117,41 @@ internal class LiveStreamClient {
             var codecConfigSent = false
             var frameCounter = 0L
 
+            // Feeds one COMPLETE H.264 access unit to the decoder. The server
+            // sends SPS+PPS as the very first message on each new connection, so
+            // the first complete unit is always codec config.
+            fun feedToDecoder(payload: ByteArray) {
+                val flags = if (!codecConfigSent) {
+                    codecConfigSent = true
+                    MediaCodec.BUFFER_FLAG_CODEC_CONFIG
+                } else {
+                    0
+                }
+
+                val inputIdx = decoder.dequeueInputBuffer(INPUT_TIMEOUT_US)
+                if (inputIdx >= 0) {
+                    decoder.getInputBuffer(inputIdx)?.apply {
+                        clear()
+                        put(payload)
+                    }
+                    decoder.queueInputBuffer(inputIdx, 0, payload.size, frameCounter++ * PTS_STEP_US, flags)
+                }
+
+                drainDecoder(decoder, bufferInfo)
+
+                if (flags != MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
+                    publish(LiveStreamStatus.Live)
+                }
+            }
+
+            // Reassembles fragmented WebSocket messages. The server splits any
+            // H.264 access unit larger than 32KB into a binary frame (opcode 0x2,
+            // FIN=0) followed by continuation frames (opcode 0x0). Feeding only
+            // the first fragment to the decoder truncates every large unit
+            // (keyframes, busy P-frames) and produces macroblock corruption, so
+            // we accumulate fragments until the FIN bit is set.
+            var assembly: java.io.ByteArrayOutputStream? = null
+
             while (running.get()) {
                 val frame = runCatching { readWsFrame(inp) }.getOrNull() ?: break
 
@@ -124,28 +159,19 @@ internal class LiveStreamClient {
                     WsFrame.OPCODE_CLOSE -> break
                     WsFrame.OPCODE_PING -> continue
                     WsFrame.OPCODE_BINARY -> {
-                        // The server always sends SPS+PPS as the very first binary frame on
-                        // each new WebSocket connection, so the first frame is always codec config.
-                        val flags = if (!codecConfigSent) {
-                            codecConfigSent = true
-                            MediaCodec.BUFFER_FLAG_CODEC_CONFIG
+                        if (frame.fin) {
+                            feedToDecoder(frame.payload)
                         } else {
-                            0
+                            // First fragment of a fragmented message.
+                            assembly = java.io.ByteArrayOutputStream().apply { write(frame.payload) }
                         }
-
-                        val inputIdx = decoder.dequeueInputBuffer(INPUT_TIMEOUT_US)
-                        if (inputIdx >= 0) {
-                            decoder.getInputBuffer(inputIdx)?.apply {
-                                clear()
-                                put(frame.payload)
-                            }
-                            decoder.queueInputBuffer(inputIdx, 0, frame.payload.size, frameCounter++ * PTS_STEP_US, flags)
-                        }
-
-                        drainDecoder(decoder, bufferInfo)
-
-                        if (flags != MediaCodec.BUFFER_FLAG_CODEC_CONFIG) {
-                            publish(LiveStreamStatus.Live)
+                    }
+                    WsFrame.OPCODE_CONTINUATION -> {
+                        val acc = assembly ?: continue  // stray continuation — ignore
+                        acc.write(frame.payload)
+                        if (frame.fin) {
+                            feedToDecoder(acc.toByteArray())
+                            assembly = null
                         }
                     }
                 }
@@ -245,6 +271,7 @@ internal class LiveStreamClient {
     private fun readWsFrame(inp: BufferedInputStream): WsFrame? {
         val b0 = inp.read().takeIf { it >= 0 } ?: return null
         val b1 = inp.read().takeIf { it >= 0 } ?: return null
+        val fin = (b0 and 0x80) != 0
         val opcode = b0 and 0x0F
         val masked = (b1 and 0x80) != 0
         var payloadLen = (b1 and 0x7F).toLong()
@@ -267,7 +294,7 @@ internal class LiveStreamClient {
             for (i in payload.indices) payload[i] = (payload[i].toInt() xor mask[i % 4].toInt()).toByte()
         }
 
-        return WsFrame(opcode, payload)
+        return WsFrame(opcode, payload, fin)
     }
 
     companion object {
