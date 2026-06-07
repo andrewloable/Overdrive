@@ -1047,6 +1047,14 @@ public class PanoramicCameraGpu {
             lastFrameTime = System.currentTimeMillis();
             firstFrameReceived = true;
             consecutiveContentionStalls = 0;  // Frames flowing — clear stall counter
+
+            // Camera setup burst is complete now that frames are flowing — kick off
+            // deferred YOLO/TFLite init so its GPU-delegate kernel compilation runs
+            // during steady-state rendering, not concurrently with the camera's heavy
+            // EGL/GL setup. Idempotent: only the first call actually starts the thread.
+            if (sentry != null) {
+                sentry.startDeferredYoloInit();
+            }
             
             // SOTA: Full-matrix auto-probe at frame 15 (~2 sec).
             // Sweeps camera IDs 0-5 × surface modes 0-5 to find the first

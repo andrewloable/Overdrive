@@ -315,10 +315,12 @@ public class SentryDaemon {
     }
     
     private static void enableWifi() {
-        log("Enabling WiFi...");
-        execShell(CMD_WIFI_ENABLE());
-        execShell(CMD_WIFI_ENABLE_ALT());
-        log("WiFi enabled");
+        log("Enabling WiFi (async)...");
+        new Thread(() -> {
+            execShell(CMD_WIFI_ENABLE());
+            execShell(CMD_WIFI_ENABLE_ALT());
+            log("WiFi enable commands completed");
+        }, "WifiEnable").start();
     }
     
     // ==================== CONTEXT HELPERS ====================

@@ -5,14 +5,17 @@ import net.bladewatch.app.logging.DaemonLogger
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.gpu.GpuDelegate
+import org.tensorflow.lite.gpu.GpuDelegateFactory
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
 import kotlin.math.max
 import kotlin.math.min
 
@@ -75,6 +78,18 @@ class YoloDetector(private val context: Context) {
     // Model configuration
     private val modelPath = "models/yolo11n.tflite"
     private val inputSize = 640
+
+    // GPU kernel serialization cache. The Adreno OpenCL backend compiles all
+    // GPU kernels inside allocateTensors() on every daemon start (~3-5s cold
+    // start). setSerializationParams() persists the compiled kernels so only
+    // the first-ever boot pays that cost; subsequent boots load from disk.
+    // /data/local/tmp is shell-UID writable and survives reboot. The cache is
+    // OpenCL-only — it silently no-ops on the OpenGL ES backend, which is
+    // harmless. The token is a content hash of the model bytes + TFLite version
+    // so a re-exported model invalidates stale kernels (loading stale kernels
+    // would otherwise yield garbage detections or a crash).
+    private val gpuCacheDir = "/data/local/tmp/tflite_gpu_cache"
+    private val tfliteVersion = "tfl2.14"
     
     // SOTA: Native C++ image processor (10x faster than manual loops)
     // Uses SIMD-accelerated bilinear resize + normalize
@@ -140,16 +155,44 @@ class YoloDetector(private val context: Context) {
             var loaded = false
             try {
                 val gpuOptions = Interpreter.Options()
-                gpuDelegate = GpuDelegate()
+
+                // Enable on-disk kernel serialization when possible. Any failure
+                // here (e.g. cache dir not writable) must NOT disable GPU — fall
+                // back to a bare delegate that compiles kernels every boot.
+                val delegateOptions = GpuDelegateFactory.Options()
+                val cacheReady = try {
+                    val dir = File(gpuCacheDir)
+                    val dirOk = dir.exists() || dir.mkdirs()
+                    if (dirOk) {
+                        val token = computeModelToken(modelFile)
+                        delegateOptions.setSerializationParams(gpuCacheDir, token)
+                        logger.info("GPU kernel cache enabled: $gpuCacheDir token=$token")
+                        true
+                    } else {
+                        logger.warn("GPU kernel cache dir not writable, skipping serialization: $gpuCacheDir")
+                        false
+                    }
+                } catch (e: Throwable) {
+                    logger.warn("GPU kernel serialization unavailable: ${e.javaClass.simpleName}: ${e.message}")
+                    false
+                }
+
+                val gpuInitStart = System.currentTimeMillis()
+                gpuDelegate = GpuDelegate(delegateOptions)
                 gpuOptions.addDelegate(gpuDelegate)
                 logger.info("Trying GPU delegate...")
 
                 interpreter = Interpreter(modelFile, gpuOptions)
                 interpreter!!.allocateTensors()
+                val gpuInitMs = System.currentTimeMillis() - gpuInitStart
 
                 isGpuEnabled = true
                 loaded = true
-                logger.info("GPU delegate applied successfully")
+                // A cold compile takes seconds; a cache hit takes a few hundred
+                // ms. The timing distinguishes the two on the OpenCL backend.
+                logger.info("GPU delegate applied successfully in ${gpuInitMs}ms " +
+                    "(cache=${if (cacheReady) "on" else "off"}; " +
+                    "${if (cacheReady && gpuInitMs < 1500) "likely cache HIT" else "cold compile / no cache"})")
             } catch (e: Throwable) {
                 logger.warn("GPU delegate failed: ${e.javaClass.simpleName}: ${e.message}")
                 interpreter?.close()
@@ -213,7 +256,24 @@ class YoloDetector(private val context: Context) {
             return false
         }
     }
-    
+
+    /**
+     * Build the GPU kernel-cache token from the model's content hash plus the
+     * TFLite version. The token guards the on-disk OpenCL kernel cache: if the
+     * model bytes change (re-export) or the runtime is bumped, the token changes
+     * and TFLite recompiles instead of loading stale, mismatched kernels.
+     * Hashing the ~5 MB mapped model costs a few ms — negligible against the
+     * multi-second compile it protects.
+     */
+    private fun computeModelToken(modelFile: ByteBuffer): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        // Duplicate so position/limit of the mapped buffer used by the
+        // interpreter are untouched.
+        md.update(modelFile.duplicate())
+        val hex = md.digest().take(8).joinToString("") { "%02x".format(it) }
+        return "yolo11n-$hex-$tfliteVersion"
+    }
+
     /**
      * SOTA Detection with native C++ preprocessing
      * 

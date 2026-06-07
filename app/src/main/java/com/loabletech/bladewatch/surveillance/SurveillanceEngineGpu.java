@@ -120,7 +120,7 @@ public class SurveillanceEngineGpu {
     private volatile long lastAiConfirmationTimeMs = 0;  // When YOLO last found a real object
     
     // Detection mode
-    private boolean useObjectDetection = false;
+    private volatile boolean useObjectDetection = false;
     // FIX (A8/B3): volatile so the AI executor sees writes from the UI thread
     // without a torn read. The lambda still snapshots into a local before use.
     private volatile YoloDetector yoloDetector = null;
@@ -128,6 +128,9 @@ public class SurveillanceEngineGpu {
     // when the user re-enables object detection after disabling all classes.
     private android.content.Context yoloContext = null;
     private android.content.res.AssetManager yoloAssetManager = null;
+    // Guards the one-time deferred YOLO init kicked off at camera first-frame.
+    private final java.util.concurrent.atomic.AtomicBoolean yoloInitStarted =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
     
     // Object detection filters (SOTA: Quadrant-relative height filter in YoloDetector)
     private float minObjectSize = 0.12f;  // 12% of QUADRANT height (~8m for person in 2x2 grid)
@@ -404,60 +407,16 @@ public class SurveillanceEngineGpu {
         currentFrame = ByteBuffer.allocateDirect(FRAME_SIZE);
         currentFrame.order(ByteOrder.nativeOrder());
         
-        // Detect available features
-        try {
-            // Initialize Java TFLite YOLO detector
-            // Note: We don't have a full Context in daemon mode, but we can create one from AssetManager
-            if (context != null) {
-                try {
-                    logger.info("Initializing Java TFLite YOLO detector...");
-                    yoloDetector = new YoloDetector(context);
-                    boolean yoloLoaded = yoloDetector.init();
-                    
-                    if (yoloLoaded) {
-                        useObjectDetection = true;
-                        logger.info("YOLO model loaded successfully - object detection enabled");
-                        logger.info("GPU acceleration: " + (yoloDetector.isGpuEnabled() ? "ENABLED" : "disabled (CPU fallback)"));
-                    } else {
-                        logger.warn("Failed to load YOLO model");
-                        useObjectDetection = false;
-                        yoloDetector = null;
-                    }
-                } catch (Exception e) {
-                    logger.error("Error initializing YOLO detector: " + e.getMessage(), e);
-                    useObjectDetection = false;
-                    yoloDetector = null;
-                }
-            } else if (assetManager != null) {
-                // Daemon mode: Create minimal context from AssetManager
-                try {
-                    logger.info("Creating AssetContext for TFLite (daemon mode)...");
-                    android.content.Context assetContext = new net.bladewatch.app.ai.AssetContext(assetManager);
-                    
-                    yoloDetector = new YoloDetector(assetContext);
-                    boolean yoloLoaded = yoloDetector.init();
-                    
-                    if (yoloLoaded) {
-                        useObjectDetection = true;
-                        logger.info("YOLO model loaded successfully - object detection enabled");
-                        logger.info("GPU acceleration: " + (yoloDetector.isGpuEnabled() ? "ENABLED" : "disabled (CPU fallback)"));
-                    } else {
-                        logger.warn("Failed to load YOLO model");
-                        useObjectDetection = false;
-                        yoloDetector = null;
-                    }
-                } catch (Exception e) {
-                    logger.error("Error creating AssetContext: " + e.getMessage(), e);
-                    useObjectDetection = false;
-                    yoloDetector = null;
-                }
-            } else {
-                logger.info("No Context or AssetManager provided - object detection disabled");
-                useObjectDetection = false;
-            }
-        } catch (UnsatisfiedLinkError e) {
-            logger.warn("Native features not available: " + e.getMessage());
-            useObjectDetection = false;
+        // YOLO/TFLite init is DEFERRED until the camera signals its first frame
+        // (see startDeferredYoloInit(), called from PanoramicCameraGpu). TFLite's
+        // GPU-delegate kernel compilation (~2-4s) would otherwise contend with the
+        // camera's heavy one-time EGL/GL setup running concurrently on the same GPU,
+        // serializing in the driver and slowing BOTH. The Context / AssetManager are
+        // retained above (yoloContext / yoloAssetManager) for the deferred thread.
+        if (context == null && assetManager == null) {
+            logger.info("No Context or AssetManager provided - object detection disabled");
+        } else {
+            logger.info("YOLO init deferred until camera first-frame (avoids GPU setup contention)");
         }
         
         logger.info("Initialized surveillance engine (buffer=" + FRAME_SIZE + " bytes)");
@@ -624,6 +583,55 @@ public class SurveillanceEngineGpu {
      * 
      * @param smallRgbFrame 320x240 RGB frame from GPU (borrowed from pool)
      */
+    /**
+     * Starts deferred YOLO/TFLite initialization on a background thread.
+     *
+     * Called by {@link net.bladewatch.app.camera.PanoramicCameraGpu} once the camera
+     * has delivered its first frame — i.e. after the camera's heavy one-time EGL/GL
+     * setup (context creation, shader compilation, first-frame warmup) is complete.
+     * Deferring to this point means TFLite's GPU-delegate kernel compilation runs
+     * during light steady-state rendering instead of contending with the camera setup
+     * burst on the same GPU (which serialized in the driver and slowed both).
+     *
+     * Idempotent: only the first invocation spawns the thread, so it is safe for the
+     * camera to call this on every frame.
+     */
+    public void startDeferredYoloInit() {
+        if (!yoloInitStarted.compareAndSet(false, true)) {
+            return; // already started
+        }
+        if (yoloContext == null && yoloAssetManager == null) {
+            logger.info("Deferred YOLO init skipped - no Context or AssetManager retained");
+            return;
+        }
+        Thread yoloInitThread = new Thread(() -> {
+            try {
+                android.content.Context ctx;
+                if (yoloContext != null) {
+                    ctx = yoloContext;
+                } else {
+                    logger.info("Creating AssetContext for TFLite (daemon mode, deferred)...");
+                    ctx = new net.bladewatch.app.ai.AssetContext(yoloAssetManager);
+                }
+                logger.info("Initializing Java TFLite YOLO detector (deferred, post camera first-frame)...");
+                YoloDetector detector = new YoloDetector(ctx);
+                boolean yoloLoaded = detector.init();
+                if (yoloLoaded) {
+                    useObjectDetection = true;   // written before volatile publish
+                    yoloDetector = detector;     // volatile write publishes both fields
+                    logger.info("YOLO model loaded successfully - object detection enabled");
+                    logger.info("GPU acceleration: " + (detector.isGpuEnabled() ? "ENABLED" : "disabled (CPU fallback)"));
+                } else {
+                    logger.warn("YOLO model load failed (deferred) - object detection disabled");
+                }
+            } catch (Throwable e) {
+                logger.warn("Deferred YOLO init error: " + e.getMessage());
+            }
+        }, "YoloInit");
+        yoloInitThread.setDaemon(true);
+        yoloInitThread.start();
+    }
+
     public void processFrame(byte[] smallRgbFrame) {
         if (!active) {
             // Still need to recycle even if not active
@@ -818,7 +826,7 @@ public class SurveillanceEngineGpu {
         // Runs YOLO on each quadrant to catalog what's already in the scene (parked cars,
         // trash cans, etc.) so future motion-triggered detections can filter them out.
         // Cost: 4 inferences, one-time. Runs on AI executor thread to avoid blocking motion pipeline.
-        if (!baselineSeeded && frameCount == 30 && useObjectDetection && yoloDetector != null) {
+        if (!baselineSeeded && frameCount >= 30 && useObjectDetection && yoloDetector != null) {
             baselineSeeded = true;  // Set immediately to prevent re-entry
             final byte[] seedFrame = new byte[smallRgbFrame.length];
             System.arraycopy(smallRgbFrame, 0, seedFrame, 0, smallRgbFrame.length);
@@ -2678,6 +2686,15 @@ public class SurveillanceEngineGpu {
      */
     private void reloadYoloDetectorIfPossible() {
         if (yoloDetector != null) return;
+        // Defer during the pre-camera startup window. If the camera-first-frame hook
+        // (startDeferredYoloInit) has not yet started, we are still in init() — applying
+        // the saved surveillance config must NOT load YOLO synchronously here, or its
+        // GPU-delegate kernel compilation lands on the startup critical path and contends
+        // with the camera's EGL/GL setup. The first-frame hook will load it exactly once.
+        if (!yoloInitStarted.get()) {
+            logger.info("YOLO reload requested before camera-ready — deferring to first-frame hook");
+            return;
+        }
         try {
             if (yoloContext != null) {
                 yoloDetector = new YoloDetector(yoloContext);

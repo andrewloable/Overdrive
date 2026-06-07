@@ -194,6 +194,14 @@ Runtime extracted assets:
 
 `HttpServer` extracts web and overlay assets when the daemon starts. Gradle also defines an `extractWebAssets` helper task that can push web assets to `/data/local/tmp/web` during development.
 
+GPU kernel cache:
+
+```text
+/data/local/tmp/tflite_gpu_cache
+```
+
+`YoloDetector` enables TFLite GPU kernel serialization (`GpuDelegateFactory.Options.setSerializationParams`) into this directory. The Adreno OpenCL backend otherwise recompiles all GPU kernels on every daemon start (~3–5s); serialization persists the compiled kernels so only the first-ever boot pays that cost. The cache key (`modelToken`) is a SHA-256 content hash of `yolo11n.tflite` plus the TFLite version, so a re-exported model or a runtime bump invalidates stale kernels automatically. The cache is OpenCL-only and silently no-ops on the OpenGL ES backend; a failure to create or write the directory falls back to a bare delegate without disabling GPU.
+
 ## Tunnel Runtime Files
 
 Zrok:

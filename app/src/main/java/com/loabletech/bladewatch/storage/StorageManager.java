@@ -117,6 +117,9 @@ public class StorageManager {
     
     // Config file location
     private static final String CONFIG_FILE = "/data/local/tmp/bladewatch_config.json";
+
+    // SD card path cache — persists across restarts to avoid running sm list-volumes on every boot
+    private static final String SD_CARD_CACHE_PATH = "/data/local/tmp/bladewatch_sdcard_path";
     
     // Default limits (in bytes)
     private static final long DEFAULT_RECORDINGS_LIMIT_MB = 500;
@@ -191,7 +194,9 @@ public class StorageManager {
     private static final int SD_WATCHDOG_QUIET_LOG_INTERVAL = 20;   // Then log every 20th attempt (~5 min)
     
     private StorageManager() {
-        discoverSdCard();
+        if (!tryLoadSdCardFromCache()) {
+            discoverSdCard();
+        }
         initDirectories();
         loadConfig();
 
@@ -522,6 +527,7 @@ public class StorageManager {
                     if (exit == 0) {
                         sdCardPath = candidate;
                         sdCardAvailable = true;
+                        writeSdCardCache(candidate);
                         logInfo("Found SD card (attempt " + attempt + "): " + sdCardPath);
                         return;
                     }
@@ -537,6 +543,47 @@ public class StorageManager {
         logDebug("No writable SD card found under /storage/");
     }
     
+    /**
+     * Reads the SD card path cache and validates it with a write probe.
+     * Returns true and sets sdCardPath/sdCardAvailable if the cached path is still valid.
+     * Deletes the cache file and returns false if validation fails.
+     */
+    private boolean tryLoadSdCardFromCache() {
+        try {
+            java.io.File cacheFile = new java.io.File(SD_CARD_CACHE_PATH);
+            if (!cacheFile.exists()) return false;
+            String cachedPath = new java.util.Scanner(cacheFile).useDelimiter("\\A").next().trim();
+            if (cachedPath.isEmpty()) return false;
+            if (!shellCanWrite(cachedPath)) {
+                logDebug("Cached SD path not writable, falling back to full discovery: " + cachedPath);
+                cacheFile.delete();
+                return false;
+            }
+            sdCardPath = cachedPath;
+            sdCardAvailable = true;
+            logInfo("SD card path loaded from cache: " + cachedPath);
+            return true;
+        } catch (Exception e) {
+            logDebug("SD card cache read failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Writes the discovered SD card path to the cache file using an atomic temp+rename.
+     */
+    private void writeSdCardCache(String path) {
+        try {
+            java.io.File tmpFile = new java.io.File(SD_CARD_CACHE_PATH + ".tmp");
+            java.io.FileWriter fw = new java.io.FileWriter(tmpFile, false);
+            fw.write(path);
+            fw.close();
+            tmpFile.renameTo(new java.io.File(SD_CARD_CACHE_PATH));
+        } catch (Exception e) {
+            logDebug("SD card cache write failed: " + e.getMessage());
+        }
+    }
+
     /**
      * Returns true if the shell UID can write to {@code dirPath}.
      * Uses a {@code touch}/{@code rm} probe via sh because {@code File.canWrite()}
