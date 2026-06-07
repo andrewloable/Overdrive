@@ -414,13 +414,30 @@ public class TelemetryDataCollector {
             }
         }
 
+        // GPS for the dashcam overlay. GpsMonitor is fed live fixes by the
+        // LocationSidecarService; hasLocation() is false until the first fix.
+        boolean hasGps = false;
+        double gpsLat = 0.0, gpsLon = 0.0;
+        try {
+            net.bladewatch.app.monitor.GpsMonitor gps =
+                    net.bladewatch.app.monitor.GpsMonitor.getInstance();
+            if (gps != null && gps.hasLocation()) {
+                hasGps = true;
+                gpsLat = gps.getLatitude();
+                gpsLon = gps.getLongitude();
+            }
+        } catch (Exception e) {
+            // Non-fatal: overlay just omits the coordinate line.
+        }
+
         latestSnapshot = new TelemetrySnapshot(
                 speedKmh, accelPercent, brakePercent,
                 brakePedalPressed, gearMode,
                 leftTurn, rightTurn,
-                seatbelts, System.currentTimeMillis()
+                seatbelts, System.currentTimeMillis(),
+                hasGps, gpsLat, gpsLon
         );
-        
+
         pollCount++;
     }
 

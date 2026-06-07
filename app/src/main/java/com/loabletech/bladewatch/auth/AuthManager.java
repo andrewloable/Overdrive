@@ -273,6 +273,32 @@ public class AuthManager {
         return a == null ? b == null : a.equals(b);
     }
 
+    /**
+     * Force the next {@link #getState()} to re-read the device secret from the
+     * daemon (via the secret-store IPC) instead of returning the in-memory
+     * cache.
+     *
+     * Why this exists: the cache is invalidated on the unified-config file's
+     * mtime, but the device secret lives in the shell-owned secrets store and
+     * is fetched over IPC — so a daemon restart that hands out the canonical
+     * secret won't change config.json's mtime and the app keeps signing JWTs
+     * with a stale secret ("Invalid signature" → "Camera unavailable"), which
+     * previously only cleared after a manual app restart. Call this when the
+     * app returns to the foreground (and before opening the live stream) so a
+     * fresh install / daemon restart re-syncs the secret automatically.
+     */
+    public static synchronized void refresh() {
+        if (testStateOverride != null) return;
+        cachedState = null;
+        cachedConfigMtime = 0;
+        // Bump the version so JWT-caching consumers (DaemonHttpClient's /status
+        // poller, WebView cookie) re-mint instead of reusing a JWT signed with
+        // the now-discarded secret. Without this, the camera/live view recovers
+        // (it mints fresh JWTs) but /status keeps failing "Invalid signature"
+        // until the cache's own TTL expires.
+        stateVersion++;
+    }
+
     // ==================== TOKEN VALIDATION ====================
 
     /**

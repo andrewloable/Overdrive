@@ -15,11 +15,27 @@ public class TelemetrySnapshot {
     public final boolean rightTurnSignal;
     public final boolean[] seatbeltBuckled; // indexed by seat position
     public final long timestampMs;
+    // GPS — burned into the dashcam overlay. hasGps=false means no fix yet
+    // (overlay omits the coordinate line rather than showing 0,0).
+    public final boolean hasGps;
+    public final double latitude;
+    public final double longitude;
 
+    // Backward-compatible constructor (no GPS).
     public TelemetrySnapshot(int speedKmh, int accelPedalPercent, int brakePedalPercent,
                              boolean brakePedalPressed, int gearMode,
                              boolean leftTurnSignal, boolean rightTurnSignal,
                              boolean[] seatbeltBuckled, long timestampMs) {
+        this(speedKmh, accelPedalPercent, brakePedalPercent, brakePedalPressed, gearMode,
+             leftTurnSignal, rightTurnSignal, seatbeltBuckled, timestampMs,
+             false, 0.0, 0.0);
+    }
+
+    public TelemetrySnapshot(int speedKmh, int accelPedalPercent, int brakePedalPercent,
+                             boolean brakePedalPressed, int gearMode,
+                             boolean leftTurnSignal, boolean rightTurnSignal,
+                             boolean[] seatbeltBuckled, long timestampMs,
+                             boolean hasGps, double latitude, double longitude) {
         this.speedKmh = speedKmh;
         this.accelPedalPercent = accelPedalPercent;
         this.brakePedalPercent = brakePedalPercent;
@@ -30,6 +46,9 @@ public class TelemetrySnapshot {
         // Defensive copy to preserve immutability
         this.seatbeltBuckled = seatbeltBuckled != null ? seatbeltBuckled.clone() : new boolean[0];
         this.timestampMs = timestampMs;
+        this.hasGps = hasGps;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     /**

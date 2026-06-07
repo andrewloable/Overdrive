@@ -80,33 +80,57 @@ internal class LiveStreamClient {
 
             publish(LiveStreamStatus.Connecting)
 
-            val jwt = getJwt() ?: run {
-                publish(LiveStreamStatus.Unavailable("Auth unavailable"))
-                return
+            // Connect with auto-retry. After a reinstall or daemon restart the
+            // daemon can take tens of seconds to come up, and the app may briefly
+            // hold a stale auth secret. Retry silently — refreshing the device
+            // secret from the daemon each attempt (covers the RETRY button too) —
+            // so the live view self-heals without a manual RETRY or app restart.
+            // Only surface "unavailable" once the retry budget is exhausted.
+            var connectedInp: BufferedInputStream? = null
+            var width = 640
+            var height = 480
+            var attempt = 0
+            while (running.get() && connectedInp == null) {
+                attempt++
+                try {
+                    AuthManager.refresh()
+                    val jwt = getJwt() ?: throw java.io.IOException("auth not ready")
+
+                    httpPost("/api/stream/enable", jwt)
+                    httpPost("/api/stream/view/${currentDirection.viewMode}", jwt)
+
+                    val dims = queryStreamDimensions(jwt) ?: (640 to 480)
+                    width = dims.first
+                    height = dims.second
+
+                    val wsSocket = Socket()
+                    activeSocket = wsSocket
+                    wsSocket.connect(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 8080), CONNECT_TIMEOUT_MS)
+                    wsSocket.soTimeout = READ_TIMEOUT_MS
+
+                    val out = BufferedOutputStream(wsSocket.getOutputStream())
+                    val candidate = BufferedInputStream(wsSocket.getInputStream())
+
+                    val wsKey = generateWebSocketKey()
+                    val tokenEncoded = java.net.URLEncoder.encode(jwt, "UTF-8")
+                    out.write(buildUpgradeRequest("/ws?token=$tokenEncoded", wsKey).toByteArray(Charsets.US_ASCII))
+                    out.flush()
+
+                    if (!readUpgradeResponse(candidate)) throw java.io.IOException("handshake failed")
+                    connectedInp = candidate  // success
+                } catch (e: Throwable) {
+                    runCatching { activeSocket?.close() }
+                    activeSocket = null
+                    if (!running.get()) return
+                    if (attempt >= MAX_CONNECT_ATTEMPTS) {
+                        publish(LiveStreamStatus.Unavailable("Camera starting — tap retry"))
+                        return
+                    }
+                    publish(LiveStreamStatus.Connecting)
+                    Thread.sleep(RETRY_DELAY_MS)
+                }
             }
-
-            httpPost("/api/stream/enable", jwt)
-            httpPost("/api/stream/view/${currentDirection.viewMode}", jwt)
-
-            val (width, height) = queryStreamDimensions(jwt) ?: (640 to 480)
-
-            val wsSocket = Socket()
-            activeSocket = wsSocket
-            wsSocket.connect(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 8080), CONNECT_TIMEOUT_MS)
-            wsSocket.soTimeout = READ_TIMEOUT_MS
-
-            val out = BufferedOutputStream(wsSocket.getOutputStream())
-            val inp = BufferedInputStream(wsSocket.getInputStream())
-
-            val wsKey = generateWebSocketKey()
-            val tokenEncoded = java.net.URLEncoder.encode(jwt, "UTF-8")
-            out.write(buildUpgradeRequest("/ws?token=$tokenEncoded", wsKey).toByteArray(Charsets.US_ASCII))
-            out.flush()
-
-            if (!readUpgradeResponse(inp)) {
-                publish(LiveStreamStatus.Error("WebSocket handshake failed"))
-                return
-            }
+            val inp = connectedInp ?: return
 
             val decoder = MediaCodec.createDecoderByType("video/avc")
             activeCodec = decoder
@@ -303,5 +327,10 @@ internal class LiveStreamClient {
         private const val READ_TIMEOUT_MS = 10_000
         private const val INPUT_TIMEOUT_US = 10_000L
         private const val PTS_STEP_US = 66_667L  // ~15fps presentation cadence
+        // Auto-retry budget for the initial connection, covering daemon
+        // cold-start after a reinstall/restart (~20 × 2s ≈ 40s of trying, plus
+        // per-attempt socket/HTTP timeouts) before showing the RETRY button.
+        private const val MAX_CONNECT_ATTEMPTS = 20
+        private const val RETRY_DELAY_MS = 2_000L
     }
 }

@@ -220,6 +220,12 @@ class RecordingLibraryFragment : Fragment() {
 
     private fun setupStorageDirectories() {
         try {
+            // Re-detect the SD card before resolving directories. On a fresh
+            // install the first StorageManager scan can run before the removable
+            // SD volume is accessible to the app, leaving recordingsDir pointed
+            // at empty internal storage (recordings show 0 until an app restart).
+            // Re-detecting here recovers the SD card path without a restart.
+            net.bladewatch.app.storage.StorageManager.getInstance().refreshSdCard()
             val recordingsDir = RecordingScanner.getRecordingsDir(requireContext())
             val surveillanceDir = RecordingScanner.getSentryEventsDir(requireContext())
             val proximityDir = RecordingScanner.getProximityEventsDir(requireContext())

@@ -301,11 +301,18 @@
             </intent-filter>
         </receiver>
 
-        <!-- Location Sidecar Service - Writes GPS to shared file for daemon -->
+        <!-- Location Sidecar Service - Writes GPS to shared file for daemon.
+             exported=true so the shell-UID daemon can (re)start it via
+             `am startservice`. With exported=false the daemon's start attempt is
+             rejected ("Permission Denial: … not exported from uid 10090"), the
+             sidecar never runs, and the daemon's GpsMonitor is stuck on the
+             cached location — trips record a single static point with no path.
+             The service only pushes GPS to token-gated localhost IPC, so
+             exporting it carries negligible risk. -->
         <service
             android:name="net.bladewatch.app.services.LocationSidecarService"
             android:foregroundServiceType="location|dataSync"
-            android:exported="false" />
+            android:exported="true" />
 
         <!-- Daemon Keepalive Service - Keeps app alive and monitors SCREEN_OFF -->
         <service

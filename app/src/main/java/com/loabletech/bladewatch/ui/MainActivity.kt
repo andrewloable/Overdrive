@@ -285,6 +285,11 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Try to start overlay if permission was just granted (user returned from settings)
         net.bladewatch.app.overlay.StatusOverlayService.startIfPermitted(this)
+        // Re-sync the auth device secret from the daemon. After a reinstall or
+        // daemon restart the app can hold a stale cached secret and sign invalid
+        // JWTs ("Camera unavailable") until force-stopped; invalidating here lets
+        // the next authenticated call pull the daemon's current secret over IPC.
+        net.bladewatch.app.auth.AuthManager.refresh()
     }
     
     /**

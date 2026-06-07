@@ -38,7 +38,7 @@ public class OverlayBitmapRenderer {
     private final DaemonLogger logger;
     private final OverlayDoubleBuffer doubleBuffer;
     private final Paint bgPaint, speedPaint, unitPaint, gearPaint;
-    private final Paint iconPaint, labelPaint, timePaint;
+    private final Paint iconPaint, labelPaint, timePaint, gpsPaint;
     private final SimpleDateFormat dateFmt, timeFmt;
 
     // Pre-extracted alpha masks (solid icons → clean stencils)
@@ -66,6 +66,7 @@ public class OverlayBitmapRenderer {
         iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         labelPaint = mp(0xFFCCCCCC, Paint.Style.FILL, 13);
         timePaint = mp(Color.WHITE, Paint.Style.FILL, 20);
+        gpsPaint = mp(Color.WHITE, Paint.Style.FILL, 15);
 
         // Typeface initialization can fail in daemon mode on automotive BSPs
         // where the font system isn't fully initialized (no Activity context).
@@ -232,6 +233,17 @@ public class OverlayBitmapRenderer {
             c.drawText(dateFmt.format(reusableDate), x, 34, timePaint);
             timePaint.setTextSize(20);
             c.drawText(timeFmt.format(reusableDate), x, 60, timePaint);
+
+            // GPS COORDINATES — burned into the dashcam footage in the empty
+            // region to the right of the main bar (x 1080–1280). Omitted when
+            // there is no fix yet so we never show a misleading 0,0.
+            if (snap.hasGps) {
+                float gx = barR + 8;
+                bgRect.set(gx - 6, 2, WIDTH - 2, 78);
+                c.drawRoundRect(bgRect, 12, 12, bgPaint);
+                c.drawText("LAT " + String.format(Locale.US, "%.5f", snap.latitude), gx, 34, gpsPaint);
+                c.drawText("LON " + String.format(Locale.US, "%.5f", snap.longitude), gx, 60, gpsPaint);
+            }
 
             doubleBuffer.markBackReady();
             return true;
