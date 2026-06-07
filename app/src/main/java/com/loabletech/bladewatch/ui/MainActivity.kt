@@ -12,10 +12,13 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupWithNavController
+import net.bladewatch.app.logging.DebugAppLogger
 import net.bladewatch.app.logging.LogLevel
 import net.bladewatch.app.logging.LogManager
 // import net.bladewatch.app.shell.PrivilegedShellSetup
@@ -687,6 +690,30 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHostFragment.navController
+
+        // Register fragment lifecycle callbacks so debug logging captures every
+        // Fragment lifecycle method when the developer debug logs toggle is on.
+        navHostFragment.childFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentCreated(fm: FragmentManager, f: Fragment, b: android.os.Bundle?) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onFragmentCreated")
+                override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: android.view.View, b: android.os.Bundle?) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onViewCreated")
+                override fun onFragmentStarted(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onStart")
+                override fun onFragmentResumed(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onResume")
+                override fun onFragmentPaused(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onPause")
+                override fun onFragmentStopped(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onStop")
+                override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onDestroyView")
+                override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) =
+                    DebugAppLogger.logLifecycle(f.javaClass.simpleName, "onDestroy")
+            },
+            true // recursive = true so child fragment managers are also covered
+        )
 
         // Top-level destinations on the rail — no back arrow on these.
         appBarConfiguration = AppBarConfiguration(

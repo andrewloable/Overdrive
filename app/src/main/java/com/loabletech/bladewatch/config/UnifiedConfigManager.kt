@@ -278,6 +278,13 @@ object UnifiedConfigManager {
         }
         if (!vehicle.has("modelId")) vehicle.put("modelId", "seal")
         if (!vehicle.has("color")) vehicle.put("color", "#E8E8EC")  // Aurora White
+
+        // Developer options defaults
+        val developerOptions = config.optJSONObject("developerOptions") ?: JSONObject().also {
+            config.put("developerOptions", it)
+        }
+        if (!developerOptions.has("timingLogsEnabled")) developerOptions.put("timingLogsEnabled", true)
+        if (!developerOptions.has("debugLogsEnabled")) developerOptions.put("debugLogsEnabled", false)
     }
     
     /**
@@ -596,6 +603,25 @@ object UnifiedConfigManager {
     @JvmStatic
     fun setTimingLogsEnabled(enabled: Boolean): Boolean {
         return updateValues("developerOptions", mapOf("timingLogsEnabled" to enabled))
+    }
+
+    /**
+     * Check whether developer debug logs are enabled.
+     * When true, the app logs Activity/Fragment lifecycle events and startup steps
+     * to /storage/emulated/0/BladeWatch/data/debug_app.log.
+     * Default is false — disabled in normal use.
+     */
+    @JvmStatic
+    fun isDebugLogsEnabled(): Boolean {
+        return loadConfig().optJSONObject("developerOptions")?.optBoolean("debugLogsEnabled", false) ?: false
+    }
+
+    /**
+     * Update developer debug logs flag.
+     */
+    @JvmStatic
+    fun setDebugLogsEnabled(enabled: Boolean): Boolean {
+        return updateValues("developerOptions", mapOf("debugLogsEnabled" to enabled))
     }
 
     /**

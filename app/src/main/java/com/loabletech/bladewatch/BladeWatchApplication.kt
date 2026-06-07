@@ -1,9 +1,12 @@
 package net.bladewatch.app
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import net.bladewatch.app.logging.DebugAppLogger
 import net.bladewatch.app.logging.LogConfig
 import net.bladewatch.app.logging.LogManager
 import net.bladewatch.app.server.LocaleManager
@@ -35,6 +38,39 @@ class BladeWatchApplication : Application() {
 
         // Initialize LogManager with file logging enabled
         LogManager.getInstance(LogConfig.default())
+
+        // Sync DebugAppLogger enabled state from persisted config (best-effort:
+        // UnifiedConfigManager may not have loaded yet on first-ever boot, in
+        // which case syncEnabled() leaves the logger disabled — correct default).
+        DebugAppLogger.syncEnabled()
+
+        // Install uncaught-exception handler.  Crashes are always written to
+        // the debug log file regardless of the toggle so a crash report is
+        // available even when verbose logging is off.
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            DebugAppLogger.logCrash(thread, throwable)
+            previousHandler?.uncaughtException(thread, throwable)
+        }
+
+        // Register Activity lifecycle callbacks so debug logging captures every
+        // Activity lifecycle method when the toggle is on.
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityCreated(a: Activity, b: Bundle?) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onCreate")
+            override fun onActivityStarted(a: Activity) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onStart")
+            override fun onActivityResumed(a: Activity) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onResume")
+            override fun onActivityPaused(a: Activity) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onPause")
+            override fun onActivityStopped(a: Activity) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onStop")
+            override fun onActivitySaveInstanceState(a: Activity, b: Bundle) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onSaveInstanceState")
+            override fun onActivityDestroyed(a: Activity) =
+                DebugAppLogger.logLifecycle(a.javaClass.simpleName, "onDestroy")
+        })
 
         // Initialize PreferencesManager before any ViewModel is created
         PreferencesManager.init(this)

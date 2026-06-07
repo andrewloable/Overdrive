@@ -13,6 +13,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
 import net.bladewatch.app.R
 import net.bladewatch.app.config.UnifiedConfigManager
+import net.bladewatch.app.logging.DebugAppLogger
 import net.bladewatch.app.ui.MainActivity
 import net.bladewatch.app.ui.util.RecordingScanner
 import java.util.Locale
@@ -58,6 +59,7 @@ class SettingsPrivacyFragment : Fragment() {
             (activity as? MainActivity)?.invokeResetDataDialog()
         }
         setupTimingLogsSwitch(view)
+        setupDebugLogsSwitch(view)
         populateStorage(view)
     }
 
@@ -69,6 +71,18 @@ class SettingsPrivacyFragment : Fragment() {
         }
         sw.setOnCheckedChangeListener { _, checked ->
             UnifiedConfigManager.setTimingLogsEnabled(checked)
+        }
+    }
+
+    private fun setupDebugLogsSwitch(root: View) {
+        val sw = root.findViewById<SwitchMaterial>(R.id.swDebugLogs) ?: return
+        sw.isChecked = UnifiedConfigManager.isDebugLogsEnabled()
+        root.findViewById<View>(R.id.rowDebugLogs).setOnClickListener {
+            sw.isChecked = !sw.isChecked
+        }
+        sw.setOnCheckedChangeListener { _, checked ->
+            UnifiedConfigManager.setDebugLogsEnabled(checked)
+            DebugAppLogger.setEnabled(checked)
         }
     }
 

@@ -763,6 +763,8 @@
     <string name="settings_developer_overline">DEVELOPER</string>
     <string name="settings_developer_timing_logs_title">Daemon timing logs</string>
     <string name="settings_developer_timing_logs_subtitle">Log elapsed-time markers during daemon startup. Disable in normal use to keep logcat clean.</string>
+    <string name="settings_developer_debug_logs_title">Developer debug logs</string>
+    <string name="settings_developer_debug_logs_subtitle">Log all Activity and Fragment lifecycle events and startup steps to /storage/emulated/0/BladeWatch/data/debug_app.log. Crashes are always captured. Off by default.</string>
 
     <!-- ============================================================== -->
     <!-- Diagnostics health-tile values (Camera + Battery)                -->

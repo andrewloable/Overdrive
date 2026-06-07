@@ -14,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import net.bladewatch.app.R
+import net.bladewatch.app.logging.DebugAppLogger
 import net.bladewatch.app.ui.model.DaemonStatus
 import net.bladewatch.app.ui.model.DaemonType
 import net.bladewatch.app.ui.viewmodel.DaemonsViewModel
@@ -53,6 +54,7 @@ class StartupFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         fragmentCreatedAtMs = SystemClock.elapsedRealtime()
+        DebugAppLogger.log("StartupFragment", "Startup screen created at elapsedRealtime=${fragmentCreatedAtMs}ms")
 
         tvStartupHeader = view.findViewById(R.id.tvStartupHeader)
         tvStartupElapsed = view.findViewById(R.id.tvStartupElapsed)
@@ -94,9 +96,13 @@ class StartupFragment : Fragment() {
 
         if (status == DaemonStatus.STARTING && !daemonStartedAtMs.containsKey(type)) {
             daemonStartedAtMs[type] = now
+            DebugAppLogger.log("StartupFragment", "${type.name} STARTING at elapsedRealtime=${now}ms")
         }
         if (status == DaemonStatus.RUNNING && !daemonCompletedAtMs.containsKey(type)) {
             daemonCompletedAtMs[type] = now
+            val startedAt = daemonStartedAtMs[type]
+            val elapsed = if (startedAt != null) now - startedAt else -1L
+            DebugAppLogger.log("StartupFragment", "${type.name} RUNNING after ${elapsed}ms")
         }
 
         val dot = statusDots[type] ?: return
@@ -177,6 +183,8 @@ class StartupFragment : Fragment() {
 
     private fun onAllDaemonsReady() {
         if (navigated) return
+        val elapsed = (SystemClock.elapsedRealtime() - fragmentCreatedAtMs)
+        DebugAppLogger.log("StartupFragment", "All daemons ready at +${elapsed}ms — verifying HTTP health")
         tvStartupHeader.text = "Verifying systems..."
         verifyDaemonHealth()
     }
@@ -199,6 +207,7 @@ class StartupFragment : Fragment() {
             }
 
             if (serverReady) {
+                DebugAppLogger.log("StartupFragment", "HTTP health check passed — navigating to dashboard")
                 handler.post {
                     if (!navigated && isAdded && view != null) {
                         tvStartupHeader.text = "All systems ready"
@@ -209,6 +218,7 @@ class StartupFragment : Fragment() {
                     }
                 }
             } else {
+                DebugAppLogger.log("StartupFragment", "HTTP health check failed — retrying in 3s", "WARN")
                 handler.postDelayed({ verifyDaemonHealth() }, 3000)
             }
         }.start()
