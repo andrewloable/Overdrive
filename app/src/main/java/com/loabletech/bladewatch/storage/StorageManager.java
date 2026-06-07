@@ -106,15 +106,8 @@ public class StorageManager {
     private static final String LEGACY_SURVEILLANCE_DIR = LEGACY_APP_FILES_DIR + "/sentry_events";
 
     // Known SD card mount paths (BYD and common Android paths)
-    private static final String[] SD_CARD_PATHS = {
-        "/storage/external_sd",
-        "/storage/sdcard1",
-        "/storage/sdcard0",
-        "/mnt/external_sd",
-        "/mnt/sdcard/external_sd",
-        "/mnt/media_rw",
-        "/mnt/sdcard",
-    };
+    // SD card paths are discovered dynamically via discoverSdCard() — always /storage/<uuid>.
+    // Do NOT add /mnt/sdcard or similar symlinks here; they may resolve to internal storage.
     
     // Subdirectories
     public static final String RECORDINGS_SUBDIR = "recordings";
@@ -131,8 +124,8 @@ public class StorageManager {
     private static final long DEFAULT_PROXIMITY_LIMIT_MB = 500;
     private static final long DEFAULT_TRIPS_LIMIT_MB = 500;
     private static final long MIN_LIMIT_MB = 100;
-    private static final long MAX_LIMIT_MB_INTERNAL = 100000;  // 100GB max for internal
-    private static final long MAX_LIMIT_MB_SD_CARD = 100000;  // 100GB max for SD card
+    private static final long MAX_LIMIT_MB_INTERNAL = 2_000_000L;  // 2TB hard ceiling (physical disk is the real limit)
+    private static final long MAX_LIMIT_MB_SD_CARD = 2_000_000L;  // 2TB hard ceiling (physical disk is the real limit)
     
     // Periodic cleanup interval (30 seconds)
     private static final long CLEANUP_INTERVAL_SECONDS = 30;
@@ -292,11 +285,12 @@ public class StorageManager {
                         String state = parts[1];       // e.g., "unmounted" or "mounted"
                         volumeUuid = parts[2];         // e.g., "3661-3064"
                         
-                        // If already mounted, check if path is actually accessible
+                        // If already mounted, verify with a shell write probe.
+                        // File.canWrite() is unreliable on sdcardfs: returns false even
+                        // when the shell UID has write access via the sdcard_rw group.
                         if ("mounted".equals(state)) {
                             String mountPath = "/storage/" + volumeUuid;
-                            File mountDir = new File(mountPath);
-                            if (mountDir.exists() && mountDir.canWrite()) {
+                            if (shellCanWrite(mountPath)) {
                                 sdCardPath = mountPath;
                                 sdCardAvailable = true;
                                 logInfo("SD card already mounted at: " + sdCardPath);
@@ -306,9 +300,8 @@ public class StorageManager {
                                 updateActiveDirectories();
                                 return true;
                             }
-                            // Mounted but path not accessible — stale mount, will remount below
-                            logWarn("SD card volume " + volumeId + " reports mounted but path " + mountPath + 
-                                " not accessible — will force remount");
+                            // Probe failed — stale mount, will force remount below.
+                            logWarn("SD card volume " + volumeId + " probe failed at " + mountPath + " — will force remount");
                         }
                         
                         break;  // Found the public volume
@@ -344,14 +337,11 @@ public class StorageManager {
                     (output.length() > 0 ? ", output: " + output.toString().trim() : ""));
                 
                 if (exitCode == 0 && volumeUuid != null) {
-                    // Wait for mount to complete
                     String mountPath = "/storage/" + volumeUuid;
-                    File mountDir = new File(mountPath);
-                    
-                    // Wait up to 5 seconds for mount to appear
-                    for (int i = 0; i < 10; i++) {
-                        Thread.sleep(500);
-                        if (mountDir.exists() && mountDir.canWrite()) {
+                    // Wait up to 3 s for the sdcardfs layer to become writable (1 s steps).
+                    for (int i = 0; i < 3; i++) {
+                        Thread.sleep(1000);
+                        if (shellCanWrite(mountPath)) {
                             sdCardPath = mountPath;
                             sdCardAvailable = true;
                             logInfo("SD card mounted successfully at: " + sdCardPath);
@@ -359,7 +349,7 @@ public class StorageManager {
                             updateActiveDirectories();
                             return true;
                         }
-                        logDebug("Waiting for mount... attempt " + (i+1) + "/10");
+                        logDebug("Waiting for mount probe... attempt " + (i+1) + "/3");
                     }
                     logWarn("SD card mount path not accessible after mount: " + mountPath);
                 } else {
@@ -385,12 +375,8 @@ public class StorageManager {
      * @return true if SD card is mounted
      */
     public boolean isSdCardMounted() {
-        if (sdCardPath == null) {
-            return false;
-        }
-        
-        File sdDir = new File(sdCardPath);
-        return sdDir.exists() && sdDir.isDirectory() && sdDir.canWrite();
+        if (sdCardPath == null) return false;
+        return shellCanWrite(sdCardPath);
     }
     
     /**
@@ -461,156 +447,115 @@ public class StorageManager {
     }
     
     /**
-     * Discover SD card path using sm list-volumes, BYD system properties, or known mount points.
+     * Discover SD card path. Only considers /storage/<uuid> paths (the canonical
+     * vold mount points). Never falls back to /mnt/sdcard or similar symlinks,
+     * which may resolve to internal storage and return wrong StatFs sizes.
+     *
+     * <p>Java's {@code File.canWrite()} is unreliable on sdcardfs mounts (returns
+     * false even when the shell UID has group write access via sdcard_rw). We use
+     * a shell {@code touch} probe instead, with up to 3 attempts separated by 1 s
+     * each before giving up.
      */
     public void discoverSdCard() {
         sdCardPath = null;
         sdCardAvailable = false;
-        
-        // Method 1: Check using 'sm list-volumes all' for mounted public volumes
+
+        // Collect candidate /storage/<uuid> paths from sm list-volumes and /storage scan.
+        java.util.List<String> candidates = new java.util.ArrayList<>();
+
+        // Source 1: sm list-volumes all — most reliable, gives us the exact UUID.
         try {
-            Process listProcess = Runtime.getRuntime().exec(new String[]{"sm", "list-volumes", "all"});
-            BufferedReader reader = new BufferedReader(new InputStreamReader(listProcess.getInputStream()));
+            Process p = Runtime.getRuntime().exec(new String[]{"sm", "list-volumes", "all"});
+            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
             String line;
-            
-            while ((line = reader.readLine()) != null) {
-                // Parse lines like: "public:8,97 mounted 3661-3064"
+            while ((line = r.readLine()) != null) {
                 line = line.trim();
                 if (line.startsWith("public:") && line.contains("mounted")) {
                     String[] parts = line.split("\\s+");
                     if (parts.length >= 3) {
-                        String volumeUuid = parts[2];  // e.g., "3661-3064"
-                        String mountPath = "/storage/" + volumeUuid;
-                        File mountDir = new File(mountPath);
-                        
-                        if (mountDir.exists() && mountDir.isDirectory() && mountDir.canWrite()) {
-                            sdCardPath = mountPath;
-                            sdCardAvailable = true;
-                            logInfo("Found SD card via sm list-volumes: " + sdCardPath);
-                            reader.close();
-                            listProcess.waitFor();
-                            return;
+                        String uuid = parts[2];
+                        if (!uuid.equals("null") && !uuid.isEmpty()) {
+                            candidates.add("/storage/" + uuid);
                         }
                     }
                 }
             }
-            reader.close();
-            listProcess.waitFor();
+            r.close();
+            p.waitFor();
         } catch (Exception e) {
-            logDebug("Could not check sm list-volumes: " + e.getMessage());
+            logDebug("sm list-volumes failed: " + e.getMessage());
         }
-        
-        // Method 2: Check BYD system property for SD card UUID
-        String sdUuid = getSystemProperty("sys.byd.mSdcardUuid");
-        if (sdUuid != null && !sdUuid.isEmpty()) {
-            String uuidPath = "/storage/" + sdUuid;
-            File uuidDir = new File(uuidPath);
-            if (uuidDir.exists() && uuidDir.isDirectory() && uuidDir.canWrite()) {
-                sdCardPath = uuidPath;
-                sdCardAvailable = true;
-                logInfo("Found SD card via BYD UUID: " + sdCardPath);
-                return;
-            }
-        }
-        
-        // Method 3: Scan /storage/ for mounted volumes
+
+        // Source 2: scan /storage/ for UUID-style directories, skipping symlinks and known non-SD names.
         try {
-            File storageDir = new File("/storage");
-            if (storageDir.exists() && storageDir.isDirectory()) {
-                File[] volumes = storageDir.listFiles();
-                if (volumes != null) {
-                    for (File vol : volumes) {
-                        // Skip known non-SD entries
-                        String name = vol.getName();
-                        if (name.equals("emulated") || name.equals("self") || name.startsWith(".")) {
-                            continue;
-                        }
-                        
-                        // Any writable directory under /storage/ that isn't emulated/self could be an SD card
-                        if (vol.isDirectory() && vol.canWrite()) {
-                            sdCardPath = vol.getAbsolutePath();
-                            sdCardAvailable = true;
-                            logInfo("Found SD card via /storage scan: " + sdCardPath);
-                            return;
-                        }
-                        
-                        // Some mounts are readable but not writable via Java — try shell test
-                        if (vol.isDirectory() && vol.canRead()) {
-                            try {
-                                Process p = Runtime.getRuntime().exec(new String[]{
-                                    "sh", "-c", "touch " + vol.getAbsolutePath() + "/.bladewatch_probe && rm " + vol.getAbsolutePath() + "/.bladewatch_probe"
-                                });
-                                int exitCode = p.waitFor();
-                                if (exitCode == 0) {
-                                    sdCardPath = vol.getAbsolutePath();
-                                    sdCardAvailable = true;
-                                    logInfo("Found SD card via /storage scan (shell write test): " + sdCardPath);
-                                    return;
-                                }
-                            } catch (Exception ignored) {}
-                        }
+            File[] entries = new File("/storage").listFiles();
+            if (entries != null) {
+                for (File f : entries) {
+                    String name = f.getName();
+                    if (name.equals("emulated") || name.equals("self") || name.equals("sdcard") || name.startsWith(".")) {
+                        continue;
+                    }
+                    // Only plain directories (not symlinks) to avoid /storage/sdcard -> E3B7-10F2 duplicates.
+                    String absPath = f.getAbsolutePath();
+                    if (f.isDirectory() && !candidates.contains(absPath)) {
+                        candidates.add(absPath);
                     }
                 }
             }
         } catch (Exception e) {
             logDebug("Could not scan /storage: " + e.getMessage());
         }
-        
-        // Method 4: Parse /proc/mounts for vfat/exfat filesystems (SD card signatures)
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader("/proc/mounts"));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                // SD cards are typically vfat, exfat, or sdcardfs
-                if (line.contains("vfat") || line.contains("exfat")) {
-                    String[] parts = line.split("\\s+");
-                    if (parts.length >= 2) {
-                        String mountPoint = parts[1];
-                        // Skip internal partitions
-                        if (mountPoint.startsWith("/mnt/vendor") || mountPoint.startsWith("/firmware") ||
-                            mountPoint.equals("/boot") || mountPoint.startsWith("/cache")) {
-                            continue;
-                        }
-                        File mountDir = new File(mountPoint);
-                        if (mountDir.exists() && mountDir.isDirectory() && mountDir.canRead()) {
-                            // Verify writable via shell
-                            try {
-                                Process p = Runtime.getRuntime().exec(new String[]{
-                                    "sh", "-c", "touch " + mountPoint + "/.bladewatch_probe && rm " + mountPoint + "/.bladewatch_probe"
-                                });
-                                int exitCode = p.waitFor();
-                                if (exitCode == 0) {
-                                    sdCardPath = mountPoint;
-                                    sdCardAvailable = true;
-                                    logInfo("Found SD card via /proc/mounts: " + sdCardPath + " (filesystem: " + 
-                                        (line.contains("exfat") ? "exfat" : "vfat") + ")");
-                                    reader.close();
-                                    return;
-                                }
-                            } catch (Exception ignored) {}
-                        }
+
+        // Probe each candidate with a shell write test (3 attempts, 1 s apart).
+        for (String candidate : candidates) {
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    File dir = new File(candidate);
+                    if (!dir.exists() || !dir.isDirectory()) {
+                        break; // path doesn't exist yet — no point retrying
                     }
+                    Process p = Runtime.getRuntime().exec(new String[]{
+                        "sh", "-c",
+                        "touch " + candidate + "/.bladewatch_probe && rm " + candidate + "/.bladewatch_probe"
+                    });
+                    int exit = p.waitFor();
+                    if (exit == 0) {
+                        sdCardPath = candidate;
+                        sdCardAvailable = true;
+                        logInfo("Found SD card (attempt " + attempt + "): " + sdCardPath);
+                        return;
+                    }
+                    logDebug("SD probe failed on " + candidate + " (attempt " + attempt + "/3, exit=" + exit + ")");
+                    if (attempt < 3) Thread.sleep(1000);
+                } catch (Exception e) {
+                    logDebug("SD probe error on " + candidate + " attempt " + attempt + ": " + e.getMessage());
+                    try { if (attempt < 3) Thread.sleep(1000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
                 }
             }
-            reader.close();
-        } catch (Exception e) {
-            logDebug("Could not parse /proc/mounts: " + e.getMessage());
         }
-        
-        // Method 4: Check known paths
-        for (String path : SD_CARD_PATHS) {
-            File dir = new File(path);
-            if (dir.exists() && dir.isDirectory() && dir.canWrite()) {
-                sdCardPath = path;
-                sdCardAvailable = true;
-                logInfo("Found SD card at: " + sdCardPath);
-                return;
-            }
-        }
-        
-        logDebug("No writable SD card found");
+
+        logDebug("No writable SD card found under /storage/");
     }
     
+    /**
+     * Returns true if the shell UID can write to {@code dirPath}.
+     * Uses a {@code touch}/{@code rm} probe via sh because {@code File.canWrite()}
+     * is unreliable on sdcardfs mounts (may return false despite sdcard_rw group access).
+     */
+    private boolean shellCanWrite(String dirPath) {
+        try {
+            File dir = new File(dirPath);
+            if (!dir.exists() || !dir.isDirectory()) return false;
+            Process p = Runtime.getRuntime().exec(new String[]{
+                "sh", "-c",
+                "touch " + dirPath + "/.bladewatch_probe && rm " + dirPath + "/.bladewatch_probe"
+            });
+            return p.waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Get Android system property via reflection or shell.
      */
@@ -862,11 +807,15 @@ public class StorageManager {
                     surveillanceStorageType = "SD_CARD".equals(survStorageType) ? StorageType.SD_CARD : StorageType.INTERNAL;
                     tripsStorageType = "SD_CARD".equals(tripsStorageTypeStr) ? StorageType.SD_CARD : StorageType.INTERNAL;
                     
-                    // Clamp to valid range based on storage type
-                    long maxRecLimit = recordingsStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
-                    long maxSurvLimit = surveillanceStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
-                    long maxTripsLimit = tripsStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
-                    
+                    // Clamp to valid range — use physical disk size where known, fall back to hard ceiling
+                    long sdDiskMb = getSdCardTotalSpace() / (1024L * 1024L);
+                    long intDiskMb = getInternalTotalSpace() / (1024L * 1024L);
+                    long sdMax = sdDiskMb > MIN_LIMIT_MB ? sdDiskMb : MAX_LIMIT_MB_SD_CARD;
+                    long intMax = intDiskMb > MIN_LIMIT_MB ? intDiskMb : MAX_LIMIT_MB_INTERNAL;
+                    long maxRecLimit = recordingsStorageType == StorageType.SD_CARD ? sdMax : intMax;
+                    long maxSurvLimit = surveillanceStorageType == StorageType.SD_CARD ? sdMax : intMax;
+                    long maxTripsLimit = tripsStorageType == StorageType.SD_CARD ? sdMax : intMax;
+
                     recordingsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxRecLimit, recordingsLimitMb));
                     surveillanceLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, surveillanceLimitMb));
                     proximityLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, proximityLimitMb));
@@ -1102,27 +1051,33 @@ public class StorageManager {
     }
     
     public void setRecordingsLimitMb(long limitMb) {
-        long maxLimit = recordingsStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
+        long maxLimit = physicalDiskMaxMb(recordingsStorageType);
         recordingsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxLimit, limitMb));
         saveConfig();
     }
-    
+
     public void setSurveillanceLimitMb(long limitMb) {
-        long maxLimit = surveillanceStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
+        long maxLimit = physicalDiskMaxMb(surveillanceStorageType);
         surveillanceLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxLimit, limitMb));
         saveConfig();
     }
-    
+
     public void setProximityLimitMb(long limitMb) {
-        long maxLimit = surveillanceStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
+        long maxLimit = physicalDiskMaxMb(surveillanceStorageType);
         proximityLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxLimit, limitMb));
         saveConfig();
     }
-    
+
     public void setTripsLimitMb(long limitMb) {
-        long maxLimit = tripsStorageType == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL;
+        long maxLimit = physicalDiskMaxMb(tripsStorageType);
         tripsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxLimit, limitMb));
         saveConfig();
+    }
+
+    private long physicalDiskMaxMb(StorageType type) {
+        long diskBytes = type == StorageType.SD_CARD ? getSdCardTotalSpace() : getInternalTotalSpace();
+        long diskMb = diskBytes / (1024L * 1024L);
+        return diskMb > MIN_LIMIT_MB ? diskMb : (type == StorageType.SD_CARD ? MAX_LIMIT_MB_SD_CARD : MAX_LIMIT_MB_INTERNAL);
     }
     
     // ==================== Storage Type Getters/Setters ====================
@@ -1895,14 +1850,24 @@ public class StorageManager {
     }
     
     public static long getMaxLimitMb() {
-        return MAX_LIMIT_MB_INTERNAL;
+        return getMaxLimitMbInternal();
     }
-    
+
     public static long getMaxLimitMbInternal() {
+        StorageManager sm = getInstance();
+        if (sm != null) {
+            long diskMb = sm.getInternalTotalSpace() / (1024L * 1024L);
+            if (diskMb > MIN_LIMIT_MB) return diskMb;
+        }
         return MAX_LIMIT_MB_INTERNAL;
     }
-    
+
     public static long getMaxLimitMbSdCard() {
+        StorageManager sm = getInstance();
+        if (sm != null) {
+            long diskMb = sm.getSdCardTotalSpace() / (1024L * 1024L);
+            if (diskMb > MIN_LIMIT_MB) return diskMb;
+        }
         return MAX_LIMIT_MB_SD_CARD;
     }
     
