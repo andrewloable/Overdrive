@@ -823,87 +823,67 @@ public class StorageManager {
     }
     
     /**
-     * Load storage limits and storage type from config file.
+     * Load storage limits and storage type from config.
+     *
+     * Reads via UnifiedConfigManager so the storage section lives in its
+     * cachedConfig and is preserved on every subsequent UnifiedConfigManager
+     * save. Previously this read /data/local/tmp/bladewatch_config.json
+     * directly, but UnifiedConfigManager.mirrorLegacyConfig() was silently
+     * overwriting that file (from its own storage-section-free cachedConfig)
+     * on any unrelated settings change, causing the SD card preference to
+     * revert to INTERNAL after each daemon restart.
      */
     private void loadConfig() {
         try {
-            File configFile = new File(CONFIG_FILE);
-            if (configFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(configFile));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
-                reader.close();
-                
-                JSONObject config = new JSONObject(sb.toString());
-                JSONObject storage = config.optJSONObject("storage");
-                if (storage != null) {
-                    recordingsLimitMb = storage.optLong("recordingsLimitMb", DEFAULT_RECORDINGS_LIMIT_MB);
-                    surveillanceLimitMb = storage.optLong("surveillanceLimitMb", DEFAULT_SURVEILLANCE_LIMIT_MB);
-                    proximityLimitMb = storage.optLong("proximityLimitMb", DEFAULT_PROXIMITY_LIMIT_MB);
-                    tripsLimitMb = storage.optLong("tripsLimitMb", DEFAULT_TRIPS_LIMIT_MB);
-                    
-                    // Load storage type selection
-                    String recStorageType = storage.optString("recordingsStorageType", "INTERNAL");
-                    String survStorageType = storage.optString("surveillanceStorageType", "INTERNAL");
-                    String tripsStorageTypeStr = storage.optString("tripsStorageType", "INTERNAL");
-                    
-                    recordingsStorageType = "SD_CARD".equals(recStorageType) ? StorageType.SD_CARD : StorageType.INTERNAL;
-                    surveillanceStorageType = "SD_CARD".equals(survStorageType) ? StorageType.SD_CARD : StorageType.INTERNAL;
-                    tripsStorageType = "SD_CARD".equals(tripsStorageTypeStr) ? StorageType.SD_CARD : StorageType.INTERNAL;
-                    
-                    // Clamp to valid range — use physical disk size where known, fall back to hard ceiling
-                    long sdDiskMb = getSdCardTotalSpace() / (1024L * 1024L);
-                    long intDiskMb = getInternalTotalSpace() / (1024L * 1024L);
-                    long sdMax = sdDiskMb > MIN_LIMIT_MB ? sdDiskMb : MAX_LIMIT_MB_SD_CARD;
-                    long intMax = intDiskMb > MIN_LIMIT_MB ? intDiskMb : MAX_LIMIT_MB_INTERNAL;
-                    long maxRecLimit = recordingsStorageType == StorageType.SD_CARD ? sdMax : intMax;
-                    long maxSurvLimit = surveillanceStorageType == StorageType.SD_CARD ? sdMax : intMax;
-                    long maxTripsLimit = tripsStorageType == StorageType.SD_CARD ? sdMax : intMax;
+            JSONObject storage = net.bladewatch.app.config.UnifiedConfigManager.loadConfig().optJSONObject("storage");
+            if (storage != null) {
+                recordingsLimitMb = storage.optLong("recordingsLimitMb", DEFAULT_RECORDINGS_LIMIT_MB);
+                surveillanceLimitMb = storage.optLong("surveillanceLimitMb", DEFAULT_SURVEILLANCE_LIMIT_MB);
+                proximityLimitMb = storage.optLong("proximityLimitMb", DEFAULT_PROXIMITY_LIMIT_MB);
+                tripsLimitMb = storage.optLong("tripsLimitMb", DEFAULT_TRIPS_LIMIT_MB);
 
-                    recordingsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxRecLimit, recordingsLimitMb));
-                    surveillanceLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, surveillanceLimitMb));
-                    proximityLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, proximityLimitMb));
-                    tripsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxTripsLimit, tripsLimitMb));
-                    
-                    logInfo("Loaded storage config: recordings=" + recordingsLimitMb + "MB (" + recordingsStorageType + 
-                        "), surveillance=" + surveillanceLimitMb + "MB (" + surveillanceStorageType + 
-                        "), trips=" + tripsLimitMb + "MB (" + tripsStorageType + ")");
-                }
+                String recStorageType = storage.optString("recordingsStorageType", "INTERNAL");
+                String survStorageType = storage.optString("surveillanceStorageType", "INTERNAL");
+                String tripsStorageTypeStr = storage.optString("tripsStorageType", "INTERNAL");
+
+                recordingsStorageType = "SD_CARD".equals(recStorageType) ? StorageType.SD_CARD : StorageType.INTERNAL;
+                surveillanceStorageType = "SD_CARD".equals(survStorageType) ? StorageType.SD_CARD : StorageType.INTERNAL;
+                tripsStorageType = "SD_CARD".equals(tripsStorageTypeStr) ? StorageType.SD_CARD : StorageType.INTERNAL;
+
+                // Clamp to valid range — use physical disk size where known, fall back to hard ceiling
+                long sdDiskMb = getSdCardTotalSpace() / (1024L * 1024L);
+                long intDiskMb = getInternalTotalSpace() / (1024L * 1024L);
+                long sdMax = sdDiskMb > MIN_LIMIT_MB ? sdDiskMb : MAX_LIMIT_MB_SD_CARD;
+                long intMax = intDiskMb > MIN_LIMIT_MB ? intDiskMb : MAX_LIMIT_MB_INTERNAL;
+                long maxRecLimit = recordingsStorageType == StorageType.SD_CARD ? sdMax : intMax;
+                long maxSurvLimit = surveillanceStorageType == StorageType.SD_CARD ? sdMax : intMax;
+                long maxTripsLimit = tripsStorageType == StorageType.SD_CARD ? sdMax : intMax;
+
+                recordingsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxRecLimit, recordingsLimitMb));
+                surveillanceLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, surveillanceLimitMb));
+                proximityLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxSurvLimit, proximityLimitMb));
+                tripsLimitMb = Math.max(MIN_LIMIT_MB, Math.min(maxTripsLimit, tripsLimitMb));
+
+                logInfo("Loaded storage config: recordings=" + recordingsLimitMb + "MB (" + recordingsStorageType +
+                    "), surveillance=" + surveillanceLimitMb + "MB (" + surveillanceStorageType +
+                    "), trips=" + tripsLimitMb + "MB (" + tripsStorageType + ")");
             }
         } catch (Exception e) {
             logWarn("Could not load storage config: " + e.getMessage());
         }
     }
-    
+
     /**
-     * Save storage limits and storage type to config file.
+     * Save storage limits and storage type via UnifiedConfigManager.
+     *
+     * Writing through UnifiedConfigManager ensures the storage section is
+     * part of its cachedConfig, so subsequent mirror writes (triggered by
+     * any other settings change) carry the storage section instead of
+     * silently overwriting it with a storage-section-free snapshot.
      */
     public void saveConfig() {
         try {
-            File configFile = new File(CONFIG_FILE);
-            JSONObject config;
-            
-            if (configFile.exists()) {
-                BufferedReader reader = new BufferedReader(new FileReader(configFile));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
-                reader.close();
-                config = new JSONObject(sb.toString());
-            } else {
-                config = new JSONObject();
-                config.put("version", 1);
-            }
-            
-            JSONObject storage = config.optJSONObject("storage");
-            if (storage == null) {
-                storage = new JSONObject();
-            }
+            JSONObject storage = new JSONObject();
             storage.put("recordingsLimitMb", recordingsLimitMb);
             storage.put("surveillanceLimitMb", surveillanceLimitMb);
             storage.put("proximityLimitMb", proximityLimitMb);
@@ -911,18 +891,11 @@ public class StorageManager {
             storage.put("recordingsStorageType", recordingsStorageType.name());
             storage.put("surveillanceStorageType", surveillanceStorageType.name());
             storage.put("tripsStorageType", tripsStorageType.name());
-            config.put("storage", storage);
-            config.put("lastModified", System.currentTimeMillis());
-            
-            FileWriter writer = new FileWriter(configFile);
-            writer.write(config.toString(2));
-            writer.close();
-            
-            configFile.setReadable(true, false);
-            configFile.setWritable(true, false);
-            
-            logInfo("Saved storage config: recordings=" + recordingsLimitMb + "MB (" + recordingsStorageType + 
-                "), surveillance=" + surveillanceLimitMb + "MB (" + surveillanceStorageType + 
+
+            net.bladewatch.app.config.UnifiedConfigManager.updateSection("storage", storage);
+
+            logInfo("Saved storage config: recordings=" + recordingsLimitMb + "MB (" + recordingsStorageType +
+                "), surveillance=" + surveillanceLimitMb + "MB (" + surveillanceStorageType +
                 "), trips=" + tripsLimitMb + "MB (" + tripsStorageType + ")");
         } catch (Exception e) {
             logError("Could not save storage config: " + e.getMessage());
