@@ -127,9 +127,7 @@ public class ConnectDispatcher {
           .append("Content-Type: application/connect+json\r\n")
           .append("Content-Length: ").append(body.length).append("\r\n")
           .append("Connection: close\r\n");
-        if (extraHeaders != null) {
-            for (String h : extraHeaders) sb.append(h).append("\r\n");
-        }
+        for (String h : extraHeaders) sb.append(h).append("\r\n");
         sb.append("\r\n");
         out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
         out.write(body);

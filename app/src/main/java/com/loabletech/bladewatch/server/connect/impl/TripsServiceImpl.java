@@ -34,7 +34,7 @@ import org.json.JSONObject;
  */
 public class TripsServiceImpl {
 
-    private TripApiHandler cachedHandler;
+    private volatile TripApiHandler cachedHandler;
 
     public void register(ConnectDispatcher dispatcher) {
         dispatcher.register("bladewatch.v1.TripsService", "ListTrips",
@@ -75,8 +75,7 @@ public class TripsServiceImpl {
         if (cachedHandler == null) {
             cachedHandler = new TripApiHandler(tam);
         }
-        TripApiHandler handler = cachedHandler;
-        JSONObject result = handler.handleRequest(uri, method, null, body);
+        JSONObject result = cachedHandler.handleRequest(uri, method, null, body);
         if (result == null) {
             throw new ConnectException("internal", "No response from TripApiHandler");
         }

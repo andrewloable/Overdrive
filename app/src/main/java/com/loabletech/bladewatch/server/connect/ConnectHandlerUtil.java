@@ -32,10 +32,12 @@ public final class ConnectHandlerUtil {
     private static final class RawCapture {
         final byte[] bodyBytes;
         final String headersSection; // everything before the blank line
+        final int httpStatus;        // parsed from the HTTP status line
 
-        RawCapture(byte[] bodyBytes, String headersSection) {
+        RawCapture(byte[] bodyBytes, String headersSection, int httpStatus) {
             this.bodyBytes = bodyBytes;
             this.headersSection = headersSection;
+            this.httpStatus = httpStatus;
         }
 
         /** Extract all Set-Cookie header values from the response headers. */
@@ -61,13 +63,14 @@ public final class ConnectHandlerUtil {
                 if (all[i] == '\r' && all[i + 1] == '\n'
                         && all[i + 2] == '\r' && all[i + 3] == '\n') {
                     String headers = new String(all, 0, i, StandardCharsets.UTF_8);
+                    int status = parseHttpStatus(headers);
                     byte[] body = new byte[all.length - i - 4];
                     System.arraycopy(all, i + 4, body, 0, body.length);
-                    return new RawCapture(body, headers);
+                    return new RawCapture(body, headers, status);
                 }
             }
             // No header separator — treat entire output as body
-            return new RawCapture(all, "");
+            return new RawCapture(all, "", 200);
         } catch (ConnectException e) {
             throw e;
         } catch (Exception e) {
@@ -105,10 +108,17 @@ public final class ConnectHandlerUtil {
     /**
      * Capture a REST handler and return its JSON body as a String, along with
      * any Set-Cookie headers from the wrapped response (for auth flows).
+     * Throws {@link ConnectException} if the wrapped handler returns HTTP 4xx/5xx.
      */
     public static ConnectResponse captureWithCookies(HandlerInvoker invoker)
             throws ConnectException {
         RawCapture raw = captureRaw(invoker);
+        if (raw.httpStatus >= 400) {
+            String body = new String(raw.bodyBytes, StandardCharsets.UTF_8).trim();
+            throw new ConnectException(
+                    httpStatusToConnectCode(raw.httpStatus),
+                    extractErrorMessage(body));
+        }
         try {
             String body = new String(raw.bodyBytes, StandardCharsets.UTF_8).trim();
             if (body.isEmpty()) body = "{}";
@@ -145,10 +155,20 @@ public final class ConnectHandlerUtil {
     }
 
     /**
-     * Capture a REST handler and return its raw JSON body string.
+     * Capture a REST handler and return its raw body as a ConnectResponse.
+     * Throws {@link ConnectException} if the wrapped handler returns HTTP 4xx/5xx.
      */
     public static ConnectResponse captureString(HandlerInvoker invoker) throws ConnectException {
-        return ConnectResponse.of(capture(invoker).toString());
+        RawCapture raw = captureRaw(invoker);
+        if (raw.httpStatus >= 400) {
+            String body = new String(raw.bodyBytes, StandardCharsets.UTF_8).trim();
+            throw new ConnectException(
+                    httpStatusToConnectCode(raw.httpStatus),
+                    extractErrorMessage(body));
+        }
+        String body = new String(raw.bodyBytes, StandardCharsets.UTF_8).trim();
+        if (body.isEmpty()) body = "{}";
+        return ConnectResponse.of(body);
     }
 
     /**
@@ -173,12 +193,44 @@ public final class ConnectHandlerUtil {
     public static String requireString(String requestJson, String field) throws ConnectException {
         try {
             String v = new org.json.JSONObject(requestJson).getString(field);
-            if (v == null || v.isEmpty()) throw new Exception("empty");
+            if (v.isEmpty()) throw new Exception("empty");
             return v;
         } catch (ConnectException e) {
             throw e;
         } catch (Exception e) {
             throw new ConnectException("invalid_argument", "Missing or invalid field: " + field);
         }
+    }
+
+    private static int parseHttpStatus(String headers) {
+        try {
+            String statusLine = headers.split("\r\n")[0]; // e.g. "HTTP/1.1 404 Not Found"
+            return Integer.parseInt(statusLine.split(" ")[1]);
+        } catch (Exception e) {
+            return 200;
+        }
+    }
+
+    private static String httpStatusToConnectCode(int status) {
+        switch (status) {
+            case 400: return "invalid_argument";
+            case 401: return "unauthenticated";
+            case 403: return "permission_denied";
+            case 404: return "not_found";
+            case 409: return "already_exists";
+            case 429: return "resource_exhausted";
+            default:  return "internal";
+        }
+    }
+
+    private static String extractErrorMessage(String body) {
+        if (body == null || body.isEmpty()) return "Request failed";
+        try {
+            JSONObject obj = new JSONObject(body);
+            String msg = obj.optString("error", null);
+            if (msg == null) msg = obj.optString("message", null);
+            if (msg != null && !msg.isEmpty()) return msg;
+        } catch (Exception ignored) {}
+        return "Request failed";
     }
 }

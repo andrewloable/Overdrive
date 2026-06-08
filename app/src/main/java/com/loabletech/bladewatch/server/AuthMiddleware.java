@@ -220,9 +220,10 @@ public class AuthMiddleware {
         log("Unauthorized: " + path + " - " + reason);
         
         // API requests get 401 JSON
-        if (path.startsWith("/api/") || path.startsWith("/ws") || 
+        if (path.startsWith("/api/") || path.startsWith("/ws") ||
             path.startsWith("/snapshot/") || path.startsWith("/video/") ||
-            path.startsWith("/thumb/") || path.startsWith("/h264/") || path.equals("/status")) {
+            path.startsWith("/thumb/") || path.startsWith("/h264/") ||
+            path.equals("/status") || path.startsWith("/bladewatch.v1.")) {
             
             String json = "{\"error\":\"Unauthorized\",\"reason\":\"" + reason + "\",\"login\":\"/login.html\"}";
             HttpResponse.sendUnauthorized(out, json);
