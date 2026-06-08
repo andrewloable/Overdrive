@@ -48,6 +48,7 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.SetChargeCapRequest.class, net.bladewatch.app.grpc.v1.SetChargeCapRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int PERCENT_FIELD_NUMBER = 1;
   private int percent_ = 0;
   /**
@@ -62,7 +63,27 @@ private static final long serialVersionUID = 0L;
   public static final int ENABLED_FIELD_NUMBER = 2;
   private boolean enabled_ = false;
   /**
-   * <code>bool enabled = 2 [json_name = "enabled"];</code>
+   * <pre>
+   * Explicit presence: a pure disable request sets enabled=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), making
+   * the handler's has("enabled") check fail. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
+   * @return Whether the enabled field is set.
+   */
+  @java.lang.Override
+  public boolean hasEnabled() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Explicit presence: a pure disable request sets enabled=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), making
+   * the handler's has("enabled") check fail. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
    * @return The enabled.
    */
   @java.lang.Override
@@ -87,7 +108,7 @@ private static final long serialVersionUID = 0L;
     if (percent_ != 0) {
       output.writeInt32(1, percent_);
     }
-    if (enabled_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       output.writeBool(2, enabled_);
     }
     getUnknownFields().writeTo(output);
@@ -98,7 +119,7 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(1, percent_);
     }
-    if (enabled_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(2, enabled_);
     }
@@ -128,8 +149,11 @@ private static final long serialVersionUID = 0L;
 
     if (getPercent()
         != other.getPercent()) return false;
-    if (getEnabled()
-        != other.getEnabled()) return false;
+    if (hasEnabled() != other.hasEnabled()) return false;
+    if (hasEnabled()) {
+      if (getEnabled()
+          != other.getEnabled()) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -143,9 +167,11 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + PERCENT_FIELD_NUMBER;
     hash = (53 * hash) + getPercent();
-    hash = (37 * hash) + ENABLED_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getEnabled());
+    if (hasEnabled()) {
+      hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getEnabled());
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -315,9 +341,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.percent_ = percent_;
       }
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.enabled_ = enabled_;
+        to_bitField0_ |= 0x00000001;
       }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -335,7 +364,7 @@ private static final long serialVersionUID = 0L;
       if (other.getPercent() != 0) {
         setPercent(other.getPercent());
       }
-      if (other.getEnabled() != false) {
+      if (other.hasEnabled()) {
         setEnabled(other.getEnabled());
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -425,7 +454,27 @@ private static final long serialVersionUID = 0L;
 
     private boolean enabled_ ;
     /**
-     * <code>bool enabled = 2 [json_name = "enabled"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets enabled=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), making
+     * the handler's has("enabled") check fail. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
+     * @return Whether the enabled field is set.
+     */
+    @java.lang.Override
+    public boolean hasEnabled() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * Explicit presence: a pure disable request sets enabled=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), making
+     * the handler's has("enabled") check fail. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
      * @return The enabled.
      */
     @java.lang.Override
@@ -433,7 +482,13 @@ private static final long serialVersionUID = 0L;
       return enabled_;
     }
     /**
-     * <code>bool enabled = 2 [json_name = "enabled"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets enabled=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), making
+     * the handler's has("enabled") check fail. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
      * @param value The enabled to set.
      * @return This builder for chaining.
      */
@@ -445,7 +500,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool enabled = 2 [json_name = "enabled"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets enabled=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), making
+     * the handler's has("enabled") check fail. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
      * @return This builder for chaining.
      */
     public Builder clearEnabled() {

@@ -37,8 +37,24 @@ public class SettingsServiceImpl {
     }
 
     private ConnectResponse handleSetQuality(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {success, recordingBitrate, recordingCodec, note}; the proto
+        // SetQualityResponse expects recording_quality (json recordingQuality),
+        // codec (json recordingCodec), message. recordingCodec already matches;
+        // map recordingBitrate→recordingQuality (same applied tier) and note→message.
+        JSONObject body = ConnectHandlerUtil.capture(out ->
                 QualitySettingsApiHandler.handle("POST", "/api/settings/quality", req, out));
+        try {
+            if (body.has("recordingBitrate") && !body.has("recordingQuality")) {
+                body.put("recordingQuality", body.optString("recordingBitrate", ""));
+            }
+            String note = body.optString("note", "");
+            if (!note.isEmpty() && !body.has("message")) {
+                body.put("message", note);
+            }
+            return ConnectResponse.of(body.toString());
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handleGetAppearance(String req, String clientIdentity) throws ConnectException {

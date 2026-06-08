@@ -17,19 +17,46 @@ public interface GetChargeCapResponseOrBuilder extends
   boolean getSuccess();
 
   /**
-   * <code>int32 percent = 2 [json_name = "percent"];</code>
+   * <pre>
+   * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+   * these optional lets a parsed null stay unset (has()=false) so the client
+   * can distinguish "not probed" from a real 0/false.
+   * </pre>
+   *
+   * <code>optional int32 percent = 2 [json_name = "percent"];</code>
+   * @return Whether the percent field is set.
+   */
+  boolean hasPercent();
+  /**
+   * <pre>
+   * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+   * these optional lets a parsed null stay unset (has()=false) so the client
+   * can distinguish "not probed" from a real 0/false.
+   * </pre>
+   *
+   * <code>optional int32 percent = 2 [json_name = "percent"];</code>
    * @return The percent.
    */
   int getPercent();
 
   /**
-   * <code>bool enabled = 3 [json_name = "enabled"];</code>
+   * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
+   * @return Whether the enabled field is set.
+   */
+  boolean hasEnabled();
+  /**
+   * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
    * @return The enabled.
    */
   boolean getEnabled();
 
   /**
-   * <code>bool supported = 4 [json_name = "supported"];</code>
+   * <code>optional bool supported = 4 [json_name = "supported"];</code>
+   * @return Whether the supported field is set.
+   */
+  boolean hasSupported();
+  /**
+   * <code>optional bool supported = 4 [json_name = "supported"];</code>
    * @return The supported.
    */
   boolean getSupported();

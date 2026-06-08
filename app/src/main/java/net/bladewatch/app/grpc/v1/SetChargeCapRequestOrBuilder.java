@@ -17,7 +17,24 @@ public interface SetChargeCapRequestOrBuilder extends
   int getPercent();
 
   /**
-   * <code>bool enabled = 2 [json_name = "enabled"];</code>
+   * <pre>
+   * Explicit presence: a pure disable request sets enabled=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), making
+   * the handler's has("enabled") check fail. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
+   * @return Whether the enabled field is set.
+   */
+  boolean hasEnabled();
+  /**
+   * <pre>
+   * Explicit presence: a pure disable request sets enabled=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), making
+   * the handler's has("enabled") check fail. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool enabled = 2 [json_name = "enabled"];</code>
    * @return The enabled.
    */
   boolean getEnabled();

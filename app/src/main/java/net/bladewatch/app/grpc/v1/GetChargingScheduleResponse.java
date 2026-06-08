@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     startChargeTime_ = "";
     endChargeTime_ = "";
     error_ = "";
+    reason_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -201,6 +202,62 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SUPPORTED_FIELD_NUMBER = 7;
+  private boolean supported_ = false;
+  /**
+   * <pre>
+   * Whether charging-schedule readback is available. The BYD cloud source was
+   * removed, so this currently reports false with reason "cloud_not_configured"
+   * so the UI can hide the section instead of showing an empty schedule.
+   * </pre>
+   *
+   * <code>bool supported = 7 [json_name = "supported"];</code>
+   * @return The supported.
+   */
+  @java.lang.Override
+  public boolean getSupported() {
+    return supported_;
+  }
+
+  public static final int REASON_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object reason_ = "";
+  /**
+   * <code>string reason = 8 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  @java.lang.Override
+  public java.lang.String getReason() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      reason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string reason = 8 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReasonBytes() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -233,6 +290,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 6, error_);
     }
+    if (supported_ != false) {
+      output.writeBool(7, supported_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, reason_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -257,6 +320,13 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(6, error_);
+    }
+    if (supported_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(7, supported_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, reason_);
     }
     return size;
   }
@@ -294,6 +364,10 @@ private static final long serialVersionUID = 0L;
         != other.getChargeWay()) return false;
     if (!getError()
         .equals(other.getError())) return false;
+    if (getSupported()
+        != other.getSupported()) return false;
+    if (!getReason()
+        .equals(other.getReason())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -319,6 +393,11 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getChargeWay();
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
+    hash = (37 * hash) + SUPPORTED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getSupported());
+    hash = (37 * hash) + REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getReason().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -456,6 +535,8 @@ private static final long serialVersionUID = 0L;
       endChargeTime_ = "";
       chargeWay_ = 0;
       error_ = "";
+      supported_ = false;
+      reason_ = "";
       return this;
     }
 
@@ -507,6 +588,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.error_ = error_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.supported_ = supported_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.reason_ = reason_;
+      }
     }
 
     @java.lang.Override
@@ -543,6 +630,14 @@ private static final long serialVersionUID = 0L;
       if (!other.getError().isEmpty()) {
         error_ = other.error_;
         bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (other.getSupported() != false) {
+        setSupported(other.getSupported());
+      }
+      if (!other.getReason().isEmpty()) {
+        reason_ = other.reason_;
+        bitField0_ |= 0x00000080;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -601,6 +696,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 56: {
+              supported_ = input.readBool();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 66: {
+              reason_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -926,6 +1031,128 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       error_ = value;
       bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private boolean supported_ ;
+    /**
+     * <pre>
+     * Whether charging-schedule readback is available. The BYD cloud source was
+     * removed, so this currently reports false with reason "cloud_not_configured"
+     * so the UI can hide the section instead of showing an empty schedule.
+     * </pre>
+     *
+     * <code>bool supported = 7 [json_name = "supported"];</code>
+     * @return The supported.
+     */
+    @java.lang.Override
+    public boolean getSupported() {
+      return supported_;
+    }
+    /**
+     * <pre>
+     * Whether charging-schedule readback is available. The BYD cloud source was
+     * removed, so this currently reports false with reason "cloud_not_configured"
+     * so the UI can hide the section instead of showing an empty schedule.
+     * </pre>
+     *
+     * <code>bool supported = 7 [json_name = "supported"];</code>
+     * @param value The supported to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSupported(boolean value) {
+
+      supported_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether charging-schedule readback is available. The BYD cloud source was
+     * removed, so this currently reports false with reason "cloud_not_configured"
+     * so the UI can hide the section instead of showing an empty schedule.
+     * </pre>
+     *
+     * <code>bool supported = 7 [json_name = "supported"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSupported() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      supported_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object reason_ = "";
+    /**
+     * <code>string reason = 8 [json_name = "reason"];</code>
+     * @return The reason.
+     */
+    public java.lang.String getReason() {
+      java.lang.Object ref = reason_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string reason = 8 [json_name = "reason"];</code>
+     * @return The bytes for reason.
+     */
+    public com.google.protobuf.ByteString
+        getReasonBytes() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string reason = 8 [json_name = "reason"];</code>
+     * @param value The reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      reason_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reason = 8 [json_name = "reason"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReason() {
+      reason_ = getDefaultInstance().getReason();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string reason = 8 [json_name = "reason"];</code>
+     * @param value The bytes for reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      reason_ = value;
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }

@@ -139,10 +139,11 @@ internal class TripsClient {
         val json = runCatching { JSONObject(resp.message.rangeJson) }.getOrNull()
             ?: return@runBlocking null
         val range = json.optJSONObject("range") ?: json
+        // The daemon's RangeEstimate.toJson() emits predictedRangeKm/builtInRangeKm
+        // (no estimatedKm or soc). Read the real keys.
         RangeEstimate(
-            estimatedKm = range.optDouble("estimatedKm", 0.0),
+            estimatedKm = range.optDouble("predictedRangeKm", 0.0),
             builtInKm = range.optDouble("builtInRangeKm", 0.0),
-            soc = range.optDouble("soc", 0.0),
         )
     }
 

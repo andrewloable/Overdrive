@@ -243,6 +243,24 @@ General status and control routes include:
 
 Additional command behavior may be implemented by the TCP command server rather than HTTP.
 
+### System status field parity (by design)
+
+`GET /status` (Connect: `SystemService.GetStatus`) intentionally drops several
+REST-emitted fields because no Connect/Angular consumer reads them, so they are
+not modelled in the proto (`proto/bladewatch/v1/system.proto`):
+
+- `BatteryMonitor.getBatteryInfo()` emits `voltage`, `soc`, `lastUpdate`, but
+  `BatteryInfo` carries only `level` — the dashboard reads `battery.level` (and
+  the vehicle state-of-charge separately via the `soc`/`ChargingInfo` object,
+  not the Android battery `soc`).
+- `NetworkMonitor.getNetworkInfo()` emits `signal` (signal percent), but
+  `NetworkInfo` has no signal field — no client surfaces it.
+- The top-level `status: "ok"` string is cosmetic and intentionally dropped.
+
+If a future client needs these, add the corresponding proto fields
+(`battery: voltage/soc/last_update`, `network: signal_percent`) and regenerate
+stubs (`cd proto && buf generate`). Tracked by BladeWatch-852m.
+
 ## Client Guidance
 
 - Always authenticate before calling protected APIs.

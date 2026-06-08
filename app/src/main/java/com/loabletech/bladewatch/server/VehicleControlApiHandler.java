@@ -487,7 +487,12 @@ public class VehicleControlApiHandler {
         JSONObject response = new JSONObject();
         try {
             JSONObject req = new JSONObject(body);
-            int area = req.optInt("area", 0);
+            // Connect/proto clients send windowIndex (same 0=all/1=LF.. scheme
+            // the handler uses for area) and a direction string ("open"/"close").
+            // windowIndex==0 ("all") is a proto default scalar and omitted on the
+            // wire, so its absence correctly maps to area 0. The legacy web UI
+            // sends area + command (1=open, 2=close, 3=stop).
+            int area = req.has("windowIndex") ? req.optInt("windowIndex", 0) : req.optInt("area", 0);
 
             // targetPercent → SDK closed-loop positioning
             if (req.has("targetPercent")) {
@@ -508,7 +513,14 @@ public class VehicleControlApiHandler {
                 return;
             }
 
-            int command = req.optInt("command", 2); // default close
+            // direction (proto) takes precedence over the legacy command int.
+            int command;
+            if (req.has("direction")) {
+                String dir = req.optString("direction", "close");
+                command = "open".equals(dir) ? 1 : "stop".equals(dir) ? 3 : 2;
+            } else {
+                command = req.optInt("command", 2); // default close
+            }
             VehicleCommand cmd;
             // "Close all" gets the cloud CLOSEWINDOW path (works while car is asleep).
             if (area == 0 && command == 2) {
@@ -555,8 +567,17 @@ public class VehicleControlApiHandler {
             String action = req.optString("action", "");
             VehicleCommand cmd;
             switch (action) {
+                // Connect/proto clients send camelCase json-names (setpointC,
+                // fanLevel, maxCooling, restoreAcOn, restoreTempC,
+                // restoreFanLevel) and OMIT default scalars (false/0). The
+                // legacy web UI sends temp/fan/enabled/restorePowerOn/
+                // restoreTemp/restoreFan. Read the proto key when present, else
+                // fall back to the legacy key. Boolean fallbacks default to
+                // false so a proto disable (omitted maxCooling=false) is honored
+                // — the legacy UI always sends the boolean explicitly, so its
+                // path never relies on the default.
                 case "power_on": {
-                    double t = req.optDouble("temp", 22);
+                    double t = req.has("setpointC") ? req.optDouble("setpointC", 22) : req.optDouble("temp", 22);
                     cmd = new VehicleCommandRouter.ClimateOnCommand(t);
                     break;
                 }
@@ -565,21 +586,27 @@ public class VehicleControlApiHandler {
                     break;
                 case "set_temp": {
                     int zone = req.optInt("zone", 1);
-                    double t = req.optDouble("temp", 22);
+                    double t = req.has("setpointC") ? req.optDouble("setpointC", 22) : req.optDouble("temp", 22);
                     cmd = new VehicleCommandRouter.ClimateSetTempCommand(zone, t);
                     break;
                 }
                 case "set_fan": {
-                    int fan = req.optInt("fan", 3);
+                    int fan = req.has("fanLevel") ? req.optInt("fanLevel", 3) : req.optInt("fan", 3);
                     cmd = new VehicleCommandRouter.ClimateSetFanCommand(fan);
                     break;
                 }
                 case "max_cooling": {
-                    boolean enabled = req.optBoolean("enabled", true);
+                    boolean enabled = req.has("maxCooling")
+                            ? req.optBoolean("maxCooling", false)
+                            : req.optBoolean("enabled", false);
                     boolean hasRestore = req.optBoolean("hasRestore", true);
-                    double restoreTemp = req.optDouble("restoreTemp", 22);
-                    int restoreFan = req.optInt("restoreFan", 3);
-                    boolean restorePowerOn = req.optBoolean("restorePowerOn", true);
+                    double restoreTemp = req.has("restoreTempC")
+                            ? req.optDouble("restoreTempC", 22) : req.optDouble("restoreTemp", 22);
+                    int restoreFan = req.has("restoreFanLevel")
+                            ? req.optInt("restoreFanLevel", 3) : req.optInt("restoreFan", 3);
+                    boolean restorePowerOn = req.has("restoreAcOn")
+                            ? req.optBoolean("restoreAcOn", false)
+                            : req.optBoolean("restorePowerOn", false);
                     cmd = new VehicleCommandRouter.ClimateMaxCoolingCommand(
                             enabled, hasRestore, restoreTemp, restoreFan, restorePowerOn);
                     break;
@@ -619,7 +646,9 @@ public class VehicleControlApiHandler {
         try {
             JSONObject req = new JSONObject(body);
             String action = req.optString("action", "heating");
-            int position = req.optInt("position", 1);
+            // Connect/proto clients send seatIndex (1=driver, 2=passenger); the
+            // legacy web UI sends position. Read the proto key when present.
+            int position = req.has("seatIndex") ? req.optInt("seatIndex", 1) : req.optInt("position", 1);
             int level = req.optInt("level", 0);
             int dh = req.optInt("driverHeat", 0);
             int dv = req.optInt("driverVent", 0);

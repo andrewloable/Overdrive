@@ -255,6 +255,11 @@ message GetChargingScheduleResponse {
   string end_charge_time = 4;
   int32 charge_way = 5;
   string error = 6;
+  // Whether charging-schedule readback is available. The BYD cloud source was
+  // removed, so this currently reports false with reason "cloud_not_configured"
+  // so the UI can hide the section instead of showing an empty schedule.
+  bool supported = 7;
+  string reason = 8;
 }
 
 message SetChargingScheduleRequest {
@@ -268,15 +273,21 @@ message GetChargeCapRequest {}
 
 message GetChargeCapResponse {
   bool success = 1;
-  int32 percent = 2;
-  bool enabled = 3;
-  bool supported = 4;
+  // Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+  // these optional lets a parsed null stay unset (has()=false) so the client
+  // can distinguish "not probed" from a real 0/false.
+  optional int32 percent = 2;
+  optional bool enabled = 3;
+  optional bool supported = 4;
   string error = 5;
 }
 
 message SetChargeCapRequest {
   int32 percent = 1;
-  bool enabled = 2;
+  // Explicit presence: a pure disable request sets enabled=false, which a plain
+  // proto3 bool would omit from the JSON wire (default-scalar omission), making
+  // the handler's has("enabled") check fail. optional forces it onto the wire.
+  optional bool enabled = 2;
 }
 
 message GetGpsLocationRequest {}

@@ -128,16 +128,21 @@ internal class SurveillanceSettingsClient {
     }
 
     fun toggleSurveillance(enable: Boolean): Boolean = runBlocking {
-        val resp = if (enable) {
-            ConnectClientProvider.surveillanceService().enable(
+        // Check the message.success field (a 200 with success=false is a failure),
+        // matching the sibling Connect calls in this client. The success check is
+        // done inside each branch so the concrete response type is preserved
+        // (a shared `val` would erase it to the common supertype).
+        if (enable) {
+            val resp = ConnectClientProvider.surveillanceService().enable(
                 EnableSurveillanceRequest.newBuilder().build(), emptyMap()
             )
+            resp is ResponseMessage.Success && resp.message.success
         } else {
-            ConnectClientProvider.surveillanceService().disable(
+            val resp = ConnectClientProvider.surveillanceService().disable(
                 DisableSurveillanceRequest.newBuilder().build(), emptyMap()
             )
+            resp is ResponseMessage.Success && resp.message.success
         }
-        resp is ResponseMessage.Success
     }
 
     fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {

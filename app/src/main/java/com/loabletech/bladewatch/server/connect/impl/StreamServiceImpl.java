@@ -67,7 +67,11 @@ public class StreamServiceImpl {
     private ConnectResponse handleSetViewMode(String req, String clientIdentity) throws ConnectException {
         int viewMode;
         try {
-            viewMode = new org.json.JSONObject(req).optInt("view_mode", 0);
+            // Proto SetViewModeRequest.view_mode has no json_name, so the Connect
+            // client serializes it to camelCase "viewMode". Accept "view_mode" as
+            // a legacy fallback.
+            org.json.JSONObject j = new org.json.JSONObject(req);
+            viewMode = j.has("viewMode") ? j.optInt("viewMode", 0) : j.optInt("view_mode", 0);
         } catch (Exception ignored) {
             viewMode = 0;
         }

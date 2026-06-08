@@ -120,8 +120,40 @@ public class TripsServiceImpl {
         root.put(arrayKey, wrapped);
     }
 
+    /**
+     * Build a REST query string (?days=&limit=&offset=) from a request body, so Connect clients can
+     * forward ListTrips/GetSummary/GetDna filters. TripApiHandler reads these only from the URI query
+     * string (params==null path), never the body, so a path-only URI would always use the defaults
+     * (days=7, limit=50, offset=0). Only fields the client actually set (non-zero) are appended.
+     */
+    private static String buildTripsQuery(String req, boolean withLimitOffset) {
+        if (req == null || req.isEmpty()) return "";
+        JSONObject r;
+        try {
+            r = new JSONObject(req);
+        } catch (org.json.JSONException e) {
+            return "";
+        }
+        StringBuilder q = new StringBuilder();
+        int days = r.optInt("days", 0);
+        if (days > 0) appendParam(q, "days", String.valueOf(days));
+        if (withLimitOffset) {
+            int limit = r.optInt("limit", 0);
+            if (limit > 0) appendParam(q, "limit", String.valueOf(limit));
+            int offset = r.optInt("offset", 0);
+            if (offset > 0) appendParam(q, "offset", String.valueOf(offset));
+        }
+        return q.length() == 0 ? "" : "?" + q;
+    }
+
+    private static void appendParam(StringBuilder q, String key, String value) {
+        if (value == null || value.isEmpty()) return;
+        if (q.length() > 0) q.append('&');
+        q.append(key).append('=').append(value);
+    }
+
     private ConnectResponse handleListTrips(String req, String clientIdentity) throws ConnectException {
-        return invoke("GET", "/api/trips", req);
+        return invoke("GET", "/api/trips" + buildTripsQuery(req, true), req);
     }
 
     private ConnectResponse handleGetTrip(String req, String clientIdentity) throws ConnectException {
@@ -148,7 +180,7 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetSummary(String req, String clientIdentity) throws ConnectException {
-        JSONObject result = invokeJson("GET", "/api/trips/summary", req);
+        JSONObject result = invokeJson("GET", "/api/trips/summary" + buildTripsQuery(req, false), req);
         // proto WeeklyRollupEntry models each entry as a single string rollup_json blob.
         try {
             wrapArrayAsJsonBlob(result, "summary", "rollupJson");
@@ -159,7 +191,7 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetDna(String req, String clientIdentity) throws ConnectException {
-        return invoke("GET", "/api/trips/dna", req);
+        return invoke("GET", "/api/trips/dna" + buildTripsQuery(req, false), req);
     }
 
     private ConnectResponse handleGetRange(String req, String clientIdentity) throws ConnectException {
@@ -199,7 +231,8 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetTelemetry(String req, String clientIdentity) throws ConnectException {
-        long id = ConnectHandlerUtil.requireLong(req, "id");
+        // proto GetTelemetryRequest.trip_id → json "tripId" (not "id").
+        long id = ConnectHandlerUtil.requireLong(req, "tripId");
         JSONObject result = invokeJson("GET", "/api/trips/" + id + "/telemetry", req);
         // proto TelemetrySample models each sample as a single string sample_json blob.
         try {
@@ -211,12 +244,14 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetSimilarTrips(String req, String clientIdentity) throws ConnectException {
-        long id = ConnectHandlerUtil.requireLong(req, "id");
+        // proto GetSimilarTripsRequest.trip_id → json "tripId" (not "id").
+        long id = ConnectHandlerUtil.requireLong(req, "tripId");
         return invoke("GET", "/api/trips/" + id + "/similar", req);
     }
 
     private ConnectResponse handleGetGpsTrace(String req, String clientIdentity) throws ConnectException {
-        long id = ConnectHandlerUtil.requireLong(req, "id");
+        // proto GetGpsTraceRequest.trip_id → json "tripId" (not "id").
+        long id = ConnectHandlerUtil.requireLong(req, "tripId");
         JSONObject result = invokeJson("GET", "/api/trips/" + id + "/gps", req);
         // Handler emits gps as positional arrays [[lat,lon],...]; proto GpsPoint expects {lat,lon}.
         try {

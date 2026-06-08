@@ -48,14 +48,58 @@ public class SurveillanceServiceImpl {
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/config", null, out));
     }
 
+    // Boolean config toggles the REST handler reads with has()-gating. The
+    // Connect client sends a full config snapshot, but JsonFormat omits any of
+    // these that are false, so the handler would never see (and never persist) a
+    // toggle turned OFF. We re-add them as false when absent so OFF sticks.
+    private static final String[] CONFIG_BOOLEAN_TOGGLES = {
+            "detectPerson", "detectCar", "detectBike", "nightMode",
+            "cameraFront", "cameraRight", "cameraRear", "cameraLeft"
+    };
+
     private ConnectResponse handleSetConfig(String req, String clientIdentity) throws ConnectException {
+        // The Connect client wraps the payload as SetSurveillanceConfigRequest.config
+        // → wire body {"config":{...}}, but the REST handler parses a FLAT body.
+        // Unwrap the nested config and re-add omitted false toggles before forwarding.
+        String flatBody;
+        try {
+            org.json.JSONObject r = new org.json.JSONObject(req);
+            org.json.JSONObject config = r.optJSONObject("config");
+            if (config == null) {
+                flatBody = req; // already flat (defensive) — forward unchanged
+            } else {
+                for (String key : CONFIG_BOOLEAN_TOGGLES) {
+                    if (!config.has(key)) config.put(key, false);
+                }
+                flatBody = config.toString();
+            }
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("invalid_argument", "Invalid surveillance config body");
+        }
+        final String body = flatBody;
         return ConnectHandlerUtil.captureString(out ->
-                SurveillanceApiHandler.handle("POST", "/api/surveillance/config", req, out));
+                SurveillanceApiHandler.handle("POST", "/api/surveillance/config", body, out));
     }
 
     private ConnectResponse handleGetStatus(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits a NESTED {success, status:{initialized, enabled, active, ...}};
+        // the proto GetSurveillanceStatusResponse is FLAT {pipeline_running,
+        // surveillance_active, error}. Map status.active → pipelineRunning (the GPU
+        // pipeline is running) and status.enabled → surveillanceActive (the user's
+        // surveillance toggle).
+        org.json.JSONObject body = ConnectHandlerUtil.capture(out ->
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/status", null, out));
+        try {
+            org.json.JSONObject status = body.optJSONObject("status");
+            org.json.JSONObject flat = new org.json.JSONObject();
+            if (status != null) {
+                flat.put("pipelineRunning", status.optBoolean("active", false));
+                flat.put("surveillanceActive", status.optBoolean("enabled", false));
+            }
+            return ConnectResponse.of(flat.toString());
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handleEnable(String req, String clientIdentity) throws ConnectException {

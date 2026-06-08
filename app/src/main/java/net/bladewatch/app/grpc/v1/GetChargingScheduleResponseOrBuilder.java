@@ -63,4 +63,28 @@ public interface GetChargingScheduleResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <pre>
+   * Whether charging-schedule readback is available. The BYD cloud source was
+   * removed, so this currently reports false with reason "cloud_not_configured"
+   * so the UI can hide the section instead of showing an empty schedule.
+   * </pre>
+   *
+   * <code>bool supported = 7 [json_name = "supported"];</code>
+   * @return The supported.
+   */
+  boolean getSupported();
+
+  /**
+   * <code>string reason = 8 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  java.lang.String getReason();
+  /**
+   * <code>string reason = 8 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  com.google.protobuf.ByteString
+      getReasonBytes();
 }

@@ -67,13 +67,19 @@ public class VehicleServiceImpl {
     }
 
     private ConnectResponse handleGetAcDiagnostics(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {success, ac:{...}}; proto GetAcDiagnosticsResponse has a
+        // string raw_json (json rawJson). Stringify the ac object into rawJson.
+        org.json.JSONObject body = ConnectHandlerUtil.capture(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/ac-diagnostics", null, out));
+        return reshapeObjectToJsonString(body, "ac", "rawJson");
     }
 
     private ConnectResponse handleGetSeatDiagnostics(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {success, seats:{...}}; proto GetSeatDiagnosticsResponse has
+        // a string raw_json (json rawJson). Stringify the seats object into rawJson.
+        org.json.JSONObject body = ConnectHandlerUtil.capture(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/seat-diagnostics", null, out));
+        return reshapeObjectToJsonString(body, "seats", "rawJson");
     }
 
     private ConnectResponse handleLock(String req, String clientIdentity) throws ConnectException {
@@ -152,17 +158,44 @@ public class VehicleServiceImpl {
     }
 
     private ConnectResponse handleGetGpsLocation(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {success, location:{...}, googleMapsUrl}; proto
+        // GetGpsLocationResponse has a string location_json (json locationJson).
+        // Stringify the location object into locationJson.
+        org.json.JSONObject body = ConnectHandlerUtil.capture(out ->
                 GpsApiHandler.handle("GET", "/api/gps", null, out));
+        return reshapeObjectToJsonString(body, "location", "locationJson");
     }
 
     private ConnectResponse handleStartGps(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {success, message, location:{...}}; proto StartGpsResponse
+        // has a string location_json (json locationJson).
+        org.json.JSONObject body = ConnectHandlerUtil.capture(out ->
                 GpsApiHandler.handle("POST", "/api/gps/start", req, out));
+        return reshapeObjectToJsonString(body, "location", "locationJson");
     }
 
     private ConnectResponse handleStopGps(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 GpsApiHandler.handle("POST", "/api/gps/stop", req, out));
+    }
+
+    /**
+     * Reshape a captured REST response whose {@code fromKey} holds a nested JSON
+     * object into the proto's flat string field {@code toKey} (the object
+     * stringified). Other top-level keys (success, googleMapsUrl, message) are
+     * preserved. If {@code fromKey} is absent or null, it is simply dropped.
+     */
+    private static ConnectResponse reshapeObjectToJsonString(
+            org.json.JSONObject body, String fromKey, String toKey) throws ConnectException {
+        try {
+            Object v = body.opt(fromKey);
+            body.remove(fromKey);
+            if (v != null && v != org.json.JSONObject.NULL) {
+                body.put(toKey, v.toString());
+            }
+            return ConnectResponse.of(body.toString());
+        } catch (Exception e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 }

@@ -49,6 +49,7 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.GetChargeCapResponse.class, net.bladewatch.app.grpc.v1.GetChargeCapResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int SUCCESS_FIELD_NUMBER = 1;
   private boolean success_ = false;
   /**
@@ -63,7 +64,27 @@ private static final long serialVersionUID = 0L;
   public static final int PERCENT_FIELD_NUMBER = 2;
   private int percent_ = 0;
   /**
-   * <code>int32 percent = 2 [json_name = "percent"];</code>
+   * <pre>
+   * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+   * these optional lets a parsed null stay unset (has()=false) so the client
+   * can distinguish "not probed" from a real 0/false.
+   * </pre>
+   *
+   * <code>optional int32 percent = 2 [json_name = "percent"];</code>
+   * @return Whether the percent field is set.
+   */
+  @java.lang.Override
+  public boolean hasPercent() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+   * these optional lets a parsed null stay unset (has()=false) so the client
+   * can distinguish "not probed" from a real 0/false.
+   * </pre>
+   *
+   * <code>optional int32 percent = 2 [json_name = "percent"];</code>
    * @return The percent.
    */
   @java.lang.Override
@@ -74,7 +95,15 @@ private static final long serialVersionUID = 0L;
   public static final int ENABLED_FIELD_NUMBER = 3;
   private boolean enabled_ = false;
   /**
-   * <code>bool enabled = 3 [json_name = "enabled"];</code>
+   * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
+   * @return Whether the enabled field is set.
+   */
+  @java.lang.Override
+  public boolean hasEnabled() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
    * @return The enabled.
    */
   @java.lang.Override
@@ -85,7 +114,15 @@ private static final long serialVersionUID = 0L;
   public static final int SUPPORTED_FIELD_NUMBER = 4;
   private boolean supported_ = false;
   /**
-   * <code>bool supported = 4 [json_name = "supported"];</code>
+   * <code>optional bool supported = 4 [json_name = "supported"];</code>
+   * @return Whether the supported field is set.
+   */
+  @java.lang.Override
+  public boolean hasSupported() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <code>optional bool supported = 4 [json_name = "supported"];</code>
    * @return The supported.
    */
   @java.lang.Override
@@ -149,13 +186,13 @@ private static final long serialVersionUID = 0L;
     if (success_ != false) {
       output.writeBool(1, success_);
     }
-    if (percent_ != 0) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       output.writeInt32(2, percent_);
     }
-    if (enabled_ != false) {
+    if (((bitField0_ & 0x00000002) != 0)) {
       output.writeBool(3, enabled_);
     }
-    if (supported_ != false) {
+    if (((bitField0_ & 0x00000004) != 0)) {
       output.writeBool(4, supported_);
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
@@ -169,15 +206,15 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(1, success_);
     }
-    if (percent_ != 0) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(2, percent_);
     }
-    if (enabled_ != false) {
+    if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(3, enabled_);
     }
-    if (supported_ != false) {
+    if (((bitField0_ & 0x00000004) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(4, supported_);
     }
@@ -210,12 +247,21 @@ private static final long serialVersionUID = 0L;
 
     if (getSuccess()
         != other.getSuccess()) return false;
-    if (getPercent()
-        != other.getPercent()) return false;
-    if (getEnabled()
-        != other.getEnabled()) return false;
-    if (getSupported()
-        != other.getSupported()) return false;
+    if (hasPercent() != other.hasPercent()) return false;
+    if (hasPercent()) {
+      if (getPercent()
+          != other.getPercent()) return false;
+    }
+    if (hasEnabled() != other.hasEnabled()) return false;
+    if (hasEnabled()) {
+      if (getEnabled()
+          != other.getEnabled()) return false;
+    }
+    if (hasSupported() != other.hasSupported()) return false;
+    if (hasSupported()) {
+      if (getSupported()
+          != other.getSupported()) return false;
+    }
     if (!getError()
         .equals(other.getError())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -232,14 +278,20 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SUCCESS_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getSuccess());
-    hash = (37 * hash) + PERCENT_FIELD_NUMBER;
-    hash = (53 * hash) + getPercent();
-    hash = (37 * hash) + ENABLED_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getEnabled());
-    hash = (37 * hash) + SUPPORTED_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getSupported());
+    if (hasPercent()) {
+      hash = (37 * hash) + PERCENT_FIELD_NUMBER;
+      hash = (53 * hash) + getPercent();
+    }
+    if (hasEnabled()) {
+      hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getEnabled());
+    }
+    if (hasSupported()) {
+      hash = (37 * hash) + SUPPORTED_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getSupported());
+    }
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
@@ -414,18 +466,23 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.success_ = success_;
       }
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.percent_ = percent_;
+        to_bitField0_ |= 0x00000001;
       }
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.enabled_ = enabled_;
+        to_bitField0_ |= 0x00000002;
       }
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.supported_ = supported_;
+        to_bitField0_ |= 0x00000004;
       }
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.error_ = error_;
       }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -443,13 +500,13 @@ private static final long serialVersionUID = 0L;
       if (other.getSuccess() != false) {
         setSuccess(other.getSuccess());
       }
-      if (other.getPercent() != 0) {
+      if (other.hasPercent()) {
         setPercent(other.getPercent());
       }
-      if (other.getEnabled() != false) {
+      if (other.hasEnabled()) {
         setEnabled(other.getEnabled());
       }
-      if (other.getSupported() != false) {
+      if (other.hasSupported()) {
         setSupported(other.getSupported());
       }
       if (!other.getError().isEmpty()) {
@@ -559,7 +616,27 @@ private static final long serialVersionUID = 0L;
 
     private int percent_ ;
     /**
-     * <code>int32 percent = 2 [json_name = "percent"];</code>
+     * <pre>
+     * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+     * these optional lets a parsed null stay unset (has()=false) so the client
+     * can distinguish "not probed" from a real 0/false.
+     * </pre>
+     *
+     * <code>optional int32 percent = 2 [json_name = "percent"];</code>
+     * @return Whether the percent field is set.
+     */
+    @java.lang.Override
+    public boolean hasPercent() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+     * these optional lets a parsed null stay unset (has()=false) so the client
+     * can distinguish "not probed" from a real 0/false.
+     * </pre>
+     *
+     * <code>optional int32 percent = 2 [json_name = "percent"];</code>
      * @return The percent.
      */
     @java.lang.Override
@@ -567,7 +644,13 @@ private static final long serialVersionUID = 0L;
       return percent_;
     }
     /**
-     * <code>int32 percent = 2 [json_name = "percent"];</code>
+     * <pre>
+     * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+     * these optional lets a parsed null stay unset (has()=false) so the client
+     * can distinguish "not probed" from a real 0/false.
+     * </pre>
+     *
+     * <code>optional int32 percent = 2 [json_name = "percent"];</code>
      * @param value The percent to set.
      * @return This builder for chaining.
      */
@@ -579,7 +662,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int32 percent = 2 [json_name = "percent"];</code>
+     * <pre>
+     * Tri-state: the REST handler emits JSON null for "not yet probed". Marking
+     * these optional lets a parsed null stay unset (has()=false) so the client
+     * can distinguish "not probed" from a real 0/false.
+     * </pre>
+     *
+     * <code>optional int32 percent = 2 [json_name = "percent"];</code>
      * @return This builder for chaining.
      */
     public Builder clearPercent() {
@@ -591,7 +680,15 @@ private static final long serialVersionUID = 0L;
 
     private boolean enabled_ ;
     /**
-     * <code>bool enabled = 3 [json_name = "enabled"];</code>
+     * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
+     * @return Whether the enabled field is set.
+     */
+    @java.lang.Override
+    public boolean hasEnabled() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
      * @return The enabled.
      */
     @java.lang.Override
@@ -599,7 +696,7 @@ private static final long serialVersionUID = 0L;
       return enabled_;
     }
     /**
-     * <code>bool enabled = 3 [json_name = "enabled"];</code>
+     * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
      * @param value The enabled to set.
      * @return This builder for chaining.
      */
@@ -611,7 +708,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool enabled = 3 [json_name = "enabled"];</code>
+     * <code>optional bool enabled = 3 [json_name = "enabled"];</code>
      * @return This builder for chaining.
      */
     public Builder clearEnabled() {
@@ -623,7 +720,15 @@ private static final long serialVersionUID = 0L;
 
     private boolean supported_ ;
     /**
-     * <code>bool supported = 4 [json_name = "supported"];</code>
+     * <code>optional bool supported = 4 [json_name = "supported"];</code>
+     * @return Whether the supported field is set.
+     */
+    @java.lang.Override
+    public boolean hasSupported() {
+      return ((bitField0_ & 0x00000008) != 0);
+    }
+    /**
+     * <code>optional bool supported = 4 [json_name = "supported"];</code>
      * @return The supported.
      */
     @java.lang.Override
@@ -631,7 +736,7 @@ private static final long serialVersionUID = 0L;
       return supported_;
     }
     /**
-     * <code>bool supported = 4 [json_name = "supported"];</code>
+     * <code>optional bool supported = 4 [json_name = "supported"];</code>
      * @param value The supported to set.
      * @return This builder for chaining.
      */
@@ -643,7 +748,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool supported = 4 [json_name = "supported"];</code>
+     * <code>optional bool supported = 4 [json_name = "supported"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSupported() {

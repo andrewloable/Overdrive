@@ -718,8 +718,11 @@ public class QualitySettingsApiHandler {
                 CameraDaemon.setRecordingQuality(tier);
             }
             
-            if (settings.has("recordingCodec")) {
-                String codec = settings.getString("recordingCodec").toUpperCase();
+            // Connect/proto clients send the proto json-name "codec"; the legacy
+            // web UI sends "recordingCodec". Read whichever is present.
+            if (settings.has("codec") || settings.has("recordingCodec")) {
+                String codecKey = settings.has("codec") ? "codec" : "recordingCodec";
+                String codec = settings.getString(codecKey).toUpperCase();
                 if (codec.equals("H264") || codec.equals("H265")) {
                     recordingCodec = codec;
                     CameraDaemon.log("Recording codec set to: " + codec);
@@ -747,8 +750,10 @@ public class QualitySettingsApiHandler {
                 }
             }
 
-            if (settings.has("cameraFps")) {
-                int fps = settings.getInt("cameraFps");
+            // Connect/proto clients send the proto json-name "fps"; the legacy
+            // web UI sends "cameraFps". Read whichever is present.
+            if (settings.has("fps") || settings.has("cameraFps")) {
+                int fps = settings.getInt(settings.has("fps") ? "fps" : "cameraFps");
                 if (fps < 10 || fps > 30) {
                     CameraDaemon.log("Rejecting cameraFps=" + fps + " — out of range [10..30]");
                 } else {

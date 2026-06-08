@@ -8,6 +8,7 @@ import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.auth.AuthManager
 import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.daemon.CameraDaemon
 import net.bladewatch.app.grpc.v1.EnableStreamRequest
 import net.bladewatch.app.grpc.v1.GetStreamQualityRequest
 import net.bladewatch.app.grpc.v1.SetViewModeRequest
@@ -152,7 +153,7 @@ internal class LiveStreamClient {
 
                     val wsSocket = Socket()
                     activeSocket = wsSocket
-                    wsSocket.connect(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 8080), CONNECT_TIMEOUT_MS)
+                    wsSocket.connect(InetSocketAddress(InetAddress.getByName("127.0.0.1"), CameraDaemon.HTTP_PORT), CONNECT_TIMEOUT_MS)
                     wsSocket.soTimeout = READ_TIMEOUT_MS
 
                     val out = BufferedOutputStream(wsSocket.getOutputStream())
@@ -288,7 +289,7 @@ internal class LiveStreamClient {
 
     private fun buildUpgradeRequest(path: String, key: String): String =
         "GET $path HTTP/1.1\r\n" +
-            "Host: 127.0.0.1:8080\r\n" +
+            "Host: 127.0.0.1:${CameraDaemon.HTTP_PORT}\r\n" +
             "Upgrade: websocket\r\n" +
             "Connection: Upgrade\r\n" +
             "Sec-WebSocket-Key: $key\r\n" +

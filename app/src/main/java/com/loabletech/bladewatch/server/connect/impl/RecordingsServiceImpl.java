@@ -92,23 +92,35 @@ public class RecordingsServiceImpl {
         // detectedClasses from the distinct actor class names so the proto field populates.
         try {
             JSONObject result = new JSONObject(raw.body);
+            // total: REST emits "totalCount"; proto ListRecordingsResponse.total reads "total".
+            if (result.has("totalCount") && !result.has("total")) {
+                result.put("total", result.optInt("totalCount"));
+            }
             JSONArray recs = result.optJSONArray("recordings");
             if (recs != null) {
                 for (int i = 0; i < recs.length(); i++) {
                     JSONObject rec = recs.optJSONObject(i);
-                    if (rec == null || rec.has("detectedClasses")) continue;
+                    if (rec == null) continue;
+                    // type: REST emits a lowercase string (normal/sentry/proximity);
+                    // proto RecordingEntry.type is an enum parsed only from value names.
+                    rec.put("type", recordingTypeEnum(rec.optString("type", "")));
+                    // has_events: derive from the enriched actors[] (events present).
                     JSONArray actors = rec.optJSONArray("actors");
-                    if (actors == null) continue;
-                    LinkedHashSet<String> classes = new LinkedHashSet<>();
-                    for (int j = 0; j < actors.length(); j++) {
-                        JSONObject a = actors.optJSONObject(j);
-                        if (a == null) continue;
-                        String c = a.optString("class", "").toLowerCase(Locale.US);
-                        if (!c.isEmpty()) classes.add(c);
+                    boolean hasEvents = actors != null && actors.length() > 0;
+                    if (!rec.has("hasEvents")) rec.put("hasEvents", hasEvents);
+                    // detected_classes: distinct actor class names (Angular events page).
+                    if (!rec.has("detectedClasses") && actors != null) {
+                        LinkedHashSet<String> classes = new LinkedHashSet<>();
+                        for (int j = 0; j < actors.length(); j++) {
+                            JSONObject a = actors.optJSONObject(j);
+                            if (a == null) continue;
+                            String c = a.optString("class", "").toLowerCase(Locale.US);
+                            if (!c.isEmpty()) classes.add(c);
+                        }
+                        JSONArray dc = new JSONArray();
+                        for (String c : classes) dc.put(c);
+                        rec.put("detectedClasses", dc);
                     }
-                    JSONArray dc = new JSONArray();
-                    for (String c : classes) dc.put(c);
-                    rec.put("detectedClasses", dc);
                 }
             }
             return ConnectResponse.of(result.toString());
@@ -117,9 +129,38 @@ public class RecordingsServiceImpl {
         }
     }
 
+    /** Map the REST lowercase recording type to the proto RecordingType enum value name. */
+    private static String recordingTypeEnum(String type) {
+        switch (type) {
+            case "normal":    return "RECORDING_TYPE_NORMAL";
+            case "sentry":    return "RECORDING_TYPE_SENTRY";
+            case "proximity": return "RECORDING_TYPE_PROXIMITY";
+            default:          return "RECORDING_TYPE_UNSPECIFIED";
+        }
+    }
+
     private ConnectResponse handleGetDates(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits dates as an array of {date,count,hasSentry} objects; the proto
+        // GetDatesResponse.dates is `repeated string`. Objects can't parse into
+        // strings (every element drops), so map each object to its date string.
+        JSONObject body = ConnectHandlerUtil.capture(out ->
                 RecordingsApiHandler.handle("GET", "/api/recordings/dates", null, out));
+        try {
+            JSONArray arr = body.optJSONArray("dates");
+            JSONArray dates = new JSONArray();
+            if (arr != null) {
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.optJSONObject(i);
+                    if (o == null) continue;
+                    String d = o.optString("date", "");
+                    if (!d.isEmpty()) dates.put(d);
+                }
+            }
+            body.put("dates", dates);
+            return ConnectResponse.of(body.toString());
+        } catch (JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handleGetStats(String req, String clientIdentity) throws ConnectException {
@@ -163,8 +204,18 @@ public class RecordingsServiceImpl {
 
     private ConnectResponse handleGetInflightStatus(String req, String clientIdentity) throws ConnectException {
         String filename = ConnectHandlerUtil.requireString(req, "filename");
-        return ConnectHandlerUtil.captureString(out ->
+        // REST emits {filename, inflight:bool, sizeBytes}; the proto
+        // GetInflightStatusResponse has only a string `status`. Derive it: an
+        // active .tmp means "recording", otherwise "not_found" (the REST has no
+        // signal to distinguish the finalizing state).
+        JSONObject body = ConnectHandlerUtil.capture(out ->
                 RecordingsApiHandler.handle("GET", "/api/recordings/inflight/" + filename, null, out));
+        try {
+            String status = body.optBoolean("inflight", false) ? "recording" : "not_found";
+            return ConnectResponse.of(new JSONObject().put("status", status).toString());
+        } catch (JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handleGetEventTimeline(String req, String clientIdentity) throws ConnectException {

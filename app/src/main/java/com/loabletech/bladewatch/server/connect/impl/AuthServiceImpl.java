@@ -31,7 +31,10 @@ public class AuthServiceImpl {
     }
 
     private ConnectResponse handleLogout(String requestJson, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // Use captureWithCookies so the cookie-expiry Set-Cookie headers that
+        // AuthApiHandler.handleLogout emits (to clear byd_session/byd_auth) are
+        // forwarded to the browser — captureString would drop them.
+        return ConnectHandlerUtil.captureWithCookies(out ->
                 AuthApiHandler.handle("POST", "/auth/logout", "{}", out, null, false));
     }
 

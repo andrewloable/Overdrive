@@ -122,7 +122,6 @@ data class DnaScores(
 data class RangeEstimate(
     val estimatedKm: Double,
     val builtInKm: Double,
-    val soc: Double,
 )
 
 data class TripsConfig(

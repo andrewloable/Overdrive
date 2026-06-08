@@ -477,16 +477,20 @@ public class TripApiHandler {
         try {
             JSONObject bodyJson = new JSONObject(body != null ? body : "{}");
 
-            if (bodyJson.has("enabled")) {
-                boolean enabled = bodyJson.getBoolean("enabled");
+            // Connect/proto clients OMIT default scalars (enabled=false,
+            // electricityRate=0.0) but set the proto presence companions
+            // hasEnabled/hasElectricityRate so a false/zero can still be saved.
+            // The legacy web UI sends the value keys directly (no presence flag).
+            if (bodyJson.optBoolean("hasEnabled", false) || bodyJson.has("enabled")) {
+                boolean enabled = bodyJson.optBoolean("enabled", false);
                 manager.onConfigChanged(enabled);
             }
 
             // Electricity rate and currency
             TripConfig config = manager.getConfig();
             if (config != null) {
-                if (bodyJson.has("electricityRate")) {
-                    config.setElectricityRate(bodyJson.getDouble("electricityRate"));
+                if (bodyJson.optBoolean("hasElectricityRate", false) || bodyJson.has("electricityRate")) {
+                    config.setElectricityRate(bodyJson.optDouble("electricityRate", 0.0));
                 }
                 if (bodyJson.has("currency")) {
                     config.setCurrency(bodyJson.getString("currency"));

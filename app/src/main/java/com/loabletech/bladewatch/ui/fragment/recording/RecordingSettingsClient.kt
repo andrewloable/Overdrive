@@ -85,13 +85,19 @@ internal class RecordingSettingsClient {
     }
 
     fun saveMode(mode: String): Boolean {
-        // No ConnectRPC endpoint for /api/recording/mode — fall back to HTTP.
+        // INTENTIONAL EXCEPTION (BladeWatch-hx2b): there is no Connect/gRPC RPC
+        // for /api/recording/mode, so this is the one client call that bypasses
+        // the Connect transport and posts directly over loopback HTTP with its
+        // own JWT. Adding a SettingsService RPC for recording mode is the proper
+        // fix but is out of scope here; until then this raw path is the accepted
+        // route. Port is derived from the shared CameraDaemon.HTTP_PORT constant
+        // to avoid drift.
         val jwt = runCatching {
             if (AuthManager.getState() == null) AuthManager.initialize()
             AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
         }.getOrNull() ?: return false
         return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/recording/mode")
+            val conn = URL("http://127.0.0.1:${net.bladewatch.app.daemon.CameraDaemon.HTTP_PORT}/api/recording/mode")
                 .openConnection(Proxy.NO_PROXY) as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Authorization", "Bearer $jwt")
