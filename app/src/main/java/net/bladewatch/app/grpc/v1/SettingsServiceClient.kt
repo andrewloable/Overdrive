@@ -20,6 +20,7 @@ import com.connectrpc.StreamType
  *    SetAppearance    POST /api/settings/appearance
  *    GetLocale        GET  /api/i18n/lang
  *    SetLocale        POST /api/i18n/lang
+ *    SetRecordingMode POST /api/recording/mode
  */
 public class SettingsServiceClient(
   private val client: ProtocolClientInterface,
@@ -91,6 +92,18 @@ public class SettingsServiceClient(
     "bladewatch.v1.SettingsService/SetLocale",
       net.bladewatch.app.grpc.v1.SetLocaleRequest::class,
       net.bladewatch.app.grpc.v1.SetLocaleResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun setRecordingMode(request: SetRecordingModeRequest, headers: Headers): ResponseMessage<SetRecordingModeResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SettingsService/SetRecordingMode",
+      net.bladewatch.app.grpc.v1.SetRecordingModeRequest::class,
+      net.bladewatch.app.grpc.v1.SetRecordingModeResponse::class,
       StreamType.UNARY,
     ),
   )

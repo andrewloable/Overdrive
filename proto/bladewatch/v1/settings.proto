@@ -14,6 +14,7 @@ option java_multiple_files = true;
 //   SetAppearance    POST /api/settings/appearance
 //   GetLocale        GET  /api/i18n/lang
 //   SetLocale        POST /api/i18n/lang
+//   SetRecordingMode POST /api/recording/mode
 service SettingsService {
   rpc GetQuality(GetQualityRequest) returns (GetQualityResponse);
   rpc SetQuality(SetQualityRequest) returns (SetQualityResponse);
@@ -21,6 +22,7 @@ service SettingsService {
   rpc SetAppearance(SetAppearanceRequest) returns (SetAppearanceResponse);
   rpc GetLocale(GetLocaleRequest) returns (GetLocaleResponse);
   rpc SetLocale(SetLocaleRequest) returns (SetLocaleResponse);
+  rpc SetRecordingMode(SetRecordingModeRequest) returns (SetRecordingModeResponse);
 }
 
 // RecordingQualityTier identifies a named recording quality preset.
@@ -150,4 +152,16 @@ message SetLocaleRequest {
 message SetLocaleResponse {
   // Resolved locale tag that was applied.
   string lang = 1;
+}
+
+message SetRecordingModeRequest {
+  // Recording mode, e.g. "CONTINUOUS", "EVENTS", "OFF".
+  string mode = 1;
+}
+
+message SetRecordingModeResponse {
+  bool success = 1;
+  // The mode that was applied.
+  string mode = 2;
+  string error = 3;
 }

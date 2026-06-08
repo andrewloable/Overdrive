@@ -58,6 +58,11 @@ Handled by `RecordingsApiHandler`:
 - `POST /api/recordings/sync` — reconcile the media catalog DB against the filesystem.
   Empty body. Returns `{success:true, added, updated, removed, total}` or
   `{success:false, error:"sync_in_progress"}` if a reconcile is already running.
+- `GET /api/recording/mode` — returns `{status:"ok", mode}`.
+- `POST /api/recording/mode` — body `{mode}` (e.g. `CONTINUOUS`/`EVENTS`/`OFF`);
+  returns `{status:"ok", mode}`. Connect: `SettingsService.SetRecordingMode`
+  (`{mode}` → `{success, mode}`), which calls `CameraDaemon.setRecordingMode`
+  directly rather than shelling this inline route.
 
 The server also supports snapshot-style routes such as:
 

@@ -23,6 +23,21 @@ class BladeWatchApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Debug-only regression guard for BladeWatch-knyj: all gRPC/Connect client
+        // calls (which block via runBlocking) must run off the main thread. The
+        // platform already throws NetworkOnMainThreadException for main-thread
+        // network, and every client call site is wrapped in a Thread/Executor; this
+        // StrictMode policy surfaces any future regression loudly in logcat without
+        // destabilizing the head unit (penaltyLog, never penaltyDeath).
+        if (BuildConfig.DEBUG) {
+            android.os.StrictMode.setThreadPolicy(
+                android.os.StrictMode.ThreadPolicy.Builder()
+                    .detectNetwork()
+                    .penaltyLog()
+                    .build()
+            )
+        }
+
         // Apply the user-picked locale before any Activity/Fragment is created.
         // Auto-mode (or unset) writes an empty list so AppCompat falls back to
         // Locale.getDefault() — i.e. the BYD head unit's system language.

@@ -4,7 +4,7 @@
 /local.properties
 /build
 /.gstack
-
+/node_modules
 /app/build
 /app/.cxx
 /app/src/main/cpp/opencv
@@ -13,7 +13,6 @@
 # Dolt database files (added by bd init)
 .dolt/
 *.db
-.beads
 recovered
 *.apk
 screenshots

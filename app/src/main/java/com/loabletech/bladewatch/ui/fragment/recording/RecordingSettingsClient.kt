@@ -2,7 +2,6 @@ package net.bladewatch.app.ui.fragment.recording
 
 import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
-import net.bladewatch.app.auth.AuthManager
 import net.bladewatch.app.client.ConnectClientProvider
 import net.bladewatch.app.grpc.v1.FormatVolumeRequest
 import net.bladewatch.app.grpc.v1.GetQualityRequest
@@ -11,12 +10,9 @@ import net.bladewatch.app.grpc.v1.GetStatusRequest
 import net.bladewatch.app.grpc.v1.GetStorageSettingsRequest
 import net.bladewatch.app.grpc.v1.ListFormatVolumesRequest
 import net.bladewatch.app.grpc.v1.SetQualityRequest
+import net.bladewatch.app.grpc.v1.SetRecordingModeRequest
 import net.bladewatch.app.grpc.v1.SetStorageSettingsRequest
 import net.bladewatch.app.grpc.v1.SyncCatalogRequest
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.Proxy
-import java.net.URL
 
 internal data class FormattableVolume(val volumeId: String, val uuid: String?, val mountPath: String?)
 internal data class FormatDriveResult(val success: Boolean, val message: String, val mountPath: String?)
@@ -84,28 +80,14 @@ internal class RecordingSettingsClient {
         )
     }
 
-    fun saveMode(mode: String): Boolean {
-        // INTENTIONAL EXCEPTION (BladeWatch-hx2b): there is no Connect/gRPC RPC
-        // for /api/recording/mode, so this is the one client call that bypasses
-        // the Connect transport and posts directly over loopback HTTP with its
-        // own JWT. Adding a SettingsService RPC for recording mode is the proper
-        // fix but is out of scope here; until then this raw path is the accepted
-        // route. Port is derived from the shared CameraDaemon.HTTP_PORT constant
-        // to avoid drift.
-        val jwt = runCatching {
-            if (AuthManager.getState() == null) AuthManager.initialize()
-            AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-        }.getOrNull() ?: return false
-        return runCatching {
-            val conn = URL("http://127.0.0.1:${net.bladewatch.app.daemon.CameraDaemon.HTTP_PORT}/api/recording/mode")
-                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-            conn.outputStream.use { it.write(JSONObject().apply { put("mode", mode) }.toString().toByteArray()) }
-            conn.responseCode == 200
-        }.getOrDefault(false)
+    fun saveMode(mode: String): Boolean = runBlocking {
+        // Recording mode goes through the SettingsService.SetRecordingMode Connect
+        // RPC like every other client call (BladeWatch-pg0s removed the former raw
+        // loopback-HTTP bypass). Auth is handled by the shared ConnectClientProvider
+        // interceptor, so no per-call JWT plumbing is needed here.
+        val req = SetRecordingModeRequest.newBuilder().setMode(mode).build()
+        val resp = ConnectClientProvider.settingsService().setRecordingMode(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
     }
 
     fun saveQuality(quality: String, codec: String): Boolean = runBlocking {

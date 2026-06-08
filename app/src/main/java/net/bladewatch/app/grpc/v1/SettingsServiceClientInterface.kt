@@ -17,6 +17,7 @@ import com.connectrpc.ResponseMessage
  *    SetAppearance    POST /api/settings/appearance
  *    GetLocale        GET  /api/i18n/lang
  *    SetLocale        POST /api/i18n/lang
+ *    SetRecordingMode POST /api/recording/mode
  */
 public interface SettingsServiceClientInterface {
   public suspend fun getQuality(request: GetQualityRequest, headers: Headers = emptyMap()): ResponseMessage<GetQualityResponse>
@@ -30,4 +31,6 @@ public interface SettingsServiceClientInterface {
   public suspend fun getLocale(request: GetLocaleRequest, headers: Headers = emptyMap()): ResponseMessage<GetLocaleResponse>
 
   public suspend fun setLocale(request: SetLocaleRequest, headers: Headers = emptyMap()): ResponseMessage<SetLocaleResponse>
+
+  public suspend fun setRecordingMode(request: SetRecordingModeRequest, headers: Headers = emptyMap()): ResponseMessage<SetRecordingModeResponse>
 }

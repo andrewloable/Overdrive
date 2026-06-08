@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Routes incoming HTTP requests that use the Connect protocol
- * (content-type: application/connect+json) to registered service handlers.
+ * Routes incoming HTTP requests that use the Connect protocol to registered
+ * service handlers. Unary RPCs arrive as "application/json"; streaming RPCs as
+ * "application/connect+json". The response Content-Type echoes the request form.
  *
  * <p>Path format: /bladewatch.v1.{ServiceName}/{MethodName}
  *
@@ -34,6 +35,10 @@ import java.util.Map;
  */
 public class ConnectDispatcher {
 
+    // Unary Connect RPCs use "application/json"; streaming Connect RPCs use
+    // "application/connect+json". connect-kotlin and @connectrpc/connect-web both
+    // send the unary form for unary calls, which is all the UI uses today.
+    private static final String CONTENT_TYPE_JSON = "application/json";
     private static final String CONTENT_TYPE_CONNECT = "application/connect+json";
     private static final String CONNECT_PROTOCOL_VERSION = "1";
 
@@ -67,24 +72,28 @@ public class ConnectDispatcher {
     public void dispatch(String method, String path, String body,
                          String contentType, String connectVersion,
                          String clientIdentity, OutputStream out) {
+        // Echo a response Content-Type matching the request: unary clients send
+        // "application/json" and require it back; streaming uses the +json form.
+        String respCt = responseContentType(contentType);
         try {
             // Only POST is valid for unary Connect calls.
             if (!"POST".equals(method)) {
-                sendConnectError(out, 405, "unimplemented", "Connect only accepts POST");
+                sendConnectError(out, respCt, 405, "unimplemented", "Connect only accepts POST");
                 return;
             }
 
             // Require Connect-Protocol-Version: 1
             if (!CONNECT_PROTOCOL_VERSION.equals(connectVersion)) {
-                sendConnectError(out, 400, "invalid_argument",
+                sendConnectError(out, respCt, 400, "invalid_argument",
                         "Missing or wrong Connect-Protocol-Version header; expected \"1\"");
                 return;
             }
 
-            // Require Content-Type: application/connect+json
-            if (contentType == null || !contentType.startsWith(CONTENT_TYPE_CONNECT)) {
-                sendConnectError(out, 415, "invalid_argument",
-                        "Content-Type must be application/connect+json");
+            // Require a supported JSON content-type. Unary Connect uses
+            // "application/json"; streaming Connect uses "application/connect+json".
+            if (!isSupportedContentType(contentType)) {
+                sendConnectError(out, respCt, 415, "invalid_argument",
+                        "Content-Type must be application/json or application/connect+json");
                 return;
             }
 
@@ -95,7 +104,7 @@ public class ConnectDispatcher {
                 // Extract the service name for a nicer error message.
                 int slash = key.indexOf('/');
                 String svcName = slash > 0 ? key.substring(0, slash) : key;
-                sendConnectError(out, 404, "not_found",
+                sendConnectError(out, respCt, 404, "not_found",
                         "Service not registered: " + svcName);
                 return;
             }
@@ -103,28 +112,28 @@ public class ConnectDispatcher {
             String requestJson = (body == null || body.isEmpty()) ? "{}" : body;
             ConnectResponse response = handler.handle(requestJson, clientIdentity != null ? clientIdentity : "");
 
-            sendConnectSuccess(out, response.body, response.extraHeaders);
+            sendConnectSuccess(out, respCt, response.body, response.extraHeaders);
 
         } catch (ConnectException e) {
             try {
-                sendConnectError(out, connectCodeToHttpStatus(e.getCode()), e.getCode(), e.getMessage());
+                sendConnectError(out, respCt, connectCodeToHttpStatus(e.getCode()), e.getCode(), e.getMessage());
             } catch (Exception ignored) {}
         } catch (Exception e) {
             CameraDaemon.log("ConnectDispatcher: unexpected error: " + e);
             try {
-                sendConnectError(out, 500, "internal", "An internal error occurred");
+                sendConnectError(out, respCt, 500, "internal", "An internal error occurred");
             } catch (Exception ignored) {}
         }
     }
 
     // ==================== HTTP response helpers ====================
 
-    private void sendConnectSuccess(OutputStream out, String jsonBody,
+    private void sendConnectSuccess(OutputStream out, String contentType, String jsonBody,
             java.util.List<String> extraHeaders) throws Exception {
         byte[] body = jsonBody.getBytes(StandardCharsets.UTF_8);
         StringBuilder sb = new StringBuilder();
         sb.append("HTTP/1.1 200 OK\r\n")
-          .append("Content-Type: application/connect+json\r\n")
+          .append("Content-Type: ").append(contentType).append("\r\n")
           .append("Content-Length: ").append(body.length).append("\r\n")
           .append("Connection: close\r\n");
         for (String h : extraHeaders) sb.append(h).append("\r\n");
@@ -134,21 +143,50 @@ public class ConnectDispatcher {
         out.flush();
     }
 
-    private void sendConnectError(OutputStream out, int httpStatus, String code, String message)
-            throws Exception {
+    private void sendConnectError(OutputStream out, String contentType, int httpStatus,
+            String code, String message) throws Exception {
         JSONObject err = new JSONObject();
         err.put("code", code);
         err.put("message", message != null ? message : "");
         byte[] body = err.toString().getBytes(StandardCharsets.UTF_8);
         String statusText = httpStatusText(httpStatus);
         String headers = "HTTP/1.1 " + httpStatus + " " + statusText + "\r\n"
-                + "Content-Type: application/connect+json\r\n"
+                + "Content-Type: " + contentType + "\r\n"
                 + "Content-Length: " + body.length + "\r\n"
                 + "Connection: close\r\n"
                 + "\r\n";
         out.write(headers.getBytes(StandardCharsets.UTF_8));
         out.write(body);
         out.flush();
+    }
+
+    /**
+     * Negotiates the response Content-Type from the request's. A streaming request
+     * ("application/connect+json") is echoed verbatim; everything else (unary
+     * "application/json", or an early error before validation) gets "application/json",
+     * which is what unary Connect clients require on the response.
+     */
+    static String responseContentType(String requestContentType) {
+        if (requestContentType != null) {
+            String ct = requestContentType.trim().toLowerCase(java.util.Locale.ROOT);
+            int semi = ct.indexOf(';');
+            if (semi >= 0) ct = ct.substring(0, semi).trim();
+            if (ct.equals(CONTENT_TYPE_CONNECT)) return CONTENT_TYPE_CONNECT;
+        }
+        return CONTENT_TYPE_JSON;
+    }
+
+    /**
+     * Accepts the JSON Connect content-types. Unary RPCs send "application/json";
+     * streaming RPCs send "application/connect+json". Tolerates an optional parameter
+     * suffix (e.g. "; charset=utf-8") and case differences.
+     */
+    static boolean isSupportedContentType(String contentType) {
+        if (contentType == null) return false;
+        String ct = contentType.trim().toLowerCase(java.util.Locale.ROOT);
+        int semi = ct.indexOf(';');
+        if (semi >= 0) ct = ct.substring(0, semi).trim();
+        return ct.equals(CONTENT_TYPE_JSON) || ct.equals(CONTENT_TYPE_CONNECT);
     }
 
     /** Map Connect error codes to their canonical HTTP status codes. */

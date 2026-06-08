@@ -48,14 +48,26 @@ public class SurveillanceServiceImpl {
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/config", null, out));
     }
 
-    // Boolean config toggles the REST handler reads with has()-gating. The
-    // Connect client sends a full config snapshot, but JsonFormat omits any of
-    // these that are false, so the handler would never see (and never persist) a
-    // toggle turned OFF. We re-add them as false when absent so OFF sticks.
-    private static final String[] CONFIG_BOOLEAN_TOGGLES = {
-            "detectPerson", "detectCar", "detectBike", "nightMode",
-            "cameraFront", "cameraRight", "cameraRear", "cameraLeft"
-    };
+    // Boolean config toggles the REST handler reads with has()-gating. The Connect
+    // client sends a FULL config snapshot, but JsonFormat omits any bool that is
+    // false, so the handler would never see (and never persist) a toggle turned OFF.
+    // We re-add every boolean field of SurveillanceConfig as false when absent so OFF
+    // sticks. Derived from the proto descriptor so a newly-added bool field is covered
+    // automatically — no hand-maintained list to drift out of sync (BladeWatch-mvay).
+    // Re-adding a bool the handler ignores (e.g. enabled/aiEnabled, which are owned by
+    // the Enable/Disable RPCs) is inert, so deriving the full set is safe.
+    static final java.util.List<String> CONFIG_BOOLEAN_TOGGLES = computeConfigBooleanToggles();
+
+    private static java.util.List<String> computeConfigBooleanToggles() {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (com.google.protobuf.Descriptors.FieldDescriptor f
+                : net.bladewatch.app.grpc.v1.SurveillanceConfig.getDescriptor().getFields()) {
+            if (f.getType() == com.google.protobuf.Descriptors.FieldDescriptor.Type.BOOL) {
+                names.add(f.getJsonName());
+            }
+        }
+        return java.util.Collections.unmodifiableList(names);
+    }
 
     private ConnectResponse handleSetConfig(String req, String clientIdentity) throws ConnectException {
         // The Connect client wraps the payload as SetSurveillanceConfigRequest.config

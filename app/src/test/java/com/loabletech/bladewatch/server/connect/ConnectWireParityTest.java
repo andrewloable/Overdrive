@@ -7,9 +7,13 @@ import net.bladewatch.app.grpc.v1.GetChargeCapResponse;
 import net.bladewatch.app.grpc.v1.GetChargingScheduleResponse;
 import net.bladewatch.app.grpc.v1.GetDatesResponse;
 import net.bladewatch.app.grpc.v1.GetGpsLocationResponse;
+import net.bladewatch.app.grpc.v1.GetGpsTraceResponse;
 import net.bladewatch.app.grpc.v1.GetInflightStatusResponse;
+import net.bladewatch.app.grpc.v1.GetStatsResponse;
+import net.bladewatch.app.grpc.v1.GetSummaryResponse;
 import net.bladewatch.app.grpc.v1.GetSurveillanceStatusResponse;
 import net.bladewatch.app.grpc.v1.GetTelemetryRequest;
+import net.bladewatch.app.grpc.v1.GetTelemetryResponse;
 import net.bladewatch.app.grpc.v1.ListRecordingsResponse;
 import net.bladewatch.app.grpc.v1.MoveWindowRequest;
 import net.bladewatch.app.grpc.v1.RecordingEntry;
@@ -313,5 +317,95 @@ public class ConnectWireParityTest {
         PARSER.merge("{\"success\":true,\"supported\":false,\"reason\":\"cloud_not_configured\"}", b);
         Assert.assertFalse(b.getSupported());
         Assert.assertEquals("cloud_not_configured", b.getReason());
+    }
+
+    // ---- BladeWatch-lnx6: parity for the high-reshape RPCs not yet covered ----
+
+    @Test
+    public void getStats_nestedStatsPopulates() throws Exception {
+        // impl reshapes flat REST {normalCount, sentrySize, ...} into nested stats{}
+        // with renamed fields (normalCount->recordingsCount, sentrySize->surveillanceSizeBytes).
+        GetStatsResponse.Builder b = GetStatsResponse.newBuilder();
+        PARSER.merge("{\"stats\":{\"recordingsCount\":3,\"recordingsSizeBytes\":1000,"
+                + "\"surveillanceCount\":2,\"surveillanceSizeBytes\":2000,"
+                + "\"proximityCount\":1,\"proximitySizeBytes\":500,"
+                + "\"totalCount\":6,\"totalSizeBytes\":3500}}", b);
+        Assert.assertEquals(3, b.getStats().getRecordingsCount());
+        Assert.assertEquals(1000L, b.getStats().getRecordingsSizeBytes());
+        Assert.assertEquals(2, b.getStats().getSurveillanceCount());
+        Assert.assertEquals(2000L, b.getStats().getSurveillanceSizeBytes());
+        Assert.assertEquals(6, b.getStats().getTotalCount());
+        Assert.assertEquals(3500L, b.getStats().getTotalSizeBytes());
+    }
+
+    @Test
+    public void getStats_rawFlatRestShapeDropsEverything() throws Exception {
+        // Pre-fix RAW shape: flat keys with different names, no stats{} nesting -> all default.
+        GetStatsResponse.Builder b = GetStatsResponse.newBuilder();
+        PARSER.merge("{\"normalCount\":3,\"normalSize\":1000,\"sentryCount\":2,"
+                + "\"sentrySize\":2000,\"totalCount\":6,\"totalSize\":3500}", b);
+        Assert.assertEquals("recordingsCount drops", 0, b.getStats().getRecordingsCount());
+        Assert.assertEquals("totalSizeBytes drops", 0L, b.getStats().getTotalSizeBytes());
+        Assert.assertEquals("un-nested totalCount drops", 0, b.getStats().getTotalCount());
+    }
+
+    @Test
+    public void getSummary_rollupJsonBlobPopulates() throws Exception {
+        // impl wraps each REST rollup object into a single rollupJson string blob.
+        GetSummaryResponse.Builder b = GetSummaryResponse.newBuilder();
+        PARSER.merge("{\"success\":true,\"summary\":[{\"rollupJson\":\"{\\\"tripCount\\\":5}\"}]}", b);
+        Assert.assertEquals(1, b.getSummaryCount());
+        Assert.assertTrue(b.getSummary(0).getRollupJson().contains("tripCount"));
+    }
+
+    @Test
+    public void getSummary_rawRollupObjectsDropBlob() throws Exception {
+        // Pre-fix RAW shape: bare rollup objects (no rollupJson wrapper) -> blob empty.
+        GetSummaryResponse.Builder b = GetSummaryResponse.newBuilder();
+        PARSER.merge("{\"success\":true,\"summary\":[{\"tripCount\":5,\"totalDistanceKm\":10.0}]}", b);
+        Assert.assertEquals(1, b.getSummaryCount());
+        Assert.assertTrue("bare rollup object drops to empty rollupJson",
+                b.getSummary(0).getRollupJson().isEmpty());
+    }
+
+    @Test
+    public void getTelemetry_sampleJsonBlobPopulates() throws Exception {
+        // impl wraps each REST telemetry sample object into a single sampleJson blob.
+        GetTelemetryResponse.Builder b = GetTelemetryResponse.newBuilder();
+        PARSER.merge("{\"success\":true,\"telemetry\":[{\"sampleJson\":\"{\\\"t\\\":1,\\\"s\\\":50}\"}]}", b);
+        Assert.assertEquals(1, b.getTelemetryCount());
+        Assert.assertTrue(b.getTelemetry(0).getSampleJson().contains("\"s\":50"));
+    }
+
+    @Test
+    public void getTelemetry_rawSampleObjectsDropBlob() throws Exception {
+        // Pre-fix RAW shape: bare sample objects (no sampleJson wrapper) -> blob empty.
+        GetTelemetryResponse.Builder b = GetTelemetryResponse.newBuilder();
+        PARSER.merge("{\"success\":true,\"telemetry\":[{\"t\":1,\"s\":50}]}", b);
+        Assert.assertEquals(1, b.getTelemetryCount());
+        Assert.assertTrue(b.getTelemetry(0).getSampleJson().isEmpty());
+    }
+
+    @Test
+    public void getGpsTrace_latLonObjectsPopulate() throws Exception {
+        // impl reshapes positional [[lat,lon],...] into {lat,lon} objects.
+        GetGpsTraceResponse.Builder b = GetGpsTraceResponse.newBuilder();
+        PARSER.merge("{\"success\":true,\"gps\":[{\"lat\":1.5,\"lon\":2.5}]}", b);
+        Assert.assertEquals(1, b.getGpsCount());
+        Assert.assertEquals(1.5, b.getGps(0).getLat(), 0.0001);
+        Assert.assertEquals(2.5, b.getGps(0).getLon(), 0.0001);
+    }
+
+    @Test
+    public void getGpsTrace_rawPositionalArraysFailToParse() {
+        // Pre-fix RAW shape: positional [lat,lon] arrays cannot parse as GpsPoint messages;
+        // this is why the impl must reshape them. A type mismatch throws (not a silent drop).
+        GetGpsTraceResponse.Builder b = GetGpsTraceResponse.newBuilder();
+        try {
+            PARSER.merge("{\"success\":true,\"gps\":[[1.5,2.5]]}", b);
+            Assert.fail("positional [lat,lon] arrays must not parse as GpsPoint objects");
+        } catch (Exception expected) {
+            // expected: InvalidProtocolBufferException (array where message expected)
+        }
     }
 }

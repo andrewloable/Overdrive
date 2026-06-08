@@ -19,6 +19,7 @@ import org.json.JSONObject;
  *   SetAppearance  → POST /api/settings/appearance
  *   GetLocale      → GET  /api/i18n/lang  (via LocaleManager directly)
  *   SetLocale      → POST /api/i18n/lang  (via LocaleManager directly)
+ *   SetRecordingMode → POST /api/recording/mode  (via CameraDaemon directly)
  */
 public class SettingsServiceImpl {
 
@@ -29,6 +30,7 @@ public class SettingsServiceImpl {
         dispatcher.register("bladewatch.v1.SettingsService", "SetAppearance", this::handleSetAppearance);
         dispatcher.register("bladewatch.v1.SettingsService", "GetLocale", this::handleGetLocale);
         dispatcher.register("bladewatch.v1.SettingsService", "SetLocale", this::handleSetLocale);
+        dispatcher.register("bladewatch.v1.SettingsService", "SetRecordingMode", this::handleSetRecordingMode);
     }
 
     private ConnectResponse handleGetQuality(String req, String clientIdentity) throws ConnectException {
@@ -90,6 +92,28 @@ public class SettingsServiceImpl {
             return ConnectResponse.of("{\"lang\":\"" + resolved + "\"}");
         } catch (Exception e) {
             throw new ConnectException("internal", "Failed to set locale: " + e.getMessage());
+        }
+    }
+
+    // Mirrors the inline POST /api/recording/mode route in HttpServer; calls
+    // CameraDaemon directly (like Get/SetLocale) rather than shelling a REST handler,
+    // since the route has no standalone handler class (BladeWatch-pg0s).
+    private ConnectResponse handleSetRecordingMode(String req, String clientIdentity) throws ConnectException {
+        String mode = "";
+        try {
+            mode = new JSONObject(req).optString("mode", "");
+        } catch (Exception ignored) {}
+        if (mode.isEmpty()) {
+            throw new ConnectException("invalid_argument", "Missing or invalid field: mode");
+        }
+        try {
+            net.bladewatch.app.daemon.CameraDaemon.setRecordingMode(mode);
+            JSONObject resp = new JSONObject();
+            resp.put("success", true);
+            resp.put("mode", mode);
+            return ConnectResponse.of(resp.toString());
+        } catch (Exception e) {
+            throw new ConnectException("internal", "Failed to set recording mode: " + e.getMessage());
         }
     }
 }

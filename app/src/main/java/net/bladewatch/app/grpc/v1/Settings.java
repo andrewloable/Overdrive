@@ -116,6 +116,16 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_bladewatch_v1_SetLocaleResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_bladewatch_v1_SetRecordingModeRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_bladewatch_v1_SetRecordingModeRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_bladewatch_v1_SetRecordingModeResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_bladewatch_v1_SetRecordingModeResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -185,32 +195,38 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
       "\016SupportedEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
       "ue\030\002 \001(\010R\005value:\0028\001\"&\n\020SetLocaleRequest\022" +
       "\022\n\004lang\030\001 \001(\tR\004lang\"\'\n\021SetLocaleResponse" +
-      "\022\022\n\004lang\030\001 \001(\tR\004lang*\354\001\n\024RecordingQualit" +
-      "yTier\022&\n\"RECORDING_QUALITY_TIER_UNSPECIF" +
-      "IED\020\000\022\"\n\036RECORDING_QUALITY_TIER_ECONOMY\020" +
-      "\001\022#\n\037RECORDING_QUALITY_TIER_STANDARD\020\002\022\037" +
-      "\n\033RECORDING_QUALITY_TIER_HIGH\020\003\022\"\n\036RECOR" +
-      "DING_QUALITY_TIER_PREMIUM\020\004\022\036\n\032RECORDING" +
-      "_QUALITY_TIER_MAX\020\005*U\n\nVideoCodec\022\033\n\027VID" +
-      "EO_CODEC_UNSPECIFIED\020\000\022\024\n\020VIDEO_CODEC_H2" +
-      "64\020\001\022\024\n\020VIDEO_CODEC_H265\020\002*b\n\010AppTheme\022\031" +
-      "\n\025APP_THEME_UNSPECIFIED\020\000\022\022\n\016APP_THEME_D" +
-      "ARK\020\001\022\023\n\017APP_THEME_LIGHT\020\002\022\022\n\016APP_THEME_" +
-      "AUTO\020\0032\217\004\n\017SettingsService\022Q\n\nGetQuality" +
-      "\022 .bladewatch.v1.GetQualityRequest\032!.bla" +
-      "dewatch.v1.GetQualityResponse\022Q\n\nSetQual" +
-      "ity\022 .bladewatch.v1.SetQualityRequest\032!." +
-      "bladewatch.v1.SetQualityResponse\022Z\n\rGetA" +
-      "ppearance\022#.bladewatch.v1.GetAppearanceR" +
-      "equest\032$.bladewatch.v1.GetAppearanceResp" +
-      "onse\022Z\n\rSetAppearance\022#.bladewatch.v1.Se" +
-      "tAppearanceRequest\032$.bladewatch.v1.SetAp" +
-      "pearanceResponse\022N\n\tGetLocale\022\037.bladewat" +
-      "ch.v1.GetLocaleRequest\032 .bladewatch.v1.G" +
-      "etLocaleResponse\022N\n\tSetLocale\022\037.bladewat" +
-      "ch.v1.SetLocaleRequest\032 .bladewatch.v1.S" +
-      "etLocaleResponseB\036\n\032net.bladewatch.app.g" +
-      "rpc.v1P\001b\006proto3"
+      "\022\022\n\004lang\030\001 \001(\tR\004lang\"-\n\027SetRecordingMode" +
+      "Request\022\022\n\004mode\030\001 \001(\tR\004mode\"^\n\030SetRecord" +
+      "ingModeResponse\022\030\n\007success\030\001 \001(\010R\007succes" +
+      "s\022\022\n\004mode\030\002 \001(\tR\004mode\022\024\n\005error\030\003 \001(\tR\005er" +
+      "ror*\354\001\n\024RecordingQualityTier\022&\n\"RECORDIN" +
+      "G_QUALITY_TIER_UNSPECIFIED\020\000\022\"\n\036RECORDIN" +
+      "G_QUALITY_TIER_ECONOMY\020\001\022#\n\037RECORDING_QU" +
+      "ALITY_TIER_STANDARD\020\002\022\037\n\033RECORDING_QUALI" +
+      "TY_TIER_HIGH\020\003\022\"\n\036RECORDING_QUALITY_TIER" +
+      "_PREMIUM\020\004\022\036\n\032RECORDING_QUALITY_TIER_MAX" +
+      "\020\005*U\n\nVideoCodec\022\033\n\027VIDEO_CODEC_UNSPECIF" +
+      "IED\020\000\022\024\n\020VIDEO_CODEC_H264\020\001\022\024\n\020VIDEO_COD" +
+      "EC_H265\020\002*b\n\010AppTheme\022\031\n\025APP_THEME_UNSPE" +
+      "CIFIED\020\000\022\022\n\016APP_THEME_DARK\020\001\022\023\n\017APP_THEM" +
+      "E_LIGHT\020\002\022\022\n\016APP_THEME_AUTO\020\0032\364\004\n\017Settin" +
+      "gsService\022Q\n\nGetQuality\022 .bladewatch.v1." +
+      "GetQualityRequest\032!.bladewatch.v1.GetQua" +
+      "lityResponse\022Q\n\nSetQuality\022 .bladewatch." +
+      "v1.SetQualityRequest\032!.bladewatch.v1.Set" +
+      "QualityResponse\022Z\n\rGetAppearance\022#.blade" +
+      "watch.v1.GetAppearanceRequest\032$.bladewat" +
+      "ch.v1.GetAppearanceResponse\022Z\n\rSetAppear" +
+      "ance\022#.bladewatch.v1.SetAppearanceReques" +
+      "t\032$.bladewatch.v1.SetAppearanceResponse\022" +
+      "N\n\tGetLocale\022\037.bladewatch.v1.GetLocaleRe" +
+      "quest\032 .bladewatch.v1.GetLocaleResponse\022" +
+      "N\n\tSetLocale\022\037.bladewatch.v1.SetLocaleRe" +
+      "quest\032 .bladewatch.v1.SetLocaleResponse\022" +
+      "c\n\020SetRecordingMode\022&.bladewatch.v1.SetR" +
+      "ecordingModeRequest\032\'.bladewatch.v1.SetR" +
+      "ecordingModeResponseB\036\n\032net.bladewatch.a" +
+      "pp.grpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -324,6 +340,18 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_SetLocaleResponse_descriptor,
         new java.lang.String[] { "Lang", });
+    internal_static_bladewatch_v1_SetRecordingModeRequest_descriptor =
+      getDescriptor().getMessageType(14);
+    internal_static_bladewatch_v1_SetRecordingModeRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_bladewatch_v1_SetRecordingModeRequest_descriptor,
+        new java.lang.String[] { "Mode", });
+    internal_static_bladewatch_v1_SetRecordingModeResponse_descriptor =
+      getDescriptor().getMessageType(15);
+    internal_static_bladewatch_v1_SetRecordingModeResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_bladewatch_v1_SetRecordingModeResponse_descriptor,
+        new java.lang.String[] { "Success", "Mode", "Error", });
     descriptor.resolveAllFeaturesImmutable();
   }
 
