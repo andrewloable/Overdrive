@@ -11,9 +11,10 @@ import com.connectrpc.ResponseMessage
  *  AuthService exposes login, logout, and status endpoints.
  *
  *  HTTP mapping:
- *    Login            POST /auth/token
- *    Logout           POST /auth/logout
- *    GetAuthStatus    GET  /auth/status
+ *    Login                POST /auth/token
+ *    Logout               POST /auth/logout
+ *    GetAuthStatus        GET  /auth/status
+ *    InvalidateAuthCache  TCP  auth_invalidate (calls AuthManager.invalidateCache() directly)
  */
 public interface AuthServiceClientInterface {
   public suspend fun login(request: LoginRequest, headers: Headers = emptyMap()): ResponseMessage<LoginResponse>
@@ -21,4 +22,6 @@ public interface AuthServiceClientInterface {
   public suspend fun logout(request: LogoutRequest, headers: Headers = emptyMap()): ResponseMessage<LogoutResponse>
 
   public suspend fun getAuthStatus(request: GetAuthStatusRequest, headers: Headers = emptyMap()): ResponseMessage<GetAuthStatusResponse>
+
+  public suspend fun invalidateAuthCache(request: InvalidateAuthCacheRequest, headers: Headers = emptyMap()): ResponseMessage<InvalidateAuthCacheResponse>
 }

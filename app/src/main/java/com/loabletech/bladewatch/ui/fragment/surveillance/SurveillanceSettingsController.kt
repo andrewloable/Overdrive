@@ -162,7 +162,7 @@ class SurveillanceSettingsController(private val context: Context) {
             val safeLoc = client.fetchSafeLocations()
 
             if (config != null) {
-                editEnabled = config.enabled; editPreset = config.environmentPreset
+                editEnabled = config.enabled; editPreset = config.distancePreset
                 editSensitivity = config.sensitivityLevel
                 editDetectPerson = config.detectPerson; editDetectCar = config.detectCar; editDetectBike = config.detectBike
                 editPreRecord = config.preRecordSeconds; editPostRecord = config.postRecordSeconds
@@ -777,7 +777,7 @@ class SurveillanceSettingsController(private val context: Context) {
             )
             val updated = config.copy(
                 enabled = editEnabled,
-                environmentPreset = editPreset,
+                distancePreset = editPreset,
                 sensitivityLevel = editSensitivity,
                 detectPerson = editDetectPerson, detectCar = editDetectCar, detectBike = editDetectBike,
                 preRecordSeconds = editPreRecord, postRecordSeconds = editPostRecord,

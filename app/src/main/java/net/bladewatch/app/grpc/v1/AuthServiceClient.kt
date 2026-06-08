@@ -14,9 +14,10 @@ import com.connectrpc.StreamType
  *  AuthService exposes login, logout, and status endpoints.
  *
  *  HTTP mapping:
- *    Login            POST /auth/token
- *    Logout           POST /auth/logout
- *    GetAuthStatus    GET  /auth/status
+ *    Login                POST /auth/token
+ *    Logout               POST /auth/logout
+ *    GetAuthStatus        GET  /auth/status
+ *    InvalidateAuthCache  TCP  auth_invalidate (calls AuthManager.invalidateCache() directly)
  */
 public class AuthServiceClient(
   private val client: ProtocolClientInterface,
@@ -52,6 +53,18 @@ public class AuthServiceClient(
     "bladewatch.v1.AuthService/GetAuthStatus",
       net.bladewatch.app.grpc.v1.GetAuthStatusRequest::class,
       net.bladewatch.app.grpc.v1.GetAuthStatusResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun invalidateAuthCache(request: InvalidateAuthCacheRequest, headers: Headers): ResponseMessage<InvalidateAuthCacheResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.AuthService/InvalidateAuthCache",
+      net.bladewatch.app.grpc.v1.InvalidateAuthCacheRequest::class,
+      net.bladewatch.app.grpc.v1.InvalidateAuthCacheResponse::class,
       StreamType.UNARY,
     ),
   )

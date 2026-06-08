@@ -106,11 +106,20 @@ public class SettingsServiceImpl {
         if (mode.isEmpty()) {
             throw new ConnectException("invalid_argument", "Missing or invalid field: mode");
         }
+        // Validate against the known enum values before passing to CameraDaemon.
+        // CameraDaemon.setRecordingMode swallows IllegalArgumentException silently;
+        // we must check here so the RPC can return a real error instead of success=true.
+        try {
+            net.bladewatch.app.recording.RecordingModeManager.Mode.valueOf(mode.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ConnectException("invalid_argument",
+                "Unknown recording mode: " + mode + ". Valid values: NONE, CONTINUOUS, DRIVE_MODE, PROXIMITY_GUARD");
+        }
         try {
             net.bladewatch.app.daemon.CameraDaemon.setRecordingMode(mode);
             JSONObject resp = new JSONObject();
             resp.put("success", true);
-            resp.put("mode", mode);
+            resp.put("mode", mode.toUpperCase());
             return ConnectResponse.of(resp.toString());
         } catch (Exception e) {
             throw new ConnectException("internal", "Failed to set recording mode: " + e.getMessage());

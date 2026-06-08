@@ -21,9 +21,19 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.connectrpc.ResponseMessage
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.R
 import net.bladewatch.app.auth.AuthManager
-import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.grpc.v1.GetModelsManifestRequest
+import net.bladewatch.app.grpc.v1.GetSelectedModelRequest
+import net.bladewatch.app.grpc.v1.GetSohNominalRequest
+import net.bladewatch.app.grpc.v1.GetSohStatusRequest
+import net.bladewatch.app.grpc.v1.InvalidateAuthCacheRequest
+import net.bladewatch.app.grpc.v1.ListTripsRequest
+import net.bladewatch.app.grpc.v1.SetSelectedModelRequest
+import net.bladewatch.app.grpc.v1.SetSohNominalRequest
 import net.bladewatch.app.ui.model.DaemonStatus
 import net.bladewatch.app.ui.model.DaemonType
 import net.bladewatch.app.ui.util.QrCodeGenerator
@@ -614,11 +624,8 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val client = CameraDaemonClient()
-                if (client.connect()) {
-                    client.invalidateAuthCacheSync()
-                    client.disconnect()
-                }
+                val req = InvalidateAuthCacheRequest.newBuilder().build()
+                runBlocking { ConnectClientProvider.authService().invalidateAuthCache(req, emptyMap()) }
             } catch (_: Exception) { }
             mainHandler.post {
                 if (isAdded) {
@@ -648,15 +655,10 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             val msgRes = try {
-                val client = CameraDaemonClient()
-                if (client.connect()) {
-                    val ok = client.invalidateAuthCacheSync()
-                    client.disconnect()
-                    if (ok) R.string.toast_token_regenerated_logged_out
-                    else R.string.toast_token_regenerated_restart
-                } else {
-                    R.string.toast_token_regenerated_no_notify
-                }
+                val req = InvalidateAuthCacheRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.authService().invalidateAuthCache(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.success) R.string.toast_token_regenerated_logged_out
+                else R.string.toast_token_regenerated_restart
             } catch (_: Exception) {
                 R.string.toast_token_regenerated
             }
@@ -690,27 +692,18 @@ class DashboardFragment : Fragment() {
             var nominalKwh = 0.0
             var modelId: String? = null
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh/nominal", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    if (!json.isNull("nominalKwh")) {
-                        nominalKwh = json.optDouble("nominalKwh", 0.0)
-                    }
+                val req = GetSohNominalRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSohNominal(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.hasNominalKwh()) {
+                    nominalKwh = resp.message.nominalKwh
                 }
-                conn.disconnect()
             } catch (_: Throwable) { /* keep defaults */ }
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/models/selected", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    val m = json.optString("modelId", "")
-                    if (m.isNotEmpty()) modelId = m
+                val req = GetSelectedModelRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSelectedModel(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.modelId.isNotEmpty()) {
+                    modelId = resp.message.modelId
                 }
-                conn.disconnect()
             } catch (_: Throwable) {}
 
             mainHandler.post {
@@ -746,30 +739,18 @@ class DashboardFragment : Fragment() {
             var dataAvailable = false
 
             try {
-                // Aggregate from the trips table (/api/trips) — the SAME source
-                // the Trips list reads — so the dashboard "This Week" count and
-                // the Trips list can never disagree. (Previously this read the
-                // separate weekly_rollups table, which could drift from the
-                // trips table and show e.g. "1 trip" on the dashboard while the
-                // Trips list showed none.)
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/trips?days=7&limit=100", "GET", 3000, 5000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    conn.disconnect()
-                    val json = org.json.JSONObject(body)
-                    val tripsArray = json.optJSONArray("trips")
-                    if (tripsArray != null) {
-                        tripCount = tripsArray.length()
-                        for (i in 0 until tripsArray.length()) {
-                            val trip = tripsArray.getJSONObject(i)
-                            totalDistanceKm += trip.optDouble("distanceKm", 0.0)
-                            totalDurationSeconds += trip.optInt("durationSeconds", 0)
-                        }
-                        dataAvailable = true
+                // Use TripsService.ListTrips Connect RPC — same source as the Trips screen,
+                // so the dashboard count and the Trips list can never disagree.
+                val req = ListTripsRequest.newBuilder().setDays(7).setLimit(100).build()
+                val resp = runBlocking { ConnectClientProvider.tripsService().listTrips(req, emptyMap()) }
+                if (resp is ResponseMessage.Success) {
+                    val trips = resp.message.tripsList
+                    tripCount = trips.size
+                    for (trip in trips) {
+                        totalDistanceKm += trip.distanceKm
+                        totalDurationSeconds += trip.durationSeconds
                     }
-                } else {
-                    conn.disconnect()
+                    dataAvailable = true
                 }
             } catch (_: Throwable) { }
 
@@ -876,80 +857,48 @@ class DashboardFragment : Fragment() {
             var calTs = 0L
 
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh/nominal", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    if (!json.isNull("nominalKwh")) initialKwh = json.optDouble("nominalKwh", 0.0)
-                }
-                conn.disconnect()
+                val req = GetSohNominalRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSohNominal(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.hasNominalKwh()) initialKwh = resp.message.nominalKwh
             } catch (_: Throwable) {}
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    nominalKwh = json.optDouble("nominalCapacityKwh", 0.0)
-                    nominalSource = json.optString("nominalSource", "unset")
-                    displaySoh = json.optDouble("displaySoh", -1.0)
-                    displaySource = json.optString("displaySource", "unavailable")
-                    val est = json.optDouble("estimatedCapacityKwh", -1.0)
-                    if (est > 0) estimatedKwh = est
-                    if (!json.isNull("modelId")) {
-                        statusModelId = json.optString("modelId", "").ifEmpty { null }
-                    }
-                    val calObj = json.optJSONObject("calibration")
-                    if (calObj != null) {
-                        calSoh = calObj.optDouble("soh", -1.0)
-                        calTs = calObj.optLong("timestampMs", 0L)
-                    }
+                val req = GetSohStatusRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSohStatus(req, emptyMap()) }
+                if (resp is ResponseMessage.Success) {
+                    nominalKwh = resp.message.nominalCapacityKwh
+                    if (resp.message.nominalSource.isNotEmpty()) nominalSource = resp.message.nominalSource
+                    displaySoh = resp.message.displaySoh
+                    if (resp.message.displaySource.isNotEmpty()) displaySource = resp.message.displaySource
+                    // estimatedKwh, statusModelId, calSoh, calTs not in this RPC — remain default
                 }
-                conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/models/manifest", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
+                val req = GetModelsManifestRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getModelsManifest(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.manifestJson.isNotEmpty()) {
+                    val json = org.json.JSONObject(resp.message.manifestJson)
                     val arr = json.optJSONArray("models")
                     if (arr != null) {
                         for (i in 0 until arr.length()) {
                             val m = arr.getJSONObject(i)
                             val id = m.optString("id", "")
-                            // Manifest uses "name" for the canonical user-facing
-                            // string ("BYD Seal", etc.) and falls back to the id.
-                            // The previous version read "title" first which never
-                            // existed in our manifest, so models showed as the
-                            // id text. Ordering: name → title → id.
                             val title = when {
                                 m.optString("name", "").isNotEmpty() -> m.optString("name")
                                 m.optString("title", "").isNotEmpty() -> m.optString("title")
                                 else -> id
                             }
-                            // nominalKwh is the manifest's canonical pack
-                            // capacity for this model. 0 means the manifest
-                            // doesn't carry a value for it; the dropdown
-                            // listener treats 0 as "don't touch the input".
                             val kwh = m.optDouble("nominalKwh", 0.0)
                             if (id.isNotEmpty()) modelIds.add(ModelEntry(id, title, kwh))
                         }
                     }
                 }
-                conn.disconnect()
             } catch (_: Throwable) {}
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/models/selected", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    val m = json.optString("modelId", "")
-                    if (m.isNotEmpty()) initialModelId = m
+                val req = GetSelectedModelRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSelectedModel(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.modelId.isNotEmpty()) {
+                    initialModelId = resp.message.modelId
                 }
-                conn.disconnect()
             } catch (_: Throwable) {}
 
             val finalNominalKwh = nominalKwh
@@ -1066,14 +1015,9 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh/nominal", "POST", 3000, 5000)
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                val body = if (kwh == null) "{\"nominalKwh\":null}" else "{\"nominalKwh\":$kwh}"
-                conn.outputStream.use { it.write(body.toByteArray()) }
-                conn.responseCode
-                conn.disconnect()
+                val builder = SetSohNominalRequest.newBuilder()
+                if (kwh != null) builder.setNominalKwh(kwh)
+                runBlocking { ConnectClientProvider.systemService().setSohNominal(builder.build(), emptyMap()) }
             } catch (_: Throwable) {}
             mainHandler.post { refreshVehicleTile() }
         }
@@ -1084,24 +1028,14 @@ class DashboardFragment : Fragment() {
             .also { metricsExecutor = it }
         executor.execute {
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh/nominal", "POST", 3000, 5000)
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.outputStream.use { it.write("{\"nominalKwh\":$kwh}".toByteArray()) }
-                conn.responseCode
-                conn.disconnect()
+                val req = SetSohNominalRequest.newBuilder().setNominalKwh(kwh).build()
+                runBlocking { ConnectClientProvider.systemService().setSohNominal(req, emptyMap()) }
             } catch (_: Throwable) {}
 
             if (!modelId.isNullOrEmpty()) {
                 try {
-                    val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                        "/api/models/selected", "POST", 3000, 5000)
-                    conn.doOutput = true
-                    conn.setRequestProperty("Content-Type", "application/json")
-                    conn.outputStream.use { it.write("{\"modelId\":\"$modelId\"}".toByteArray()) }
-                    conn.responseCode
-                    conn.disconnect()
+                    val req = SetSelectedModelRequest.newBuilder().setModelId(modelId).build()
+                    runBlocking { ConnectClientProvider.systemService().setSelectedModel(req, emptyMap()) }
                 } catch (_: Throwable) {}
             }
 

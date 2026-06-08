@@ -56,6 +56,16 @@ public final class Auth extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_bladewatch_v1_GetAuthStatusResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_bladewatch_v1_InvalidateAuthCacheRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_bladewatch_v1_InvalidateAuthCacheRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_bladewatch_v1_InvalidateAuthCacheResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_bladewatch_v1_InvalidateAuthCacheResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -74,14 +84,19 @@ public final class Auth extends com.google.protobuf.GeneratedFile {
       "\030\n\007success\030\001 \001(\010R\007success\022\030\n\007message\030\002 \001" +
       "(\tR\007message\"\026\n\024GetAuthStatusRequest\"L\n\025G" +
       "etAuthStatusResponse\022\026\n\006status\030\001 \001(\tR\006st" +
-      "atus\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId2\364\001\n\013Au" +
-      "thService\022B\n\005Login\022\033.bladewatch.v1.Login" +
-      "Request\032\034.bladewatch.v1.LoginResponse\022E\n" +
-      "\006Logout\022\034.bladewatch.v1.LogoutRequest\032\035." +
-      "bladewatch.v1.LogoutResponse\022Z\n\rGetAuthS" +
-      "tatus\022#.bladewatch.v1.GetAuthStatusReque" +
-      "st\032$.bladewatch.v1.GetAuthStatusResponse" +
-      "B\036\n\032net.bladewatch.app.grpc.v1P\001b\006proto3"
+      "atus\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId\"\034\n\032Inv" +
+      "alidateAuthCacheRequest\"7\n\033InvalidateAut" +
+      "hCacheResponse\022\030\n\007success\030\001 \001(\010R\007success" +
+      "2\342\002\n\013AuthService\022B\n\005Login\022\033.bladewatch.v" +
+      "1.LoginRequest\032\034.bladewatch.v1.LoginResp" +
+      "onse\022E\n\006Logout\022\034.bladewatch.v1.LogoutReq" +
+      "uest\032\035.bladewatch.v1.LogoutResponse\022Z\n\rG" +
+      "etAuthStatus\022#.bladewatch.v1.GetAuthStat" +
+      "usRequest\032$.bladewatch.v1.GetAuthStatusR" +
+      "esponse\022l\n\023InvalidateAuthCache\022).bladewa" +
+      "tch.v1.InvalidateAuthCacheRequest\032*.blad" +
+      "ewatch.v1.InvalidateAuthCacheResponseB\036\n" +
+      "\032net.bladewatch.app.grpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -123,6 +138,18 @@ public final class Auth extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_GetAuthStatusResponse_descriptor,
         new java.lang.String[] { "Status", "DeviceId", });
+    internal_static_bladewatch_v1_InvalidateAuthCacheRequest_descriptor =
+      getDescriptor().getMessageType(6);
+    internal_static_bladewatch_v1_InvalidateAuthCacheRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_bladewatch_v1_InvalidateAuthCacheRequest_descriptor,
+        new java.lang.String[] { });
+    internal_static_bladewatch_v1_InvalidateAuthCacheResponse_descriptor =
+      getDescriptor().getMessageType(7);
+    internal_static_bladewatch_v1_InvalidateAuthCacheResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_bladewatch_v1_InvalidateAuthCacheResponse_descriptor,
+        new java.lang.String[] { "Success", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

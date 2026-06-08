@@ -15,11 +15,14 @@ import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.WorkerThread
 import net.bladewatch.app.R
+import com.connectrpc.ResponseMessage
+import net.bladewatch.app.client.ConnectClientProvider
+import kotlinx.coroutines.runBlocking
+import net.bladewatch.app.grpc.v1.GetLastChargeRequest
+import net.bladewatch.app.grpc.v1.GetParkingDeltaRequest
 import net.bladewatch.app.ui.model.RecordingFile
 import net.bladewatch.app.ui.util.RecordingScanner
-import net.bladewatch.app.util.DaemonHttpClient
 import org.json.JSONObject
-import java.net.HttpURLConnection
 import java.util.Calendar
 
 /**
@@ -115,8 +118,12 @@ class DashboardInsightProvider(appContext: Context) {
     private fun parkingDeltaInsight(emphasisColor: Int): DashboardInsight? {
         // 72 hours = 3 days, after which the delta is too stale to be
         // interesting on the dashboard.
-        val json = fetchDaemonJson("/api/performance/parking-delta?maxAgeHours=72") ?: return null
-        if (json.optBoolean("available", true).not()) return null
+        val json: JSONObject = try {
+            val req = GetParkingDeltaRequest.newBuilder().setMaxAgeHours(72).build()
+            val resp = runBlocking { ConnectClientProvider.systemService().getParkingDelta(req, emptyMap()) }
+            if (resp !is ResponseMessage.Success || !resp.message.available) return null
+            JSONObject(resp.message.rawJson)
+        } catch (_: Throwable) { return null }
         val deltaSoc = json.optDouble("deltaSoc", Double.NaN)
         // We only surface drain across an ACC-OFF→ACC-ON cycle — i.e. how
         // much SOC/kWh was consumed while the car sat idle (vampire drain,
@@ -185,8 +192,12 @@ class DashboardInsightProvider(appContext: Context) {
 
     /** "Last charge: +X kWh in Y minutes" — only if a session in the last 24h. */
     private fun chargingRecapInsight(emphasisColor: Int): DashboardInsight? {
-        val json = fetchDaemonJson("/api/performance/last-charge?hoursBack=24") ?: return null
-        if (json.optBoolean("available", true).not()) return null
+        val json: JSONObject = try {
+            val req = GetLastChargeRequest.newBuilder().setHoursBack(24).build()
+            val resp = runBlocking { ConnectClientProvider.systemService().getLastCharge(req, emptyMap()) }
+            if (resp !is ResponseMessage.Success || !resp.message.available) return null
+            JSONObject(resp.message.rawJson)
+        } catch (_: Throwable) { return null }
         val kwh = json.optDouble("energyAddedKwh", Double.NaN)
         val mins = json.optLong("durationMinutes", 0L)
         if (kwh.isNaN() || kwh <= 0.05 || kwh > 500) return null
@@ -274,29 +285,6 @@ class DashboardInsightProvider(appContext: Context) {
     }
 
     // ============== Helpers ==============
-
-    /**
-     * GET against the in-process daemon. Returns null on any error (timeout,
-     * non-200, malformed JSON) — callers treat null as "no insight available"
-     * and the carousel skips it.
-     *
-     * Always called from a worker thread (build() is @WorkerThread).
-     */
-    private fun fetchDaemonJson(path: String): JSONObject? {
-        var conn: HttpURLConnection? = null
-        return try {
-            conn = DaemonHttpClient.open(path, "GET", connectTimeoutMs = 1500, readTimeoutMs = 2500)
-            val code = conn.responseCode
-            if (code != 200) return null
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            if (body.isEmpty()) return null
-            JSONObject(body)
-        } catch (_: Throwable) {
-            null
-        } finally {
-            try { conn?.disconnect() } catch (_: Throwable) {}
-        }
-    }
 
     /**
      * Process start time in ms. On API 24+ this is the boot-anchored start

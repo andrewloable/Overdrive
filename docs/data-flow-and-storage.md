@@ -169,6 +169,18 @@ Common subdirectories:
 
 `StorageSetup` prepares the app-owned external storage directory and requests or grants storage permissions. `StorageManager` also detects external SD-card-style paths and can manage separate storage choices for recordings, surveillance, and trips.
 
+### Storage Priority (Auto-Select on Startup)
+
+On daemon startup, `StorageManager.applyAutoStoragePriority()` resolves which physical drive to use:
+
+1. **SD card** — discovered via `sm list-volumes all` and a write probe under `/storage/<uuid>`. If a `BladeWatch/` folder exists it is preferred; if not, the folder is created.
+2. **USB drive** — if no SD card, scans `/mnt/usb*` and `/storage/usb*` for the first writable directory and applies the same BladeWatch/ creation logic.
+3. **Internal storage** (`/storage/emulated/0/BladeWatch`) — fallback when no external drive is found.
+
+The resolved storage type is persisted to the unified config (`recordingsStorageType`, `surveillanceStorageType`, `tripsStorageType`). The scan runs unconditionally on every boot so inserting or removing a drive between reboots is always reflected. All three storage types (recordings, surveillance, trips) are set to the same device.
+
+The SD-card watchdog (`startSdCardWatchdog`) starts after the priority scan and keeps the selected drive mounted during sentry mode.
+
 Storage cleanup behavior includes:
 
 - Default storage limit around `500 MB`.

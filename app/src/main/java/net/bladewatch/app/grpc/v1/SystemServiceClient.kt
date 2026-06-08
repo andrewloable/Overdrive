@@ -15,11 +15,21 @@ import com.connectrpc.StreamType
  *  and audio testing.
  *
  *  HTTP mapping:
- *    GetStatus        GET  /status
- *    GetPerformance   GET  /api/performance (PerformanceApiHandler)
- *    PlayAudioTest    POST /api/audio/test-avas
- *    ListModels       GET  /api/models/list
- *    DownloadModel    POST /api/models/download
+ *    GetStatus          GET  /status
+ *    GetPerformance     GET  /api/performance     (PerformanceApiHandler)
+ *    PlayAudioTest      POST /api/audio/test-avas
+ *    ListModels         GET  /api/models/list
+ *    DownloadModel      POST /api/models/download
+ *    GetSohNominal      GET  /api/performance/soh/nominal
+ *    SetSohNominal      POST /api/performance/soh/nominal
+ *    GetSohStatus       GET  /api/performance/soh
+ *    ResetSoh           POST /api/performance/soh/reset
+ *    ResetPerformance   POST /api/performance/reset
+ *    GetParkingDelta    GET  /api/performance/parking-delta
+ *    GetLastCharge      GET  /api/performance/last-charge
+ *    GetSelectedModel   GET  /api/models/selected
+ *    SetSelectedModel   POST /api/models/selected
+ *    GetModelsManifest  GET  /api/models/manifest
  */
 public class SystemServiceClient(
   private val client: ProtocolClientInterface,
@@ -79,6 +89,126 @@ public class SystemServiceClient(
     "bladewatch.v1.SystemService/DownloadModel",
       net.bladewatch.app.grpc.v1.DownloadModelRequest::class,
       net.bladewatch.app.grpc.v1.DownloadModelResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getSohNominal(request: GetSohNominalRequest, headers: Headers): ResponseMessage<GetSohNominalResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetSohNominal",
+      net.bladewatch.app.grpc.v1.GetSohNominalRequest::class,
+      net.bladewatch.app.grpc.v1.GetSohNominalResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun setSohNominal(request: SetSohNominalRequest, headers: Headers): ResponseMessage<SetSohNominalResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/SetSohNominal",
+      net.bladewatch.app.grpc.v1.SetSohNominalRequest::class,
+      net.bladewatch.app.grpc.v1.SetSohNominalResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getSohStatus(request: GetSohStatusRequest, headers: Headers): ResponseMessage<GetSohStatusResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetSohStatus",
+      net.bladewatch.app.grpc.v1.GetSohStatusRequest::class,
+      net.bladewatch.app.grpc.v1.GetSohStatusResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun resetSoh(request: ResetSohRequest, headers: Headers): ResponseMessage<ResetSohResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/ResetSoh",
+      net.bladewatch.app.grpc.v1.ResetSohRequest::class,
+      net.bladewatch.app.grpc.v1.ResetSohResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun resetPerformance(request: ResetPerformanceRequest, headers: Headers): ResponseMessage<ResetPerformanceResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/ResetPerformance",
+      net.bladewatch.app.grpc.v1.ResetPerformanceRequest::class,
+      net.bladewatch.app.grpc.v1.ResetPerformanceResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getParkingDelta(request: GetParkingDeltaRequest, headers: Headers): ResponseMessage<GetParkingDeltaResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetParkingDelta",
+      net.bladewatch.app.grpc.v1.GetParkingDeltaRequest::class,
+      net.bladewatch.app.grpc.v1.GetParkingDeltaResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getLastCharge(request: GetLastChargeRequest, headers: Headers): ResponseMessage<GetLastChargeResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetLastCharge",
+      net.bladewatch.app.grpc.v1.GetLastChargeRequest::class,
+      net.bladewatch.app.grpc.v1.GetLastChargeResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getSelectedModel(request: GetSelectedModelRequest, headers: Headers): ResponseMessage<GetSelectedModelResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetSelectedModel",
+      net.bladewatch.app.grpc.v1.GetSelectedModelRequest::class,
+      net.bladewatch.app.grpc.v1.GetSelectedModelResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun setSelectedModel(request: SetSelectedModelRequest, headers: Headers): ResponseMessage<SetSelectedModelResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/SetSelectedModel",
+      net.bladewatch.app.grpc.v1.SetSelectedModelRequest::class,
+      net.bladewatch.app.grpc.v1.SetSelectedModelResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  override suspend fun getModelsManifest(request: GetModelsManifestRequest, headers: Headers): ResponseMessage<GetModelsManifestResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "bladewatch.v1.SystemService/GetModelsManifest",
+      net.bladewatch.app.grpc.v1.GetModelsManifestRequest::class,
+      net.bladewatch.app.grpc.v1.GetModelsManifestResponse::class,
       StreamType.UNARY,
     ),
   )

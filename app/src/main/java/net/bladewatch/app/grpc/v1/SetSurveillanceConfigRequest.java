@@ -75,6 +75,48 @@ private static final long serialVersionUID = 0L;
     return config_ == null ? net.bladewatch.app.grpc.v1.SurveillanceConfig.getDefaultInstance() : config_;
   }
 
+  public static final int MANUAL_CAMERA_ID_FIELD_NUMBER = 2;
+  private int manualCameraId_ = 0;
+  /**
+   * <pre>
+   * Camera probe override fields. Write to the "camera" config section, not the
+   * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+   * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+   * </pre>
+   *
+   * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+   * @return Whether the manualCameraId field is set.
+   */
+  @java.lang.Override
+  public boolean hasManualCameraId() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * Camera probe override fields. Write to the "camera" config section, not the
+   * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+   * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+   * </pre>
+   *
+   * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+   * @return The manualCameraId.
+   */
+  @java.lang.Override
+  public int getManualCameraId() {
+    return manualCameraId_;
+  }
+
+  public static final int CLEAR_MANUAL_CAMERA_ID_FIELD_NUMBER = 3;
+  private boolean clearManualCameraId_ = false;
+  /**
+   * <code>bool clear_manual_camera_id = 3 [json_name = "clearManualCameraId"];</code>
+   * @return The clearManualCameraId.
+   */
+  @java.lang.Override
+  public boolean getClearManualCameraId() {
+    return clearManualCameraId_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -92,6 +134,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(1, getConfig());
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeInt32(2, manualCameraId_);
+    }
+    if (clearManualCameraId_ != false) {
+      output.writeBool(3, clearManualCameraId_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -99,6 +147,14 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(1, getConfig());
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(2, manualCameraId_);
+    }
+    if (clearManualCameraId_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(3, clearManualCameraId_);
     }
     return size;
   }
@@ -129,6 +185,13 @@ private static final long serialVersionUID = 0L;
       if (!getConfig()
           .equals(other.getConfig())) return false;
     }
+    if (hasManualCameraId() != other.hasManualCameraId()) return false;
+    if (hasManualCameraId()) {
+      if (getManualCameraId()
+          != other.getManualCameraId()) return false;
+    }
+    if (getClearManualCameraId()
+        != other.getClearManualCameraId()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -144,6 +207,13 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CONFIG_FIELD_NUMBER;
       hash = (53 * hash) + getConfig().hashCode();
     }
+    if (hasManualCameraId()) {
+      hash = (37 * hash) + MANUAL_CAMERA_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getManualCameraId();
+    }
+    hash = (37 * hash) + CLEAR_MANUAL_CAMERA_ID_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getClearManualCameraId());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -286,6 +356,8 @@ private static final long serialVersionUID = 0L;
         configBuilder_.dispose();
         configBuilder_ = null;
       }
+      manualCameraId_ = 0;
+      clearManualCameraId_ = false;
       return this;
     }
 
@@ -326,6 +398,13 @@ private static final long serialVersionUID = 0L;
             : configBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.manualCameraId_ = manualCameraId_;
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.clearManualCameraId_ = clearManualCameraId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -343,6 +422,12 @@ private static final long serialVersionUID = 0L;
       if (other == net.bladewatch.app.grpc.v1.SetSurveillanceConfigRequest.getDefaultInstance()) return this;
       if (other.hasConfig()) {
         mergeConfig(other.getConfig());
+      }
+      if (other.hasManualCameraId()) {
+        setManualCameraId(other.getManualCameraId());
+      }
+      if (other.getClearManualCameraId() != false) {
+        setClearManualCameraId(other.getClearManualCameraId());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -377,6 +462,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 10
+            case 16: {
+              manualCameraId_ = input.readInt32();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 16
+            case 24: {
+              clearManualCameraId_ = input.readBool();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 24
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -513,6 +608,102 @@ private static final long serialVersionUID = 0L;
         config_ = null;
       }
       return configBuilder_;
+    }
+
+    private int manualCameraId_ ;
+    /**
+     * <pre>
+     * Camera probe override fields. Write to the "camera" config section, not the
+     * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+     * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+     * </pre>
+     *
+     * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+     * @return Whether the manualCameraId field is set.
+     */
+    @java.lang.Override
+    public boolean hasManualCameraId() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * Camera probe override fields. Write to the "camera" config section, not the
+     * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+     * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+     * </pre>
+     *
+     * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+     * @return The manualCameraId.
+     */
+    @java.lang.Override
+    public int getManualCameraId() {
+      return manualCameraId_;
+    }
+    /**
+     * <pre>
+     * Camera probe override fields. Write to the "camera" config section, not the
+     * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+     * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+     * </pre>
+     *
+     * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+     * @param value The manualCameraId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setManualCameraId(int value) {
+
+      manualCameraId_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Camera probe override fields. Write to the "camera" config section, not the
+     * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+     * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+     * </pre>
+     *
+     * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearManualCameraId() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      manualCameraId_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private boolean clearManualCameraId_ ;
+    /**
+     * <code>bool clear_manual_camera_id = 3 [json_name = "clearManualCameraId"];</code>
+     * @return The clearManualCameraId.
+     */
+    @java.lang.Override
+    public boolean getClearManualCameraId() {
+      return clearManualCameraId_;
+    }
+    /**
+     * <code>bool clear_manual_camera_id = 3 [json_name = "clearManualCameraId"];</code>
+     * @param value The clearManualCameraId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setClearManualCameraId(boolean value) {
+
+      clearManualCameraId_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool clear_manual_camera_id = 3 [json_name = "clearManualCameraId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearClearManualCameraId() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      clearManualCameraId_ = false;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:bladewatch.v1.SetSurveillanceConfigRequest)

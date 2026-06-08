@@ -72,7 +72,9 @@ public class SurveillanceServiceImpl {
     private ConnectResponse handleSetConfig(String req, String clientIdentity) throws ConnectException {
         // The Connect client wraps the payload as SetSurveillanceConfigRequest.config
         // → wire body {"config":{...}}, but the REST handler parses a FLAT body.
-        // Unwrap the nested config and re-add omitted false toggles before forwarding.
+        // Unwrap the nested config, re-add omitted false toggles, and merge the camera
+        // probe override fields (manualCameraId, clearManualCameraId) from the top-level
+        // request before forwarding.
         String flatBody;
         try {
             org.json.JSONObject r = new org.json.JSONObject(req);
@@ -82,6 +84,13 @@ public class SurveillanceServiceImpl {
             } else {
                 for (String key : CONFIG_BOOLEAN_TOGGLES) {
                     if (!config.has(key)) config.put(key, false);
+                }
+                // Merge camera probe override fields from the top-level request.
+                if (r.has("manualCameraId") && !r.isNull("manualCameraId")) {
+                    config.put("manualCameraId", r.getInt("manualCameraId"));
+                }
+                if (r.optBoolean("clearManualCameraId", false)) {
+                    config.put("clearManualCameraId", true);
                 }
                 flatBody = config.toString();
             }

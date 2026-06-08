@@ -34,7 +34,14 @@ import net.bladewatch.app.launcher.AdbDaemonLauncher
 import com.google.android.material.appbar.MaterialToolbar
 import android.widget.ImageView
 import android.widget.LinearLayout
+import com.connectrpc.ResponseMessage
+import net.bladewatch.app.client.ConnectClientProvider
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.R
+import net.bladewatch.app.grpc.v1.GetSohStatusRequest
+import net.bladewatch.app.grpc.v1.ResetPerformanceRequest
+import net.bladewatch.app.grpc.v1.ResetSohRequest
+import net.bladewatch.app.grpc.v1.SetSurveillanceConfigRequest
 import net.bladewatch.app.util.BydDataCacheWhitelist
 
 /**
@@ -1050,17 +1057,12 @@ class MainActivity : AppCompatActivity() {
                 // Auto mode
                 Thread {
                     try {
-                        val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                            "/api/surveillance/config", "POST", 3000, 3000)
-                        conn.setRequestProperty("Content-Type", "application/json")
-                        conn.doOutput = true
-                        val body = """{"clearManualCameraId":true}"""
-                        conn.outputStream.use { it.write(body.toByteArray()) }
-                        val responseCode = conn.responseCode
-                        conn.disconnect()
-
+                        val req = SetSurveillanceConfigRequest.newBuilder()
+                            .setClearManualCameraId(true)
+                            .build()
+                        val resp = runBlocking { ConnectClientProvider.surveillanceService().setConfig(req, emptyMap()) }
                         runOnUiThread {
-                            if (responseCode == 200) {
+                            if (resp is ResponseMessage.Success && resp.message.success) {
                                 Toast.makeText(this, getString(R.string.toast_camera_set_to_auto), Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(this, getString(R.string.toast_failed_to_save_short), Toast.LENGTH_SHORT).show()
@@ -1076,17 +1078,12 @@ class MainActivity : AppCompatActivity() {
                 val selectedCamId = selectedIndex - 1
                 Thread {
                     try {
-                        val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                            "/api/surveillance/config", "POST", 3000, 3000)
-                        conn.setRequestProperty("Content-Type", "application/json")
-                        conn.doOutput = true
-                        val body = """{"manualCameraId":$selectedCamId}"""
-                        conn.outputStream.use { it.write(body.toByteArray()) }
-                        val responseCode = conn.responseCode
-                        conn.disconnect()
-
+                        val req = SetSurveillanceConfigRequest.newBuilder()
+                            .setManualCameraId(selectedCamId)
+                            .build()
+                        val resp = runBlocking { ConnectClientProvider.surveillanceService().setConfig(req, emptyMap()) }
                         runOnUiThread {
-                            if (responseCode == 200) {
+                            if (resp is ResponseMessage.Success && resp.message.success) {
                                 Toast.makeText(this, getString(R.string.toast_camera_id_set, selectedCamId), Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(this, getString(R.string.toast_failed_to_save_short), Toast.LENGTH_SHORT).show()
@@ -1231,41 +1228,22 @@ class MainActivity : AppCompatActivity() {
             // Fetch full SOH status (modelId, calibration anchor, estimated capacity) —
             // properties file alone doesn't carry modelId or live calibration shape.
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    hasEstimate = json.optBoolean("hasEstimate", hasEstimate)
-                    val apiDisplaySoh = json.optDouble("displaySoh", -1.0)
-                    val apiDisplaySource = json.optString("displaySource", displaySource)
-                    // Prefer the daemon's display fields. They separate real
-                    // estimates from nominal fallbacks, so the dialog can show
-                    // useful battery data without pretending the fallback is a
-                    // measured SOH value.
+                val req = GetSohStatusRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSohStatus(req, emptyMap()) }
+                if (resp is ResponseMessage.Success) {
+                    val apiDisplaySoh = resp.message.displaySoh
+                    val apiDisplaySource = resp.message.displaySource
                     if (apiDisplaySoh > 0) {
                         sohPercent = String.format("%.1f%%", apiDisplaySoh)
                         method = apiDisplaySource.ifEmpty { method }
                         displaySource = apiDisplaySource.ifEmpty { displaySource }
                     }
-                    if (!json.isNull("modelId")) {
-                        modelId = json.optString("modelId", "").ifEmpty { null }
-                    }
-                    nominalKwhValue = json.optDouble("nominalCapacityKwh", nominalKwhValue)
-                    nominalSourceVal = json.optString("nominalSource", nominalSourceVal)
+                    if (resp.message.nominalCapacityKwh > 0) nominalKwhValue = resp.message.nominalCapacityKwh
+                    if (resp.message.nominalSource.isNotEmpty()) nominalSourceVal = resp.message.nominalSource
                     source = nominalSourceVal
-                    if (nominalKwhValue > 0) {
-                        nominalKwh = String.format("%.1f kWh", nominalKwhValue)
-                    }
-                    val est = json.optDouble("estimatedCapacityKwh", -1.0)
-                    if (est > 0) estimatedKwhValue = est
-                    val calObj = json.optJSONObject("calibration")
-                    if (calObj != null) {
-                        calibrationSoh = calObj.optDouble("soh", -1.0)
-                        calibrationTs = calObj.optLong("timestampMs", 0L)
-                    }
+                    if (nominalKwhValue > 0) nominalKwh = String.format("%.1f kWh", nominalKwhValue)
+                    // modelId, estimatedCapacityKwh, calibration not in this RPC — remain from file fallback
                 }
-                conn.disconnect()
             } catch (_: Throwable) { /* keep legacy file fallback values */ }
 
             val finalSoh = sohPercent
@@ -1430,15 +1408,9 @@ class MainActivity : AppCompatActivity() {
         val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
         executor.execute {
             try {
-                // Use daemon API (daemon owns the file, has write permissions)
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh/reset", "POST", 3000, 3000)
-                conn.doOutput = true
-                conn.outputStream.use { it.write("{}".toByteArray()) }
-                val responseCode = conn.responseCode
-                conn.disconnect()
-                
-                if (responseCode == 200) {
+                val req = ResetSohRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().resetSoh(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.success) {
                     runOnUiThread {
                         Toast.makeText(this, getString(R.string.toast_soh_reset_success), Toast.LENGTH_LONG).show()
                         logsViewModel.info("SOH", "SOH estimation reset by user")
@@ -1544,27 +1516,13 @@ class MainActivity : AppCompatActivity() {
         val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
         executor.execute {
             try {
-                val payload = org.json.JSONObject().apply {
-                    put("categories", org.json.JSONArray(categories))
-                }
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/reset", "POST", 5000, 15000)
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.outputStream.use { it.write(payload.toString().toByteArray()) }
-
-                val code = conn.responseCode
-                val body = if (code in 200..299) {
-                    conn.inputStream.bufferedReader().use { it.readText() }
-                } else {
-                    conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                }
-                conn.disconnect()
-
-                val data = try { org.json.JSONObject(body) } catch (e: Exception) { null }
+                val req = ResetPerformanceRequest.newBuilder()
+                    .addAllCategories(categories)
+                    .build()
+                val resp = runBlocking { ConnectClientProvider.systemService().resetPerformance(req, emptyMap()) }
                 runOnUiThread {
-                    if (data != null && data.optBoolean("success", false)) {
-                        val results = data.optJSONObject("results")
+                    if (resp is ResponseMessage.Success && resp.message.success) {
+                        val results = try { org.json.JSONObject(resp.message.resultsJson) } catch (e: Exception) { null }
                         val lines = StringBuilder()
                         for (cat in categories) {
                             val r = results?.optJSONObject(cat)
@@ -1589,7 +1547,7 @@ class MainActivity : AppCompatActivity() {
                             .show()
                         logsViewModel.info("Reset", "Categories: ${categories.joinToString(",")}")
                     } else {
-                        val err = data?.optString("error") ?: "HTTP $code"
+                        val err = if (resp is ResponseMessage.Success) resp.message.error else "Request failed"
                         Toast.makeText(this, getString(R.string.toast_reset_failed_with_error, err), Toast.LENGTH_LONG).show()
                     }
                 }

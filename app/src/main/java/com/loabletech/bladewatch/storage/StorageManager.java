@@ -902,8 +902,108 @@ public class StorageManager {
         }
     }
     
+    // ==================== Auto Storage Priority ====================
+
+    /**
+     * Applies the storage priority on daemon startup: SD card → USB → internal.
+     *
+     * Runs unconditionally so that inserting or removing a drive between boots is
+     * always reflected correctly. The decision is persisted to config so
+     * mid-session reads remain consistent. Existing SD_CARD config values are
+     * overridden — hardware presence is the authoritative signal, not stored prefs.
+     *
+     * Safe to call after getInstance() completes: updateActiveDirectories() guards
+     * against switching while recording/surveillance is active.
+     */
+    public void applyAutoStoragePriority() {
+        // 1. SD card (discovered in constructor via tryLoadSdCardFromCache / discoverSdCard)
+        if (sdCardAvailable && sdCardPath != null) {
+            File bladeWatchDir = new File(sdCardPath, "BladeWatch");
+            if (bladeWatchDir.exists()) {
+                logInfo("Auto-priority: SD card with existing BladeWatch/ at " + sdCardPath);
+            } else {
+                logInfo("Auto-priority: SD card found, creating BladeWatch/ at " + sdCardPath);
+            }
+            // initSdCardDirectories() already ran in the constructor — dirs exist.
+            recordingsStorageType = StorageType.SD_CARD;
+            surveillanceStorageType = StorageType.SD_CARD;
+            tripsStorageType = StorageType.SD_CARD;
+            updateActiveDirectories();
+            saveConfig();
+            return;
+        }
+
+        // 2. USB drive (scans /mnt/usb* and /storage/usb*)
+        String usbPath = discoverUsbDrive();
+        if (usbPath != null) {
+            logInfo("Auto-priority: USB drive found at " + usbPath);
+            // Reuse StorageType.SD_CARD machinery — USB is treated identically
+            // once sdCardPath is set to the USB mount point.
+            sdCardPath = usbPath;
+            sdCardAvailable = true;
+            writeSdCardCache(usbPath);
+            initSdCardDirectories();
+            recordingsStorageType = StorageType.SD_CARD;
+            surveillanceStorageType = StorageType.SD_CARD;
+            tripsStorageType = StorageType.SD_CARD;
+            updateActiveDirectories();
+            saveConfig();
+            return;
+        }
+
+        // 3. Internal (default) — no external storage found
+        logInfo("Auto-priority: no external storage found, using internal");
+        recordingsStorageType = StorageType.INTERNAL;
+        surveillanceStorageType = StorageType.INTERNAL;
+        tripsStorageType = StorageType.INTERNAL;
+        updateActiveDirectories();
+        saveConfig();
+    }
+
+    /**
+     * Scans known USB mount paths (/mnt/usb* and /storage/usb*) and returns
+     * the first directory that is writable by the shell UID, or null if none found.
+     */
+    private String discoverUsbDrive() {
+        java.util.List<String> candidates = new java.util.ArrayList<>();
+
+        try {
+            File[] mntEntries = new File("/mnt").listFiles();
+            if (mntEntries != null) {
+                for (File f : mntEntries) {
+                    if (f.isDirectory() && f.getName().toLowerCase(java.util.Locale.ROOT).startsWith("usb")) {
+                        candidates.add(f.getAbsolutePath());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logDebug("USB scan /mnt failed: " + e.getMessage());
+        }
+
+        try {
+            File[] storageEntries = new File("/storage").listFiles();
+            if (storageEntries != null) {
+                for (File f : storageEntries) {
+                    String name = f.getName().toLowerCase(java.util.Locale.ROOT);
+                    if (f.isDirectory() && name.startsWith("usb") && !candidates.contains(f.getAbsolutePath())) {
+                        candidates.add(f.getAbsolutePath());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logDebug("USB scan /storage failed: " + e.getMessage());
+        }
+
+        for (String path : candidates) {
+            if (shellCanWrite(path)) {
+                return path;
+            }
+        }
+        return null;
+    }
+
     // ==================== Directory Getters ====================
-    
+
     public File getRecordingsDir() {
         return recordingsDir;
     }

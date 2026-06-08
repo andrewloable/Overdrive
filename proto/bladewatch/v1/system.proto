@@ -9,17 +9,37 @@ option java_multiple_files = true;
 // and audio testing.
 //
 // HTTP mapping:
-//   GetStatus        GET  /status
-//   GetPerformance   GET  /api/performance (PerformanceApiHandler)
-//   PlayAudioTest    POST /api/audio/test-avas
-//   ListModels       GET  /api/models/list
-//   DownloadModel    POST /api/models/download
+//   GetStatus          GET  /status
+//   GetPerformance     GET  /api/performance     (PerformanceApiHandler)
+//   PlayAudioTest      POST /api/audio/test-avas
+//   ListModels         GET  /api/models/list
+//   DownloadModel      POST /api/models/download
+//   GetSohNominal      GET  /api/performance/soh/nominal
+//   SetSohNominal      POST /api/performance/soh/nominal
+//   GetSohStatus       GET  /api/performance/soh
+//   ResetSoh           POST /api/performance/soh/reset
+//   ResetPerformance   POST /api/performance/reset
+//   GetParkingDelta    GET  /api/performance/parking-delta
+//   GetLastCharge      GET  /api/performance/last-charge
+//   GetSelectedModel   GET  /api/models/selected
+//   SetSelectedModel   POST /api/models/selected
+//   GetModelsManifest  GET  /api/models/manifest
 service SystemService {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
   rpc GetPerformance(GetPerformanceRequest) returns (GetPerformanceResponse);
   rpc PlayAudioTest(PlayAudioTestRequest) returns (PlayAudioTestResponse);
   rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
   rpc DownloadModel(DownloadModelRequest) returns (DownloadModelResponse);
+  rpc GetSohNominal(GetSohNominalRequest) returns (GetSohNominalResponse);
+  rpc SetSohNominal(SetSohNominalRequest) returns (SetSohNominalResponse);
+  rpc GetSohStatus(GetSohStatusRequest) returns (GetSohStatusResponse);
+  rpc ResetSoh(ResetSohRequest) returns (ResetSohResponse);
+  rpc ResetPerformance(ResetPerformanceRequest) returns (ResetPerformanceResponse);
+  rpc GetParkingDelta(GetParkingDeltaRequest) returns (GetParkingDeltaResponse);
+  rpc GetLastCharge(GetLastChargeRequest) returns (GetLastChargeResponse);
+  rpc GetSelectedModel(GetSelectedModelRequest) returns (GetSelectedModelResponse);
+  rpc SetSelectedModel(SetSelectedModelRequest) returns (SetSelectedModelResponse);
+  rpc GetModelsManifest(GetModelsManifestRequest) returns (GetModelsManifestResponse);
 }
 
 // BatteryInfo carries the Android battery level and charge state.
@@ -192,4 +212,95 @@ message DownloadModelResponse {
   bool success = 1;
   string message = 2;
   string error = 3;
+}
+
+// SOH nominal capacity endpoints.
+message GetSohNominalRequest {}
+message GetSohNominalResponse {
+  // Present only when a nominal kWh has been set; absent means "unset".
+  optional double nominal_kwh = 1;
+  // "user", "auto", or "unset".
+  string nominal_source = 2;
+}
+
+message SetSohNominalRequest {
+  // Omit (not set) to clear the user override.
+  optional double nominal_kwh = 1;
+}
+message SetSohNominalResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// SOH status (stub — estimation has been removed).
+message GetSohStatusRequest {}
+message GetSohStatusResponse {
+  bool success = 1;
+  double nominal_capacity_kwh = 2;
+  string nominal_source = 3;
+  double display_soh = 4;
+  string display_source = 5;
+  string error = 6;
+}
+
+message ResetSohRequest {}
+message ResetSohResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// Bulk performance data reset.
+message ResetPerformanceRequest {
+  // Categories to reset: "trips", "socHistory", "soh",
+  // "mediaRecordings", "mediaSurveillance", "mediaProximity", "mediaTrips".
+  repeated string categories = 1;
+}
+message ResetPerformanceResponse {
+  bool success = 1;
+  // Per-category result objects encoded as JSON (map serialisation complexity avoided).
+  string results_json = 2;
+  string error = 3;
+}
+
+// Parking energy-delta and last-charge endpoints.
+message GetParkingDeltaRequest {
+  // Hours of history to consider (default 72).
+  int32 max_age_hours = 1;
+}
+message GetParkingDeltaResponse {
+  bool available = 1;
+  // Full JSON object from SocHistoryDatabase.getLastParkingDelta(), present when available=true.
+  string raw_json = 2;
+}
+
+message GetLastChargeRequest {
+  // How far back to look in hours (default 24).
+  int32 hours_back = 1;
+}
+message GetLastChargeResponse {
+  bool available = 1;
+  // Full JSON object from SocHistoryDatabase.getMostRecentCompletedChargingSession(), present when available=true.
+  string raw_json = 2;
+}
+
+// Vehicle model selection and manifest.
+message GetSelectedModelRequest {}
+message GetSelectedModelResponse {
+  string model_id = 1;
+  string color = 2;
+}
+
+message SetSelectedModelRequest {
+  string model_id = 1;
+  string color = 2;
+}
+message SetSelectedModelResponse {
+  bool ok = 1;
+  string error = 2;
+}
+
+message GetModelsManifestRequest {}
+message GetModelsManifestResponse {
+  // Full manifest JSON from /data/local/tmp/web/shared/models/manifest.json.
+  string manifest_json = 1;
 }

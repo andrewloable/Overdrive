@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bladewatch/v1/system.proto.
  */
 export const file_bladewatch_v1_system: GenFile = /*@__PURE__*/
-  fileDesc("ChpibGFkZXdhdGNoL3YxL3N5c3RlbS5wcm90bxINYmxhZGV3YXRjaC52MSJSCgtCYXR0ZXJ5SW5mbxINCgVsZXZlbBgBIAEoBUoECAIQA0oECAMQBEoECAQQBVIGc3RhdHVzUgtpc19jaGFyZ2luZ1INc3RhdHVzX3N0cmluZyKOAQoMQ2hhcmdpbmdJbmZvEhIKCnN0YXRlX25hbWUYASABKAkSDgoGc3RhdHVzGAIgASgJEhoKEmNoYXJnaW5nX3Bvd2VyX2tfdxgDIAEoARIWCg5pc19kaXNjaGFyZ2luZxgEIAEoCBIQCghpc19lcnJvchgFIAEoCBIUCgxpc19lc3RpbWF0ZWQYBiABKAgiTwoHU29jSW5mbxIPCgdwZXJjZW50GAEgASgBEg4KBmlzX2xvdxgCIAEoCBITCgtpc19jcml0aWNhbBgDIAEoCBIOCgZzdGF0dXMYBCABKAkinAEKCVJhbmdlSW5mbxIVCg1lbGVjX3JhbmdlX2ttGAEgASgBEhUKDWZ1ZWxfcmFuZ2Vfa20YAiABKAESFgoOdG90YWxfcmFuZ2Vfa20YAyABKAESDgoGaXNfbG93GAQgASgIEhMKC2lzX2NyaXRpY2FsGAUgASgIEg4KBnN0YXR1cxgGIAEoCRIUCgxmdWVsX3BlcmNlbnQYByABKAEiGgoHU29oSW5mbxIPCgdwZXJjZW50GAEgASgBIngKD1JlY29yZGluZ1N0YXR1cxIXCg9jb25maWd1cmVkX21vZGUYASABKAkSFAoMaXNfcmVjb3JkaW5nGAIgASgIEhgKEHBpcGVsaW5lX3J1bm5pbmcYAyABKAgSDAoEZ2VhchgEIAEoCRIOCgZhY2Nfb24YBSABKAgiZgoKVHJpcFN0YXR1cxIPCgdlbmFibGVkGAEgASgIEhMKC3RyaXBfYWN0aXZlGAIgASgIEhcKD3RyaXBfc3RhcnRfdGltZRgDIAEoAxIZChF0cmlwX2R1cmF0aW9uX3NlYxgEIAEoAyJ9CgtOZXR3b3JrSW5mbxIMCgR0eXBlGAEgASgJEgwKBHNzaWQYAiABKAkSCgoCaXAYAyABKAkSGAoQbGFuX2h0dHBfZW5hYmxlZBgEIAEoCBIRCglodHRwX2JpbmQYBSABKAkSGQoRaHR0cF9tb2RlX3dhcm5pbmcYBiABKAkiUgoNR3BzU3RhdHVzSW5mbxILCgNsYXQYASABKAESCwoDbG5nGAIgASgBEhEKCXNwZWVkX2ttaBgDIAEoARIUCgxoYXNfbG9jYXRpb24YBCABKAgiEgoQR2V0U3RhdHVzUmVxdWVzdCLKBQoRR2V0U3RhdHVzUmVzcG9uc2USEQoJZGV2aWNlX2lkGAEgASgJEhoKEnZlaGljbGVfZGF0YV9yZWFkeRgCIAEoCBITCgthcHBfdmVyc2lvbhgDIAEoCRIRCglyZWNvcmRpbmcYBCADKAUSDwoHdmlld2luZxgFIAMoBRIOCgZhY3RpdmUYBiADKAUSEQoJYXZhaWxhYmxlGAcgAygFEisKB2JhdHRlcnkYCCABKAsyGi5ibGFkZXdhdGNoLnYxLkJhdHRlcnlJbmZvEgsKA2FjYxgJIAEoCBItCghjaGFyZ2luZxgKIAEoCzIbLmJsYWRld2F0Y2gudjEuQ2hhcmdpbmdJbmZvEiMKA3NvYxgLIAEoCzIWLmJsYWRld2F0Y2gudjEuU29jSW5mbxInCgVyYW5nZRgMIAEoCzIYLmJsYWRld2F0Y2gudjEuUmFuZ2VJbmZvEiMKA3NvaBgNIAEoCzIWLmJsYWRld2F0Y2gudjEuU29oSW5mbxIVCg1kaXN0YW5jZV91bml0GA4gASgJEg4KBmxvY2FsZRgPIAEoCRIcChRzYWZlX3pvbmVfc3VwcHJlc3NlZBgQIAEoCBIUCgxpbl9zYWZlX3pvbmUYESABKAgSFgoOc2FmZV96b25lX25hbWUYEiABKAkSGAoQZ3B1X3N1cnZlaWxsYW5jZRgTIAEoCBI4ChByZWNvcmRpbmdfc3RhdHVzGBQgASgLMh4uYmxhZGV3YXRjaC52MS5SZWNvcmRpbmdTdGF0dXMSLgoLdHJpcF9zdGF0dXMYFSABKAsyGS5ibGFkZXdhdGNoLnYxLlRyaXBTdGF0dXMSKwoHbmV0d29yaxgXIAEoCzIaLmJsYWRld2F0Y2gudjEuTmV0d29ya0luZm8SGgoSdmVoaWNsZV9kYXRhX2Vycm9yGBggASgJSgQIFhAXUghncHNfanNvbiIXChVHZXRQZXJmb3JtYW5jZVJlcXVlc3QiQwoWR2V0UGVyZm9ybWFuY2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEhgKEHBlcmZvcm1hbmNlX2pzb24YAiABKAkiKwoUUGxheUF1ZGlvVGVzdFJlcXVlc3QSEwoLZHVyYXRpb25fbXMYASABKAUiSAoVUGxheUF1ZGlvVGVzdFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCRINCgVlcnJvchgDIAEoCSJMCglNb2RlbEluZm8SDAoEbmFtZRgBIAEoCRISCgpkb3dubG9hZGVkGAMgASgIEhIKCnNpemVfYnl0ZXMYBCABKANKBAgCEANSA3VybCITChFMaXN0TW9kZWxzUmVxdWVzdCJNChJMaXN0TW9kZWxzUmVzcG9uc2USKAoGbW9kZWxzGAIgAygLMhguYmxhZGV3YXRjaC52MS5Nb2RlbEluZm9KBAgBEAJSB3N1Y2Nlc3MiMQoURG93bmxvYWRNb2RlbFJlcXVlc3QSCwoDdXJsGAEgASgJEgwKBG5hbWUYAiABKAkiSAoVRG93bmxvYWRNb2RlbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCRINCgVlcnJvchgDIAEoCTLJAwoNU3lzdGVtU2VydmljZRJOCglHZXRTdGF0dXMSHy5ibGFkZXdhdGNoLnYxLkdldFN0YXR1c1JlcXVlc3QaIC5ibGFkZXdhdGNoLnYxLkdldFN0YXR1c1Jlc3BvbnNlEl0KDkdldFBlcmZvcm1hbmNlEiQuYmxhZGV3YXRjaC52MS5HZXRQZXJmb3JtYW5jZVJlcXVlc3QaJS5ibGFkZXdhdGNoLnYxLkdldFBlcmZvcm1hbmNlUmVzcG9uc2USWgoNUGxheUF1ZGlvVGVzdBIjLmJsYWRld2F0Y2gudjEuUGxheUF1ZGlvVGVzdFJlcXVlc3QaJC5ibGFkZXdhdGNoLnYxLlBsYXlBdWRpb1Rlc3RSZXNwb25zZRJRCgpMaXN0TW9kZWxzEiAuYmxhZGV3YXRjaC52MS5MaXN0TW9kZWxzUmVxdWVzdBohLmJsYWRld2F0Y2gudjEuTGlzdE1vZGVsc1Jlc3BvbnNlEloKDURvd25sb2FkTW9kZWwSIy5ibGFkZXdhdGNoLnYxLkRvd25sb2FkTW9kZWxSZXF1ZXN0GiQuYmxhZGV3YXRjaC52MS5Eb3dubG9hZE1vZGVsUmVzcG9uc2VCHgoabmV0LmJsYWRld2F0Y2guYXBwLmdycGMudjFQAWIGcHJvdG8z");
+  fileDesc("ChpibGFkZXdhdGNoL3YxL3N5c3RlbS5wcm90bxINYmxhZGV3YXRjaC52MSJSCgtCYXR0ZXJ5SW5mbxINCgVsZXZlbBgBIAEoBUoECAIQA0oECAMQBEoECAQQBVIGc3RhdHVzUgtpc19jaGFyZ2luZ1INc3RhdHVzX3N0cmluZyKOAQoMQ2hhcmdpbmdJbmZvEhIKCnN0YXRlX25hbWUYASABKAkSDgoGc3RhdHVzGAIgASgJEhoKEmNoYXJnaW5nX3Bvd2VyX2tfdxgDIAEoARIWCg5pc19kaXNjaGFyZ2luZxgEIAEoCBIQCghpc19lcnJvchgFIAEoCBIUCgxpc19lc3RpbWF0ZWQYBiABKAgiTwoHU29jSW5mbxIPCgdwZXJjZW50GAEgASgBEg4KBmlzX2xvdxgCIAEoCBITCgtpc19jcml0aWNhbBgDIAEoCBIOCgZzdGF0dXMYBCABKAkinAEKCVJhbmdlSW5mbxIVCg1lbGVjX3JhbmdlX2ttGAEgASgBEhUKDWZ1ZWxfcmFuZ2Vfa20YAiABKAESFgoOdG90YWxfcmFuZ2Vfa20YAyABKAESDgoGaXNfbG93GAQgASgIEhMKC2lzX2NyaXRpY2FsGAUgASgIEg4KBnN0YXR1cxgGIAEoCRIUCgxmdWVsX3BlcmNlbnQYByABKAEiGgoHU29oSW5mbxIPCgdwZXJjZW50GAEgASgBIngKD1JlY29yZGluZ1N0YXR1cxIXCg9jb25maWd1cmVkX21vZGUYASABKAkSFAoMaXNfcmVjb3JkaW5nGAIgASgIEhgKEHBpcGVsaW5lX3J1bm5pbmcYAyABKAgSDAoEZ2VhchgEIAEoCRIOCgZhY2Nfb24YBSABKAgiZgoKVHJpcFN0YXR1cxIPCgdlbmFibGVkGAEgASgIEhMKC3RyaXBfYWN0aXZlGAIgASgIEhcKD3RyaXBfc3RhcnRfdGltZRgDIAEoAxIZChF0cmlwX2R1cmF0aW9uX3NlYxgEIAEoAyJ9CgtOZXR3b3JrSW5mbxIMCgR0eXBlGAEgASgJEgwKBHNzaWQYAiABKAkSCgoCaXAYAyABKAkSGAoQbGFuX2h0dHBfZW5hYmxlZBgEIAEoCBIRCglodHRwX2JpbmQYBSABKAkSGQoRaHR0cF9tb2RlX3dhcm5pbmcYBiABKAkiUgoNR3BzU3RhdHVzSW5mbxILCgNsYXQYASABKAESCwoDbG5nGAIgASgBEhEKCXNwZWVkX2ttaBgDIAEoARIUCgxoYXNfbG9jYXRpb24YBCABKAgiEgoQR2V0U3RhdHVzUmVxdWVzdCLKBQoRR2V0U3RhdHVzUmVzcG9uc2USEQoJZGV2aWNlX2lkGAEgASgJEhoKEnZlaGljbGVfZGF0YV9yZWFkeRgCIAEoCBITCgthcHBfdmVyc2lvbhgDIAEoCRIRCglyZWNvcmRpbmcYBCADKAUSDwoHdmlld2luZxgFIAMoBRIOCgZhY3RpdmUYBiADKAUSEQoJYXZhaWxhYmxlGAcgAygFEisKB2JhdHRlcnkYCCABKAsyGi5ibGFkZXdhdGNoLnYxLkJhdHRlcnlJbmZvEgsKA2FjYxgJIAEoCBItCghjaGFyZ2luZxgKIAEoCzIbLmJsYWRld2F0Y2gudjEuQ2hhcmdpbmdJbmZvEiMKA3NvYxgLIAEoCzIWLmJsYWRld2F0Y2gudjEuU29jSW5mbxInCgVyYW5nZRgMIAEoCzIYLmJsYWRld2F0Y2gudjEuUmFuZ2VJbmZvEiMKA3NvaBgNIAEoCzIWLmJsYWRld2F0Y2gudjEuU29oSW5mbxIVCg1kaXN0YW5jZV91bml0GA4gASgJEg4KBmxvY2FsZRgPIAEoCRIcChRzYWZlX3pvbmVfc3VwcHJlc3NlZBgQIAEoCBIUCgxpbl9zYWZlX3pvbmUYESABKAgSFgoOc2FmZV96b25lX25hbWUYEiABKAkSGAoQZ3B1X3N1cnZlaWxsYW5jZRgTIAEoCBI4ChByZWNvcmRpbmdfc3RhdHVzGBQgASgLMh4uYmxhZGV3YXRjaC52MS5SZWNvcmRpbmdTdGF0dXMSLgoLdHJpcF9zdGF0dXMYFSABKAsyGS5ibGFkZXdhdGNoLnYxLlRyaXBTdGF0dXMSKwoHbmV0d29yaxgXIAEoCzIaLmJsYWRld2F0Y2gudjEuTmV0d29ya0luZm8SGgoSdmVoaWNsZV9kYXRhX2Vycm9yGBggASgJSgQIFhAXUghncHNfanNvbiIXChVHZXRQZXJmb3JtYW5jZVJlcXVlc3QiQwoWR2V0UGVyZm9ybWFuY2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEhgKEHBlcmZvcm1hbmNlX2pzb24YAiABKAkiKwoUUGxheUF1ZGlvVGVzdFJlcXVlc3QSEwoLZHVyYXRpb25fbXMYASABKAUiSAoVUGxheUF1ZGlvVGVzdFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCRINCgVlcnJvchgDIAEoCSJMCglNb2RlbEluZm8SDAoEbmFtZRgBIAEoCRISCgpkb3dubG9hZGVkGAMgASgIEhIKCnNpemVfYnl0ZXMYBCABKANKBAgCEANSA3VybCITChFMaXN0TW9kZWxzUmVxdWVzdCJNChJMaXN0TW9kZWxzUmVzcG9uc2USKAoGbW9kZWxzGAIgAygLMhguYmxhZGV3YXRjaC52MS5Nb2RlbEluZm9KBAgBEAJSB3N1Y2Nlc3MiMQoURG93bmxvYWRNb2RlbFJlcXVlc3QSCwoDdXJsGAEgASgJEgwKBG5hbWUYAiABKAkiSAoVRG93bmxvYWRNb2RlbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCRINCgVlcnJvchgDIAEoCSIWChRHZXRTb2hOb21pbmFsUmVxdWVzdCJZChVHZXRTb2hOb21pbmFsUmVzcG9uc2USGAoLbm9taW5hbF9rd2gYASABKAFIAIgBARIWCg5ub21pbmFsX3NvdXJjZRgCIAEoCUIOCgxfbm9taW5hbF9rd2giQAoUU2V0U29oTm9taW5hbFJlcXVlc3QSGAoLbm9taW5hbF9rd2gYASABKAFIAIgBAUIOCgxfbm9taW5hbF9rd2giNwoVU2V0U29oTm9taW5hbFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkiFQoTR2V0U29oU3RhdHVzUmVxdWVzdCKZAQoUR2V0U29oU3RhdHVzUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIcChRub21pbmFsX2NhcGFjaXR5X2t3aBgCIAEoARIWCg5ub21pbmFsX3NvdXJjZRgDIAEoCRITCgtkaXNwbGF5X3NvaBgEIAEoARIWCg5kaXNwbGF5X3NvdXJjZRgFIAEoCRINCgVlcnJvchgGIAEoCSIRCg9SZXNldFNvaFJlcXVlc3QiMgoQUmVzZXRTb2hSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg0KBWVycm9yGAIgASgJIi0KF1Jlc2V0UGVyZm9ybWFuY2VSZXF1ZXN0EhIKCmNhdGVnb3JpZXMYASADKAkiUAoYUmVzZXRQZXJmb3JtYW5jZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFAoMcmVzdWx0c19qc29uGAIgASgJEg0KBWVycm9yGAMgASgJIi8KFkdldFBhcmtpbmdEZWx0YVJlcXVlc3QSFQoNbWF4X2FnZV9ob3VycxgBIAEoBSI+ChdHZXRQYXJraW5nRGVsdGFSZXNwb25zZRIRCglhdmFpbGFibGUYASABKAgSEAoIcmF3X2pzb24YAiABKAkiKgoUR2V0TGFzdENoYXJnZVJlcXVlc3QSEgoKaG91cnNfYmFjaxgBIAEoBSI8ChVHZXRMYXN0Q2hhcmdlUmVzcG9uc2USEQoJYXZhaWxhYmxlGAEgASgIEhAKCHJhd19qc29uGAIgASgJIhkKF0dldFNlbGVjdGVkTW9kZWxSZXF1ZXN0IjsKGEdldFNlbGVjdGVkTW9kZWxSZXNwb25zZRIQCghtb2RlbF9pZBgBIAEoCRINCgVjb2xvchgCIAEoCSI6ChdTZXRTZWxlY3RlZE1vZGVsUmVxdWVzdBIQCghtb2RlbF9pZBgBIAEoCRINCgVjb2xvchgCIAEoCSI1ChhTZXRTZWxlY3RlZE1vZGVsUmVzcG9uc2USCgoCb2sYASABKAgSDQoFZXJyb3IYAiABKAkiGgoYR2V0TW9kZWxzTWFuaWZlc3RSZXF1ZXN0IjIKGUdldE1vZGVsc01hbmlmZXN0UmVzcG9uc2USFQoNbWFuaWZlc3RfanNvbhgBIAEoCTL8CgoNU3lzdGVtU2VydmljZRJOCglHZXRTdGF0dXMSHy5ibGFkZXdhdGNoLnYxLkdldFN0YXR1c1JlcXVlc3QaIC5ibGFkZXdhdGNoLnYxLkdldFN0YXR1c1Jlc3BvbnNlEl0KDkdldFBlcmZvcm1hbmNlEiQuYmxhZGV3YXRjaC52MS5HZXRQZXJmb3JtYW5jZVJlcXVlc3QaJS5ibGFkZXdhdGNoLnYxLkdldFBlcmZvcm1hbmNlUmVzcG9uc2USWgoNUGxheUF1ZGlvVGVzdBIjLmJsYWRld2F0Y2gudjEuUGxheUF1ZGlvVGVzdFJlcXVlc3QaJC5ibGFkZXdhdGNoLnYxLlBsYXlBdWRpb1Rlc3RSZXNwb25zZRJRCgpMaXN0TW9kZWxzEiAuYmxhZGV3YXRjaC52MS5MaXN0TW9kZWxzUmVxdWVzdBohLmJsYWRld2F0Y2gudjEuTGlzdE1vZGVsc1Jlc3BvbnNlEloKDURvd25sb2FkTW9kZWwSIy5ibGFkZXdhdGNoLnYxLkRvd25sb2FkTW9kZWxSZXF1ZXN0GiQuYmxhZGV3YXRjaC52MS5Eb3dubG9hZE1vZGVsUmVzcG9uc2USWgoNR2V0U29oTm9taW5hbBIjLmJsYWRld2F0Y2gudjEuR2V0U29oTm9taW5hbFJlcXVlc3QaJC5ibGFkZXdhdGNoLnYxLkdldFNvaE5vbWluYWxSZXNwb25zZRJaCg1TZXRTb2hOb21pbmFsEiMuYmxhZGV3YXRjaC52MS5TZXRTb2hOb21pbmFsUmVxdWVzdBokLmJsYWRld2F0Y2gudjEuU2V0U29oTm9taW5hbFJlc3BvbnNlElcKDEdldFNvaFN0YXR1cxIiLmJsYWRld2F0Y2gudjEuR2V0U29oU3RhdHVzUmVxdWVzdBojLmJsYWRld2F0Y2gudjEuR2V0U29oU3RhdHVzUmVzcG9uc2USSwoIUmVzZXRTb2gSHi5ibGFkZXdhdGNoLnYxLlJlc2V0U29oUmVxdWVzdBofLmJsYWRld2F0Y2gudjEuUmVzZXRTb2hSZXNwb25zZRJjChBSZXNldFBlcmZvcm1hbmNlEiYuYmxhZGV3YXRjaC52MS5SZXNldFBlcmZvcm1hbmNlUmVxdWVzdBonLmJsYWRld2F0Y2gudjEuUmVzZXRQZXJmb3JtYW5jZVJlc3BvbnNlEmAKD0dldFBhcmtpbmdEZWx0YRIlLmJsYWRld2F0Y2gudjEuR2V0UGFya2luZ0RlbHRhUmVxdWVzdBomLmJsYWRld2F0Y2gudjEuR2V0UGFya2luZ0RlbHRhUmVzcG9uc2USWgoNR2V0TGFzdENoYXJnZRIjLmJsYWRld2F0Y2gudjEuR2V0TGFzdENoYXJnZVJlcXVlc3QaJC5ibGFkZXdhdGNoLnYxLkdldExhc3RDaGFyZ2VSZXNwb25zZRJjChBHZXRTZWxlY3RlZE1vZGVsEiYuYmxhZGV3YXRjaC52MS5HZXRTZWxlY3RlZE1vZGVsUmVxdWVzdBonLmJsYWRld2F0Y2gudjEuR2V0U2VsZWN0ZWRNb2RlbFJlc3BvbnNlEmMKEFNldFNlbGVjdGVkTW9kZWwSJi5ibGFkZXdhdGNoLnYxLlNldFNlbGVjdGVkTW9kZWxSZXF1ZXN0GicuYmxhZGV3YXRjaC52MS5TZXRTZWxlY3RlZE1vZGVsUmVzcG9uc2USZgoRR2V0TW9kZWxzTWFuaWZlc3QSJy5ibGFkZXdhdGNoLnYxLkdldE1vZGVsc01hbmlmZXN0UmVxdWVzdBooLmJsYWRld2F0Y2gudjEuR2V0TW9kZWxzTWFuaWZlc3RSZXNwb25zZUIeChpuZXQuYmxhZGV3YXRjaC5hcHAuZ3JwYy52MVABYgZwcm90bzM");
 
 /**
  * BatteryInfo carries the Android battery level and charge state.
@@ -677,15 +677,451 @@ export const DownloadModelResponseSchema: GenMessage<DownloadModelResponse> = /*
   messageDesc(file_bladewatch_v1_system, 19);
 
 /**
+ * SOH nominal capacity endpoints.
+ *
+ * @generated from message bladewatch.v1.GetSohNominalRequest
+ */
+export type GetSohNominalRequest = Message<"bladewatch.v1.GetSohNominalRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSohNominalRequest.
+ * Use `create(GetSohNominalRequestSchema)` to create a new message.
+ */
+export const GetSohNominalRequestSchema: GenMessage<GetSohNominalRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 20);
+
+/**
+ * @generated from message bladewatch.v1.GetSohNominalResponse
+ */
+export type GetSohNominalResponse = Message<"bladewatch.v1.GetSohNominalResponse"> & {
+  /**
+   * Present only when a nominal kWh has been set; absent means "unset".
+   *
+   * @generated from field: optional double nominal_kwh = 1;
+   */
+  nominalKwh?: number | undefined;
+
+  /**
+   * "user", "auto", or "unset".
+   *
+   * @generated from field: string nominal_source = 2;
+   */
+  nominalSource: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSohNominalResponse.
+ * Use `create(GetSohNominalResponseSchema)` to create a new message.
+ */
+export const GetSohNominalResponseSchema: GenMessage<GetSohNominalResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 21);
+
+/**
+ * @generated from message bladewatch.v1.SetSohNominalRequest
+ */
+export type SetSohNominalRequest = Message<"bladewatch.v1.SetSohNominalRequest"> & {
+  /**
+   * Omit (not set) to clear the user override.
+   *
+   * @generated from field: optional double nominal_kwh = 1;
+   */
+  nominalKwh?: number | undefined;
+};
+
+/**
+ * Describes the message bladewatch.v1.SetSohNominalRequest.
+ * Use `create(SetSohNominalRequestSchema)` to create a new message.
+ */
+export const SetSohNominalRequestSchema: GenMessage<SetSohNominalRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 22);
+
+/**
+ * @generated from message bladewatch.v1.SetSohNominalResponse
+ */
+export type SetSohNominalResponse = Message<"bladewatch.v1.SetSohNominalResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string error = 2;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.SetSohNominalResponse.
+ * Use `create(SetSohNominalResponseSchema)` to create a new message.
+ */
+export const SetSohNominalResponseSchema: GenMessage<SetSohNominalResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 23);
+
+/**
+ * SOH status (stub — estimation has been removed).
+ *
+ * @generated from message bladewatch.v1.GetSohStatusRequest
+ */
+export type GetSohStatusRequest = Message<"bladewatch.v1.GetSohStatusRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSohStatusRequest.
+ * Use `create(GetSohStatusRequestSchema)` to create a new message.
+ */
+export const GetSohStatusRequestSchema: GenMessage<GetSohStatusRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 24);
+
+/**
+ * @generated from message bladewatch.v1.GetSohStatusResponse
+ */
+export type GetSohStatusResponse = Message<"bladewatch.v1.GetSohStatusResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: double nominal_capacity_kwh = 2;
+   */
+  nominalCapacityKwh: number;
+
+  /**
+   * @generated from field: string nominal_source = 3;
+   */
+  nominalSource: string;
+
+  /**
+   * @generated from field: double display_soh = 4;
+   */
+  displaySoh: number;
+
+  /**
+   * @generated from field: string display_source = 5;
+   */
+  displaySource: string;
+
+  /**
+   * @generated from field: string error = 6;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSohStatusResponse.
+ * Use `create(GetSohStatusResponseSchema)` to create a new message.
+ */
+export const GetSohStatusResponseSchema: GenMessage<GetSohStatusResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 25);
+
+/**
+ * @generated from message bladewatch.v1.ResetSohRequest
+ */
+export type ResetSohRequest = Message<"bladewatch.v1.ResetSohRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.ResetSohRequest.
+ * Use `create(ResetSohRequestSchema)` to create a new message.
+ */
+export const ResetSohRequestSchema: GenMessage<ResetSohRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 26);
+
+/**
+ * @generated from message bladewatch.v1.ResetSohResponse
+ */
+export type ResetSohResponse = Message<"bladewatch.v1.ResetSohResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string error = 2;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.ResetSohResponse.
+ * Use `create(ResetSohResponseSchema)` to create a new message.
+ */
+export const ResetSohResponseSchema: GenMessage<ResetSohResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 27);
+
+/**
+ * Bulk performance data reset.
+ *
+ * @generated from message bladewatch.v1.ResetPerformanceRequest
+ */
+export type ResetPerformanceRequest = Message<"bladewatch.v1.ResetPerformanceRequest"> & {
+  /**
+   * Categories to reset: "trips", "socHistory", "soh",
+   * "mediaRecordings", "mediaSurveillance", "mediaProximity", "mediaTrips".
+   *
+   * @generated from field: repeated string categories = 1;
+   */
+  categories: string[];
+};
+
+/**
+ * Describes the message bladewatch.v1.ResetPerformanceRequest.
+ * Use `create(ResetPerformanceRequestSchema)` to create a new message.
+ */
+export const ResetPerformanceRequestSchema: GenMessage<ResetPerformanceRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 28);
+
+/**
+ * @generated from message bladewatch.v1.ResetPerformanceResponse
+ */
+export type ResetPerformanceResponse = Message<"bladewatch.v1.ResetPerformanceResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * Per-category result objects encoded as JSON (map serialisation complexity avoided).
+   *
+   * @generated from field: string results_json = 2;
+   */
+  resultsJson: string;
+
+  /**
+   * @generated from field: string error = 3;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.ResetPerformanceResponse.
+ * Use `create(ResetPerformanceResponseSchema)` to create a new message.
+ */
+export const ResetPerformanceResponseSchema: GenMessage<ResetPerformanceResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 29);
+
+/**
+ * Parking energy-delta and last-charge endpoints.
+ *
+ * @generated from message bladewatch.v1.GetParkingDeltaRequest
+ */
+export type GetParkingDeltaRequest = Message<"bladewatch.v1.GetParkingDeltaRequest"> & {
+  /**
+   * Hours of history to consider (default 72).
+   *
+   * @generated from field: int32 max_age_hours = 1;
+   */
+  maxAgeHours: number;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetParkingDeltaRequest.
+ * Use `create(GetParkingDeltaRequestSchema)` to create a new message.
+ */
+export const GetParkingDeltaRequestSchema: GenMessage<GetParkingDeltaRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 30);
+
+/**
+ * @generated from message bladewatch.v1.GetParkingDeltaResponse
+ */
+export type GetParkingDeltaResponse = Message<"bladewatch.v1.GetParkingDeltaResponse"> & {
+  /**
+   * @generated from field: bool available = 1;
+   */
+  available: boolean;
+
+  /**
+   * Full JSON object from SocHistoryDatabase.getLastParkingDelta(), present when available=true.
+   *
+   * @generated from field: string raw_json = 2;
+   */
+  rawJson: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetParkingDeltaResponse.
+ * Use `create(GetParkingDeltaResponseSchema)` to create a new message.
+ */
+export const GetParkingDeltaResponseSchema: GenMessage<GetParkingDeltaResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 31);
+
+/**
+ * @generated from message bladewatch.v1.GetLastChargeRequest
+ */
+export type GetLastChargeRequest = Message<"bladewatch.v1.GetLastChargeRequest"> & {
+  /**
+   * How far back to look in hours (default 24).
+   *
+   * @generated from field: int32 hours_back = 1;
+   */
+  hoursBack: number;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetLastChargeRequest.
+ * Use `create(GetLastChargeRequestSchema)` to create a new message.
+ */
+export const GetLastChargeRequestSchema: GenMessage<GetLastChargeRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 32);
+
+/**
+ * @generated from message bladewatch.v1.GetLastChargeResponse
+ */
+export type GetLastChargeResponse = Message<"bladewatch.v1.GetLastChargeResponse"> & {
+  /**
+   * @generated from field: bool available = 1;
+   */
+  available: boolean;
+
+  /**
+   * Full JSON object from SocHistoryDatabase.getMostRecentCompletedChargingSession(), present when available=true.
+   *
+   * @generated from field: string raw_json = 2;
+   */
+  rawJson: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetLastChargeResponse.
+ * Use `create(GetLastChargeResponseSchema)` to create a new message.
+ */
+export const GetLastChargeResponseSchema: GenMessage<GetLastChargeResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 33);
+
+/**
+ * Vehicle model selection and manifest.
+ *
+ * @generated from message bladewatch.v1.GetSelectedModelRequest
+ */
+export type GetSelectedModelRequest = Message<"bladewatch.v1.GetSelectedModelRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSelectedModelRequest.
+ * Use `create(GetSelectedModelRequestSchema)` to create a new message.
+ */
+export const GetSelectedModelRequestSchema: GenMessage<GetSelectedModelRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 34);
+
+/**
+ * @generated from message bladewatch.v1.GetSelectedModelResponse
+ */
+export type GetSelectedModelResponse = Message<"bladewatch.v1.GetSelectedModelResponse"> & {
+  /**
+   * @generated from field: string model_id = 1;
+   */
+  modelId: string;
+
+  /**
+   * @generated from field: string color = 2;
+   */
+  color: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetSelectedModelResponse.
+ * Use `create(GetSelectedModelResponseSchema)` to create a new message.
+ */
+export const GetSelectedModelResponseSchema: GenMessage<GetSelectedModelResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 35);
+
+/**
+ * @generated from message bladewatch.v1.SetSelectedModelRequest
+ */
+export type SetSelectedModelRequest = Message<"bladewatch.v1.SetSelectedModelRequest"> & {
+  /**
+   * @generated from field: string model_id = 1;
+   */
+  modelId: string;
+
+  /**
+   * @generated from field: string color = 2;
+   */
+  color: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.SetSelectedModelRequest.
+ * Use `create(SetSelectedModelRequestSchema)` to create a new message.
+ */
+export const SetSelectedModelRequestSchema: GenMessage<SetSelectedModelRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 36);
+
+/**
+ * @generated from message bladewatch.v1.SetSelectedModelResponse
+ */
+export type SetSelectedModelResponse = Message<"bladewatch.v1.SetSelectedModelResponse"> & {
+  /**
+   * @generated from field: bool ok = 1;
+   */
+  ok: boolean;
+
+  /**
+   * @generated from field: string error = 2;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.SetSelectedModelResponse.
+ * Use `create(SetSelectedModelResponseSchema)` to create a new message.
+ */
+export const SetSelectedModelResponseSchema: GenMessage<SetSelectedModelResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 37);
+
+/**
+ * @generated from message bladewatch.v1.GetModelsManifestRequest
+ */
+export type GetModelsManifestRequest = Message<"bladewatch.v1.GetModelsManifestRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.GetModelsManifestRequest.
+ * Use `create(GetModelsManifestRequestSchema)` to create a new message.
+ */
+export const GetModelsManifestRequestSchema: GenMessage<GetModelsManifestRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 38);
+
+/**
+ * @generated from message bladewatch.v1.GetModelsManifestResponse
+ */
+export type GetModelsManifestResponse = Message<"bladewatch.v1.GetModelsManifestResponse"> & {
+  /**
+   * Full manifest JSON from /data/local/tmp/web/shared/models/manifest.json.
+   *
+   * @generated from field: string manifest_json = 1;
+   */
+  manifestJson: string;
+};
+
+/**
+ * Describes the message bladewatch.v1.GetModelsManifestResponse.
+ * Use `create(GetModelsManifestResponseSchema)` to create a new message.
+ */
+export const GetModelsManifestResponseSchema: GenMessage<GetModelsManifestResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_system, 39);
+
+/**
  * SystemService exposes daemon status, performance metrics, AI model management,
  * and audio testing.
  *
  * HTTP mapping:
- *   GetStatus        GET  /status
- *   GetPerformance   GET  /api/performance (PerformanceApiHandler)
- *   PlayAudioTest    POST /api/audio/test-avas
- *   ListModels       GET  /api/models/list
- *   DownloadModel    POST /api/models/download
+ *   GetStatus          GET  /status
+ *   GetPerformance     GET  /api/performance     (PerformanceApiHandler)
+ *   PlayAudioTest      POST /api/audio/test-avas
+ *   ListModels         GET  /api/models/list
+ *   DownloadModel      POST /api/models/download
+ *   GetSohNominal      GET  /api/performance/soh/nominal
+ *   SetSohNominal      POST /api/performance/soh/nominal
+ *   GetSohStatus       GET  /api/performance/soh
+ *   ResetSoh           POST /api/performance/soh/reset
+ *   ResetPerformance   POST /api/performance/reset
+ *   GetParkingDelta    GET  /api/performance/parking-delta
+ *   GetLastCharge      GET  /api/performance/last-charge
+ *   GetSelectedModel   GET  /api/models/selected
+ *   SetSelectedModel   POST /api/models/selected
+ *   GetModelsManifest  GET  /api/models/manifest
  *
  * @generated from service bladewatch.v1.SystemService
  */
@@ -729,6 +1165,86 @@ export const SystemService: GenService<{
     methodKind: "unary";
     input: typeof DownloadModelRequestSchema;
     output: typeof DownloadModelResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetSohNominal
+   */
+  getSohNominal: {
+    methodKind: "unary";
+    input: typeof GetSohNominalRequestSchema;
+    output: typeof GetSohNominalResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.SetSohNominal
+   */
+  setSohNominal: {
+    methodKind: "unary";
+    input: typeof SetSohNominalRequestSchema;
+    output: typeof SetSohNominalResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetSohStatus
+   */
+  getSohStatus: {
+    methodKind: "unary";
+    input: typeof GetSohStatusRequestSchema;
+    output: typeof GetSohStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.ResetSoh
+   */
+  resetSoh: {
+    methodKind: "unary";
+    input: typeof ResetSohRequestSchema;
+    output: typeof ResetSohResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.ResetPerformance
+   */
+  resetPerformance: {
+    methodKind: "unary";
+    input: typeof ResetPerformanceRequestSchema;
+    output: typeof ResetPerformanceResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetParkingDelta
+   */
+  getParkingDelta: {
+    methodKind: "unary";
+    input: typeof GetParkingDeltaRequestSchema;
+    output: typeof GetParkingDeltaResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetLastCharge
+   */
+  getLastCharge: {
+    methodKind: "unary";
+    input: typeof GetLastChargeRequestSchema;
+    output: typeof GetLastChargeResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetSelectedModel
+   */
+  getSelectedModel: {
+    methodKind: "unary";
+    input: typeof GetSelectedModelRequestSchema;
+    output: typeof GetSelectedModelResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.SetSelectedModel
+   */
+  setSelectedModel: {
+    methodKind: "unary";
+    input: typeof SetSelectedModelRequestSchema;
+    output: typeof SetSelectedModelResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.SystemService.GetModelsManifest
+   */
+  getModelsManifest: {
+    methodKind: "unary";
+    input: typeof GetModelsManifestRequestSchema;
+    output: typeof GetModelsManifestResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_bladewatch_v1_system, 0);

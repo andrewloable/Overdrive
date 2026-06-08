@@ -12,11 +12,21 @@ import com.connectrpc.ResponseMessage
  *  and audio testing.
  *
  *  HTTP mapping:
- *    GetStatus        GET  /status
- *    GetPerformance   GET  /api/performance (PerformanceApiHandler)
- *    PlayAudioTest    POST /api/audio/test-avas
- *    ListModels       GET  /api/models/list
- *    DownloadModel    POST /api/models/download
+ *    GetStatus          GET  /status
+ *    GetPerformance     GET  /api/performance     (PerformanceApiHandler)
+ *    PlayAudioTest      POST /api/audio/test-avas
+ *    ListModels         GET  /api/models/list
+ *    DownloadModel      POST /api/models/download
+ *    GetSohNominal      GET  /api/performance/soh/nominal
+ *    SetSohNominal      POST /api/performance/soh/nominal
+ *    GetSohStatus       GET  /api/performance/soh
+ *    ResetSoh           POST /api/performance/soh/reset
+ *    ResetPerformance   POST /api/performance/reset
+ *    GetParkingDelta    GET  /api/performance/parking-delta
+ *    GetLastCharge      GET  /api/performance/last-charge
+ *    GetSelectedModel   GET  /api/models/selected
+ *    SetSelectedModel   POST /api/models/selected
+ *    GetModelsManifest  GET  /api/models/manifest
  */
 public interface SystemServiceClientInterface {
   public suspend fun getStatus(request: GetStatusRequest, headers: Headers = emptyMap()): ResponseMessage<GetStatusResponse>
@@ -28,4 +38,24 @@ public interface SystemServiceClientInterface {
   public suspend fun listModels(request: ListModelsRequest, headers: Headers = emptyMap()): ResponseMessage<ListModelsResponse>
 
   public suspend fun downloadModel(request: DownloadModelRequest, headers: Headers = emptyMap()): ResponseMessage<DownloadModelResponse>
+
+  public suspend fun getSohNominal(request: GetSohNominalRequest, headers: Headers = emptyMap()): ResponseMessage<GetSohNominalResponse>
+
+  public suspend fun setSohNominal(request: SetSohNominalRequest, headers: Headers = emptyMap()): ResponseMessage<SetSohNominalResponse>
+
+  public suspend fun getSohStatus(request: GetSohStatusRequest, headers: Headers = emptyMap()): ResponseMessage<GetSohStatusResponse>
+
+  public suspend fun resetSoh(request: ResetSohRequest, headers: Headers = emptyMap()): ResponseMessage<ResetSohResponse>
+
+  public suspend fun resetPerformance(request: ResetPerformanceRequest, headers: Headers = emptyMap()): ResponseMessage<ResetPerformanceResponse>
+
+  public suspend fun getParkingDelta(request: GetParkingDeltaRequest, headers: Headers = emptyMap()): ResponseMessage<GetParkingDeltaResponse>
+
+  public suspend fun getLastCharge(request: GetLastChargeRequest, headers: Headers = emptyMap()): ResponseMessage<GetLastChargeResponse>
+
+  public suspend fun getSelectedModel(request: GetSelectedModelRequest, headers: Headers = emptyMap()): ResponseMessage<GetSelectedModelResponse>
+
+  public suspend fun setSelectedModel(request: SetSelectedModelRequest, headers: Headers = emptyMap()): ResponseMessage<SetSelectedModelResponse>
+
+  public suspend fun getModelsManifest(request: GetModelsManifestRequest, headers: Headers = emptyMap()): ResponseMessage<GetModelsManifestResponse>
 }

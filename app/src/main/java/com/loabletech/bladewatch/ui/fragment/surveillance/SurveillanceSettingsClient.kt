@@ -29,7 +29,7 @@ internal class SurveillanceSettingsClient {
         val cfg = resp.message.config
         SurveillanceConfig(
             enabled = cfg.enabled,
-            environmentPreset = cfg.distancePreset.takeIf { it.isNotEmpty() } ?: "OUTDOOR",
+            distancePreset = cfg.distancePreset.takeIf { it.isNotEmpty() } ?: "OUTDOOR",
             sensitivityLevel = cfg.sensitivity.takeIf { it > 0 } ?: 3,
             detectPerson = cfg.detectPerson,
             detectCar = cfg.detectCar,
@@ -106,7 +106,7 @@ internal class SurveillanceSettingsClient {
         val protoConfig = net.bladewatch.app.grpc.v1.SurveillanceConfig.newBuilder()
             .setEnabled(config.enabled)
             .setSensitivity(config.sensitivityLevel)
-            .setDistancePreset(config.environmentPreset)
+            .setDistancePreset(config.distancePreset)
             .setDetectPerson(config.detectPerson)
             .setDetectCar(config.detectCar)
             .setDetectBike(config.detectBike)

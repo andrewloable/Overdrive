@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bladewatch/v1/auth.proto.
  */
 export const file_bladewatch_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChhibGFkZXdhdGNoL3YxL2F1dGgucHJvdG8SDWJsYWRld2F0Y2gudjEiHQoMTG9naW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJIlYKDUxvZ2luUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIRCglkZXZpY2VfaWQYAiABKAkSEgoKZXhwaXJlc19pbhgDIAEoAxINCgVlcnJvchgEIAEoCSIPCg1Mb2dvdXRSZXF1ZXN0IjIKDkxvZ291dFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCSIWChRHZXRBdXRoU3RhdHVzUmVxdWVzdCI6ChVHZXRBdXRoU3RhdHVzUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJEhEKCWRldmljZV9pZBgCIAEoCTL0AQoLQXV0aFNlcnZpY2USQgoFTG9naW4SGy5ibGFkZXdhdGNoLnYxLkxvZ2luUmVxdWVzdBocLmJsYWRld2F0Y2gudjEuTG9naW5SZXNwb25zZRJFCgZMb2dvdXQSHC5ibGFkZXdhdGNoLnYxLkxvZ291dFJlcXVlc3QaHS5ibGFkZXdhdGNoLnYxLkxvZ291dFJlc3BvbnNlEloKDUdldEF1dGhTdGF0dXMSIy5ibGFkZXdhdGNoLnYxLkdldEF1dGhTdGF0dXNSZXF1ZXN0GiQuYmxhZGV3YXRjaC52MS5HZXRBdXRoU3RhdHVzUmVzcG9uc2VCHgoabmV0LmJsYWRld2F0Y2guYXBwLmdycGMudjFQAWIGcHJvdG8z");
+  fileDesc("ChhibGFkZXdhdGNoL3YxL2F1dGgucHJvdG8SDWJsYWRld2F0Y2gudjEiHQoMTG9naW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJIlYKDUxvZ2luUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIRCglkZXZpY2VfaWQYAiABKAkSEgoKZXhwaXJlc19pbhgDIAEoAxINCgVlcnJvchgEIAEoCSIPCg1Mb2dvdXRSZXF1ZXN0IjIKDkxvZ291dFJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCSIWChRHZXRBdXRoU3RhdHVzUmVxdWVzdCI6ChVHZXRBdXRoU3RhdHVzUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJEhEKCWRldmljZV9pZBgCIAEoCSIcChpJbnZhbGlkYXRlQXV0aENhY2hlUmVxdWVzdCIuChtJbnZhbGlkYXRlQXV0aENhY2hlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCDLiAgoLQXV0aFNlcnZpY2USQgoFTG9naW4SGy5ibGFkZXdhdGNoLnYxLkxvZ2luUmVxdWVzdBocLmJsYWRld2F0Y2gudjEuTG9naW5SZXNwb25zZRJFCgZMb2dvdXQSHC5ibGFkZXdhdGNoLnYxLkxvZ291dFJlcXVlc3QaHS5ibGFkZXdhdGNoLnYxLkxvZ291dFJlc3BvbnNlEloKDUdldEF1dGhTdGF0dXMSIy5ibGFkZXdhdGNoLnYxLkdldEF1dGhTdGF0dXNSZXF1ZXN0GiQuYmxhZGV3YXRjaC52MS5HZXRBdXRoU3RhdHVzUmVzcG9uc2USbAoTSW52YWxpZGF0ZUF1dGhDYWNoZRIpLmJsYWRld2F0Y2gudjEuSW52YWxpZGF0ZUF1dGhDYWNoZVJlcXVlc3QaKi5ibGFkZXdhdGNoLnYxLkludmFsaWRhdGVBdXRoQ2FjaGVSZXNwb25zZUIeChpuZXQuYmxhZGV3YXRjaC5hcHAuZ3JwYy52MVABYgZwcm90bzM");
 
 /**
  * LoginRequest carries the device token used to obtain a JWT session cookie.
@@ -142,12 +142,43 @@ export const GetAuthStatusResponseSchema: GenMessage<GetAuthStatusResponse> = /*
   messageDesc(file_bladewatch_v1_auth, 5);
 
 /**
+ * @generated from message bladewatch.v1.InvalidateAuthCacheRequest
+ */
+export type InvalidateAuthCacheRequest = Message<"bladewatch.v1.InvalidateAuthCacheRequest"> & {
+};
+
+/**
+ * Describes the message bladewatch.v1.InvalidateAuthCacheRequest.
+ * Use `create(InvalidateAuthCacheRequestSchema)` to create a new message.
+ */
+export const InvalidateAuthCacheRequestSchema: GenMessage<InvalidateAuthCacheRequest> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_auth, 6);
+
+/**
+ * @generated from message bladewatch.v1.InvalidateAuthCacheResponse
+ */
+export type InvalidateAuthCacheResponse = Message<"bladewatch.v1.InvalidateAuthCacheResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+};
+
+/**
+ * Describes the message bladewatch.v1.InvalidateAuthCacheResponse.
+ * Use `create(InvalidateAuthCacheResponseSchema)` to create a new message.
+ */
+export const InvalidateAuthCacheResponseSchema: GenMessage<InvalidateAuthCacheResponse> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_auth, 7);
+
+/**
  * AuthService exposes login, logout, and status endpoints.
  *
  * HTTP mapping:
- *   Login            POST /auth/token
- *   Logout           POST /auth/logout
- *   GetAuthStatus    GET  /auth/status
+ *   Login                POST /auth/token
+ *   Logout               POST /auth/logout
+ *   GetAuthStatus        GET  /auth/status
+ *   InvalidateAuthCache  TCP  auth_invalidate (calls AuthManager.invalidateCache() directly)
  *
  * @generated from service bladewatch.v1.AuthService
  */
@@ -175,6 +206,14 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof GetAuthStatusRequestSchema;
     output: typeof GetAuthStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc bladewatch.v1.AuthService.InvalidateAuthCache
+   */
+  invalidateAuthCache: {
+    methodKind: "unary";
+    input: typeof InvalidateAuthCacheRequestSchema;
+    output: typeof InvalidateAuthCacheResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_bladewatch_v1_auth, 0);

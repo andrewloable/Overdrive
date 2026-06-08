@@ -386,24 +386,6 @@ public class CameraDaemonClient {
     }
     
     /**
-     * Set recording mode (blocking).
-     * @param mode NONE, CONTINUOUS, DRIVE_MODE, or PROXIMITY_GUARD
-     * @return true if successful
-     */
-    public boolean setRecordingModeSync(String mode) {
-        try {
-            JSONObject cmd = new JSONObject();
-            cmd.put("cmd", "setRecordingMode");
-            cmd.put("mode", mode.toUpperCase());
-            JSONObject response = sendCommand(cmd);
-            return "ok".equals(response.optString("status"));
-        } catch (Exception e) {
-            Log.e(TAG, "setRecordingMode error: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Set recordings storage type (blocking).
      * @param type INTERNAL or SD_CARD
      * @return true if successful

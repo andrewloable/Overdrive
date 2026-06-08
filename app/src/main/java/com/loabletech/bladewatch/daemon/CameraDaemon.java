@@ -264,6 +264,13 @@ public class CameraDaemon {
         storageManager.fixAllPermissions();
         logT("StorageManager.fixAllPermissions done");
 
+        // Auto-select SD card → USB → internal based on hardware presence.
+        // Runs unconditionally so inserting/removing a drive between boots is
+        // always reflected. Must run before startSdCardWatchdog() so the watchdog
+        // knows whether any type is on SD card.
+        storageManager.applyAutoStoragePriority();
+        logT("applyAutoStoragePriority done");
+
         // Start the SD-card mount watchdog at daemon boot (instead of only on
         // ACC OFF). The watchdog no-ops when no storage type is set to SD, so
         // it's safe to start unconditionally — but it must run continuously

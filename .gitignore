@@ -19,6 +19,9 @@ screenshots
 
 # Beads / Dolt files (added by bd init)
 .beads-credential-key
+# Dolt backup chunks — binary, large, regenerable; must never be committed to source
+.beads/backup/*.darc
+.beads/backup/oldgen/
 
 # Angular / Vite web UI
 web/node_modules/

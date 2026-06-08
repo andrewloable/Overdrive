@@ -19,7 +19,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
+import com.connectrpc.ResponseMessage
+import net.bladewatch.app.client.ConnectClientProvider
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.R
+import net.bladewatch.app.grpc.v1.GetSohStatusRequest
 import net.bladewatch.app.ui.MainActivity
 import net.bladewatch.app.ui.model.DaemonStatus
 import net.bladewatch.app.ui.model.DaemonType
@@ -483,18 +487,15 @@ class DiagnosticsFragment : Fragment() {
             var sohPercent: Double? = null
             var displaySource = "unavailable"
             try {
-                val conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                    "/api/performance/soh", "GET", 2000, 3000)
-                if (conn.responseCode == 200) {
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(body)
-                    val displaySoh = json.optDouble("displaySoh", -1.0)
+                val req = GetSohStatusRequest.newBuilder().build()
+                val resp = runBlocking { ConnectClientProvider.systemService().getSohStatus(req, emptyMap()) }
+                if (resp is ResponseMessage.Success && resp.message.success) {
+                    val displaySoh = resp.message.displaySoh
                     if (displaySoh >= 60.0 && displaySoh <= 110.0) {
                         sohPercent = displaySoh
-                        displaySource = json.optString("displaySource", displaySource)
+                        if (resp.message.displaySource.isNotEmpty()) displaySource = resp.message.displaySource
                     }
                 }
-                conn.disconnect()
             } catch (_: Throwable) {
                 // Fall through to file fallback below.
             }

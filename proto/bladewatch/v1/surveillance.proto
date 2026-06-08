@@ -89,6 +89,11 @@ message GetSurveillanceConfigResponse {
 
 message SetSurveillanceConfigRequest {
   SurveillanceConfig config = 1;
+  // Camera probe override fields. Write to the "camera" config section, not the
+  // surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+  // index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+  optional int32 manual_camera_id = 2;
+  bool clear_manual_camera_id = 3;
 }
 
 message SetSurveillanceConfigResponse {

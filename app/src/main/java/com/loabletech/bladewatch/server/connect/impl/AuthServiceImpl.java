@@ -20,6 +20,8 @@ public class AuthServiceImpl {
         dispatcher.register("bladewatch.v1.AuthService", "Login", this::handleLogin);
         dispatcher.register("bladewatch.v1.AuthService", "Logout", this::handleLogout);
         dispatcher.register("bladewatch.v1.AuthService", "GetAuthStatus", this::handleGetAuthStatus);
+        dispatcher.register("bladewatch.v1.AuthService", "InvalidateAuthCache",
+                this::handleInvalidateAuthCache);
     }
 
     private ConnectResponse handleLogin(String requestJson, String clientIdentity) throws ConnectException {
@@ -41,5 +43,14 @@ public class AuthServiceImpl {
     private ConnectResponse handleGetAuthStatus(String requestJson, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 AuthApiHandler.handle("GET", "/auth/status", null, out, null, false));
+    }
+
+    private ConnectResponse handleInvalidateAuthCache(String requestJson, String clientIdentity) throws ConnectException {
+        try {
+            net.bladewatch.app.auth.AuthManager.invalidateCache();
+            return ConnectResponse.of("{\"success\":true}");
+        } catch (Exception e) {
+            return ConnectResponse.of("{\"success\":false}");
+        }
     }
 }

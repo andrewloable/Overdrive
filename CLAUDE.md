@@ -12,6 +12,8 @@ This project was forked from "Overdrive" and rebranded to BladeWatch (package `c
 
 Do **not** run `git add`, `git commit`, or `git push` automatically. All commits are reviewed and made manually by the developer. Make code changes and stop — do not stage or commit them.
 
+**Beads commit model**: `.beads/issues.jsonl` and `.beads/export-state.json` are tracked snapshots. Never stage `.beads/backup/*.darc` files — they are large binary Dolt chunks, gitignored, and should never appear in source commits. When running `git add`, target specific source files only, never `git add .` or `git add -A`.
+
 ## Device Connection
 
 The test device (BYD head unit) is at **192.168.0.251:5555** over ADB TCP.

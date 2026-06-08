@@ -12,7 +12,10 @@ data class SafeZone(
 
 data class SurveillanceConfig(
     val enabled: Boolean,
-    val environmentPreset: String,
+    // Detection distance preset (proto: distance_preset / json: distancePreset).
+    // Controls minObjectSize for AI range. NOT the same as the daemon's separate
+    // environmentPreset (indoor/outdoor tuning) exposed by GET /api/surveillance endpoint.
+    val distancePreset: String,
     val sensitivityLevel: Int,
     val detectPerson: Boolean,
     val detectCar: Boolean,

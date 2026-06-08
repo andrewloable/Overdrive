@@ -24,4 +24,33 @@ public interface SetSurveillanceConfigRequestOrBuilder extends
    * <code>.bladewatch.v1.SurveillanceConfig config = 1 [json_name = "config"];</code>
    */
   net.bladewatch.app.grpc.v1.SurveillanceConfigOrBuilder getConfigOrBuilder();
+
+  /**
+   * <pre>
+   * Camera probe override fields. Write to the "camera" config section, not the
+   * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+   * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+   * </pre>
+   *
+   * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+   * @return Whether the manualCameraId field is set.
+   */
+  boolean hasManualCameraId();
+  /**
+   * <pre>
+   * Camera probe override fields. Write to the "camera" config section, not the
+   * surveillance config. Set manual_camera_id (0-5) to pin the probe to that
+   * index. Set clear_manual_camera_id=true to clear the pin and force re-discovery.
+   * </pre>
+   *
+   * <code>optional int32 manual_camera_id = 2 [json_name = "manualCameraId"];</code>
+   * @return The manualCameraId.
+   */
+  int getManualCameraId();
+
+  /**
+   * <code>bool clear_manual_camera_id = 3 [json_name = "clearManualCameraId"];</code>
+   * @return The clearManualCameraId.
+   */
+  boolean getClearManualCameraId();
 }

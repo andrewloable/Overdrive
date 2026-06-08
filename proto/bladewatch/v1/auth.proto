@@ -8,13 +8,15 @@ option java_multiple_files = true;
 // AuthService exposes login, logout, and status endpoints.
 //
 // HTTP mapping:
-//   Login            POST /auth/token
-//   Logout           POST /auth/logout
-//   GetAuthStatus    GET  /auth/status
+//   Login                POST /auth/token
+//   Logout               POST /auth/logout
+//   GetAuthStatus        GET  /auth/status
+//   InvalidateAuthCache  TCP  auth_invalidate (calls AuthManager.invalidateCache() directly)
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc GetAuthStatus(GetAuthStatusRequest) returns (GetAuthStatusResponse);
+  rpc InvalidateAuthCache(InvalidateAuthCacheRequest) returns (InvalidateAuthCacheResponse);
 }
 
 // LoginRequest carries the device token used to obtain a JWT session cookie.
@@ -45,4 +47,10 @@ message GetAuthStatusResponse {
   // "ok" when authenticated.
   string status = 1;
   string device_id = 2;
+}
+
+message InvalidateAuthCacheRequest {}
+
+message InvalidateAuthCacheResponse {
+  bool success = 1;
 }
