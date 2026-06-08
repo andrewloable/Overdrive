@@ -463,7 +463,26 @@ dependencies {
     // Works for UID 2000 because it's 100% Java bytecode - no Android framework needed
     implementation("com.h2database:h2:2.2.224")
 
+    // Protobuf runtime for generated ConnectRPC message classes
+    // Version must match the protoc/remote plugin version (4.35.0 = protoc 33.x / buf remote v4.35)
+    implementation("com.google.protobuf:protobuf-java:4.35.0")
+
+    // ConnectRPC Kotlin runtime + OkHttp transport + Java protobuf serialization
+    implementation(libs.connectrpc.kotlin)
+    implementation(libs.connectrpc.kotlin.okhttp)
+    implementation(libs.connectrpc.kotlin.google.java.ext)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+// Regenerate protobuf stubs from proto/. Generated files are committed to the repo,
+// so this task is optional — run manually when .proto files change.
+// Usage: ./gradlew generateConnectProtos
+tasks.register<Exec>("generateConnectProtos") {
+    description = "Regenerate Java + TypeScript stubs from proto/ using buf generate"
+    group = "codegen"
+    workingDir = rootProject.file("proto")
+    commandLine("buf", "generate")
 }

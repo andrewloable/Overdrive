@@ -1,0 +1,62 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Recordings</h1>
+    @if (usedBytes() > 0) {
+      <div class="stats-bar">{{ usedMb() | number }} MB · {{ totalCount() }} files</div>
+    }
+  </div>
+
+  @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
+
+  <div class="filter-tabs">
+    @for (f of filters; track f.key) {
+      <button class="filter-tab" [class.active]="activeFilter() === f.key" (click)="setFilter(f.key)">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  @if (activeVideo(); as rec) {
+    <div class="video-overlay" (click)="closeVideo()">
+      <div class="video-container" (click)="$event.stopPropagation()">
+        <button class="close-btn" (click)="closeVideo()">✕</button>
+        <video [src]="'/video/' + rec.filename" controls autoplay class="video-player"></video>
+        <div class="video-title">{{ rec.filename }}</div>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else {
+    <div class="recording-grid">
+      @for (rec of recordings(); track rec.filename) {
+        <div class="recording-card">
+          <div class="thumb-wrap" (click)="playVideo(rec)">
+            <img [src]="'/thumb/' + rec.filename" [alt]="rec.filename" class="thumb" loading="lazy">
+            <div class="play-overlay">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+            </div>
+            @if (rec.durationSeconds > 0) {
+              <div class="duration">{{ rec.durationSeconds }}s</div>
+            }
+          </div>
+          <div class="rec-info">
+            <div class="rec-time">{{ rec.timeLabel || rec.dateLabel }}</div>
+            <div class="rec-type-badge" [class]="rec.type">{{ rec.type }}</div>
+          </div>
+          <button class="delete-btn" (click)="deleteRecording(rec)" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      } @empty {
+        <div class="empty-text">No recordings found.</div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-base, #0F0F12);
+  color: var(--text-primary, #ffffff);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+
+  .has-nav & {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+}

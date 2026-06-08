@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// SettingsService manages recording quality, appearance, and locale settings.
+//
+// HTTP mapping:
+//   GetQuality       GET  /api/settings/quality
+//   SetQuality       POST /api/settings/quality
+//   GetAppearance    GET  /api/settings/appearance
+//   SetAppearance    POST /api/settings/appearance
+//   GetLocale        GET  /api/i18n/lang
+//   SetLocale        POST /api/i18n/lang
+service SettingsService {
+  rpc GetQuality(GetQualityRequest) returns (GetQualityResponse);
+  rpc SetQuality(SetQualityRequest) returns (SetQualityResponse);
+  rpc GetAppearance(GetAppearanceRequest) returns (GetAppearanceResponse);
+  rpc SetAppearance(SetAppearanceRequest) returns (SetAppearanceResponse);
+  rpc GetLocale(GetLocaleRequest) returns (GetLocaleResponse);
+  rpc SetLocale(SetLocaleRequest) returns (SetLocaleResponse);
+}
+
+// RecordingQualityTier identifies a named recording quality preset.
+enum RecordingQualityTier {
+  RECORDING_QUALITY_TIER_UNSPECIFIED = 0;
+  RECORDING_QUALITY_TIER_ECONOMY = 1;
+  RECORDING_QUALITY_TIER_STANDARD = 2;
+  RECORDING_QUALITY_TIER_HIGH = 3;
+  RECORDING_QUALITY_TIER_PREMIUM = 4;
+  RECORDING_QUALITY_TIER_MAX = 5;
+}
+
+// VideoCodec selects the encoding format.
+enum VideoCodec {
+  VIDEO_CODEC_UNSPECIFIED = 0;
+  VIDEO_CODEC_H264 = 1;
+  VIDEO_CODEC_H265 = 2;
+}
+
+// AppTheme selects the UI colour scheme.
+enum AppTheme {
+  APP_THEME_UNSPECIFIED = 0;
+  APP_THEME_DARK = 1;
+  APP_THEME_LIGHT = 2;
+  APP_THEME_AUTO = 3;
+}
+
+// QualityTierInfo describes one recording quality tier.
+message QualityTierInfo {
+  string display_name = 1;
+  int64 bitrate_bps = 2;
+  double bitrate_mbps = 3;
+  double mb_per_minute = 4;
+  double gb_per_hour = 5;
+  string quality_equivalent = 6;
+}
+
+// ActiveRecordingEstimate gives real-time size estimates for the current settings.
+message ActiveRecordingEstimate {
+  double bitrate_mbps = 1;
+  double mb_per_minute = 2;
+  double mb_per_2_min = 3;
+  double gb_per_hour = 4;
+  int32 minutes_per_gb = 5;
+  string quality_equivalent = 6;
+}
+
+message GetQualityRequest {}
+
+message GetQualityResponse {
+  bool success = 1;
+  // Current recording quality tier name (e.g. "STANDARD").
+  string recording_quality = 2;
+  // Current codec name ("H264" or "H265").
+  string codec = 3;
+  // Current FPS setting.
+  int32 fps = 4;
+  // Per-tier options keyed by tier name (e.g. "ECONOMY", "STANDARD", etc.).
+  map<string, QualityTierInfo> recording_quality_options = 5;
+  ActiveRecordingEstimate active_recording_estimate = 6;
+  // Codec display options keyed by codec name.
+  map<string, string> codec_options = 7;
+  // FPS options keyed by numeric string (e.g. "15").
+  map<string, string> fps_options = 8;
+  string native_resolution = 9;
+}
+
+message SetQualityRequest {
+  // One of: ECONOMY, STANDARD, HIGH, PREMIUM, MAX. Leave empty to keep current.
+  string recording_quality = 1;
+  // One of: H264, H265. Leave empty to keep current.
+  string codec = 2;
+  // Streaming quality preset. Leave empty to keep current.
+  string streaming_quality = 3;
+  // FPS (10-30). 0 = keep current.
+  int32 fps = 4;
+}
+
+message SetQualityResponse {
+  bool success = 1;
+  string recording_quality = 2;
+  string codec = 3;
+  string message = 4;
+  string error = 5;
+}
+
+message GetAppearanceRequest {}
+
+message GetAppearanceResponse {
+  bool success = 1;
+  string theme = 2;
+  // BCP-47 locale tag or "auto".
+  string locale = 3;
+}
+
+message SetAppearanceRequest {
+  // One of: dark, light, auto. Leave empty to keep current.
+  string theme = 1;
+  // BCP-47 locale tag or "auto". Leave empty to keep current.
+  string locale = 2;
+}
+
+message SetAppearanceResponse {
+  bool success = 1;
+  string theme = 2;
+  string locale = 3;
+  string error = 4;
+}
+
+message GetLocaleRequest {}
+
+message GetLocaleResponse {
+  // Active BCP-47 locale tag.
+  string lang = 1;
+  // All supported tags mapped to true.
+  map<string, bool> supported = 2;
+}
+
+message SetLocaleRequest {
+  string lang = 1;
+}
+
+message SetLocaleResponse {
+  // Resolved locale tag that was applied.
+  string lang = 1;
+}

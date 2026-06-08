@@ -1,0 +1,52 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="brand-logo">
+      <img src="/shared/app-icon-glyph-dark.webp" alt="BladeWatch">
+    </div>
+    <h1 class="login-title">BladeWatch</h1>
+    <p class="login-subtitle">Enter your device token to access</p>
+
+    <div class="device-info">
+      <div class="device-info-label">Device ID</div>
+      <div class="device-info-value">{{ deviceId() }}</div>
+    </div>
+
+    @if (statusMessage()) {
+      <div class="status-message" [class]="statusMessage()!.type">
+        {{ statusMessage()!.text }}
+      </div>
+    }
+
+    <div class="form-group">
+      <label class="form-label">Access Code</label>
+      <input
+        type="text"
+        class="form-input"
+        [class.input-error]="error()"
+        [ngModel]="accessCode()"
+        (ngModelChange)="accessCode.set($event)"
+        (keypress)="onKeyPress($event)"
+        placeholder="xxxxxxxx"
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="8"
+      >
+      <p class="form-hint">Find this in your BladeWatch app → Dashboard → Access Code</p>
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="onSubmit()" [disabled]="loading()">
+      @if (loading()) {
+        <span class="spinner"></span>
+      } @else {
+        <span>Login</span>
+      }
+    </button>
+
+    <div class="login-footer">
+      <p>Your data stays on your device.</p>
+    </div>
+  </div>
+</div>

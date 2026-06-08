@@ -355,6 +355,23 @@ public class CameraDaemon {
         ipcServer = new SurveillanceIpcServer(19877);
         accMonitor = new AccMonitor();
 
+        // Register Connect protocol service implementations
+        net.bladewatch.app.server.connect.ConnectDispatcher cd =
+                httpServer.getConnectDispatcher();
+        new net.bladewatch.app.server.connect.impl.AuthServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.UpdateServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.NotificationsServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.SettingsServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.StreamServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.StorageServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.VehicleServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.SurveillanceServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.SafeLocationsServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.TripsServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.RecordingsServiceImpl().register(cd);
+        new net.bladewatch.app.server.connect.impl.SystemServiceImpl(httpServer).register(cd);
+        logT("Connect service impls registered");
+
         // Init app context. This will break the app if run in a thread
         if (sharedAppContext == null) {
             try {

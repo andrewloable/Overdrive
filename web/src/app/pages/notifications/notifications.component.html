@@ -1,0 +1,41 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Notifications</h1>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else {
+    @if (statusMsg()) {
+      <div class="status-banner">{{ statusMsg() }}</div>
+    }
+
+    <div class="card">
+      <div class="section-title">Push Subscriptions</div>
+      @for (sub of subscriptions(); track sub.id) {
+        <div class="sub-row">
+          <div class="sub-info">
+            <div class="sub-label">{{ sub.label || 'Browser' }}</div>
+            <div class="sub-meta">ID: {{ sub.id }}</div>
+          </div>
+          <button class="btn btn-danger btn-sm" (click)="unsubscribe(sub.id)">Remove</button>
+        </div>
+      } @empty {
+        <p class="empty-text">No push subscriptions yet.</p>
+      }
+    </div>
+
+    <div class="actions">
+      @if (vapidKey()) {
+        <button class="btn btn-primary" (click)="subscribe()" [disabled]="subscribing()">
+          {{ subscribing() ? 'Subscribing…' : 'Enable Push Notifications' }}
+        </button>
+      }
+      <button class="btn btn-secondary" (click)="sendTest()" [disabled]="testSending() || subscriptions().length === 0">
+        {{ testSending() ? 'Sending…' : 'Send Test' }}
+      </button>
+    </div>
+  }
+</div>

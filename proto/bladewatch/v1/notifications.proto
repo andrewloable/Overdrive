@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// NotificationsService manages Web Push subscriptions and notification preferences.
+//
+// HTTP mapping:
+//   GetCategories        GET  /api/notifications/categories
+//   Subscribe            POST /api/push/subscribe
+//   Unsubscribe          POST /api/push/unsubscribe
+//   ListSubscriptions    GET  /api/push/subscriptions
+//   UpdatePreferences    POST /api/push/preferences
+//   SendTest             POST /api/push/test
+service NotificationsService {
+  rpc GetCategories(GetCategoriesRequest) returns (GetCategoriesResponse);
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse);
+  rpc Unsubscribe(UnsubscribeRequest) returns (UnsubscribeResponse);
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+  rpc UpdatePreferences(UpdatePreferencesRequest) returns (UpdatePreferencesResponse);
+  rpc SendTest(SendTestRequest) returns (SendTestResponse);
+}
+
+// NotificationSeverity mirrors NotificationEvent.Severity.
+enum NotificationSeverity {
+  NOTIFICATION_SEVERITY_UNSPECIFIED = 0;
+  NOTIFICATION_SEVERITY_INFO = 1;
+  NOTIFICATION_SEVERITY_ALERT = 2;
+  NOTIFICATION_SEVERITY_CRITICAL = 3;
+}
+
+// QuietHoursPref defines a window (minutes since midnight) during which
+// non-critical push notifications are suppressed.
+message QuietHoursPref {
+  int32 start_min = 1;
+  int32 end_min = 2;
+  bool allow_critical = 3;
+}
+
+// PushKeys carries the ECDH/auth keys from the browser PushSubscription.
+message PushKeys {
+  string p256dh = 1;
+  string auth = 2;
+}
+
+// PushSubscriptionRecord is one registered device for the settings UI.
+message PushSubscriptionRecord {
+  string id = 1;
+  string label = 2;
+  int64 created_at = 3;
+  int64 last_seen_at = 4;
+  string min_severity = 5;
+  repeated string muted_categories = 6;
+  QuietHoursPref quiet_hours = 7;
+}
+
+message GetCategoriesRequest {}
+
+message GetCategoriesResponse {
+  // Forwarded registry JSON blob from CategoryRegistry.rawJson().
+  string categories_json = 1;
+  string vapid_public_key = 2;
+}
+
+message SubscribeRequest {
+  string endpoint = 1;
+  PushKeys keys = 2;
+  string label = 3;
+}
+
+message SubscribeResponse {
+  bool success = 1;
+  string id = 2;
+  string error = 3;
+}
+
+message UnsubscribeRequest {
+  // Either id or endpoint must be set.
+  string id = 1;
+  string endpoint = 2;
+}
+
+message UnsubscribeResponse {
+  bool success = 1;
+}
+
+message ListSubscriptionsRequest {}
+
+message ListSubscriptionsResponse {
+  bool success = 1;
+  repeated PushSubscriptionRecord subscriptions = 2;
+}
+
+message UpdatePreferencesRequest {
+  string id = 1;
+  repeated string muted_categories = 2;
+  string min_severity = 3;
+  // Set to null-equivalent (has_quiet_hours=false) to clear.
+  QuietHoursPref quiet_hours = 4;
+  bool has_quiet_hours = 5;
+}
+
+message UpdatePreferencesResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message SendTestRequest {
+  string category = 1;
+  string severity = 2;
+}
+
+message SendTestResponse {
+  bool success = 1;
+}

@@ -1,0 +1,219 @@
+:host {
+  display: block;
+  padding: 20px 16px;
+  color: var(--text-primary, #fff);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.page-header {
+  margin-bottom: 20px;
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    margin: 0;
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted, #71717A);
+}
+
+.error-card {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger, #EF4444);
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 14px;
+}
+
+.card {
+  background: var(--bg-surface, #16161A);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #71717A);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand-primary, #00D4AA) 0%, var(--brand-secondary, #0EA5E9) 100%);
+  color: #000;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3);
+  }
+}
+
+.btn-secondary {
+  background: var(--bg-elevated, #1E1E24);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.1));
+  color: var(--text-primary, #fff);
+
+  &:hover:not(:disabled) {
+    background: rgba(255,255,255,0.07);
+  }
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger, #EF4444);
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+  }
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #A1A1AA);
+  margin-bottom: 8px;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  background: var(--bg-elevated, #1E1E24);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.1));
+  border-radius: 10px;
+  color: var(--text-primary, #fff);
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--brand-primary, #00D4AA);
+  }
+}
+
+.form-select option {
+  background: #1E1E24;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.toggle-label {
+  font-size: 14px;
+  color: var(--text-primary, #fff);
+}
+
+.toggle-sub {
+  font-size: 12px;
+  color: var(--text-muted, #71717A);
+  margin-top: 2px;
+}
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-elevated, #1E1E24);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.1));
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+
+  &.on {
+    background: var(--brand-primary, #00D4AA);
+    border-color: var(--brand-primary, #00D4AA);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  &.on::after {
+    transform: translateX(20px);
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.active {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--success, #22C55E);
+  }
+
+  &.inactive {
+    background: rgba(113, 113, 122, 0.15);
+    color: var(--text-muted, #71717A);
+  }
+
+  &.warn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+  }
+}

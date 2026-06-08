@@ -20,3 +20,7 @@ screenshots
 
 # Beads / Dolt files (added by bd init)
 .beads-credential-key
+
+# Angular / Vite web UI
+web/node_modules/
+web/dist/

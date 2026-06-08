@@ -1,0 +1,276 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// TripsService manages trip analytics records, Driving DNA scores, and
+// personalised range estimation.
+//
+// HTTP mapping:
+//   ListTrips        GET    /api/trips
+//   GetTrip          GET    /api/trips/{id}
+//   DeleteTrip       DELETE /api/trips/{id}
+//   GetSummary       GET    /api/trips/summary
+//   GetDna           GET    /api/trips/dna
+//   GetRange         GET    /api/trips/range
+//   GetConfig        GET    /api/trips/config
+//   SetConfig        POST   /api/trips/config
+//   GetStorage       GET    /api/trips/storage
+//   SetStorage       POST   /api/trips/storage
+//   SyncTrips        POST   /api/trips/sync
+//   GetTelemetry     GET    /api/trips/{id}/telemetry
+//   GetSimilarTrips  GET    /api/trips/{id}/similar
+//   GetGpsTrace      GET    /api/trips/{id}/gps
+service TripsService {
+  rpc ListTrips(ListTripsRequest) returns (ListTripsResponse);
+  rpc GetTrip(GetTripRequest) returns (GetTripResponse);
+  rpc DeleteTrip(DeleteTripRequest) returns (DeleteTripResponse);
+  rpc GetSummary(GetSummaryRequest) returns (GetSummaryResponse);
+  rpc GetDna(GetDnaRequest) returns (GetDnaResponse);
+  rpc GetRange(GetRangeRequest) returns (GetRangeResponse);
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc GetStorage(GetStorageRequest) returns (GetStorageResponse);
+  rpc SetStorage(SetStorageRequest) returns (SetStorageResponse);
+  rpc SyncTrips(SyncTripsRequest) returns (SyncTripsResponse);
+  rpc GetTelemetry(GetTelemetryRequest) returns (GetTelemetryResponse);
+  rpc GetSimilarTrips(GetSimilarTripsRequest) returns (GetSimilarTripsResponse);
+  rpc GetGpsTrace(GetGpsTraceRequest) returns (GetGpsTraceResponse);
+}
+
+// TripSummary is a compact trip row for list views.
+message TripSummary {
+  int64 id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  double distance_km = 4;
+  int32 duration_seconds = 5;
+  double avg_speed_kmh = 6;
+  int32 max_speed_kmh = 7;
+  double soc_start = 8;
+  double soc_end = 9;
+  double energy_per_km = 10;
+  double trip_cost = 11;
+  string currency = 12;
+  int32 overall_score = 13;
+  string kinematic_state = 14;
+  string gradient_profile = 15;
+  double start_lat = 16;
+  double start_lon = 17;
+  double end_lat = 18;
+  double end_lon = 19;
+  int32 ext_temp_c = 20;
+}
+
+// TripDetail extends TripSummary with Driving DNA scores and micro-moments.
+message TripDetail {
+  TripSummary summary = 1;
+  int32 anticipation_score = 2;
+  int32 smoothness_score = 3;
+  int32 speed_discipline_score = 4;
+  int32 efficiency_score = 5;
+  int32 consistency_score = 6;
+  double elevation_gain_m = 7;
+  double elevation_loss_m = 8;
+  double avg_gradient_percent = 9;
+  // Raw micro-moments JSON blob.
+  string micro_moments_json = 10;
+}
+
+// DnaScores holds the five Driving DNA axes.
+message DnaScores {
+  int32 anticipation = 1;
+  int32 smoothness = 2;
+  int32 speed_discipline = 3;
+  int32 efficiency = 4;
+  int32 consistency = 5;
+  int32 overall = 6;
+}
+
+// WeeklyRollupEntry is one week-level trip summary row.
+message WeeklyRollupEntry {
+  // Raw JSON blob from WeeklyRollup.toJson().
+  string rollup_json = 1;
+}
+
+// TelemetrySample is one recorded data point during a trip.
+message TelemetrySample {
+  // Raw JSON blob from TelemetrySample.toJson().
+  string sample_json = 1;
+}
+
+// TripConfig controls trip recording behaviour.
+message TripConfig {
+  bool enabled = 1;
+  double electricity_rate = 2;
+  string currency = 3;
+  string distance_unit = 4;
+}
+
+// TripStorageInfo reports trips storage usage and limits.
+message TripStorageInfo {
+  string storage_type = 1;
+  int64 limit_mb = 2;
+  double used_mb = 3;
+  string used_unit = 4;
+  bool sd_card_available = 5;
+  int32 trips_count = 6;
+  string storage_path = 7;
+}
+
+// SimilarTripsStats carries aggregate statistics over similar-route trips.
+message SimilarTripsStats {
+  double avg_efficiency = 1;
+  double avg_score = 2;
+  double avg_duration_seconds = 3;
+  double avg_speed_kmh = 4;
+  double avg_cost = 5;
+  int64 best_trip_id = 6;
+  double best_efficiency = 7;
+  int64 worst_trip_id = 8;
+  double worst_efficiency = 9;
+}
+
+// GpsPoint is a [lat, lon] pair for lightweight GPS trace responses.
+message GpsPoint {
+  double lat = 1;
+  double lon = 2;
+}
+
+message ListTripsRequest {
+  int32 days = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListTripsResponse {
+  bool success = 1;
+  repeated TripSummary trips = 2;
+}
+
+message GetTripRequest {
+  int64 id = 1;
+}
+
+message GetTripResponse {
+  bool success = 1;
+  TripDetail trip = 2;
+  string error = 3;
+}
+
+message DeleteTripRequest {
+  int64 id = 1;
+}
+
+message DeleteTripResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GetSummaryRequest {
+  int32 days = 1;
+}
+
+message GetSummaryResponse {
+  bool success = 1;
+  repeated WeeklyRollupEntry summary = 2;
+}
+
+message GetDnaRequest {
+  int32 days = 1;
+}
+
+message GetDnaResponse {
+  bool success = 1;
+  DnaScores dna = 2;
+}
+
+message GetRangeRequest {}
+
+message GetRangeResponse {
+  bool success = 1;
+  // Raw JSON from RangeEstimate.toJson(), or empty when not enough data.
+  string range_json = 2;
+  string message = 3;
+}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+  bool success = 1;
+  TripConfig config = 2;
+}
+
+message SetConfigRequest {
+  bool enabled = 1;
+  bool has_enabled = 2;
+  double electricity_rate = 3;
+  bool has_electricity_rate = 4;
+  string currency = 5;
+  string distance_unit = 6;
+}
+
+message SetConfigResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GetStorageRequest {}
+
+message GetStorageResponse {
+  bool success = 1;
+  TripStorageInfo storage = 2;
+}
+
+message SetStorageRequest {
+  // "INTERNAL" or "SD_CARD". Leave empty to keep current.
+  string storage_type = 1;
+  int64 storage_limit_mb = 2;
+  bool has_storage_limit_mb = 3;
+}
+
+message SetStorageResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message SyncTripsRequest {}
+
+message SyncTripsResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GetTelemetryRequest {
+  int64 trip_id = 1;
+}
+
+message GetTelemetryResponse {
+  bool success = 1;
+  repeated TelemetrySample telemetry = 2;
+  string error = 3;
+}
+
+message GetSimilarTripsRequest {
+  int64 trip_id = 1;
+}
+
+message GetSimilarTripsResponse {
+  bool success = 1;
+  repeated TripSummary similar = 2;
+  int32 count = 3;
+  SimilarTripsStats stats = 4;
+  string error = 5;
+}
+
+message GetGpsTraceRequest {
+  int64 trip_id = 1;
+}
+
+message GetGpsTraceResponse {
+  bool success = 1;
+  repeated GpsPoint gps = 2;
+  string error = 3;
+}

@@ -8,6 +8,7 @@ import net.bladewatch.app.config.UnifiedConfigManager;
 import net.bladewatch.app.daemon.CameraDaemon;
 import net.bladewatch.app.monitor.AccMonitor;
 import net.bladewatch.app.monitor.BatteryMonitor;
+import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.surveillance.GpuPipelineConfig;
 import net.bladewatch.app.surveillance.HardwareEventRecorderGpu;
 
@@ -56,8 +57,15 @@ public class HttpServer {
     // Thread Pool to prevent server clogging (max 32 concurrent connections)
     private final ExecutorService threadPool = Executors.newFixedThreadPool(32);
 
+    private final ConnectDispatcher connectDispatcher = new ConnectDispatcher();
+
     public HttpServer(int port) {
         this.port = port;
+    }
+
+    /** Expose the ConnectDispatcher so service impls can register themselves. */
+    public ConnectDispatcher getConnectDispatcher() {
+        return connectDispatcher;
     }
 
     /**
@@ -229,6 +237,8 @@ public class HttpServer {
             String ifNoneMatchHeader = null;
             String cookieHeader = null;
             String authHeader = null;
+            String contentTypeHeader = null;
+            String connectVersionHeader = null;
             // Reverse-proxy fingerprints — used by AuthMiddleware to disable
             // the loopback safety net when a tunnel relayed the request.
             // zrok injects X-Forwarded-*.
@@ -256,6 +266,10 @@ public class HttpServer {
                     cookieHeader = line.substring(7).trim();
                 } else if (lower.startsWith("authorization:")) {
                     authHeader = line.substring(14).trim();
+                } else if (lower.startsWith("content-type:")) {
+                    contentTypeHeader = line.substring(13).trim();
+                } else if (lower.startsWith("connect-protocol-version:")) {
+                    connectVersionHeader = line.substring(25).trim();
                 } else if (lower.startsWith("accept-language:")) {
                     // First-touch locale hint. Only used if the user has never
                     // explicitly chosen via the picker (LocaleManager file empty).
@@ -393,7 +407,8 @@ public class HttpServer {
             }
 
             // Route to modular handlers first
-            if (routeToHandlers(method, path, body, rangeHeader, ifNoneMatchHeader, out)) {
+            if (routeToHandlers(method, path, body, rangeHeader, ifNoneMatchHeader,
+                    contentTypeHeader, connectVersionHeader, out)) {
                 // Handled by a modular handler
             }
             // Static pages
@@ -550,7 +565,16 @@ public class HttpServer {
      * @return true if handled by a handler
      */
     private boolean routeToHandlers(String method, String path, String body, String rangeHeader,
-                                     String ifNoneMatchHeader, OutputStream out) throws Exception {
+                                     String ifNoneMatchHeader, String contentTypeHeader,
+                                     String connectVersionHeader, OutputStream out) throws Exception {
+        // Connect protocol — routes /bladewatch.v1.ServiceName/Method to registered service impls.
+        // Auth middleware already ran before this call, so no extra JWT check needed here.
+        if (path.startsWith("/bladewatch.v1.")) {
+            connectDispatcher.dispatch(method, path, body,
+                    contentTypeHeader, connectVersionHeader, out);
+            return true;
+        }
+
         // Recordings API (with Range header support for video seeking) + thumbnails + event timelines
         if (path.startsWith("/api/recordings") || path.startsWith("/video/") ||
             path.startsWith("/thumb/") || path.startsWith("/api/events/")) {
@@ -673,6 +697,11 @@ public class HttpServer {
             out.flush();
             offset += count;
         }
+    }
+
+    /** Expose sendStatus for Connect service impls (ConnectHandlerUtil capture pattern). */
+    public void serveStatus(OutputStream out) throws Exception {
+        sendStatus(out);
     }
 
     private void sendStatus(OutputStream out) throws Exception {

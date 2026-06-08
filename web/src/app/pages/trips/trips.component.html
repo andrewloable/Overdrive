@@ -1,0 +1,55 @@
+<div class="page">
+  <div class="page-header"><h1>Trips</h1></div>
+  @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
+
+  @if (selectedTrip(); as trip) {
+    <div class="detail-view">
+      <button class="back-btn" (click)="closeDetail()">← Back</button>
+      <div class="detail-header">
+        <div class="detail-date">{{ trip.startTime ? (trip.startTime * 1000 | date:'medium') : '—' }}</div>
+        <button class="btn btn-danger btn-sm" (click)="deleteTrip(trip)">Delete</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Distance</div>
+          <div class="stat-value">{{ trip.distanceKm | number:'1.1-1' }} km</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Duration</div>
+          <div class="stat-value">{{ durationLabel(trip.durationSeconds) }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Speed</div>
+          <div class="stat-value">{{ trip.avgSpeedKmh | number:'1.0-0' }} km/h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Score</div>
+          <div class="stat-value">{{ trip.overallScore | number:'1.0-0' }}</div>
+        </div>
+      </div>
+      @if (mapsUrl(trip)) {
+        <a class="maps-link" [href]="mapsUrl(trip)" target="_blank" rel="noopener">Open route in Google Maps ↗</a>
+      }
+    </div>
+  } @else if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else {
+    <div class="trip-list">
+      @for (trip of trips(); track trip.id) {
+        <div class="trip-row" (click)="selectTrip(trip)">
+          <div class="trip-info">
+            <div class="trip-date">{{ trip.startTime ? (trip.startTime * 1000 | date:'mediumDate') : '—' }}</div>
+            <div class="trip-meta">{{ trip.distanceKm | number:'1.1-1' }} km · {{ durationLabel(trip.durationSeconds) }}</div>
+          </div>
+          <div class="trip-score" [class.good]="trip.overallScore >= 80" [class.warn]="trip.overallScore < 60">
+            {{ trip.overallScore | number:'1.0-0' }}
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-text">No trips recorded yet.</div>
+      }
+    </div>
+  }
+</div>

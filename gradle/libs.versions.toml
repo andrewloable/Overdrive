@@ -14,6 +14,7 @@ navigationKtx = "2.8.5"
 lifecycleKtx = "2.8.7"
 zxing = "3.5.3"
 osmdroid = "6.1.20"
+connectrpc-kotlin = "0.6.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +35,9 @@ androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifec
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleKtx" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+connectrpc-kotlin = { group = "com.connectrpc", name = "connect-kotlin", version.ref = "connectrpc-kotlin" }
+connectrpc-kotlin-okhttp = { group = "com.connectrpc", name = "connect-kotlin-okhttp", version.ref = "connectrpc-kotlin" }
+connectrpc-kotlin-google-java-ext = { group = "com.connectrpc", name = "connect-kotlin-google-java-ext", version.ref = "connectrpc-kotlin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

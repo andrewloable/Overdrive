@@ -1,0 +1,113 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Surveillance</h1>
+    <div class="status-badge" [class.active]="active()" [class.inactive]="!active()">
+      {{ active() ? 'Active' : 'Inactive' }}
+    </div>
+  </div>
+
+  @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else {
+    <div class="card">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Surveillance Mode</div>
+          <div class="toggle-sub">{{ pipelineRunning() ? 'Pipeline running' : 'Pipeline stopped' }}</div>
+        </div>
+        <button class="toggle" [class.on]="active()" (click)="toggle()" [disabled]="toggling()"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Detection Config</div>
+
+      <div class="form-group">
+        <label class="form-label">Sensitivity ({{ sensitivity() }})</label>
+        <input type="range" min="1" max="5" step="1" class="range-input"
+          [ngModel]="sensitivity()" (ngModelChange)="sensitivity.set($event)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Distance Preset</label>
+        <select class="form-select" [ngModel]="distancePreset()" (ngModelChange)="distancePreset.set($event)">
+          <option value="NEAR">Near</option>
+          <option value="SHORT">Short</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="BALANCED">Balanced</option>
+          <option value="LONG">Long</option>
+          <option value="FAR">Far</option>
+        </select>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">AI Detection</div>
+        <button class="toggle" [class.on]="aiEnabled()" (click)="aiEnabled.set(!aiEnabled())"></button>
+      </div>
+
+      @if (aiEnabled()) {
+        <div class="form-group">
+          <label class="form-label">AI Confidence ({{ aiConfidence() | number:'1.2-2' }})</label>
+          <input type="range" min="0" max="1" step="0.05" class="range-input"
+            [ngModel]="aiConfidence()" (ngModelChange)="aiConfidence.set(+$event)">
+        </div>
+      }
+
+      <div class="detect-row">
+        <label class="check-label"><input type="checkbox" [ngModel]="detectPerson()" (ngModelChange)="detectPerson.set($event)"> Person</label>
+        <label class="check-label"><input type="checkbox" [ngModel]="detectCar()" (ngModelChange)="detectCar.set($event)"> Car</label>
+        <label class="check-label"><input type="checkbox" [ngModel]="detectBike()" (ngModelChange)="detectBike.set($event)"> Bike</label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">Night Mode</div>
+        <button class="toggle" [class.on]="nightMode()" (click)="nightMode.set(!nightMode())"></button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" (click)="saveConfig()" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save Config' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        Live Snapshots
+        <button class="refresh-all-btn" (click)="loadAllSnapshots()">Refresh All</button>
+      </div>
+      <div class="snapshot-grid">
+        @for (q of quadrants; track q) {
+          <div class="snapshot-cell" (click)="loadSnapshot(q)">
+            @if (snapshotLoading()[q]) {
+              <div class="snap-loading">Loading…</div>
+            } @else if (snapshots()[q]) {
+              <img [src]="snapshots()[q]" [alt]="'Quadrant ' + q" class="snap-img">
+            } @else {
+              <div class="snap-placeholder">Cam {{ q }}<br><span>tap to load</span></div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        Safe Locations
+        <button class="toggle" [class.on]="safeLocationsEnabled()" (click)="toggleSafeLocations()" style="width:36px;height:20px"></button>
+      </div>
+      @for (zone of safeZones(); track zone.id) {
+        <div class="zone-row">
+          <div class="zone-name">{{ zone.name || zone.id }}</div>
+          <button class="btn btn-danger btn-sm" (click)="deleteZone(zone.id)">Remove</button>
+        </div>
+      } @empty {
+        <p class="empty-text">No safe zones configured.</p>
+      }
+    </div>
+  }
+</div>

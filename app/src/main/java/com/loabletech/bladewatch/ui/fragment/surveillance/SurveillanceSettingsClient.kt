@@ -1,268 +1,231 @@
 package net.bladewatch.app.ui.fragment.surveillance
 
-import net.bladewatch.app.auth.AuthManager
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.Proxy
-import java.net.URL
+import com.connectrpc.ResponseMessage
+import kotlinx.coroutines.runBlocking
+import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.grpc.v1.AddZoneRequest
+import net.bladewatch.app.grpc.v1.DeleteZoneRequest
+import net.bladewatch.app.grpc.v1.DisableSurveillanceRequest
+import net.bladewatch.app.grpc.v1.EnableSurveillanceRequest
+import net.bladewatch.app.grpc.v1.FormatVolumeRequest
+import net.bladewatch.app.grpc.v1.GetStatsRequest
+import net.bladewatch.app.grpc.v1.GetStorageSettingsRequest
+import net.bladewatch.app.grpc.v1.GetSurveillanceConfigRequest
+import net.bladewatch.app.grpc.v1.GetSurveillanceStatusRequest
+import net.bladewatch.app.grpc.v1.ListFormatVolumesRequest
+import net.bladewatch.app.grpc.v1.ListZonesRequest
+import net.bladewatch.app.grpc.v1.SetStorageSettingsRequest
+import net.bladewatch.app.grpc.v1.SetSurveillanceConfigRequest
+import net.bladewatch.app.grpc.v1.SyncSurveillanceCatalogRequest
+import net.bladewatch.app.grpc.v1.ToggleSafeLocationsRequest
 
 internal class SurveillanceSettingsClient {
 
-    fun fetchConfig(): SurveillanceConfig? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/surveillance/config", jwt) ?: return null
-        val cfg = json.optJSONObject("config") ?: json
-        return SurveillanceConfig(
-            enabled = cfg.optBoolean("enabled", false),
-            environmentPreset = cfg.optString("environmentPreset", "OUTDOOR"),
-            sensitivityLevel = cfg.optInt("sensitivityLevel", cfg.optInt("sensitivity", 3)),
-            detectPerson = cfg.optBoolean("detectPerson", true),
-            detectCar = cfg.optBoolean("detectCar", true),
-            detectBike = cfg.optBoolean("detectBike", true),
-            preRecordSeconds = cfg.optInt("preRecordSeconds", 5),
-            postRecordSeconds = cfg.optInt("postRecordSeconds", 10),
-            nightMode = cfg.optBoolean("nightMode", false),
-            aiEnabled = cfg.optBoolean("aiEnabled", true),
-            aiConfidence = cfg.optDouble("aiConfidence", 0.4).toFloat(),
-            cameraFront = cfg.optBoolean("cameraFront", true),
-            cameraRight = cfg.optBoolean("cameraRight", true),
-            cameraRear = cfg.optBoolean("cameraRear", true),
-            cameraLeft = cfg.optBoolean("cameraLeft", true),
-            deterrentAction = cfg.optString("deterrentAction", "silent"),
-            deterrentCooldownSeconds = cfg.optInt("deterrentCooldownSeconds", 60),
+    fun fetchConfig(): SurveillanceConfig? = runBlocking {
+        val resp = ConnectClientProvider.surveillanceService().getConfig(
+            GetSurveillanceConfigRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success || !resp.message.success) return@runBlocking null
+        val cfg = resp.message.config
+        SurveillanceConfig(
+            enabled = cfg.enabled,
+            environmentPreset = cfg.distancePreset.takeIf { it.isNotEmpty() } ?: "OUTDOOR",
+            sensitivityLevel = cfg.sensitivity.takeIf { it > 0 } ?: 3,
+            detectPerson = cfg.detectPerson,
+            detectCar = cfg.detectCar,
+            detectBike = cfg.detectBike,
+            preRecordSeconds = cfg.preRecordSeconds.takeIf { it > 0 } ?: 5,
+            postRecordSeconds = cfg.postRecordSeconds.takeIf { it > 0 } ?: 10,
+            nightMode = cfg.nightMode,
+            aiEnabled = cfg.aiEnabled,
+            aiConfidence = cfg.aiConfidence.toFloat().takeIf { it > 0f } ?: 0.4f,
+            cameraFront = true,
+            cameraRight = true,
+            cameraRear = true,
+            cameraLeft = true,
+            deterrentAction = "silent",
+            deterrentCooldownSeconds = 60,
         )
     }
 
-    fun fetchStatus(): SurveillanceStatus? {
-        val jwt = getJwt() ?: return null
-        val statusJson = httpGet("/api/surveillance/status", jwt)
-        val statsJson = httpGet("/api/recordings/stats", jwt)
-        val isRunning = statusJson?.optBoolean("running", false) ?: false
-        val eventsToday = statsJson?.optInt("sentryTodayCount", 0) ?: 0
-        return SurveillanceStatus(isRunning = isRunning, eventsToday = eventsToday)
+    fun fetchStatus(): SurveillanceStatus? = runBlocking {
+        val statusResp = ConnectClientProvider.surveillanceService().getStatus(
+            GetSurveillanceStatusRequest.newBuilder().build(), emptyMap()
+        )
+        val statsResp = ConnectClientProvider.recordingsService().getStats(
+            GetStatsRequest.newBuilder().build(), emptyMap()
+        )
+        val isRunning = statusResp is ResponseMessage.Success &&
+            (statusResp.message.pipelineRunning || statusResp.message.surveillanceActive)
+        val eventsToday = if (statsResp is ResponseMessage.Success)
+            statsResp.message.stats?.surveillanceCount ?: 0
+        else 0
+        SurveillanceStatus(isRunning = isRunning, eventsToday = eventsToday)
     }
 
-    fun fetchStorage(): SurveillanceStorageSettings? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/settings/storage", jwt) ?: return null
-        return SurveillanceStorageSettings(
-            storageType = json.optString("surveillanceStorageType", "INTERNAL"),
-            limitMb = json.optLong("surveillanceLimitMb", 500),
-            surveillanceSize = json.optLong("surveillanceSize", 0),
-            surveillanceCount = json.optLong("surveillanceCount", 0),
-            sdCardAvailable = json.optBoolean("sdCardAvailable", false),
-            path = json.optString("surveillancePath", ""),
-            minLimitMb = json.optLong("minLimitMb", 100),
-            maxLimitMb = json.optLong("maxLimitMb", 100000),
-            maxLimitMbSdCard = json.optLong("maxLimitMbSdCard", 100000),
-            internalTotalMb = json.optLong("internalTotalSpace", 0) / (1024L * 1024L),
-            sdCardTotalMb = json.optLong("sdCardTotalSpace", 0) / (1024L * 1024L),
+    fun fetchStorage(): SurveillanceStorageSettings? = runBlocking {
+        val resp = ConnectClientProvider.storageService().getStorageSettings(
+            GetStorageSettingsRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val m = resp.message
+        SurveillanceStorageSettings(
+            storageType = m.surveillanceStorageType.takeIf { it.isNotEmpty() } ?: "INTERNAL",
+            limitMb = m.surveillanceLimitMb.takeIf { it > 0 } ?: 500L,
+            surveillanceSize = m.surveillanceSizeBytes,
+            surveillanceCount = m.surveillanceCount.toLong(),
+            sdCardAvailable = m.sdCardAvailable,
+            path = m.surveillancePath,
+            minLimitMb = m.minLimitMb.takeIf { it > 0 } ?: 100L,
+            maxLimitMb = m.maxLimitMb.takeIf { it > 0 } ?: 100000L,
+            maxLimitMbSdCard = m.maxLimitMbSdCard.takeIf { it > 0 } ?: 100000L,
+            internalTotalMb = m.internalTotalBytes / (1024L * 1024L),
+            sdCardTotalMb = m.sdCardTotalBytes / (1024L * 1024L),
         )
     }
 
-    fun fetchSafeLocations(): SafeLocationsState? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/surveillance/safe-locations", jwt) ?: return null
-        val featureEnabled = json.optBoolean("featureEnabled", false)
-        val hasGps = json.optBoolean("hasGps", false)
-        val lat = json.optDouble("lat", 0.0)
-        val lng = json.optDouble("lng", 0.0)
-        val zonesArr = json.optJSONArray("zones")
-        val zones = mutableListOf<SafeZone>()
-        if (zonesArr != null) {
-            for (i in 0 until zonesArr.length()) {
-                val z = zonesArr.getJSONObject(i)
-                zones.add(SafeZone(
-                    id = z.optString("id"),
-                    name = z.optString("name", "Unnamed"),
-                    lat = z.optDouble("lat"),
-                    lng = z.optDouble("lng"),
-                    radiusM = z.optInt("radiusM", 150),
-                ))
-            }
+    fun fetchSafeLocations(): SafeLocationsState? = runBlocking {
+        val resp = ConnectClientProvider.safeLocationsService().listZones(
+            ListZonesRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val m = resp.message
+        val zones = m.zonesList.map { z ->
+            SafeZone(id = z.id, name = z.name, lat = z.lat, lng = z.lng, radiusM = z.radiusM)
         }
-        return SafeLocationsState(featureEnabled, zones, hasGps, lat, lng)
+        SafeLocationsState(
+            featureEnabled = m.featureEnabled,
+            zones = zones,
+            hasGps = false,
+            currentLat = 0.0,
+            currentLng = 0.0,
+        )
     }
 
-    fun saveConfig(config: SurveillanceConfig): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("enabled", config.enabled)
-            put("environmentPreset", config.environmentPreset)
-            put("sensitivityLevel", config.sensitivityLevel)
-            put("detectPerson", config.detectPerson)
-            put("detectCar", config.detectCar)
-            put("detectBike", config.detectBike)
-            put("preRecordSeconds", config.preRecordSeconds)
-            put("postRecordSeconds", config.postRecordSeconds)
-            put("nightMode", config.nightMode)
-            put("aiEnabled", config.aiEnabled)
-            put("aiConfidence", config.aiConfidence)
-            put("cameraFront", config.cameraFront)
-            put("cameraRight", config.cameraRight)
-            put("cameraRear", config.cameraRear)
-            put("cameraLeft", config.cameraLeft)
-            put("deterrentAction", config.deterrentAction)
-            put("deterrentCooldownSeconds", config.deterrentCooldownSeconds)
-        }.toString()
-        return httpPost("/api/surveillance/config", body, jwt) == 200
+    fun saveConfig(config: SurveillanceConfig): Boolean = runBlocking {
+        val protoConfig = net.bladewatch.app.grpc.v1.SurveillanceConfig.newBuilder()
+            .setEnabled(config.enabled)
+            .setSensitivity(config.sensitivityLevel)
+            .setDistancePreset(config.environmentPreset)
+            .setDetectPerson(config.detectPerson)
+            .setDetectCar(config.detectCar)
+            .setDetectBike(config.detectBike)
+            .setPreRecordSeconds(config.preRecordSeconds)
+            .setPostRecordSeconds(config.postRecordSeconds)
+            .setNightMode(config.nightMode)
+            .setAiEnabled(config.aiEnabled)
+            .setAiConfidence(config.aiConfidence.toDouble())
+            .build()
+        val req = SetSurveillanceConfigRequest.newBuilder().setConfig(protoConfig).build()
+        val resp = ConnectClientProvider.surveillanceService().setConfig(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
     }
 
-    fun toggleSurveillance(enable: Boolean): Boolean {
-        val jwt = getJwt() ?: return false
-        val path = if (enable) "/api/surveillance/enable" else "/api/surveillance/disable"
-        return httpPost(path, "", jwt) == 200
-    }
-
-    fun saveStorage(storageType: String, limitMb: Long): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("surveillanceStorageType", storageType)
-            put("surveillanceLimitMb", limitMb)
-        }.toString()
-        return httpPost("/api/settings/storage", body, jwt) == 200
-    }
-
-    fun toggleSafeLocations(enabled: Boolean): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply { put("enabled", enabled) }.toString()
-        return httpPost("/api/surveillance/safe-locations/toggle", body, jwt) == 200
-    }
-
-    fun addSafeZone(name: String, lat: Double, lng: Double, radiusM: Int): SafeZone? {
-        val jwt = getJwt() ?: return null
-        val body = JSONObject().apply {
-            put("name", name)
-            put("lat", lat)
-            put("lng", lng)
-            put("radiusM", radiusM)
-        }.toString()
-        val resp = httpPostJson("/api/surveillance/safe-locations", body, jwt) ?: return null
-        val z = resp.optJSONObject("zone") ?: return null
-        return SafeZone(z.optString("id"), z.optString("name", "Unnamed"), z.optDouble("lat"), z.optDouble("lng"), z.optInt("radiusM", 150))
-    }
-
-    fun deleteSafeZone(id: String): Boolean {
-        val jwt = getJwt() ?: return false
-        return httpDelete("/api/surveillance/safe-locations?id=$id", jwt) in 200..299
-    }
-
-    private fun getJwt(): String? = runCatching {
-        if (AuthManager.getState() == null) AuthManager.initialize()
-        AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-    }.getOrNull()
-
-    private fun httpGet(path: String, jwt: String): JSONObject? = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        if (conn.responseCode != 200) return null
-        JSONObject(conn.inputStream.bufferedReader().readText())
-    }.getOrNull()
-
-    private fun httpPost(path: String, body: String, jwt: String): Int = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        if (body.isNotEmpty()) {
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-        }
-        conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        if (body.isNotEmpty()) conn.outputStream.use { it.write(body.toByteArray()) }
-        conn.responseCode
-    }.getOrDefault(-1)
-
-    private fun httpPostJson(path: String, body: String, jwt: String): JSONObject? = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        conn.outputStream.use { it.write(body.toByteArray()) }
-        if (conn.responseCode !in 200..299) return null
-        JSONObject(conn.inputStream.bufferedReader().readText())
-    }.getOrNull()
-
-    private fun httpDelete(path: String, jwt: String): Int = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "DELETE"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        conn.responseCode
-    }.getOrDefault(-1)
-
-    // ── Format external drive ── Shared with the Recording storage view; both
-    // use the generic /api/storage/format endpoint (formats the physical SD/USB
-    // drive, which both recordings and surveillance share). Reuses the
-    // FormattableVolume / FormatDriveResult types from the recording package.
-    fun listFormattableVolumes(): List<net.bladewatch.app.ui.fragment.recording.FormattableVolume> {
-        val jwt = getJwt() ?: return emptyList()
-        val json = httpGet("/api/storage/format", jwt) ?: return emptyList()
-        val arr = json.optJSONArray("volumes") ?: return emptyList()
-        return (0 until arr.length()).mapNotNull { i ->
-            val v = arr.optJSONObject(i) ?: return@mapNotNull null
-            if (!v.optBoolean("mounted", false)) return@mapNotNull null
-            net.bladewatch.app.ui.fragment.recording.FormattableVolume(
-                volumeId = v.optString("volumeId"),
-                uuid = v.optString("uuid").takeIf { it != "null" && it.isNotEmpty() },
-                mountPath = v.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
+    fun toggleSurveillance(enable: Boolean): Boolean = runBlocking {
+        val resp = if (enable) {
+            ConnectClientProvider.surveillanceService().enable(
+                EnableSurveillanceRequest.newBuilder().build(), emptyMap()
+            )
+        } else {
+            ConnectClientProvider.surveillanceService().disable(
+                DisableSurveillanceRequest.newBuilder().build(), emptyMap()
             )
         }
+        resp is ResponseMessage.Success
     }
 
-    fun syncCatalog(): net.bladewatch.app.ui.fragment.recording.SyncResult {
-        val jwt = getJwt()
-            ?: return net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Not authenticated")
-        return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/surveillance/sync")
-                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 120_000
-            val responseBody = try { conn.inputStream.bufferedReader().readText() }
-                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
-            val json = JSONObject(responseBody)
-            if (json.optBoolean("success", false)) {
-                val added = json.optInt("added", 0)
-                val updated = json.optInt("updated", 0)
-                val removed = json.optInt("removed", 0)
-                val total = json.optInt("total", 0)
-                net.bladewatch.app.ui.fragment.recording.SyncResult(true, "Synced: +$added ~$updated -$removed ($total total)")
-            } else {
-                val error = json.optString("error", "Unknown error")
-                if (error == "sync_in_progress") net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync already in progress")
-                else net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync failed: $error")
+    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+        val req = SetStorageSettingsRequest.newBuilder()
+            .setSurveillanceStorageType(storageType)
+            .setSurveillanceLimitMb(limitMb)
+            .build()
+        val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
+    }
+
+    fun toggleSafeLocations(enabled: Boolean): Boolean = runBlocking {
+        val req = ToggleSafeLocationsRequest.newBuilder()
+            .setEnabled(enabled)
+            .setEnabledSet(true)
+            .build()
+        val resp = ConnectClientProvider.safeLocationsService().toggle(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
+    }
+
+    fun addSafeZone(name: String, lat: Double, lng: Double, radiusM: Int): SafeZone? = runBlocking {
+        val req = AddZoneRequest.newBuilder()
+            .setName(name)
+            .setLat(lat)
+            .setLng(lng)
+            .setRadiusM(radiusM)
+            .build()
+        val resp = ConnectClientProvider.safeLocationsService().addZone(req, emptyMap())
+        if (resp !is ResponseMessage.Success || !resp.message.success) return@runBlocking null
+        val z = resp.message.zone ?: return@runBlocking null
+        SafeZone(id = z.id, name = z.name, lat = z.lat, lng = z.lng, radiusM = z.radiusM)
+    }
+
+    fun deleteSafeZone(id: String): Boolean = runBlocking {
+        val req = DeleteZoneRequest.newBuilder().setId(id).build()
+        val resp = ConnectClientProvider.safeLocationsService().deleteZone(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
+    }
+
+    fun listFormattableVolumes(): List<net.bladewatch.app.ui.fragment.recording.FormattableVolume> = runBlocking {
+        val resp = ConnectClientProvider.storageService().listFormatVolumes(
+            ListFormatVolumesRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking emptyList()
+        resp.message.volumesList
+            .filter { it.mounted }
+            .map { v ->
+                net.bladewatch.app.ui.fragment.recording.FormattableVolume(
+                    volumeId = v.volumeId,
+                    uuid = v.uuid.takeIf { it.isNotEmpty() },
+                    mountPath = v.mountPath.takeIf { it.isNotEmpty() },
+                )
             }
-        }.getOrElse { e -> net.bladewatch.app.ui.fragment.recording.SyncResult(false, e.message ?: "Network error") }
     }
 
-    fun formatVolume(volumeId: String): net.bladewatch.app.ui.fragment.recording.FormatDriveResult {
-        val jwt = getJwt()
-            ?: return net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, "Not authenticated", null)
-        val body = JSONObject().apply { put("volumeId", volumeId) }.toString()
-        return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/storage/format")
-                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 60_000  // format can take up to 30s
-            conn.outputStream.use { it.write(body.toByteArray()) }
-            val responseBody = try { conn.inputStream.bufferedReader().readText() }
-                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
-            val json = JSONObject(responseBody)
-            net.bladewatch.app.ui.fragment.recording.FormatDriveResult(
-                success = json.optBoolean("success", false),
-                message = json.optString("message", json.optString("error", "Unknown result")),
-                mountPath = json.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
-            )
-        }.getOrElse { e ->
-            net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, e.message ?: "Network error", null)
+    fun syncCatalog(): net.bladewatch.app.ui.fragment.recording.SyncResult = runBlocking {
+        val resp = ConnectClientProvider.surveillanceService().syncCatalog(
+            SyncSurveillanceCatalogRequest.newBuilder().build(), emptyMap()
+        )
+        when (resp) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                if (m.success) {
+                    net.bladewatch.app.ui.fragment.recording.SyncResult(
+                        true, "Synced: +${m.added} -${m.removed}"
+                    )
+                } else {
+                    val err = m.error
+                    if (err == "sync_in_progress")
+                        net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync already in progress")
+                    else
+                        net.bladewatch.app.ui.fragment.recording.SyncResult(false, "Sync failed: $err")
+                }
+            }
+            is ResponseMessage.Failure ->
+                net.bladewatch.app.ui.fragment.recording.SyncResult(false, resp.cause.message ?: "Network error")
+        }
+    }
+
+    fun formatVolume(volumeId: String): net.bladewatch.app.ui.fragment.recording.FormatDriveResult = runBlocking {
+        val resp = ConnectClientProvider.storageService().formatVolume(
+            FormatVolumeRequest.newBuilder().setVolumeId(volumeId).build(), emptyMap()
+        )
+        when (resp) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                net.bladewatch.app.ui.fragment.recording.FormatDriveResult(
+                    success = m.success,
+                    message = m.message.takeIf { it.isNotEmpty() } ?: m.error.takeIf { it.isNotEmpty() } ?: "Unknown result",
+                    mountPath = m.mountPath.takeIf { it.isNotEmpty() },
+                )
+            }
+            is ResponseMessage.Failure ->
+                net.bladewatch.app.ui.fragment.recording.FormatDriveResult(false, resp.cause.message ?: "Network error", null)
         }
     }
 }

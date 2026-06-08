@@ -1,100 +1,104 @@
 package net.bladewatch.app.ui.fragment.trips
 
-import net.bladewatch.app.auth.AuthManager
+import com.connectrpc.ResponseMessage
+import kotlinx.coroutines.runBlocking
+import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.grpc.v1.GetConfigRequest
+import net.bladewatch.app.grpc.v1.GetDnaRequest
+import net.bladewatch.app.grpc.v1.GetRangeRequest
+import net.bladewatch.app.grpc.v1.GetStorageRequest
+import net.bladewatch.app.grpc.v1.GetSummaryRequest
+import net.bladewatch.app.grpc.v1.GetTelemetryRequest
+import net.bladewatch.app.grpc.v1.GetTripRequest
+import net.bladewatch.app.grpc.v1.ListTripsRequest
+import net.bladewatch.app.grpc.v1.SetConfigRequest
+import net.bladewatch.app.grpc.v1.SetStorageRequest
+import net.bladewatch.app.grpc.v1.SyncTripsRequest
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.Proxy
-import java.net.URL
 
 internal data class TripSyncResult(val success: Boolean, val message: String)
 
 internal class TripsClient {
 
-    fun fetchTrips(days: Int): List<TripItem> {
-        val jwt = getJwt() ?: return emptyList()
-        val json = httpGet("/api/trips?days=$days&limit=100", jwt) ?: return emptyList()
-        val arr = json.optJSONArray("trips") ?: return emptyList()
-        val result = mutableListOf<TripItem>()
-        for (i in 0 until arr.length()) {
-            val t = arr.getJSONObject(i)
-            result.add(
-                TripItem(
-                    id = t.optLong("id"),
-                    startTime = t.optLong("startTime"),
-                    endTime = t.optLong("endTime"),
-                    distanceKm = t.optDouble("distanceKm", 0.0),
-                    durationSeconds = t.optInt("durationSeconds", 0),
-                    overallScore = t.optInt("overallScore", 0),
-                    tripCost = t.optDouble("tripCost", 0.0),
-                    currency = t.optString("currency", ""),
-                    energyKwh = t.optDouble("energyUsedKwh", 0.0),
-                )
+    fun fetchTrips(days: Int): List<TripItem> = runBlocking {
+        val req = ListTripsRequest.newBuilder().setDays(days).setLimit(100).build()
+        val resp = ConnectClientProvider.tripsService().listTrips(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking emptyList()
+        resp.message.tripsList.map { t ->
+            TripItem(
+                id = t.id,
+                startTime = t.startTime,
+                endTime = t.endTime,
+                distanceKm = t.distanceKm,
+                durationSeconds = t.durationSeconds,
+                overallScore = t.overallScore,
+                tripCost = t.tripCost,
+                currency = t.currency,
+                energyKwh = 0.0, // proto TripSummary has energyPerKm, not energyUsedKwh
             )
         }
-        return result
     }
 
-    fun fetchTripDetail(tripId: Long): TripDetail? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/$tripId", jwt) ?: return null
-        val t = json.optJSONObject("trip") ?: return null
-        return TripDetail(
-            id = t.optLong("id"),
-            startTime = t.optLong("startTime"),
-            endTime = t.optLong("endTime"),
-            distanceKm = t.optDouble("distanceKm", 0.0),
-            durationSeconds = t.optInt("durationSeconds", 0),
-            avgSpeedKmh = t.optDouble("avgSpeedKmh", 0.0),
-            maxSpeedKmh = t.optDouble("maxSpeedKmh", 0.0),
-            socStart = t.optDouble("socStart", 0.0),
-            socEnd = t.optDouble("socEnd", 0.0),
-            energyUsedKwh = t.optDouble("energyUsedKwh", 0.0),
-            efficiencySocPerKm = t.optDouble("efficiencySocPerKm", 0.0),
-            currency = t.optString("currency", ""),
-            tripCost = t.optDouble("tripCost", 0.0),
-            gradientProfile = t.optString("gradientProfile", ""),
-            elevationGainM = t.optDouble("elevationGainM", 0.0),
-            elevationLossM = t.optDouble("elevationLossM", 0.0),
-            extTempC = t.optDouble("extTempC", 0.0),
-            anticipationScore = t.optInt("anticipationScore", 0),
-            smoothnessScore = t.optInt("smoothnessScore", 0),
-            speedDisciplineScore = t.optInt("speedDisciplineScore", 0),
-            efficiencyScore = t.optInt("efficiencyScore", 0),
-            consistencyScore = t.optInt("consistencyScore", 0),
-            overallScore = t.optInt("overallScore", 0),
-            telemetryFilePath = t.optString("telemetryFilePath", ""),
+    fun fetchTripDetail(tripId: Long): TripDetail? = runBlocking {
+        val req = GetTripRequest.newBuilder().setId(tripId).build()
+        val resp = ConnectClientProvider.tripsService().getTrip(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val t = resp.message.trip ?: return@runBlocking null
+        val s = t.summary ?: return@runBlocking null
+        TripDetail(
+            id = s.id,
+            startTime = s.startTime,
+            endTime = s.endTime,
+            distanceKm = s.distanceKm,
+            durationSeconds = s.durationSeconds,
+            avgSpeedKmh = s.avgSpeedKmh,
+            maxSpeedKmh = s.maxSpeedKmh.toDouble(),
+            socStart = s.socStart,
+            socEnd = s.socEnd,
+            energyUsedKwh = 0.0,
+            efficiencySocPerKm = 0.0,
+            currency = s.currency,
+            tripCost = s.tripCost,
+            gradientProfile = s.gradientProfile,
+            elevationGainM = t.elevationGainM,
+            elevationLossM = t.elevationLossM,
+            extTempC = s.extTempC.toDouble(),
+            anticipationScore = t.anticipationScore,
+            smoothnessScore = t.smoothnessScore,
+            speedDisciplineScore = t.speedDisciplineScore,
+            efficiencyScore = t.efficiencyScore,
+            consistencyScore = t.consistencyScore,
+            overallScore = s.overallScore,
+            telemetryFilePath = "",
         )
     }
 
-    fun fetchTelemetry(tripId: Long): List<TelemetryPoint> {
-        val jwt = getJwt() ?: return emptyList()
-        val json = httpGet("/api/trips/$tripId/telemetry", jwt) ?: return emptyList()
-        val arr = json.optJSONArray("telemetry") ?: return emptyList()
-        val result = ArrayList<TelemetryPoint>(arr.length())
-        for (i in 0 until arr.length()) {
-            val s = arr.optJSONObject(i) ?: continue
-            result.add(
-                TelemetryPoint(
-                    timestampMs = s.optLong("t", 0),
-                    speedKmh = s.optInt("s", 0),
-                    accelPercent = s.optInt("a", 0),
-                    brakePercent = s.optInt("b", 0),
-                    lat = s.optDouble("la", 0.0),
-                    lon = s.optDouble("lo", 0.0),
-                )
+    fun fetchTelemetry(tripId: Long): List<TelemetryPoint> = runBlocking {
+        val req = GetTelemetryRequest.newBuilder().setTripId(tripId).build()
+        val resp = ConnectClientProvider.tripsService().getTelemetry(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking emptyList()
+        resp.message.telemetryList.mapNotNull { sample ->
+            val json = runCatching { JSONObject(sample.sampleJson) }.getOrNull()
+                ?: return@mapNotNull null
+            TelemetryPoint(
+                timestampMs = json.optLong("t", 0),
+                speedKmh = json.optInt("s", 0),
+                accelPercent = json.optInt("a", 0),
+                brakePercent = json.optInt("b", 0),
+                lat = json.optDouble("la", 0.0),
+                lon = json.optDouble("lo", 0.0),
             )
         }
-        return result
     }
 
-    fun fetchSummary(days: Int): TripsSummary? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/summary?days=$days", jwt) ?: return null
-        val arr = json.optJSONArray("summary") ?: return null
+    fun fetchSummary(days: Int): TripsSummary? = runBlocking {
+        val req = GetSummaryRequest.newBuilder().setDays(days).build()
+        val resp = ConnectClientProvider.tripsService().getSummary(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
         var tripCount = 0; var totalDist = 0.0; var totalDur = 0
         var totalEnergy = 0.0; var totalEfficiency = 0.0; var energyPerKmSum = 0.0
-        for (i in 0 until arr.length()) {
-            val r = arr.getJSONObject(i)
+        for (entry in resp.message.summaryList) {
+            val r = runCatching { JSONObject(entry.rollupJson) }.getOrNull() ?: continue
             tripCount += r.optInt("tripCount")
             totalDist += r.optDouble("totalDistanceKm", 0.0)
             totalDur += r.optInt("totalDurationSeconds")
@@ -102,8 +106,8 @@ internal class TripsClient {
             totalEfficiency += r.optDouble("avgEfficiency", 0.0)
             energyPerKmSum += r.optDouble("avgEnergyPerKm", 0.0)
         }
-        val count = arr.length()
-        return TripsSummary(
+        val count = resp.message.summaryList.size
+        TripsSummary(
             tripCount = tripCount,
             totalDistanceKm = totalDist,
             totalDurationSeconds = totalDur,
@@ -113,126 +117,93 @@ internal class TripsClient {
         )
     }
 
-    fun fetchDna(days: Int): DnaScores? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/dna?days=$days", jwt) ?: return null
-        val dna = json.optJSONObject("dna") ?: return null
-        return DnaScores(
-            anticipation = dna.optInt("anticipation"),
-            smoothness = dna.optInt("smoothness"),
-            speedDiscipline = dna.optInt("speedDiscipline"),
-            efficiency = dna.optInt("efficiency"),
-            consistency = dna.optInt("consistency"),
-            overall = dna.optInt("overall"),
+    fun fetchDna(days: Int): DnaScores? = runBlocking {
+        val req = GetDnaRequest.newBuilder().setDays(days).build()
+        val resp = ConnectClientProvider.tripsService().getDna(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val dna = resp.message.dna ?: return@runBlocking null
+        DnaScores(
+            anticipation = dna.anticipation,
+            smoothness = dna.smoothness,
+            speedDiscipline = dna.speedDiscipline,
+            efficiency = dna.efficiency,
+            consistency = dna.consistency,
+            overall = dna.overall,
         )
     }
 
-    fun fetchRange(): RangeEstimate? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/range", jwt) ?: return null
-        val range = json.optJSONObject("range") ?: return null
-        return RangeEstimate(
+    fun fetchRange(): RangeEstimate? = runBlocking {
+        val req = GetRangeRequest.newBuilder().build()
+        val resp = ConnectClientProvider.tripsService().getRange(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val json = runCatching { JSONObject(resp.message.rangeJson) }.getOrNull()
+            ?: return@runBlocking null
+        val range = json.optJSONObject("range") ?: json
+        RangeEstimate(
             estimatedKm = range.optDouble("estimatedKm", 0.0),
             builtInKm = range.optDouble("builtInRangeKm", 0.0),
             soc = range.optDouble("soc", 0.0),
         )
     }
 
-    fun fetchConfig(): TripsConfig? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/config", jwt) ?: return null
-        val cfg = json.optJSONObject("config") ?: return null
-        return TripsConfig(
-            enabled = cfg.optBoolean("enabled", false),
-            electricityRate = cfg.optDouble("electricityRate", 0.0),
-            currency = cfg.optString("currency", "USD"),
-            distanceUnit = cfg.optString("distanceUnit", "km"),
+    fun fetchConfig(): TripsConfig? = runBlocking {
+        val req = GetConfigRequest.newBuilder().build()
+        val resp = ConnectClientProvider.tripsService().getConfig(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val cfg = resp.message.config ?: return@runBlocking null
+        TripsConfig(
+            enabled = cfg.enabled,
+            electricityRate = cfg.electricityRate,
+            currency = cfg.currency,
+            distanceUnit = cfg.distanceUnit,
         )
     }
 
-    fun saveConfig(enabled: Boolean, rate: Double, currency: String, distanceUnit: String): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("enabled", enabled)
-            put("electricityRate", rate)
-            put("currency", currency)
-            put("distanceUnit", distanceUnit)
-        }.toString()
-        return httpPost("/api/trips/config", body, jwt) == 200
+    fun saveConfig(enabled: Boolean, rate: Double, currency: String, distanceUnit: String): Boolean = runBlocking {
+        val req = SetConfigRequest.newBuilder()
+            .setEnabled(enabled)
+            .setHasEnabled(true)
+            .setElectricityRate(rate)
+            .setHasElectricityRate(true)
+            .setCurrency(currency)
+            .setDistanceUnit(distanceUnit)
+            .build()
+        val resp = ConnectClientProvider.tripsService().setConfig(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
     }
 
-    fun fetchStorage(): TripsStorage? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/trips/storage", jwt) ?: return null
-        val s = json.optJSONObject("storage") ?: return null
-        return TripsStorage(
-            storageType = s.optString("storageType", "INTERNAL"),
-            limitMb = s.optLong("limitMb", 500),
-            usedMb = s.optDouble("usedMb", 0.0),
-            usedUnit = s.optString("usedUnit", "MB"),
-            sdCardAvailable = s.optBoolean("sdCardAvailable", false),
-            tripsCount = s.optInt("tripsCount", 0),
-            storagePath = s.optString("storagePath", ""),
+    fun fetchStorage(): TripsStorage? = runBlocking {
+        val req = GetStorageRequest.newBuilder().build()
+        val resp = ConnectClientProvider.tripsService().getStorage(req, emptyMap())
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val s = resp.message.storage ?: return@runBlocking null
+        TripsStorage(
+            storageType = s.storageType,
+            limitMb = s.limitMb,
+            usedMb = s.usedMb,
+            usedUnit = s.usedUnit,
+            sdCardAvailable = s.sdCardAvailable,
+            tripsCount = s.tripsCount,
+            storagePath = s.storagePath,
         )
     }
 
-    fun saveStorage(storageType: String, limitMb: Long): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("storageType", storageType)
-            put("storageLimitMb", limitMb)
-        }.toString()
-        return httpPost("/api/trips/storage", body, jwt) == 200
+    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+        val req = SetStorageRequest.newBuilder()
+            .setStorageType(storageType)
+            .setStorageLimitMb(limitMb)
+            .setHasStorageLimitMb(true)
+            .build()
+        val resp = ConnectClientProvider.tripsService().setStorage(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
     }
 
-    fun syncDatabase(): TripSyncResult {
-        val jwt = getJwt() ?: return TripSyncResult(false, "Not authenticated")
-        return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/trips/sync")
-                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 120_000
-            val responseBody = try { conn.inputStream.bufferedReader().readText() }
-                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
-            val json = JSONObject(responseBody)
-            if (json.optBoolean("success", false)) {
-                val added = json.optInt("added", 0)
-                val removed = json.optInt("removed", 0)
-                val total = json.optInt("total", 0)
-                TripSyncResult(true, "Synced: +$added -$removed ($total total)")
-            } else {
-                val error = json.optString("error", "Unknown error")
-                TripSyncResult(false, "Sync failed: $error")
-            }
-        }.getOrElse { e -> TripSyncResult(false, e.message ?: "Network error") }
+    fun syncDatabase(): TripSyncResult = runBlocking {
+        val req = SyncTripsRequest.newBuilder().build()
+        val resp = ConnectClientProvider.tripsService().syncTrips(req, emptyMap())
+        when (resp) {
+            is ResponseMessage.Success -> TripSyncResult(resp.message.success, "Synced successfully")
+            is ResponseMessage.Failure -> TripSyncResult(false, resp.cause.message ?: "Network error")
+        }
     }
-
-    private fun getJwt(): String? = runCatching {
-        if (AuthManager.getState() == null) AuthManager.initialize()
-        AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-    }.getOrNull()
-
-    private fun httpGet(path: String, jwt: String): JSONObject? = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.connectTimeout = 5_000
-        conn.readTimeout = 10_000
-        if (conn.responseCode != 200) return null
-        JSONObject(conn.inputStream.bufferedReader().readText())
-    }.getOrNull()
-
-    private fun httpPost(path: String, body: String, jwt: String): Int = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.doOutput = true
-        conn.connectTimeout = 5_000
-        conn.readTimeout = 10_000
-        conn.outputStream.use { it.write(body.toByteArray()) }
-        conn.responseCode
-    }.getOrDefault(-1)
 }

@@ -1,6 +1,18 @@
 package net.bladewatch.app.ui.fragment.recording
 
+import com.connectrpc.ResponseMessage
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.auth.AuthManager
+import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.grpc.v1.FormatVolumeRequest
+import net.bladewatch.app.grpc.v1.GetQualityRequest
+import net.bladewatch.app.grpc.v1.GetStatsRequest
+import net.bladewatch.app.grpc.v1.GetStatusRequest
+import net.bladewatch.app.grpc.v1.GetStorageSettingsRequest
+import net.bladewatch.app.grpc.v1.ListFormatVolumesRequest
+import net.bladewatch.app.grpc.v1.SetQualityRequest
+import net.bladewatch.app.grpc.v1.SetStorageSettingsRequest
+import net.bladewatch.app.grpc.v1.SyncCatalogRequest
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.Proxy
@@ -12,15 +24,23 @@ internal data class SyncResult(val success: Boolean, val message: String)
 
 internal class RecordingSettingsClient {
 
-    fun fetchStatus(): RecordingStatus? {
-        val jwt = getJwt() ?: return null
-        val modeJson = httpGet("/api/recording/mode", jwt)
-        val statsJson = httpGet("/api/recordings/stats", jwt)
-        val mode = modeJson?.optString("mode", "UNKNOWN") ?: "UNKNOWN"
-        val isRecording = modeJson?.optString("status") == "ok" && mode != "NONE"
-        val normalToday = statsJson?.optInt("normalTodayCount", 0) ?: 0
-        val proxToday = statsJson?.optInt("proximityTodayCount", 0) ?: 0
-        return RecordingStatus(
+    fun fetchStatus(): RecordingStatus? = runBlocking {
+        val statusResp = ConnectClientProvider.systemService().getStatus(
+            GetStatusRequest.newBuilder().build(), emptyMap()
+        )
+        val statsResp = ConnectClientProvider.recordingsService().getStats(
+            GetStatsRequest.newBuilder().build(), emptyMap()
+        )
+        val recStatus = if (statusResp is ResponseMessage.Success) statusResp.message.recordingStatus else null
+        val mode = recStatus?.configuredMode?.takeIf { it.isNotEmpty() } ?: "UNKNOWN"
+        val isRecording = recStatus?.isRecording ?: false
+        val normalToday = if (statsResp is ResponseMessage.Success)
+            statsResp.message.stats?.recordingsCount ?: 0
+        else 0
+        val proxToday = if (statsResp is ResponseMessage.Success)
+            statsResp.message.stats?.proximityCount ?: 0
+        else 0
+        RecordingStatus(
             currentMode = mode,
             isRecording = isRecording,
             normalTodayCount = normalToday,
@@ -28,160 +48,148 @@ internal class RecordingSettingsClient {
         )
     }
 
-    fun fetchQuality(): RecordingQualitySettings? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/settings/quality", jwt) ?: return null
-        val q = json.optString("recordingQuality", json.optString("quality", "STANDARD"))
-        // Daemon GET returns the codec under "recordingCodec" (see
-        // QualitySettingsApiHandler.sendQualitySettings). Reading "codec" here
-        // always missed it and silently fell back to H264.
-        val codec = json.optString("recordingCodec", json.optString("codec", "H264"))
-        return RecordingQualitySettings(
-            quality = RecordingQuality.fromValue(q),
-            codec = codec,
-            segmentMinutes = json.optInt("recordingSegmentMinutes", 5),
+    fun fetchQuality(): RecordingQualitySettings? = runBlocking {
+        val resp = ConnectClientProvider.settingsService().getQuality(
+            GetQualityRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val m = resp.message
+        RecordingQualitySettings(
+            quality = RecordingQuality.fromValue(m.recordingQuality.takeIf { it.isNotEmpty() } ?: "STANDARD"),
+            codec = m.codec.takeIf { it.isNotEmpty() } ?: "H264",
+            segmentMinutes = 5,
         )
     }
 
-    fun fetchStorage(): RecordingStorageSettings? {
-        val jwt = getJwt() ?: return null
-        val json = httpGet("/api/settings/storage", jwt) ?: return null
-        return RecordingStorageSettings(
-            storageType = json.optString("recordingsStorageType", "INTERNAL"),
-            limitMb = json.optLong("recordingsLimitMb", 500),
-            recordingsSize = json.optLong("recordingsSize", 0),
-            recordingsCount = json.optLong("recordingsCount", 0),
-            sdCardAvailable = json.optBoolean("sdCardAvailable", false),
-            sdCardFreeFormatted = json.optString("sdCardFreeFormatted", ""),
-            internalFreeFormatted = json.optString("internalFreeFormatted", ""),
-            recordingsPath = json.optString("recordingsPath", ""),
-            minLimitMb = json.optLong("minLimitMb", 100),
-            maxLimitMb = json.optLong("maxLimitMb", 100000),
-            maxLimitMbSdCard = json.optLong("maxLimitMbSdCard", 100000),
-            internalTotalMb = json.optLong("internalTotalSpace", 0) / (1024L * 1024L),
-            sdCardTotalMb = json.optLong("sdCardTotalSpace", 0) / (1024L * 1024L),
+    fun fetchStorage(): RecordingStorageSettings? = runBlocking {
+        val resp = ConnectClientProvider.storageService().getStorageSettings(
+            GetStorageSettingsRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val m = resp.message
+        RecordingStorageSettings(
+            storageType = m.recordingsStorageType.takeIf { it.isNotEmpty() } ?: "INTERNAL",
+            limitMb = m.recordingsLimitMb.takeIf { it > 0 } ?: 500L,
+            recordingsSize = m.recordingsSizeBytes,
+            recordingsCount = m.recordingsCount.toLong(),
+            sdCardAvailable = m.sdCardAvailable,
+            sdCardFreeFormatted = m.sdCardFreeFormatted,
+            internalFreeFormatted = m.internalFreeFormatted,
+            recordingsPath = m.recordingsPath,
+            minLimitMb = m.minLimitMb.takeIf { it > 0 } ?: 100L,
+            maxLimitMb = m.maxLimitMb.takeIf { it > 0 } ?: 100000L,
+            maxLimitMbSdCard = m.maxLimitMbSdCard.takeIf { it > 0 } ?: 100000L,
+            internalTotalMb = m.internalTotalBytes / (1024L * 1024L),
+            sdCardTotalMb = m.sdCardTotalBytes / (1024L * 1024L),
         )
     }
 
     fun saveMode(mode: String): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply { put("mode", mode) }.toString()
-        return httpPost("/api/recording/mode", body, jwt) == 200
-    }
-
-    fun saveQuality(quality: String, codec: String): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("recordingQuality", quality)
-            // Daemon POST handler reads "recordingCodec" (not "codec"), so
-            // sending "codec" meant the codec change was silently dropped and
-            // H265 never persisted.
-            put("recordingCodec", codec)
-        }.toString()
-        return httpPost("/api/settings/quality", body, jwt) == 200
-    }
-
-    fun saveRecordingLimit(segmentMinutes: Int): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply { put("recordingSegmentMinutes", segmentMinutes) }.toString()
-        return httpPost("/api/settings/quality", body, jwt) == 200
-    }
-
-    fun saveStorage(storageType: String, limitMb: Long): Boolean {
-        val jwt = getJwt() ?: return false
-        val body = JSONObject().apply {
-            put("recordingsStorageType", storageType)
-            put("recordingsLimitMb", limitMb)
-        }.toString()
-        return httpPost("/api/settings/storage", body, jwt) == 200
-    }
-
-    fun listFormattableVolumes(): List<FormattableVolume> {
-        val jwt = getJwt() ?: return emptyList()
-        val json = httpGet("/api/storage/format", jwt) ?: return emptyList()
-        val arr = json.optJSONArray("volumes") ?: return emptyList()
-        return (0 until arr.length()).mapNotNull { i ->
-            val v = arr.optJSONObject(i) ?: return@mapNotNull null
-            if (!v.optBoolean("mounted", false)) return@mapNotNull null
-            FormattableVolume(
-                volumeId = v.optString("volumeId"),
-                uuid = v.optString("uuid").takeIf { it != "null" && it.isNotEmpty() },
-                mountPath = v.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
-            )
-        }
-    }
-
-    fun formatVolume(volumeId: String): FormatDriveResult {
-        val jwt = getJwt() ?: return FormatDriveResult(false, "Not authenticated", null)
-        val body = JSONObject().apply { put("volumeId", volumeId) }.toString()
+        // No ConnectRPC endpoint for /api/recording/mode — fall back to HTTP.
+        val jwt = runCatching {
+            if (AuthManager.getState() == null) AuthManager.initialize()
+            AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
+        }.getOrNull() ?: return false
         return runCatching {
-            val conn = java.net.URL("http://127.0.0.1:8080/api/storage/format")
-                .openConnection(java.net.Proxy.NO_PROXY) as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 60_000  // format can take up to 30s
-            conn.outputStream.use { it.write(body.toByteArray()) }
-            val responseBody = try { conn.inputStream.bufferedReader().readText() }
-                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
-            val json = JSONObject(responseBody)
-            FormatDriveResult(
-                success = json.optBoolean("success", false),
-                message = json.optString("message", json.optString("error", "Unknown result")),
-                mountPath = json.optString("mountPath").takeIf { it != "null" && it.isNotEmpty() }
-            )
-        }.getOrElse { e -> FormatDriveResult(false, e.message ?: "Network error", null) }
-    }
-
-    fun syncCatalog(): SyncResult {
-        val jwt = getJwt() ?: return SyncResult(false, "Not authenticated")
-        return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/recordings/sync")
+            val conn = URL("http://127.0.0.1:8080/api/recording/mode")
                 .openConnection(Proxy.NO_PROXY) as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.connectTimeout = 5_000
-            conn.readTimeout = 120_000
-            val responseBody = try { conn.inputStream.bufferedReader().readText() }
-                               catch (_: Exception) { conn.errorStream?.bufferedReader()?.readText() ?: "" }
-            val json = JSONObject(responseBody)
-            if (json.optBoolean("success", false)) {
-                val added = json.optInt("added", 0)
-                val updated = json.optInt("updated", 0)
-                val removed = json.optInt("removed", 0)
-                val total = json.optInt("total", 0)
-                SyncResult(true, "Synced: +$added ~$updated -$removed ($total total)")
-            } else {
-                val error = json.optString("error", "Unknown error")
-                if (error == "sync_in_progress") SyncResult(false, "Sync already in progress")
-                else SyncResult(false, "Sync failed: $error")
-            }
-        }.getOrElse { e -> SyncResult(false, e.message ?: "Network error") }
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
+            conn.outputStream.use { it.write(JSONObject().apply { put("mode", mode) }.toString().toByteArray()) }
+            conn.responseCode == 200
+        }.getOrDefault(false)
     }
 
-    private fun getJwt(): String? = runCatching {
-        if (AuthManager.getState() == null) AuthManager.initialize()
-        AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-    }.getOrNull()
+    fun saveQuality(quality: String, codec: String): Boolean = runBlocking {
+        val req = SetQualityRequest.newBuilder()
+            .setRecordingQuality(quality)
+            .setCodec(codec)
+            .build()
+        val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
+    }
 
-    private fun httpGet(path: String, jwt: String): JSONObject? = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        if (conn.responseCode != 200) return null
-        JSONObject(conn.inputStream.bufferedReader().readText())
-    }.getOrNull()
+    fun saveRecordingLimit(segmentMinutes: Int): Boolean {
+        // Proto SetQualityRequest has no recordingSegmentMinutes field — fall back to HTTP.
+        val jwt = runCatching {
+            if (AuthManager.getState() == null) AuthManager.initialize()
+            AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
+        }.getOrNull() ?: return false
+        return runCatching {
+            val conn = URL("http://127.0.0.1:8080/api/settings/quality")
+                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Authorization", "Bearer $jwt")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
+            conn.outputStream.use {
+                it.write(JSONObject().apply { put("recordingSegmentMinutes", segmentMinutes) }.toString().toByteArray())
+            }
+            conn.responseCode == 200
+        }.getOrDefault(false)
+    }
 
-    private fun httpPost(path: String, body: String, jwt: String): Int = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-        conn.outputStream.use { it.write(body.toByteArray()) }
-        conn.responseCode
-    }.getOrDefault(-1)
+    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+        val req = SetStorageSettingsRequest.newBuilder()
+            .setRecordingsStorageType(storageType)
+            .setRecordingsLimitMb(limitMb)
+            .build()
+        val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
+    }
+
+    fun listFormattableVolumes(): List<FormattableVolume> = runBlocking {
+        val resp = ConnectClientProvider.storageService().listFormatVolumes(
+            ListFormatVolumesRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking emptyList()
+        resp.message.volumesList
+            .filter { it.mounted }
+            .map { v ->
+                FormattableVolume(
+                    volumeId = v.volumeId,
+                    uuid = v.uuid.takeIf { it.isNotEmpty() },
+                    mountPath = v.mountPath.takeIf { it.isNotEmpty() },
+                )
+            }
+    }
+
+    fun formatVolume(volumeId: String): FormatDriveResult = runBlocking {
+        val resp = ConnectClientProvider.storageService().formatVolume(
+            FormatVolumeRequest.newBuilder().setVolumeId(volumeId).build(), emptyMap()
+        )
+        when (resp) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                FormatDriveResult(
+                    success = m.success,
+                    message = m.message.takeIf { it.isNotEmpty() } ?: m.error.takeIf { it.isNotEmpty() } ?: "Unknown result",
+                    mountPath = m.mountPath.takeIf { it.isNotEmpty() },
+                )
+            }
+            is ResponseMessage.Failure ->
+                FormatDriveResult(false, resp.cause.message ?: "Network error", null)
+        }
+    }
+
+    fun syncCatalog(): SyncResult = runBlocking {
+        val resp = ConnectClientProvider.recordingsService().syncCatalog(
+            SyncCatalogRequest.newBuilder().build(), emptyMap()
+        )
+        when (resp) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                if (m.success) {
+                    SyncResult(true, "Synced: +${m.added} -${m.removed}")
+                } else {
+                    val err = m.error
+                    if (err == "sync_in_progress") SyncResult(false, "Sync already in progress")
+                    else SyncResult(false, "Sync failed: $err")
+                }
+            }
+            is ResponseMessage.Failure -> SyncResult(false, resp.cause.message ?: "Network error")
+        }
+    }
 }

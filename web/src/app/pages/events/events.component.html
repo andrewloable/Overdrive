@@ -1,0 +1,39 @@
+<div class="page">
+  <div class="page-header"><h1>Events</h1></div>
+
+  @if (activeVideo(); as rec) {
+    <div class="video-overlay" (click)="closeVideo()">
+      <div class="video-container" (click)="$event.stopPropagation()">
+        <button class="close-btn" (click)="closeVideo()">✕</button>
+        <video [src]="'/video/' + rec.filename" controls autoplay class="video-player"></video>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else {
+    <div class="event-list">
+      @for (ev of events(); track ev.filename) {
+        <div class="event-card" (click)="playVideo(ev)">
+          <div class="thumb-wrap">
+            <img [src]="'/thumb/' + ev.filename" [alt]="ev.filename" class="thumb" loading="lazy">
+            <div class="play-icon">▶</div>
+          </div>
+          <div class="event-info">
+            <div class="event-badge" [class]="typeBadge(ev.type)">{{ typeBadge(ev.type) }}</div>
+            <div class="event-time">{{ ev.timestampMs ? (ev.timestampMs | date:'mediumDate') : ev.dateLabel }}</div>
+            <div class="event-time-detail">{{ ev.timestampMs ? (ev.timestampMs | date:'shortTime') : ev.timeLabel }}</div>
+            @if (ev.detectedClasses && ev.detectedClasses.length > 0) {
+              <div class="event-classes">{{ ev.detectedClasses.join(', ') }}</div>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-text">No sentry events recorded.</div>
+      }
+    </div>
+  }
+</div>

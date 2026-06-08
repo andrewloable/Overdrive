@@ -1,0 +1,31 @@
+@import '../../shared/page-shared';
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--text-muted, #71717A);
+}
+
+.info-value {
+  font-size: 14px;
+  color: var(--text-primary, #fff);
+  font-weight: 500;
+
+  &.mono { font-family: monospace; color: var(--brand-primary, #00D4AA); }
+}
+
+.about-text {
+  font-size: 14px;
+  color: var(--text-secondary, #A1A1AA);
+  line-height: 1.6;
+  margin: 0 0 8px;
+}

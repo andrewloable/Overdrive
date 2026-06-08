@@ -1,0 +1,56 @@
+<div class="page">
+  <div class="stream-section">
+    <div class="stream-wrap">
+      <canvas #streamCanvas class="stream-canvas"></canvas>
+      <div class="stream-badge" [class.live]="streamConnected()">
+        {{ streamConnected() ? '● LIVE' : '○ Connecting…' }}
+      </div>
+    </div>
+
+    <div class="cam-selector">
+      @for (cam of cameras; track cam.id) {
+        <button class="cam-btn" [class.active]="selectedCam() === cam.id" (click)="selectCamera(cam.id)">
+          {{ cam.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">Loading status…</div>
+  } @else if (status(); as s) {
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Battery</div>
+        <div class="stat-value brand">{{ batteryLabel() }}</div>
+        @if (chargingLabel()) {
+          <div class="stat-sub">{{ chargingLabel() }}</div>
+        }
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Range</div>
+        <div class="stat-value">{{ rangeLabel() }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Recording</div>
+        <div class="stat-value" [class.recording]="s.recordingStatus?.isRecording">
+          {{ s.recordingStatus?.isRecording ? 'REC' : 'Idle' }}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">GPS</div>
+        <div class="stat-value small">
+          {{ s.gpsJson ? 'Active' : 'No fix' }}
+        </div>
+      </div>
+    </div>
+
+    @if (s.network) {
+      <div class="card net-card">
+        <span class="net-type">{{ s.network.type || 'Network' }}</span>
+        @if (s.network.ssid) { <span class="net-ssid">{{ s.network.ssid }}</span> }
+        @if (s.network.ip) { <span class="net-ip">{{ s.network.ip }}</span> }
+      </div>
+    }
+  }
+</div>

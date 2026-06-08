@@ -4,16 +4,18 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import android.util.Log
 import android.view.Surface
+import com.connectrpc.ResponseMessage
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.auth.AuthManager
-import org.json.JSONObject
+import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.grpc.v1.EnableStreamRequest
+import net.bladewatch.app.grpc.v1.GetStreamQualityRequest
+import net.bladewatch.app.grpc.v1.SetViewModeRequest
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
-import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.Socket
-import java.net.URL
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -47,8 +49,12 @@ internal class LiveStreamClient {
     fun selectDirection(direction: LiveViewDirection) {
         currentDirection = direction
         Thread({
-            val jwt = getJwt() ?: return@Thread
-            httpPost("/api/stream/view/${direction.viewMode}", jwt)
+            runBlocking {
+                ConnectClientProvider.streamService().setViewMode(
+                    SetViewModeRequest.newBuilder().setViewMode(direction.viewMode).build(),
+                    emptyMap()
+                )
+            }
         }, "LiveStreamViewSelect").apply {
             isDaemon = true
             start()
@@ -68,6 +74,34 @@ internal class LiveStreamClient {
         activeCodec = null
         runCatching { c?.stop() }
         runCatching { c?.release() }
+    }
+
+    private fun enableStream() {
+        runBlocking {
+            ConnectClientProvider.streamService().enable(
+                EnableStreamRequest.newBuilder().build(), emptyMap()
+            )
+        }
+    }
+
+    private fun setViewMode(direction: LiveViewDirection) {
+        runBlocking {
+            ConnectClientProvider.streamService().setViewMode(
+                SetViewModeRequest.newBuilder().setViewMode(direction.viewMode).build(),
+                emptyMap()
+            )
+        }
+    }
+
+    private fun queryStreamDimensions(): Pair<Int, Int>? = runBlocking {
+        val resp = ConnectClientProvider.streamService().getQuality(
+            GetStreamQualityRequest.newBuilder().build(), emptyMap()
+        )
+        if (resp !is ResponseMessage.Success) return@runBlocking null
+        val currentId = resp.message.current
+        resp.message.optionsList.firstOrNull { it.id == currentId }?.let { opt ->
+            opt.width to opt.height
+        }
     }
 
     private fun runStream() {
@@ -94,14 +128,18 @@ internal class LiveStreamClient {
                 attempt++
                 try {
                     AuthManager.refresh()
-                    val jwt = getJwt() ?: throw java.io.IOException("auth not ready")
 
-                    httpPost("/api/stream/enable", jwt)
-                    httpPost("/api/stream/view/${currentDirection.viewMode}", jwt)
+                    enableStream()
+                    setViewMode(currentDirection)
 
-                    val dims = queryStreamDimensions(jwt) ?: (640 to 480)
+                    val dims = queryStreamDimensions() ?: (640 to 480)
                     width = dims.first
                     height = dims.second
+
+                    val jwt = runCatching {
+                        if (AuthManager.getState() == null) AuthManager.initialize()
+                        AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
+                    }.getOrNull() ?: throw java.io.IOException("auth not ready")
 
                     val wsSocket = Socket()
                     activeSocket = wsSocket
@@ -232,40 +270,6 @@ internal class LiveStreamClient {
     private fun publish(status: LiveStreamStatus) {
         onStateChange?.invoke(status)
     }
-
-    private fun getJwt(): String? = runCatching {
-        if (AuthManager.getState() == null) AuthManager.initialize()
-        AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-    }.getOrNull()
-
-    private fun httpPost(path: String, jwt: String): Int = runCatching {
-        val conn = URL("http://127.0.0.1:8080$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.setRequestProperty("Content-Length", "0")
-        conn.connectTimeout = 3_000
-        conn.readTimeout = 5_000
-        conn.responseCode
-    }.getOrDefault(-1)
-
-    private fun queryStreamDimensions(jwt: String): Pair<Int, Int>? = runCatching {
-        val conn = URL("http://127.0.0.1:8080/api/stream/quality").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Authorization", "Bearer $jwt")
-        conn.connectTimeout = 3_000
-        conn.readTimeout = 3_000
-        if (conn.responseCode != 200) return null
-        val json = JSONObject(conn.inputStream.bufferedReader().readText())
-        val currentId = json.optString("current")
-        val options = json.optJSONArray("options") ?: return null
-        for (i in 0 until options.length()) {
-            val opt = options.getJSONObject(i)
-            if (opt.optString("id") == currentId) {
-                return opt.optInt("width", 640) to opt.optInt("height", 480)
-            }
-        }
-        null
-    }.getOrNull()
 
     private fun generateWebSocketKey(): String {
         val bytes = ByteArray(16)

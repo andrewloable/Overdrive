@@ -1,0 +1,44 @@
+@import '../../shared/page-shared';
+
+.status-banner {
+  background: rgba(0, 212, 170, 0.1);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  color: var(--brand-primary, #00D4AA);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.sub-label {
+  font-size: 14px;
+  color: var(--text-primary, #fff);
+}
+
+.sub-meta {
+  font-size: 11px;
+  color: var(--text-muted, #71717A);
+  margin-top: 2px;
+  font-family: monospace;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.empty-text {
+  font-size: 13px;
+  color: var(--text-muted, #71717A);
+  padding: 8px 0;
+}

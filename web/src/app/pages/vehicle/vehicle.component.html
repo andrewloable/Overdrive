@@ -1,0 +1,65 @@
+<div class="page">
+  <div class="page-header"><h1>Vehicle Control</h1></div>
+
+  @if (statusMsg()) {
+    <div class="status-banner" [class.error]="statusMsg().includes('fail') || statusMsg().includes('unavail')">
+      {{ statusMsg() }}
+    </div>
+  }
+
+  <div class="card action-grid">
+    <button class="action-btn" (click)="doAction('lock')" [disabled]="actionBusy() !== null">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span>{{ actionBusy() === 'lock' ? 'Locking…' : 'Lock' }}</span>
+    </button>
+
+    <button class="action-btn warn" (click)="doAction('unlock')" [disabled]="actionBusy() !== null">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+      </svg>
+      <span>{{ actionBusy() === 'unlock' ? 'Unlocking…' : 'Unlock' }}</span>
+    </button>
+
+    <button class="action-btn" (click)="doAction('flash')" [disabled]="actionBusy() !== null">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <span>{{ actionBusy() === 'flash' ? 'Flashing…' : 'Flash Lights' }}</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      GPS Location
+      <button class="btn-icon" (click)="refreshGps()" title="Refresh" [disabled]="gpsLoading()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spin]="gpsLoading()">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+    </div>
+
+    @if (gpsLoading()) {
+      <div class="loading-small">Fetching location…</div>
+    } @else if (gpsLocation(); as loc) {
+      <div class="gps-coords">
+        <span>{{ loc.lat | number:'1.6-6' }}, {{ loc.lng | number:'1.6-6' }}</span>
+      </div>
+      @if (googleMapsUrl()) {
+        <a class="maps-link" [href]="googleMapsUrl()" target="_blank" rel="noopener">
+          Open in Google Maps ↗
+        </a>
+      }
+    } @else {
+      <p class="no-gps">No GPS fix available</p>
+    }
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Performance</h1>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">Loading metrics…</div>
+  } @else if (error()) {
+    <div class="error-card">{{ error() }}</div>
+  } @else if (metrics(); as m) {
+    <div class="gauge-grid">
+      <div class="gauge-card">
+        <div class="gauge-label">CPU</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill" [style.width.%]="m.cpuPercent" [class.warn]="m.cpuPercent > 70" [class.crit]="m.cpuPercent > 90"></div>
+        </div>
+        <div class="gauge-value">{{ m.cpuPercent | number:'1.0-1' }}%</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-label">Memory</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill" [style.width.%]="m.memPercent" [class.warn]="m.memPercent > 70" [class.crit]="m.memPercent > 90"></div>
+        </div>
+        <div class="gauge-value">{{ m.memPercent | number:'1.0-1' }}%</div>
+        @if (m.memTotalMb > 0) {
+          <div class="gauge-sub">{{ m.memUsedMb | number:'1.0-0' }} / {{ m.memTotalMb | number:'1.0-0' }} MB</div>
+        }
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-label">Temperature</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill temp" [style.width.%]="(m.tempC / 80) * 100" [class.warn]="m.tempC > 55" [class.crit]="m.tempC > 70"></div>
+        </div>
+        <div class="gauge-value">{{ m.tempC | number:'1.0-1' }}°C</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge-label">Camera FPS</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill fps" [style.width.%]="(m.fps / 30) * 100"></div>
+        </div>
+        <div class="gauge-value">{{ m.fps | number:'1.0-1' }}</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" (click)="playAudioTest()" [disabled]="audioTesting()">
+        {{ audioTesting() ? 'Playing…' : 'Audio Test (3s)' }}
+      </button>
+    </div>
+  }
+</div>

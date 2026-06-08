@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// UpdateService manages OTA app updates for the head unit.
+//
+// HTTP mapping:
+//   CheckUpdate      GET  /api/update/check
+//   GetPreview       GET  /api/update/preview
+//   InstallUpdate    POST /api/update/install?confirm=true
+//   GetProgress      GET  /api/update/progress
+service UpdateService {
+  rpc CheckUpdate(CheckUpdateRequest) returns (CheckUpdateResponse);
+  rpc GetPreview(GetPreviewRequest) returns (GetPreviewResponse);
+  rpc InstallUpdate(InstallUpdateRequest) returns (InstallUpdateResponse);
+  rpc GetProgress(GetProgressRequest) returns (GetProgressResponse);
+}
+
+message CheckUpdateRequest {}
+
+message CheckUpdateResponse {
+  // True when a newer version exists in the release feed.
+  bool available = 1;
+  string current_version = 2;
+  string remote_version = 3;
+  string release_notes = 4;
+  // Populated on network error.
+  string error = 5;
+}
+
+message GetPreviewRequest {}
+
+message GetPreviewResponse {
+  // "zrok", "none", or "unknown".
+  string tunnel_type = 1;
+  bool tunnel_url_may_change = 2;
+  string current_tunnel_url = 3;
+  repeated string local_ip_addresses = 4;
+  int32 estimated_downtime_seconds = 5;
+  int32 local_recovery_seconds = 6;
+  bool recommend_in_app = 7;
+  string recommend_in_app_reason = 8;
+}
+
+message InstallUpdateRequest {
+  // Must be true — guards against accidental installs.
+  bool confirm = 1;
+}
+
+message InstallUpdateResponse {
+  // "scheduled" on success.
+  string status = 1;
+  int32 estimated_downtime_seconds = 2;
+  string error = 3;
+}
+
+message GetProgressRequest {}
+
+// UpdatePhase names the stage an in-progress install is in.
+enum UpdatePhase {
+  UPDATE_PHASE_UNSPECIFIED = 0;
+  UPDATE_PHASE_IDLE = 1;
+  UPDATE_PHASE_QUEUED = 2;
+  UPDATE_PHASE_DOWNLOADING = 3;
+  UPDATE_PHASE_VERIFYING = 4;
+  UPDATE_PHASE_STOPPING_DAEMONS = 5;
+  UPDATE_PHASE_INSTALLING = 6;
+  UPDATE_PHASE_ERROR = 7;
+}
+
+message GetProgressResponse {
+  // Phase name string (e.g. "downloading", "installing", "idle").
+  string phase = 1;
+  // Download percent 0-100, or -1 when indeterminate.
+  int32 percent = 2;
+  string message = 3;
+  string error = 4;
+  // Epoch ms when the progress record was written.
+  int64 ts = 5;
+}

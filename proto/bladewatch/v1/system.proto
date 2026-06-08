@@ -1,0 +1,184 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// SystemService exposes daemon status, performance metrics, AI model management,
+// and audio testing.
+//
+// HTTP mapping:
+//   GetStatus        GET  /status
+//   GetPerformance   GET  /api/performance (PerformanceApiHandler)
+//   PlayAudioTest    POST /api/audio/test
+//   ListModels       GET  /api/models/
+//   DownloadModel    POST /api/models/download
+service SystemService {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc GetPerformance(GetPerformanceRequest) returns (GetPerformanceResponse);
+  rpc PlayAudioTest(PlayAudioTestRequest) returns (PlayAudioTestResponse);
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  rpc DownloadModel(DownloadModelRequest) returns (DownloadModelResponse);
+}
+
+// BatteryInfo carries the Android battery level and charge state.
+message BatteryInfo {
+  int32 level = 1;
+  int32 status = 2;
+  bool is_charging = 3;
+  string status_string = 4;
+}
+
+// ChargingInfo carries BYD BMS charging power and state.
+message ChargingInfo {
+  string state_name = 1;
+  string status = 2;
+  double charging_power_k_w = 3;
+  bool is_discharging = 4;
+  bool is_error = 5;
+  // True when kW is estimated from SoC rate rather than direct BMS reading.
+  bool is_estimated = 6;
+}
+
+// SocInfo carries the high-voltage battery State of Charge.
+message SocInfo {
+  double percent = 1;
+  bool is_low = 2;
+  bool is_critical = 3;
+  string status = 4;
+}
+
+// RangeInfo carries the vehicle's estimated driving range.
+message RangeInfo {
+  double elec_range_km = 1;
+  double fuel_range_km = 2;
+  double total_range_km = 3;
+  bool is_low = 4;
+  bool is_critical = 5;
+  string status = 6;
+  // Only present on PHEVs.
+  double fuel_percent = 7;
+}
+
+// SohInfo carries the battery State of Health estimate.
+message SohInfo {
+  double percent = 1;
+}
+
+// RecordingStatus carries the current recording mode pipeline state.
+message RecordingStatus {
+  string configured_mode = 1;
+  bool is_recording = 2;
+  bool pipeline_running = 3;
+  string gear = 4;
+  bool acc_on = 5;
+}
+
+// TripStatus summarises the active trip analytics state.
+message TripStatus {
+  bool enabled = 1;
+  bool trip_active = 2;
+  // Epoch ms when the current trip started (0 when no trip active).
+  int64 trip_start_time = 3;
+  int64 trip_duration_sec = 4;
+}
+
+// NetworkInfo carries the current network connection details.
+message NetworkInfo {
+  string type = 1;
+  string ssid = 2;
+  string ip = 3;
+  bool lan_http_enabled = 4;
+  string http_bind = 5;
+  string http_mode_warning = 6;
+}
+
+// GpsStatusInfo is a lightweight location snapshot embedded in SystemStatus.
+// Full GpsLocation is in common.proto and is also used by VehicleService.
+message GpsStatusInfo {
+  double lat = 1;
+  double lng = 2;
+  double speed_kmh = 3;
+  bool has_location = 4;
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  string device_id = 1;
+  bool vehicle_data_ready = 2;
+  string app_version = 3;
+  // Camera IDs currently recording.
+  repeated int32 recording = 4;
+  // Camera IDs in view-only mode.
+  repeated int32 viewing = 5;
+  // Camera IDs active (recording or view).
+  repeated int32 active = 6;
+  // Camera IDs available on this device.
+  repeated int32 available = 7;
+  BatteryInfo battery = 8;
+  bool acc = 9;
+  ChargingInfo charging = 10;
+  SocInfo soc = 11;
+  RangeInfo range = 12;
+  SohInfo soh = 13;
+  string distance_unit = 14;
+  string locale = 15;
+  bool safe_zone_suppressed = 16;
+  bool in_safe_zone = 17;
+  string safe_zone_name = 18;
+  bool gpu_surveillance = 19;
+  RecordingStatus recording_status = 20;
+  TripStatus trip_status = 21;
+  // Serialised JSON blob from GpsMonitor.getLocationJson().
+  string gps_json = 22;
+  NetworkInfo network = 23;
+  // Populated only when vehicle data block throws.
+  string vehicle_data_error = 24;
+}
+
+message GetPerformanceRequest {}
+
+message GetPerformanceResponse {
+  bool success = 1;
+  // Raw JSON blob from PerformanceApiHandler (format varies).
+  string performance_json = 2;
+}
+
+message PlayAudioTestRequest {
+  // Duration hint in milliseconds. 0 = use server default.
+  int32 duration_ms = 1;
+}
+
+message PlayAudioTestResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}
+
+// ModelInfo describes one downloadable AI model.
+message ModelInfo {
+  string name = 1;
+  string url = 2;
+  bool downloaded = 3;
+  int64 size_bytes = 4;
+}
+
+message ListModelsRequest {}
+
+message ListModelsResponse {
+  bool success = 1;
+  repeated ModelInfo models = 2;
+}
+
+message DownloadModelRequest {
+  string url = 1;
+  string name = 2;
+}
+
+message DownloadModelResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}

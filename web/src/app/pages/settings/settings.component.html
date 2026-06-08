@@ -1,0 +1,81 @@
+<div class="page">
+  <div class="page-header"><h1>Settings</h1></div>
+
+  @if (statusMsg()) {
+    <div class="status-banner">{{ statusMsg() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else {
+    <div class="card">
+      <div class="section-title">Recording Quality</div>
+      <div class="form-group">
+        <label class="form-label">Quality Tier</label>
+        <select class="form-select" [ngModel]="recordingQuality()" (ngModelChange)="recordingQuality.set($event)">
+          <option value="ECONOMY">Economy</option>
+          <option value="STANDARD">Standard</option>
+          <option value="HIGH">High</option>
+          <option value="PREMIUM">Premium</option>
+          <option value="MAX">Max</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Video Codec</label>
+        <select class="form-select" [ngModel]="codec()" (ngModelChange)="codec.set($event)">
+          <option value="H264">H.264 (AVC)</option>
+          <option value="H265">H.265 (HEVC)</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" (click)="saveQuality()" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save Quality' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Language</div>
+      <div class="form-group">
+        <label class="form-label">App Language</label>
+        <select class="form-select" [ngModel]="lang()" (ngModelChange)="lang.set($event)">
+          @for (l of supportedLangs(); track l.code) {
+            <option [value]="l.code">{{ l.label }}</option>
+          } @empty {
+            <option [value]="lang()">{{ lang() }}</option>
+          }
+        </select>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" (click)="saveLang()" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save Language' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Updates</div>
+      @if (updateInfo(); as info) {
+        @if (info.available) {
+          <div class="update-available">
+            <div class="update-version">v{{ info.remoteVersion }} available</div>
+            @if (info.releaseNotes) {
+              <div class="update-notes">{{ info.releaseNotes }}</div>
+            }
+            <button class="btn btn-primary" (click)="installUpdate()" [disabled]="installing()">
+              {{ installing() ? 'Installing…' : 'Install Update' }}
+            </button>
+          </div>
+        } @else {
+          <p class="up-to-date">You're running v{{ info.currentVersion }} — up to date.</p>
+        }
+      } @else {
+        <div class="actions">
+          <button class="btn btn-secondary" (click)="checkUpdate()" [disabled]="checkingUpdate()">
+            {{ checkingUpdate() ? 'Checking…' : 'Check for Updates' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

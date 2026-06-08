@@ -1,0 +1,8 @@
+<div class="app-shell" [class.has-nav]="showNav()">
+  <main class="main-content">
+    <router-outlet />
+  </main>
+  @if (showNav()) {
+    <app-nav />
+  }
+</div>

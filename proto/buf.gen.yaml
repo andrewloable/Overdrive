@@ -1,6 +1,16 @@
 version: v2
 plugins:
-  - plugin: java
+  # Java protobuf message classes — generated into the app source tree
+  - remote: buf.build/protocolbuffers/java
     out: ../app/src/main/java
-  - plugin: kotlin
+
+  # TypeScript protobuf message classes for Angular web UI
+  - remote: buf.build/bufbuild/es
+    out: ../web/src/gen
+    opt:
+      - target=ts
+      - import_extension=none
+
+  # Kotlin ConnectRPC service client stubs for Android app
+  - remote: buf.build/connectrpc/kotlin
     out: ../app/src/main/java

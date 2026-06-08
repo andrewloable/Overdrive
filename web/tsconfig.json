@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false,
+    "useDefineForClassFields": false,
+    "lib": ["ES2022", "dom"],
+    "paths": {}
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.app.json" }]
+}

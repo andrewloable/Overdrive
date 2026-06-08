@@ -1,0 +1,34 @@
+@import '../../shared/page-shared';
+
+.status-banner {
+  background: rgba(0, 212, 170, 0.1);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  color: var(--brand-primary, #00D4AA);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.update-available {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.update-version {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--brand-primary, #00D4AA);
+}
+
+.update-notes {
+  font-size: 13px;
+  color: var(--text-secondary, #A1A1AA);
+  white-space: pre-wrap;
+}
+
+.up-to-date {
+  font-size: 14px;
+  color: var(--text-secondary, #A1A1AA);
+}
