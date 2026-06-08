@@ -86,6 +86,8 @@ message GetQualityResponse {
   // FPS options keyed by numeric string (e.g. "15").
   map<string, string> fps_options = 8;
   string native_resolution = 9;
+  // Recording segment length in minutes (e.g. 5, 10, 15).
+  int32 recording_segment_minutes = 10;
 }
 
 message SetQualityRequest {
@@ -97,6 +99,8 @@ message SetQualityRequest {
   string streaming_quality = 3;
   // FPS (10-30). 0 = keep current.
   int32 fps = 4;
+  // Recording segment length in minutes. 0 = keep current.
+  int32 recording_segment_minutes = 5;
 }
 
 message SetQualityResponse {

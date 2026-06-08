@@ -5,6 +5,7 @@ import net.bladewatch.app.server.QualitySettingsApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 import org.json.JSONObject;
 
@@ -30,47 +31,47 @@ public class SettingsServiceImpl {
         dispatcher.register("bladewatch.v1.SettingsService", "SetLocale", this::handleSetLocale);
     }
 
-    private String handleGetQuality(String req) throws ConnectException {
+    private ConnectResponse handleGetQuality(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("GET", "/api/settings/quality", null, out));
     }
 
-    private String handleSetQuality(String req) throws ConnectException {
+    private ConnectResponse handleSetQuality(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("POST", "/api/settings/quality", req, out));
     }
 
-    private String handleGetAppearance(String req) throws ConnectException {
+    private ConnectResponse handleGetAppearance(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("GET", "/api/settings/appearance", null, out));
     }
 
-    private String handleSetAppearance(String req) throws ConnectException {
+    private ConnectResponse handleSetAppearance(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("POST", "/api/settings/appearance", req, out));
     }
 
-    private String handleGetLocale(String req) throws ConnectException {
+    private ConnectResponse handleGetLocale(String req, String clientIdentity) throws ConnectException {
         try {
             JSONObject resp = new JSONObject();
             resp.put("lang", LocaleManager.get());
             JSONObject supported = new JSONObject();
             for (String s : LocaleManager.SUPPORTED) supported.put(s, true);
             resp.put("supported", supported);
-            return resp.toString();
+            return ConnectResponse.of(resp.toString());
         } catch (Exception e) {
             throw new ConnectException("internal", "Failed to get locale: " + e.getMessage());
         }
     }
 
-    private String handleSetLocale(String req) throws ConnectException {
+    private ConnectResponse handleSetLocale(String req, String clientIdentity) throws ConnectException {
         try {
             String want = "";
             try {
                 want = new JSONObject(req).optString("lang", "");
             } catch (Exception ignored) {}
             String resolved = LocaleManager.set(want);
-            return "{\"lang\":\"" + resolved + "\"}";
+            return ConnectResponse.of("{\"lang\":\"" + resolved + "\"}");
         } catch (Exception e) {
             throw new ConnectException("internal", "Failed to set locale: " + e.getMessage());
         }

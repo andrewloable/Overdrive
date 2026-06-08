@@ -486,3 +486,31 @@ tasks.register<Exec>("generateConnectProtos") {
     workingDir = rootProject.file("proto")
     commandLine("buf", "generate")
 }
+
+// Build the Angular web UI and copy the output into app assets.
+// The dist output is checked in at web/dist and is also generated here so
+// the APK always contains a fresh build when Node.js is available.
+tasks.register<Exec>("buildAngularWebUI") {
+    description = "Build the Angular web UI and copy dist to app/src/main/assets/web/angular/"
+    group = "build"
+    workingDir = rootProject.file("web")
+    commandLine("npm", "run", "build")
+    doLast {
+        copy {
+            from(rootProject.file("web/dist"))
+            into(file("src/main/assets/web/angular"))
+        }
+    }
+    // Skip if npm / Node is not on PATH — the committed dist is used instead.
+    isIgnoreExitValue = false
+    onlyIf {
+        try {
+            ProcessBuilder("npm", "--version").start().waitFor() == 0
+        } catch (e: Exception) {
+            logger.warn("buildAngularWebUI: npm not found — skipping Angular build")
+            false
+        }
+    }
+}
+// Hook into preBuild so Angular is compiled before any variant's assets are packaged.
+tasks.named("preBuild") { dependsOn("buildAngularWebUI") }

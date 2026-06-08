@@ -39,12 +39,12 @@ internal class SurveillanceSettingsClient {
             nightMode = cfg.nightMode,
             aiEnabled = cfg.aiEnabled,
             aiConfidence = cfg.aiConfidence.toFloat().takeIf { it > 0f } ?: 0.4f,
-            cameraFront = true,
-            cameraRight = true,
-            cameraRear = true,
-            cameraLeft = true,
-            deterrentAction = "silent",
-            deterrentCooldownSeconds = 60,
+            cameraFront = cfg.cameraFront,
+            cameraRight = cfg.cameraRight,
+            cameraRear = cfg.cameraRear,
+            cameraLeft = cfg.cameraLeft,
+            deterrentAction = cfg.deterrentAction.takeIf { it.isNotEmpty() } ?: "silent",
+            deterrentCooldownSeconds = cfg.deterrentCooldownSeconds.takeIf { it > 0 } ?: 60,
         )
     }
 
@@ -96,9 +96,9 @@ internal class SurveillanceSettingsClient {
         SafeLocationsState(
             featureEnabled = m.featureEnabled,
             zones = zones,
-            hasGps = false,
-            currentLat = 0.0,
-            currentLng = 0.0,
+            hasGps = m.hasGps,
+            currentLat = m.currentLat,
+            currentLng = m.currentLng,
         )
     }
 
@@ -115,6 +115,12 @@ internal class SurveillanceSettingsClient {
             .setNightMode(config.nightMode)
             .setAiEnabled(config.aiEnabled)
             .setAiConfidence(config.aiConfidence.toDouble())
+            .setCameraFront(config.cameraFront)
+            .setCameraRight(config.cameraRight)
+            .setCameraRear(config.cameraRear)
+            .setCameraLeft(config.cameraLeft)
+            .setDeterrentAction(config.deterrentAction)
+            .setDeterrentCooldownSeconds(config.deterrentCooldownSeconds)
             .build()
         val req = SetSurveillanceConfigRequest.newBuilder().setConfig(protoConfig).build()
         val resp = ConnectClientProvider.surveillanceService().setConfig(req, emptyMap())
@@ -188,7 +194,7 @@ internal class SurveillanceSettingsClient {
     }
 
     fun syncCatalog(): net.bladewatch.app.ui.fragment.recording.SyncResult = runBlocking {
-        val resp = ConnectClientProvider.surveillanceService().syncCatalog(
+        val resp = ConnectClientProvider.longSurveillanceService().syncCatalog(
             SyncSurveillanceCatalogRequest.newBuilder().build(), emptyMap()
         )
         when (resp) {

@@ -41,6 +41,10 @@ message ListZonesResponse {
   bool feature_enabled = 2;
   // Whether the vehicle is currently inside any zone.
   bool currently_in_safe_zone = 3;
+  // Current GPS fix from the daemon, for map centering and add-zone-at-location.
+  bool has_gps = 4;
+  double current_lat = 5;
+  double current_lng = 6;
 }
 
 message AddZoneRequest {

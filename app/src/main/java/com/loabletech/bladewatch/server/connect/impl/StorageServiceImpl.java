@@ -6,6 +6,7 @@ import net.bladewatch.app.server.QualitySettingsApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.StorageService.
@@ -47,47 +48,47 @@ public class StorageServiceImpl {
                 this::handleFormatVolume);
     }
 
-    private String handleGetStorageSettings(String req) throws ConnectException {
+    private ConnectResponse handleGetStorageSettings(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("GET", "/api/settings/storage", null, out));
     }
 
-    private String handleSetStorageSettings(String req) throws ConnectException {
+    private ConnectResponse handleSetStorageSettings(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 QualitySettingsApiHandler.handle("POST", "/api/settings/storage", req, out));
     }
 
-    private String handleGetExternalStorage(String req) throws ConnectException {
+    private ConnectResponse handleGetExternalStorage(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ExternalStorageApiHandler.handle("/api/storage/external", "GET", null, out));
     }
 
-    private String handleSetExternalConfig(String req) throws ConnectException {
+    private ConnectResponse handleSetExternalConfig(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ExternalStorageApiHandler.handle("/api/storage/external/config", "POST", req, out));
     }
 
-    private String handleTriggerCleanup(String req) throws ConnectException {
+    private ConnectResponse handleTriggerCleanup(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ExternalStorageApiHandler.handle("/api/storage/external/cleanup", "POST", req, out));
     }
 
-    private String handlePreviewCleanup(String req) throws ConnectException {
+    private ConnectResponse handlePreviewCleanup(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ExternalStorageApiHandler.handle("/api/storage/external/preview", "GET", null, out));
     }
 
-    private String handleRefreshExternalStorage(String req) throws ConnectException {
+    private ConnectResponse handleRefreshExternalStorage(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ExternalStorageApiHandler.handle("/api/storage/external/refresh", "POST", req, out));
     }
 
-    private String handleListFormatVolumes(String req) throws ConnectException {
+    private ConnectResponse handleListFormatVolumes(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 FormatStorageApiHandler.handle("/api/storage/format", "GET", null, out));
     }
 
-    private String handleFormatVolume(String req) throws ConnectException {
+    private ConnectResponse handleFormatVolume(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 FormatStorageApiHandler.handle("/api/storage/format", "POST", req, out));
     }

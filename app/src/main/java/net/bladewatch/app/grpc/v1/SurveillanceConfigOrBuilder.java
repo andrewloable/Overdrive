@@ -193,4 +193,62 @@ public interface SurveillanceConfigOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRecordingCodecBytes();
+
+  /**
+   * <pre>
+   * Per-camera enable flags.
+   * </pre>
+   *
+   * <code>bool camera_front = 24 [json_name = "cameraFront"];</code>
+   * @return The cameraFront.
+   */
+  boolean getCameraFront();
+
+  /**
+   * <code>bool camera_right = 25 [json_name = "cameraRight"];</code>
+   * @return The cameraRight.
+   */
+  boolean getCameraRight();
+
+  /**
+   * <code>bool camera_rear = 26 [json_name = "cameraRear"];</code>
+   * @return The cameraRear.
+   */
+  boolean getCameraRear();
+
+  /**
+   * <code>bool camera_left = 27 [json_name = "cameraLeft"];</code>
+   * @return The cameraLeft.
+   */
+  boolean getCameraLeft();
+
+  /**
+   * <pre>
+   * Deterrent action: "silent", "flash", "beep", etc.
+   * </pre>
+   *
+   * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+   * @return The deterrentAction.
+   */
+  java.lang.String getDeterrentAction();
+  /**
+   * <pre>
+   * Deterrent action: "silent", "flash", "beep", etc.
+   * </pre>
+   *
+   * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+   * @return The bytes for deterrentAction.
+   */
+  com.google.protobuf.ByteString
+      getDeterrentActionBytes();
+
+  /**
+   * <pre>
+   * Minimum seconds between deterrent triggers.
+   * </pre>
+   *
+   * <code>int32 deterrent_cooldown_seconds = 29 [json_name = "deterrentCooldownSeconds"];</code>
+   * @return The deterrentCooldownSeconds.
+   */
+  int getDeterrentCooldownSeconds();
 }

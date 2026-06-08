@@ -241,6 +241,9 @@ message SyncTripsRequest {}
 message SyncTripsResponse {
   bool success = 1;
   string error = 2;
+  int32 added = 3;
+  int32 removed = 4;
+  int32 total = 5;
 }
 
 message GetTelemetryRequest {

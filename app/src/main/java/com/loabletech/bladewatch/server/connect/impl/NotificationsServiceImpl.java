@@ -4,6 +4,7 @@ import net.bladewatch.app.server.NotificationApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.NotificationsService.
@@ -33,32 +34,32 @@ public class NotificationsServiceImpl {
                 this::handleSendTest);
     }
 
-    private String handleGetCategories(String req) throws ConnectException {
+    private ConnectResponse handleGetCategories(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("GET", "/api/notifications/categories", null, out));
     }
 
-    private String handleSubscribe(String req) throws ConnectException {
+    private ConnectResponse handleSubscribe(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("POST", "/api/push/subscribe", req, out));
     }
 
-    private String handleUnsubscribe(String req) throws ConnectException {
+    private ConnectResponse handleUnsubscribe(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("POST", "/api/push/unsubscribe", req, out));
     }
 
-    private String handleListSubscriptions(String req) throws ConnectException {
+    private ConnectResponse handleListSubscriptions(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("GET", "/api/push/subscriptions", null, out));
     }
 
-    private String handleUpdatePreferences(String req) throws ConnectException {
+    private ConnectResponse handleUpdatePreferences(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("POST", "/api/push/preferences", req, out));
     }
 
-    private String handleSendTest(String req) throws ConnectException {
+    private ConnectResponse handleSendTest(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("POST", "/api/push/test", req, out));
     }

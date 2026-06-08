@@ -49,4 +49,26 @@ public interface ListZonesResponseOrBuilder extends
    * @return The currentlyInSafeZone.
    */
   boolean getCurrentlyInSafeZone();
+
+  /**
+   * <pre>
+   * Current GPS fix from the daemon, for map centering and add-zone-at-location.
+   * </pre>
+   *
+   * <code>bool has_gps = 4 [json_name = "hasGps"];</code>
+   * @return The hasGps.
+   */
+  boolean getHasGps();
+
+  /**
+   * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+   * @return The currentLat.
+   */
+  double getCurrentLat();
+
+  /**
+   * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+   * @return The currentLng.
+   */
+  double getCurrentLng();
 }

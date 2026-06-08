@@ -99,6 +99,39 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int ADDED_FIELD_NUMBER = 3;
+  private int added_ = 0;
+  /**
+   * <code>int32 added = 3 [json_name = "added"];</code>
+   * @return The added.
+   */
+  @java.lang.Override
+  public int getAdded() {
+    return added_;
+  }
+
+  public static final int REMOVED_FIELD_NUMBER = 4;
+  private int removed_ = 0;
+  /**
+   * <code>int32 removed = 4 [json_name = "removed"];</code>
+   * @return The removed.
+   */
+  @java.lang.Override
+  public int getRemoved() {
+    return removed_;
+  }
+
+  public static final int TOTAL_FIELD_NUMBER = 5;
+  private int total_ = 0;
+  /**
+   * <code>int32 total = 5 [json_name = "total"];</code>
+   * @return The total.
+   */
+  @java.lang.Override
+  public int getTotal() {
+    return total_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -119,6 +152,15 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, error_);
     }
+    if (added_ != 0) {
+      output.writeInt32(3, added_);
+    }
+    if (removed_ != 0) {
+      output.writeInt32(4, removed_);
+    }
+    if (total_ != 0) {
+      output.writeInt32(5, total_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -129,6 +171,18 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, error_);
+    }
+    if (added_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(3, added_);
+    }
+    if (removed_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(4, removed_);
+    }
+    if (total_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(5, total_);
     }
     return size;
   }
@@ -158,6 +212,12 @@ private static final long serialVersionUID = 0L;
         != other.getSuccess()) return false;
     if (!getError()
         .equals(other.getError())) return false;
+    if (getAdded()
+        != other.getAdded()) return false;
+    if (getRemoved()
+        != other.getRemoved()) return false;
+    if (getTotal()
+        != other.getTotal()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -174,6 +234,12 @@ private static final long serialVersionUID = 0L;
         getSuccess());
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
+    hash = (37 * hash) + ADDED_FIELD_NUMBER;
+    hash = (53 * hash) + getAdded();
+    hash = (37 * hash) + REMOVED_FIELD_NUMBER;
+    hash = (53 * hash) + getRemoved();
+    hash = (37 * hash) + TOTAL_FIELD_NUMBER;
+    hash = (53 * hash) + getTotal();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -307,6 +373,9 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       success_ = false;
       error_ = "";
+      added_ = 0;
+      removed_ = 0;
+      total_ = 0;
       return this;
     }
 
@@ -346,6 +415,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.error_ = error_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.added_ = added_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.removed_ = removed_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.total_ = total_;
+      }
     }
 
     @java.lang.Override
@@ -367,6 +445,15 @@ private static final long serialVersionUID = 0L;
         error_ = other.error_;
         bitField0_ |= 0x00000002;
         onChanged();
+      }
+      if (other.getAdded() != 0) {
+        setAdded(other.getAdded());
+      }
+      if (other.getRemoved() != 0) {
+        setRemoved(other.getRemoved());
+      }
+      if (other.getTotal() != 0) {
+        setTotal(other.getTotal());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -404,6 +491,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 24: {
+              added_ = input.readInt32();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 24
+            case 32: {
+              removed_ = input.readInt32();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 40: {
+              total_ = input.readInt32();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -521,6 +623,102 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       error_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private int added_ ;
+    /**
+     * <code>int32 added = 3 [json_name = "added"];</code>
+     * @return The added.
+     */
+    @java.lang.Override
+    public int getAdded() {
+      return added_;
+    }
+    /**
+     * <code>int32 added = 3 [json_name = "added"];</code>
+     * @param value The added to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAdded(int value) {
+
+      added_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 added = 3 [json_name = "added"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAdded() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      added_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int removed_ ;
+    /**
+     * <code>int32 removed = 4 [json_name = "removed"];</code>
+     * @return The removed.
+     */
+    @java.lang.Override
+    public int getRemoved() {
+      return removed_;
+    }
+    /**
+     * <code>int32 removed = 4 [json_name = "removed"];</code>
+     * @param value The removed to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRemoved(int value) {
+
+      removed_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 removed = 4 [json_name = "removed"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRemoved() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      removed_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int total_ ;
+    /**
+     * <code>int32 total = 5 [json_name = "total"];</code>
+     * @return The total.
+     */
+    @java.lang.Override
+    public int getTotal() {
+      return total_;
+    }
+    /**
+     * <code>int32 total = 5 [json_name = "total"];</code>
+     * @param value The total to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTotal(int value) {
+
+      total_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 total = 5 [json_name = "total"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTotal() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      total_ = 0;
       onChanged();
       return this;
     }

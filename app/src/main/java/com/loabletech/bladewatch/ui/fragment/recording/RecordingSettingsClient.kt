@@ -57,7 +57,7 @@ internal class RecordingSettingsClient {
         RecordingQualitySettings(
             quality = RecordingQuality.fromValue(m.recordingQuality.takeIf { it.isNotEmpty() } ?: "STANDARD"),
             codec = m.codec.takeIf { it.isNotEmpty() } ?: "H264",
-            segmentMinutes = 5,
+            segmentMinutes = m.recordingSegmentMinutes.takeIf { it > 0 } ?: 5,
         )
     }
 
@@ -111,24 +111,12 @@ internal class RecordingSettingsClient {
         resp is ResponseMessage.Success && resp.message.success
     }
 
-    fun saveRecordingLimit(segmentMinutes: Int): Boolean {
-        // Proto SetQualityRequest has no recordingSegmentMinutes field — fall back to HTTP.
-        val jwt = runCatching {
-            if (AuthManager.getState() == null) AuthManager.initialize()
-            AuthManager.generateJwt()?.takeIf { it.isNotBlank() }
-        }.getOrNull() ?: return false
-        return runCatching {
-            val conn = URL("http://127.0.0.1:8080/api/settings/quality")
-                .openConnection(Proxy.NO_PROXY) as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Authorization", "Bearer $jwt")
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true; conn.connectTimeout = 5_000; conn.readTimeout = 10_000
-            conn.outputStream.use {
-                it.write(JSONObject().apply { put("recordingSegmentMinutes", segmentMinutes) }.toString().toByteArray())
-            }
-            conn.responseCode == 200
-        }.getOrDefault(false)
+    fun saveRecordingLimit(segmentMinutes: Int): Boolean = runBlocking {
+        val req = SetQualityRequest.newBuilder()
+            .setRecordingSegmentMinutes(segmentMinutes)
+            .build()
+        val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())
+        resp is ResponseMessage.Success && resp.message.success
     }
 
     fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
@@ -157,7 +145,7 @@ internal class RecordingSettingsClient {
     }
 
     fun formatVolume(volumeId: String): FormatDriveResult = runBlocking {
-        val resp = ConnectClientProvider.storageService().formatVolume(
+        val resp = ConnectClientProvider.longStorageService().formatVolume(
             FormatVolumeRequest.newBuilder().setVolumeId(volumeId).build(), emptyMap()
         )
         when (resp) {
@@ -175,7 +163,7 @@ internal class RecordingSettingsClient {
     }
 
     fun syncCatalog(): SyncResult = runBlocking {
-        val resp = ConnectClientProvider.recordingsService().syncCatalog(
+        val resp = ConnectClientProvider.longRecordingsService().syncCatalog(
             SyncCatalogRequest.newBuilder().build(), emptyMap()
         )
         when (resp) {

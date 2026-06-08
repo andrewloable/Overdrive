@@ -4,6 +4,7 @@ import net.bladewatch.app.server.SurveillanceApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.SurveillanceService.
@@ -42,37 +43,37 @@ public class SurveillanceServiceImpl {
                 this::handleSyncCatalog);
     }
 
-    private String handleGetConfig(String req) throws ConnectException {
+    private ConnectResponse handleGetConfig(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/config", null, out));
     }
 
-    private String handleSetConfig(String req) throws ConnectException {
+    private ConnectResponse handleSetConfig(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("POST", "/api/surveillance/config", req, out));
     }
 
-    private String handleGetStatus(String req) throws ConnectException {
+    private ConnectResponse handleGetStatus(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/status", null, out));
     }
 
-    private String handleEnable(String req) throws ConnectException {
+    private ConnectResponse handleEnable(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("POST", "/api/surveillance/enable", req, out));
     }
 
-    private String handleDisable(String req) throws ConnectException {
+    private ConnectResponse handleDisable(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("POST", "/api/surveillance/disable", req, out));
     }
 
-    private String handleGetHeatmap(String req) throws ConnectException {
+    private ConnectResponse handleGetHeatmap(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/heatmap", null, out));
     }
 
-    private String handleGetSnapshot(String req) throws ConnectException {
+    private ConnectResponse handleGetSnapshot(String req, String clientIdentity) throws ConnectException {
         int quadrant;
         try {
             quadrant = new org.json.JSONObject(req).optInt("quadrant", 0);
@@ -80,17 +81,20 @@ public class SurveillanceServiceImpl {
             quadrant = 0;
         }
         final int q = quadrant;
-        return ConnectHandlerUtil.captureString(out ->
+        // The snapshot endpoint returns raw JPEG bytes; encode as base64 in
+        // the imageJpeg field so the Connect response stays application/connect+json.
+        return ConnectHandlerUtil.captureBytes(out ->
                 SurveillanceApiHandler.handle(
-                        "GET", "/api/surveillance/snapshot/" + q, null, out));
+                        "GET", "/api/surveillance/snapshot/" + q, null, out),
+                "imageJpeg");
     }
 
-    private String handleGetFilterLog(String req) throws ConnectException {
+    private ConnectResponse handleGetFilterLog(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("GET", "/api/surveillance/filterlog", null, out));
     }
 
-    private String handleSyncCatalog(String req) throws ConnectException {
+    private ConnectResponse handleSyncCatalog(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SurveillanceApiHandler.handle("POST", "/api/surveillance/sync", req, out));
     }

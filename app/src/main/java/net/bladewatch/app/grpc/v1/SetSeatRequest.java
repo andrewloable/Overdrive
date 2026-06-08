@@ -114,6 +114,54 @@ private static final long serialVersionUID = 0L;
     return level_;
   }
 
+  public static final int DRIVER_HEAT_FIELD_NUMBER = 4;
+  private int driverHeat_ = 0;
+  /**
+   * <pre>
+   * Full current seat state: cloud API is stateful and requires these on every call.
+   * </pre>
+   *
+   * <code>int32 driver_heat = 4 [json_name = "driverHeat"];</code>
+   * @return The driverHeat.
+   */
+  @java.lang.Override
+  public int getDriverHeat() {
+    return driverHeat_;
+  }
+
+  public static final int DRIVER_VENT_FIELD_NUMBER = 5;
+  private int driverVent_ = 0;
+  /**
+   * <code>int32 driver_vent = 5 [json_name = "driverVent"];</code>
+   * @return The driverVent.
+   */
+  @java.lang.Override
+  public int getDriverVent() {
+    return driverVent_;
+  }
+
+  public static final int PASSENGER_HEAT_FIELD_NUMBER = 6;
+  private int passengerHeat_ = 0;
+  /**
+   * <code>int32 passenger_heat = 6 [json_name = "passengerHeat"];</code>
+   * @return The passengerHeat.
+   */
+  @java.lang.Override
+  public int getPassengerHeat() {
+    return passengerHeat_;
+  }
+
+  public static final int PASSENGER_VENT_FIELD_NUMBER = 7;
+  private int passengerVent_ = 0;
+  /**
+   * <code>int32 passenger_vent = 7 [json_name = "passengerVent"];</code>
+   * @return The passengerVent.
+   */
+  @java.lang.Override
+  public int getPassengerVent() {
+    return passengerVent_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -137,6 +185,18 @@ private static final long serialVersionUID = 0L;
     if (level_ != 0) {
       output.writeInt32(3, level_);
     }
+    if (driverHeat_ != 0) {
+      output.writeInt32(4, driverHeat_);
+    }
+    if (driverVent_ != 0) {
+      output.writeInt32(5, driverVent_);
+    }
+    if (passengerHeat_ != 0) {
+      output.writeInt32(6, passengerHeat_);
+    }
+    if (passengerVent_ != 0) {
+      output.writeInt32(7, passengerVent_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -151,6 +211,22 @@ private static final long serialVersionUID = 0L;
     if (level_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(3, level_);
+    }
+    if (driverHeat_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(4, driverHeat_);
+    }
+    if (driverVent_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(5, driverVent_);
+    }
+    if (passengerHeat_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(6, passengerHeat_);
+    }
+    if (passengerVent_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(7, passengerVent_);
     }
     return size;
   }
@@ -182,6 +258,14 @@ private static final long serialVersionUID = 0L;
         .equals(other.getAction())) return false;
     if (getLevel()
         != other.getLevel()) return false;
+    if (getDriverHeat()
+        != other.getDriverHeat()) return false;
+    if (getDriverVent()
+        != other.getDriverVent()) return false;
+    if (getPassengerHeat()
+        != other.getPassengerHeat()) return false;
+    if (getPassengerVent()
+        != other.getPassengerVent()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -199,6 +283,14 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getAction().hashCode();
     hash = (37 * hash) + LEVEL_FIELD_NUMBER;
     hash = (53 * hash) + getLevel();
+    hash = (37 * hash) + DRIVER_HEAT_FIELD_NUMBER;
+    hash = (53 * hash) + getDriverHeat();
+    hash = (37 * hash) + DRIVER_VENT_FIELD_NUMBER;
+    hash = (53 * hash) + getDriverVent();
+    hash = (37 * hash) + PASSENGER_HEAT_FIELD_NUMBER;
+    hash = (53 * hash) + getPassengerHeat();
+    hash = (37 * hash) + PASSENGER_VENT_FIELD_NUMBER;
+    hash = (53 * hash) + getPassengerVent();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -333,6 +425,10 @@ private static final long serialVersionUID = 0L;
       seatIndex_ = 0;
       action_ = "";
       level_ = 0;
+      driverHeat_ = 0;
+      driverVent_ = 0;
+      passengerHeat_ = 0;
+      passengerVent_ = 0;
       return this;
     }
 
@@ -375,6 +471,18 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.level_ = level_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.driverHeat_ = driverHeat_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.driverVent_ = driverVent_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.passengerHeat_ = passengerHeat_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.passengerVent_ = passengerVent_;
+      }
     }
 
     @java.lang.Override
@@ -399,6 +507,18 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getLevel() != 0) {
         setLevel(other.getLevel());
+      }
+      if (other.getDriverHeat() != 0) {
+        setDriverHeat(other.getDriverHeat());
+      }
+      if (other.getDriverVent() != 0) {
+        setDriverVent(other.getDriverVent());
+      }
+      if (other.getPassengerHeat() != 0) {
+        setPassengerHeat(other.getPassengerHeat());
+      }
+      if (other.getPassengerVent() != 0) {
+        setPassengerVent(other.getPassengerVent());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -441,6 +561,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 32: {
+              driverHeat_ = input.readInt32();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 40: {
+              driverVent_ = input.readInt32();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
+            case 48: {
+              passengerHeat_ = input.readInt32();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
+            case 56: {
+              passengerVent_ = input.readInt32();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -602,6 +742,146 @@ private static final long serialVersionUID = 0L;
     public Builder clearLevel() {
       bitField0_ = (bitField0_ & ~0x00000004);
       level_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int driverHeat_ ;
+    /**
+     * <pre>
+     * Full current seat state: cloud API is stateful and requires these on every call.
+     * </pre>
+     *
+     * <code>int32 driver_heat = 4 [json_name = "driverHeat"];</code>
+     * @return The driverHeat.
+     */
+    @java.lang.Override
+    public int getDriverHeat() {
+      return driverHeat_;
+    }
+    /**
+     * <pre>
+     * Full current seat state: cloud API is stateful and requires these on every call.
+     * </pre>
+     *
+     * <code>int32 driver_heat = 4 [json_name = "driverHeat"];</code>
+     * @param value The driverHeat to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDriverHeat(int value) {
+
+      driverHeat_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Full current seat state: cloud API is stateful and requires these on every call.
+     * </pre>
+     *
+     * <code>int32 driver_heat = 4 [json_name = "driverHeat"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDriverHeat() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      driverHeat_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int driverVent_ ;
+    /**
+     * <code>int32 driver_vent = 5 [json_name = "driverVent"];</code>
+     * @return The driverVent.
+     */
+    @java.lang.Override
+    public int getDriverVent() {
+      return driverVent_;
+    }
+    /**
+     * <code>int32 driver_vent = 5 [json_name = "driverVent"];</code>
+     * @param value The driverVent to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDriverVent(int value) {
+
+      driverVent_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 driver_vent = 5 [json_name = "driverVent"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDriverVent() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      driverVent_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int passengerHeat_ ;
+    /**
+     * <code>int32 passenger_heat = 6 [json_name = "passengerHeat"];</code>
+     * @return The passengerHeat.
+     */
+    @java.lang.Override
+    public int getPassengerHeat() {
+      return passengerHeat_;
+    }
+    /**
+     * <code>int32 passenger_heat = 6 [json_name = "passengerHeat"];</code>
+     * @param value The passengerHeat to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPassengerHeat(int value) {
+
+      passengerHeat_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 passenger_heat = 6 [json_name = "passengerHeat"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPassengerHeat() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      passengerHeat_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int passengerVent_ ;
+    /**
+     * <code>int32 passenger_vent = 7 [json_name = "passengerVent"];</code>
+     * @return The passengerVent.
+     */
+    @java.lang.Override
+    public int getPassengerVent() {
+      return passengerVent_;
+    }
+    /**
+     * <code>int32 passenger_vent = 7 [json_name = "passengerVent"];</code>
+     * @param value The passengerVent to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPassengerVent(int value) {
+
+      passengerVent_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 passenger_vent = 7 [json_name = "passengerVent"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPassengerVent() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      passengerVent_ = 0;
       onChanged();
       return this;
     }

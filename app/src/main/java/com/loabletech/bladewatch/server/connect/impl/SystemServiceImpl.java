@@ -7,6 +7,7 @@ import net.bladewatch.app.server.PerformanceApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.SystemService.
@@ -42,26 +43,26 @@ public class SystemServiceImpl {
                 this::handleDownloadModel);
     }
 
-    private String handleGetStatus(String req) throws ConnectException {
+    private ConnectResponse handleGetStatus(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out -> httpServer.serveStatus(out));
     }
 
-    private String handleGetPerformance(String req) throws ConnectException {
+    private ConnectResponse handleGetPerformance(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 PerformanceApiHandler.handle("GET", "/api/performance", null, out));
     }
 
-    private String handlePlayAudioTest(String req) throws ConnectException {
+    private ConnectResponse handlePlayAudioTest(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 AudioTestApiHandler.handle("POST", "/api/audio/test-avas", req, out));
     }
 
-    private String handleListModels(String req) throws ConnectException {
+    private ConnectResponse handleListModels(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ModelsApiHandler.handle("GET", "/api/models/list", null, out));
     }
 
-    private String handleDownloadModel(String req) throws ConnectException {
+    private ConnectResponse handleDownloadModel(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 ModelsApiHandler.handle("POST", "/api/models/download", req, out));
     }

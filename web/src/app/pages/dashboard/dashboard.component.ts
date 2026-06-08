@@ -76,8 +76,8 @@ export default class DashboardComponent implements OnInit, AfterViewInit, OnDest
   batteryLabel(): string {
     const s = this.status();
     if (!s) return '—';
-    if (s.soc?.percent) return `${s.soc.percent}%`;
-    if (s.battery?.level) return `${s.battery.level}%`;
+    if (s.soc?.percent != null) return `${s.soc.percent}%`;
+    if (s.battery?.level != null) return `${s.battery.level}%`;
     return '—';
   }
 

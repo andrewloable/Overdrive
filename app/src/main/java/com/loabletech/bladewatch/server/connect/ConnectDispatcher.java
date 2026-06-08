@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,7 +66,7 @@ public class ConnectDispatcher {
      */
     public void dispatch(String method, String path, String body,
                          String contentType, String connectVersion,
-                         OutputStream out) {
+                         String clientIdentity, OutputStream out) {
         try {
             // Only POST is valid for unary Connect calls.
             if (!"POST".equals(method)) {
@@ -100,32 +101,37 @@ public class ConnectDispatcher {
             }
 
             String requestJson = (body == null || body.isEmpty()) ? "{}" : body;
-            String responseJson = handler.handle(requestJson);
+            ConnectResponse response = handler.handle(requestJson, clientIdentity != null ? clientIdentity : "");
 
-            sendConnectSuccess(out, responseJson);
+            sendConnectSuccess(out, response.body, response.extraHeaders);
 
         } catch (ConnectException e) {
             try {
-                sendConnectError(out, 400, e.getCode(), e.getMessage());
+                sendConnectError(out, connectCodeToHttpStatus(e.getCode()), e.getCode(), e.getMessage());
             } catch (Exception ignored) {}
         } catch (Exception e) {
-            CameraDaemon.log("ConnectDispatcher: unexpected error: " + e.getMessage());
+            CameraDaemon.log("ConnectDispatcher: unexpected error: " + e);
             try {
-                sendConnectError(out, 500, "internal", "Internal error: " + e.getMessage());
+                sendConnectError(out, 500, "internal", "An internal error occurred");
             } catch (Exception ignored) {}
         }
     }
 
     // ==================== HTTP response helpers ====================
 
-    private void sendConnectSuccess(OutputStream out, String jsonBody) throws Exception {
+    private void sendConnectSuccess(OutputStream out, String jsonBody,
+            java.util.List<String> extraHeaders) throws Exception {
         byte[] body = jsonBody.getBytes(StandardCharsets.UTF_8);
-        String headers = "HTTP/1.1 200 OK\r\n"
-                + "Content-Type: application/connect+json\r\n"
-                + "Content-Length: " + body.length + "\r\n"
-                + "Connection: close\r\n"
-                + "\r\n";
-        out.write(headers.getBytes(StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        sb.append("HTTP/1.1 200 OK\r\n")
+          .append("Content-Type: application/connect+json\r\n")
+          .append("Content-Length: ").append(body.length).append("\r\n")
+          .append("Connection: close\r\n");
+        if (extraHeaders != null) {
+            for (String h : extraHeaders) sb.append(h).append("\r\n");
+        }
+        sb.append("\r\n");
+        out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
         out.write(body);
         out.flush();
     }
@@ -147,14 +153,37 @@ public class ConnectDispatcher {
         out.flush();
     }
 
+    /** Map Connect error codes to their canonical HTTP status codes. */
+    private int connectCodeToHttpStatus(String code) {
+        if (code == null) return 500;
+        switch (code) {
+            case "invalid_argument":    return 400;
+            case "unauthenticated":     return 401;
+            case "permission_denied":   return 403;
+            case "not_found":           return 404;
+            case "already_exists":      return 409;
+            case "resource_exhausted":  return 429;
+            case "unimplemented":       return 501;
+            case "unavailable":         return 503;
+            case "internal":            return 500;
+            default:                    return 500;
+        }
+    }
+
     private String httpStatusText(int status) {
         switch (status) {
             case 200: return "OK";
             case 400: return "Bad Request";
+            case 401: return "Unauthorized";
+            case 403: return "Forbidden";
             case 404: return "Not Found";
             case 405: return "Method Not Allowed";
+            case 409: return "Conflict";
             case 415: return "Unsupported Media Type";
+            case 429: return "Too Many Requests";
             case 500: return "Internal Server Error";
+            case 501: return "Not Implemented";
+            case 503: return "Service Unavailable";
             default:  return "Error";
         }
     }

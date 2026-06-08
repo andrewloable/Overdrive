@@ -49,11 +49,14 @@ internal class LiveStreamClient {
     fun selectDirection(direction: LiveViewDirection) {
         currentDirection = direction
         Thread({
-            runBlocking {
+            val resp = runBlocking {
                 ConnectClientProvider.streamService().setViewMode(
                     SetViewModeRequest.newBuilder().setViewMode(direction.viewMode).build(),
                     emptyMap()
                 )
+            }
+            if (resp is ResponseMessage.Failure) {
+                Log.w(TAG, "selectDirection failed: ${resp.cause.message}")
             }
         }, "LiveStreamViewSelect").apply {
             isDaemon = true
@@ -77,19 +80,25 @@ internal class LiveStreamClient {
     }
 
     private fun enableStream() {
-        runBlocking {
+        val resp = runBlocking {
             ConnectClientProvider.streamService().enable(
                 EnableStreamRequest.newBuilder().build(), emptyMap()
             )
         }
+        if (resp is ResponseMessage.Failure) {
+            throw java.io.IOException("stream enable failed: ${resp.cause.message}")
+        }
     }
 
     private fun setViewMode(direction: LiveViewDirection) {
-        runBlocking {
+        val resp = runBlocking {
             ConnectClientProvider.streamService().setViewMode(
                 SetViewModeRequest.newBuilder().setViewMode(direction.viewMode).build(),
                 emptyMap()
             )
+        }
+        if (resp is ResponseMessage.Failure) {
+            throw java.io.IOException("set view mode failed: ${resp.cause.message}")
         }
     }
 

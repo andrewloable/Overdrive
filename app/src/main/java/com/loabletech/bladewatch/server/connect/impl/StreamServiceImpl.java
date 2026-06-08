@@ -4,6 +4,7 @@ import net.bladewatch.app.server.StreamingApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.StreamService.
@@ -31,27 +32,27 @@ public class StreamServiceImpl {
                 this::handleGetViewMode);
     }
 
-    private String handleEnable(String req) throws ConnectException {
+    private ConnectResponse handleEnable(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 StreamingApiHandler.handle("POST", "/api/stream/enable", req, out));
     }
 
-    private String handleDisable(String req) throws ConnectException {
+    private ConnectResponse handleDisable(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 StreamingApiHandler.handle("POST", "/api/stream/disable", req, out));
     }
 
-    private String handleGetStatus(String req) throws ConnectException {
+    private ConnectResponse handleGetStatus(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 StreamingApiHandler.handle("GET", "/api/stream/status", null, out));
     }
 
-    private String handleGetQuality(String req) throws ConnectException {
+    private ConnectResponse handleGetQuality(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 StreamingApiHandler.handle("GET", "/api/stream/quality", null, out));
     }
 
-    private String handleSetQuality(String req) throws ConnectException {
+    private ConnectResponse handleSetQuality(String req, String clientIdentity) throws ConnectException {
         String tier;
         try {
             tier = new org.json.JSONObject(req).optString("quality", "STANDARD").toUpperCase();
@@ -63,7 +64,7 @@ public class StreamServiceImpl {
                 StreamingApiHandler.handle("POST", "/api/stream/quality/" + t, req, out));
     }
 
-    private String handleSetViewMode(String req) throws ConnectException {
+    private ConnectResponse handleSetViewMode(String req, String clientIdentity) throws ConnectException {
         int viewMode;
         try {
             viewMode = new org.json.JSONObject(req).optInt("view_mode", 0);
@@ -75,7 +76,7 @@ public class StreamServiceImpl {
                 StreamingApiHandler.handle("POST", "/api/stream/view/" + vm, req, out));
     }
 
-    private String handleGetViewMode(String req) throws ConnectException {
+    private ConnectResponse handleGetViewMode(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 StreamingApiHandler.handle("GET", "/api/stream/view", null, out));
     }

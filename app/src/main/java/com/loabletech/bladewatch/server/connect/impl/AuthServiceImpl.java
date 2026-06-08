@@ -4,8 +4,7 @@ import net.bladewatch.app.server.AuthApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
-
-import org.json.JSONObject;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.AuthService.
@@ -23,17 +22,20 @@ public class AuthServiceImpl {
         dispatcher.register("bladewatch.v1.AuthService", "GetAuthStatus", this::handleGetAuthStatus);
     }
 
-    private String handleLogin(String requestJson) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
-                AuthApiHandler.handle("POST", "/auth/token", requestJson, out, "connect", false));
+    private ConnectResponse handleLogin(String requestJson, String clientIdentity) throws ConnectException {
+        // Use captureWithCookies so the byd_session Set-Cookie header set by
+        // AuthApiHandler.handleTokenValidation is forwarded to the browser.
+        // clientIdentity is the real client IP (X-Forwarded-For or socket) for per-IP rate limiting.
+        return ConnectHandlerUtil.captureWithCookies(out ->
+                AuthApiHandler.handle("POST", "/auth/token", requestJson, out, clientIdentity, false));
     }
 
-    private String handleLogout(String requestJson) throws ConnectException {
+    private ConnectResponse handleLogout(String requestJson, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 AuthApiHandler.handle("POST", "/auth/logout", "{}", out, null, false));
     }
 
-    private String handleGetAuthStatus(String requestJson) throws ConnectException {
+    private ConnectResponse handleGetAuthStatus(String requestJson, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 AuthApiHandler.handle("GET", "/auth/status", null, out, null, false));
     }

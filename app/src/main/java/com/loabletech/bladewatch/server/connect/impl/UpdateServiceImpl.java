@@ -4,6 +4,7 @@ import net.bladewatch.app.server.UpdateApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.UpdateService.
@@ -23,22 +24,22 @@ public class UpdateServiceImpl {
         dispatcher.register("bladewatch.v1.UpdateService", "GetProgress", this::handleGetProgress);
     }
 
-    private String handleCheckUpdate(String req) throws ConnectException {
+    private ConnectResponse handleCheckUpdate(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 UpdateApiHandler.handle("GET", "/api/update/check", null, out));
     }
 
-    private String handleGetPreview(String req) throws ConnectException {
+    private ConnectResponse handleGetPreview(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 UpdateApiHandler.handle("GET", "/api/update/preview", null, out));
     }
 
-    private String handleInstallUpdate(String req) throws ConnectException {
+    private ConnectResponse handleInstallUpdate(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 UpdateApiHandler.handle("POST", "/api/update/install?confirm=true", req, out));
     }
 
-    private String handleGetProgress(String req) throws ConnectException {
+    private ConnectResponse handleGetProgress(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 UpdateApiHandler.handle("GET", "/api/update/progress", null, out));
     }

@@ -200,9 +200,17 @@ internal class TripsClient {
 
     fun syncDatabase(): TripSyncResult = runBlocking {
         val req = SyncTripsRequest.newBuilder().build()
-        val resp = ConnectClientProvider.tripsService().syncTrips(req, emptyMap())
+        val resp = ConnectClientProvider.longTripsService().syncTrips(req, emptyMap())
         when (resp) {
-            is ResponseMessage.Success -> TripSyncResult(resp.message.success, "Synced successfully")
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                if (m.success) {
+                    val detail = "+${m.added} -${m.removed} (${m.total} total)"
+                    TripSyncResult(true, "Synced successfully: $detail")
+                } else {
+                    TripSyncResult(false, m.error.takeIf { it.isNotEmpty() } ?: "Sync failed")
+                }
+            }
             is ResponseMessage.Failure -> TripSyncResult(false, resp.cause.message ?: "Network error")
         }
     }

@@ -8,6 +8,7 @@ import net.bladewatch.app.grpc.v1.FlashRequest
 import net.bladewatch.app.grpc.v1.GetChargeCapRequest
 import net.bladewatch.app.grpc.v1.GetVehicleStateRequest
 import net.bladewatch.app.grpc.v1.LockRequest
+import net.bladewatch.app.grpc.v1.VehicleCommandResponse
 import net.bladewatch.app.grpc.v1.MoveWindowRequest
 import net.bladewatch.app.grpc.v1.SetAdasRequest
 import net.bladewatch.app.grpc.v1.SetChargeCapRequest
@@ -147,6 +148,9 @@ class VehicleClient {
             SetClimateRequest.newBuilder()
                 .setAction("max_cooling")
                 .setMaxCooling(enable)
+                .setRestoreAcOn(restoreAcOn)
+                .setRestoreTempC(restoreTemp.toDouble())
+                .setRestoreFanLevel(restoreFan)
                 .build(),
             emptyMap()
         )
@@ -162,6 +166,10 @@ class VehicleClient {
                 .setSeatIndex(position)
                 .setAction("heating")
                 .setLevel(newLevel)
+                .setDriverHeat(driverHeat)
+                .setDriverVent(driverVent)
+                .setPassengerHeat(passengerHeat)
+                .setPassengerVent(passengerVent)
                 .build(),
             emptyMap()
         )
@@ -175,6 +183,10 @@ class VehicleClient {
                 .setSeatIndex(position)
                 .setAction("ventilation")
                 .setLevel(newLevel)
+                .setDriverHeat(driverHeat)
+                .setDriverVent(driverVent)
+                .setPassengerHeat(passengerHeat)
+                .setPassengerVent(passengerVent)
                 .build(),
             emptyMap()
         )
@@ -259,10 +271,10 @@ class VehicleClient {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private fun vehicleCommand(block: suspend ConnectClientProvider.() -> ResponseMessage<*>): Boolean = runBlocking {
+    private fun vehicleCommand(block: suspend ConnectClientProvider.() -> ResponseMessage<VehicleCommandResponse>): Boolean = runBlocking {
         try {
             val resp = ConnectClientProvider.block()
-            resp is ResponseMessage.Success
+            resp is ResponseMessage.Success && resp.message.success
         } catch (_: Exception) {
             false
         }

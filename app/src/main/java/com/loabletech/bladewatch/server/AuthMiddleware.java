@@ -48,7 +48,9 @@ public class AuthMiddleware {
         // worker registration and manifest discovery, with no Bearer header
         // (browser-internal fetch, not auth.js-wrapped).
         "/manifest.json",
-        "/sw.js"
+        "/sw.js",
+        // Connect protocol: login endpoint must be reachable before a session exists.
+        "/bladewatch.v1.AuthService/Login"
     ));
 
     // Path prefixes that don't require authentication

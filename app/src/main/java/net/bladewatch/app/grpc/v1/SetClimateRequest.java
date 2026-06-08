@@ -143,6 +143,43 @@ private static final long serialVersionUID = 0L;
     return maxCooling_;
   }
 
+  public static final int RESTORE_AC_ON_FIELD_NUMBER = 7;
+  private boolean restoreAcOn_ = false;
+  /**
+   * <pre>
+   * Restore params: used when disabling max_cooling to re-apply prior AC state.
+   * </pre>
+   *
+   * <code>bool restore_ac_on = 7 [json_name = "restoreAcOn"];</code>
+   * @return The restoreAcOn.
+   */
+  @java.lang.Override
+  public boolean getRestoreAcOn() {
+    return restoreAcOn_;
+  }
+
+  public static final int RESTORE_TEMP_C_FIELD_NUMBER = 8;
+  private double restoreTempC_ = 0D;
+  /**
+   * <code>double restore_temp_c = 8 [json_name = "restoreTempC"];</code>
+   * @return The restoreTempC.
+   */
+  @java.lang.Override
+  public double getRestoreTempC() {
+    return restoreTempC_;
+  }
+
+  public static final int RESTORE_FAN_LEVEL_FIELD_NUMBER = 9;
+  private int restoreFanLevel_ = 0;
+  /**
+   * <code>int32 restore_fan_level = 9 [json_name = "restoreFanLevel"];</code>
+   * @return The restoreFanLevel.
+   */
+  @java.lang.Override
+  public int getRestoreFanLevel() {
+    return restoreFanLevel_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -175,6 +212,15 @@ private static final long serialVersionUID = 0L;
     if (maxCooling_ != false) {
       output.writeBool(6, maxCooling_);
     }
+    if (restoreAcOn_ != false) {
+      output.writeBool(7, restoreAcOn_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(restoreTempC_) != 0) {
+      output.writeDouble(8, restoreTempC_);
+    }
+    if (restoreFanLevel_ != 0) {
+      output.writeInt32(9, restoreFanLevel_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -201,6 +247,18 @@ private static final long serialVersionUID = 0L;
     if (maxCooling_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(6, maxCooling_);
+    }
+    if (restoreAcOn_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(7, restoreAcOn_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(restoreTempC_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(8, restoreTempC_);
+    }
+    if (restoreFanLevel_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(9, restoreFanLevel_);
     }
     return size;
   }
@@ -239,6 +297,13 @@ private static final long serialVersionUID = 0L;
         != other.getWindMode()) return false;
     if (getMaxCooling()
         != other.getMaxCooling()) return false;
+    if (getRestoreAcOn()
+        != other.getRestoreAcOn()) return false;
+    if (java.lang.Double.doubleToLongBits(getRestoreTempC())
+        != java.lang.Double.doubleToLongBits(
+            other.getRestoreTempC())) return false;
+    if (getRestoreFanLevel()
+        != other.getRestoreFanLevel()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -265,6 +330,14 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + MAX_COOLING_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getMaxCooling());
+    hash = (37 * hash) + RESTORE_AC_ON_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getRestoreAcOn());
+    hash = (37 * hash) + RESTORE_TEMP_C_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getRestoreTempC()));
+    hash = (37 * hash) + RESTORE_FAN_LEVEL_FIELD_NUMBER;
+    hash = (53 * hash) + getRestoreFanLevel();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -402,6 +475,9 @@ private static final long serialVersionUID = 0L;
       fanLevel_ = 0;
       windMode_ = 0;
       maxCooling_ = false;
+      restoreAcOn_ = false;
+      restoreTempC_ = 0D;
+      restoreFanLevel_ = 0;
       return this;
     }
 
@@ -453,6 +529,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.maxCooling_ = maxCooling_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.restoreAcOn_ = restoreAcOn_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.restoreTempC_ = restoreTempC_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.restoreFanLevel_ = restoreFanLevel_;
+      }
     }
 
     @java.lang.Override
@@ -486,6 +571,15 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getMaxCooling() != false) {
         setMaxCooling(other.getMaxCooling());
+      }
+      if (other.getRestoreAcOn() != false) {
+        setRestoreAcOn(other.getRestoreAcOn());
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getRestoreTempC()) != 0) {
+        setRestoreTempC(other.getRestoreTempC());
+      }
+      if (other.getRestoreFanLevel() != 0) {
+        setRestoreFanLevel(other.getRestoreFanLevel());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -543,6 +637,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 48
+            case 56: {
+              restoreAcOn_ = input.readBool();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 65: {
+              restoreTempC_ = input.readDouble();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 65
+            case 72: {
+              restoreFanLevel_ = input.readInt32();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 72
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -788,6 +897,114 @@ private static final long serialVersionUID = 0L;
     public Builder clearMaxCooling() {
       bitField0_ = (bitField0_ & ~0x00000020);
       maxCooling_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean restoreAcOn_ ;
+    /**
+     * <pre>
+     * Restore params: used when disabling max_cooling to re-apply prior AC state.
+     * </pre>
+     *
+     * <code>bool restore_ac_on = 7 [json_name = "restoreAcOn"];</code>
+     * @return The restoreAcOn.
+     */
+    @java.lang.Override
+    public boolean getRestoreAcOn() {
+      return restoreAcOn_;
+    }
+    /**
+     * <pre>
+     * Restore params: used when disabling max_cooling to re-apply prior AC state.
+     * </pre>
+     *
+     * <code>bool restore_ac_on = 7 [json_name = "restoreAcOn"];</code>
+     * @param value The restoreAcOn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRestoreAcOn(boolean value) {
+
+      restoreAcOn_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Restore params: used when disabling max_cooling to re-apply prior AC state.
+     * </pre>
+     *
+     * <code>bool restore_ac_on = 7 [json_name = "restoreAcOn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRestoreAcOn() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      restoreAcOn_ = false;
+      onChanged();
+      return this;
+    }
+
+    private double restoreTempC_ ;
+    /**
+     * <code>double restore_temp_c = 8 [json_name = "restoreTempC"];</code>
+     * @return The restoreTempC.
+     */
+    @java.lang.Override
+    public double getRestoreTempC() {
+      return restoreTempC_;
+    }
+    /**
+     * <code>double restore_temp_c = 8 [json_name = "restoreTempC"];</code>
+     * @param value The restoreTempC to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRestoreTempC(double value) {
+
+      restoreTempC_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>double restore_temp_c = 8 [json_name = "restoreTempC"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRestoreTempC() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      restoreTempC_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private int restoreFanLevel_ ;
+    /**
+     * <code>int32 restore_fan_level = 9 [json_name = "restoreFanLevel"];</code>
+     * @return The restoreFanLevel.
+     */
+    @java.lang.Override
+    public int getRestoreFanLevel() {
+      return restoreFanLevel_;
+    }
+    /**
+     * <code>int32 restore_fan_level = 9 [json_name = "restoreFanLevel"];</code>
+     * @param value The restoreFanLevel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRestoreFanLevel(int value) {
+
+      restoreFanLevel_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 restore_fan_level = 9 [json_name = "restoreFanLevel"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRestoreFanLevel() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      restoreFanLevel_ = 0;
       onChanged();
       return this;
     }

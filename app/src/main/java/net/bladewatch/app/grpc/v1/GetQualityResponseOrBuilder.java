@@ -254,4 +254,14 @@ java.lang.String defaultValue);
    */
   com.google.protobuf.ByteString
       getNativeResolutionBytes();
+
+  /**
+   * <pre>
+   * Recording segment length in minutes (e.g. 5, 10, 15).
+   * </pre>
+   *
+   * <code>int32 recording_segment_minutes = 10 [json_name = "recordingSegmentMinutes"];</code>
+   * @return The recordingSegmentMinutes.
+   */
+  int getRecordingSegmentMinutes();
 }

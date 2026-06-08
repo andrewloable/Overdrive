@@ -91,6 +91,8 @@ public class HttpServer {
             // Extract web/local and web/shared directories
             extractAssetDir(assetManager, "web/local", new File(WEB_ROOT, "local"));
             extractAssetDir(assetManager, "web/shared", new File(WEB_ROOT, "shared"));
+            // Extract Angular SPA build output.
+            extractAssetDir(assetManager, "web/angular", new File(WEB_ROOT, "angular"));
             // Extract i18n catalogs (one JSON per supported locale).
             // The web/i18n directory is created by the NLLB translation pipeline
             // — at minimum web/i18n/en.json must exist for the runtime to load.
@@ -406,16 +408,38 @@ public class HttpServer {
                 return;
             }
 
+            // Derive client identity (X-Forwarded-For / socket) for Connect rate limiting.
+            String connectClientIdentity;
+            if (forwardedFor != null && !forwardedFor.isEmpty()) {
+                int comma = forwardedFor.indexOf(',');
+                connectClientIdentity = (comma > 0 ? forwardedFor.substring(0, comma) : forwardedFor).trim();
+            } else {
+                connectClientIdentity = String.valueOf(client.getRemoteSocketAddress());
+            }
+
             // Route to modular handlers first
             if (routeToHandlers(method, path, body, rangeHeader, ifNoneMatchHeader,
-                    contentTypeHeader, connectVersionHeader, out)) {
+                    contentTypeHeader, connectVersionHeader, connectClientIdentity, out)) {
                 // Handled by a modular handler
             }
-            // Static pages
-            else if (path.equals("/") || path.equals("/index.html")) {
-                if (!serveStaticFile(out, "local/index.html")) {
-                    HttpResponse.sendError(out, 404, "index.html not found");
+            // Angular SPA static assets (JS/CSS chunks produced by Vite build).
+            else if (path.startsWith("/assets/") || path.startsWith("/vendor/")) {
+                String filePath = path.substring(1); // strip leading slash
+                int q = filePath.indexOf('?');
+                if (q >= 0) filePath = filePath.substring(0, q);
+                if (!serveStaticFile(out, "angular/" + filePath)) {
+                    HttpResponse.sendError(out, 404, "Not Found: " + path);
                 }
+            // Legacy pages kept for regression testing until Angular is fully stable.
+            } else if (path.startsWith("/legacy/")) {
+                String filePath = path.substring("/legacy/".length());
+                int q = filePath.indexOf('?');
+                if (q >= 0) filePath = filePath.substring(0, q);
+                if (filePath.isEmpty()) filePath = "index.html";
+                if (!serveStaticFile(out, "local/" + filePath)) {
+                    HttpResponse.sendError(out, 404, "Not Found: /legacy/" + filePath);
+                }
+            // Legacy manifest + service worker (still used by installed PWA instances).
             } else if (path.startsWith("/manifest.json")) {
                 if (!serveStaticFile(out, "local/manifest.json")) {
                     HttpResponse.sendError(out, 404, "manifest.json not found");
@@ -423,39 +447,6 @@ public class HttpServer {
             } else if (path.startsWith("/sw.js")) {
                 if (!serveStaticFile(out, "local/sw.js")) {
                     HttpResponse.sendError(out, 404, "sw.js not found");
-                }
-            } else if (path.equals("/recording.html") || path.equals("/recording")) {
-                if (!serveStaticFile(out, "local/recording.html")) {
-                    HttpResponse.sendError(out, 404, "recording.html not found");
-                }
-            } else if (path.equals("/surveillance.html") || path.equals("/surveillance")) {
-                if (!serveStaticFile(out, "local/surveillance.html")) {
-                    HttpResponse.sendError(out, 404, "surveillance.html not found");
-                }
-            } else if (path.equals("/events.html") || path.equals("/events") || 
-                       path.startsWith("/events.html?") || path.startsWith("/events?")) {
-                if (!serveStaticFile(out, "local/events.html")) {
-                    HttpResponse.sendError(out, 404, "events.html not found");
-                }
-            } else if (path.equals("/performance.html") || path.equals("/performance")) {
-                if (!serveStaticFile(out, "local/performance.html")) {
-                    HttpResponse.sendError(out, 404, "performance.html not found");
-                }
-            } else if (path.equals("/trips.html") || path.equals("/trips")) {
-                if (!serveStaticFile(out, "local/trips.html")) {
-                    HttpResponse.sendError(out, 404, "trips.html not found");
-                }
-            } else if (path.equals("/vehicle-control.html") || path.equals("/vehicle-control")) {
-                if (!serveStaticFile(out, "local/vehicle-control.html")) {
-                    HttpResponse.sendError(out, 404, "vehicle-control.html not found");
-                }
-            } else if (path.equals("/notifications.html") || path.equals("/notifications")) {
-                if (!serveStaticFile(out, "local/notifications.html")) {
-                    HttpResponse.sendError(out, 404, "notifications.html not found");
-                }
-            } else if (path.equals("/about.html") || path.equals("/about")) {
-                if (!serveStaticFile(out, "local/about.html")) {
-                    HttpResponse.sendError(out, 404, "about.html not found");
                 }
             } else if (path.equals("/credits.json")) {
                 if (!serveStaticFile(out, "local/credits.json")) {
@@ -551,7 +542,11 @@ public class HttpServer {
                 // Legacy view page - redirect
                 HttpResponse.sendHtml(out, "<html><head><meta http-equiv='refresh' content='0;url=/'></head></html>");
             } else {
-                HttpResponse.sendError(out, 404, "Not Found");
+                // Angular SPA fallback — serve index.html for all unrecognised paths so
+                // the Angular router can handle the route client-side.
+                if (!serveStaticFile(out, "angular/index.html")) {
+                    HttpResponse.sendError(out, 404, "Not Found");
+                }
             }
         } catch (Exception e) {
             CameraDaemon.log("HTTP error: " + e.getMessage());
@@ -566,12 +561,13 @@ public class HttpServer {
      */
     private boolean routeToHandlers(String method, String path, String body, String rangeHeader,
                                      String ifNoneMatchHeader, String contentTypeHeader,
-                                     String connectVersionHeader, OutputStream out) throws Exception {
+                                     String connectVersionHeader, String clientIdentity,
+                                     OutputStream out) throws Exception {
         // Connect protocol — routes /bladewatch.v1.ServiceName/Method to registered service impls.
         // Auth middleware already ran before this call, so no extra JWT check needed here.
         if (path.startsWith("/bladewatch.v1.")) {
             connectDispatcher.dispatch(method, path, body,
-                    contentTypeHeader, connectVersionHeader, out);
+                    contentTypeHeader, connectVersionHeader, clientIdentity, out);
             return true;
         }
 

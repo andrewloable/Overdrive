@@ -317,54 +317,56 @@ public final class Trips extends com.google.protobuf.GeneratedFile {
       "\003R\016storageLimitMb\022/\n\024has_storage_limit_m" +
       "b\030\003 \001(\010R\021hasStorageLimitMb\"D\n\022SetStorage" +
       "Response\022\030\n\007success\030\001 \001(\010R\007success\022\024\n\005er" +
-      "ror\030\002 \001(\tR\005error\"\022\n\020SyncTripsRequest\"C\n\021" +
-      "SyncTripsResponse\022\030\n\007success\030\001 \001(\010R\007succ" +
-      "ess\022\024\n\005error\030\002 \001(\tR\005error\".\n\023GetTelemetr" +
-      "yRequest\022\027\n\007trip_id\030\001 \001(\003R\006tripId\"\204\001\n\024Ge" +
-      "tTelemetryResponse\022\030\n\007success\030\001 \001(\010R\007suc" +
-      "cess\022<\n\ttelemetry\030\002 \003(\0132\036.bladewatch.v1." +
-      "TelemetrySampleR\ttelemetry\022\024\n\005error\030\003 \001(" +
-      "\tR\005error\"1\n\026GetSimilarTripsRequest\022\027\n\007tr" +
-      "ip_id\030\001 \001(\003R\006tripId\"\315\001\n\027GetSimilarTripsR" +
-      "esponse\022\030\n\007success\030\001 \001(\010R\007success\0224\n\007sim" +
-      "ilar\030\002 \003(\0132\032.bladewatch.v1.TripSummaryR\007" +
-      "similar\022\024\n\005count\030\003 \001(\005R\005count\0226\n\005stats\030\004" +
-      " \001(\0132 .bladewatch.v1.SimilarTripsStatsR\005" +
-      "stats\022\024\n\005error\030\005 \001(\tR\005error\"-\n\022GetGpsTra" +
-      "ceRequest\022\027\n\007trip_id\030\001 \001(\003R\006tripId\"p\n\023Ge" +
-      "tGpsTraceResponse\022\030\n\007success\030\001 \001(\010R\007succ" +
-      "ess\022)\n\003gps\030\002 \003(\0132\027.bladewatch.v1.GpsPoin" +
-      "tR\003gps\022\024\n\005error\030\003 \001(\tR\005error2\211\t\n\014TripsSe" +
-      "rvice\022N\n\tListTrips\022\037.bladewatch.v1.ListT" +
-      "ripsRequest\032 .bladewatch.v1.ListTripsRes" +
-      "ponse\022H\n\007GetTrip\022\035.bladewatch.v1.GetTrip" +
-      "Request\032\036.bladewatch.v1.GetTripResponse\022" +
-      "Q\n\nDeleteTrip\022 .bladewatch.v1.DeleteTrip" +
-      "Request\032!.bladewatch.v1.DeleteTripRespon" +
-      "se\022Q\n\nGetSummary\022 .bladewatch.v1.GetSumm" +
-      "aryRequest\032!.bladewatch.v1.GetSummaryRes" +
-      "ponse\022E\n\006GetDna\022\034.bladewatch.v1.GetDnaRe" +
-      "quest\032\035.bladewatch.v1.GetDnaResponse\022K\n\010" +
-      "GetRange\022\036.bladewatch.v1.GetRangeRequest" +
-      "\032\037.bladewatch.v1.GetRangeResponse\022N\n\tGet" +
-      "Config\022\037.bladewatch.v1.GetConfigRequest\032" +
-      " .bladewatch.v1.GetConfigResponse\022N\n\tSet" +
-      "Config\022\037.bladewatch.v1.SetConfigRequest\032" +
-      " .bladewatch.v1.SetConfigResponse\022Q\n\nGet" +
-      "Storage\022 .bladewatch.v1.GetStorageReques" +
-      "t\032!.bladewatch.v1.GetStorageResponse\022Q\n\n" +
-      "SetStorage\022 .bladewatch.v1.SetStorageReq" +
-      "uest\032!.bladewatch.v1.SetStorageResponse\022" +
-      "N\n\tSyncTrips\022\037.bladewatch.v1.SyncTripsRe" +
-      "quest\032 .bladewatch.v1.SyncTripsResponse\022" +
-      "W\n\014GetTelemetry\022\".bladewatch.v1.GetTelem" +
-      "etryRequest\032#.bladewatch.v1.GetTelemetry" +
-      "Response\022`\n\017GetSimilarTrips\022%.bladewatch" +
-      ".v1.GetSimilarTripsRequest\032&.bladewatch." +
-      "v1.GetSimilarTripsResponse\022T\n\013GetGpsTrac" +
-      "e\022!.bladewatch.v1.GetGpsTraceRequest\032\".b" +
-      "ladewatch.v1.GetGpsTraceResponseB\036\n\032net." +
-      "bladewatch.app.grpc.v1P\001b\006proto3"
+      "ror\030\002 \001(\tR\005error\"\022\n\020SyncTripsRequest\"\211\001\n" +
+      "\021SyncTripsResponse\022\030\n\007success\030\001 \001(\010R\007suc" +
+      "cess\022\024\n\005error\030\002 \001(\tR\005error\022\024\n\005added\030\003 \001(" +
+      "\005R\005added\022\030\n\007removed\030\004 \001(\005R\007removed\022\024\n\005to" +
+      "tal\030\005 \001(\005R\005total\".\n\023GetTelemetryRequest\022" +
+      "\027\n\007trip_id\030\001 \001(\003R\006tripId\"\204\001\n\024GetTelemetr" +
+      "yResponse\022\030\n\007success\030\001 \001(\010R\007success\022<\n\tt" +
+      "elemetry\030\002 \003(\0132\036.bladewatch.v1.Telemetry" +
+      "SampleR\ttelemetry\022\024\n\005error\030\003 \001(\tR\005error\"" +
+      "1\n\026GetSimilarTripsRequest\022\027\n\007trip_id\030\001 \001" +
+      "(\003R\006tripId\"\315\001\n\027GetSimilarTripsResponse\022\030" +
+      "\n\007success\030\001 \001(\010R\007success\0224\n\007similar\030\002 \003(" +
+      "\0132\032.bladewatch.v1.TripSummaryR\007similar\022\024" +
+      "\n\005count\030\003 \001(\005R\005count\0226\n\005stats\030\004 \001(\0132 .bl" +
+      "adewatch.v1.SimilarTripsStatsR\005stats\022\024\n\005" +
+      "error\030\005 \001(\tR\005error\"-\n\022GetGpsTraceRequest" +
+      "\022\027\n\007trip_id\030\001 \001(\003R\006tripId\"p\n\023GetGpsTrace" +
+      "Response\022\030\n\007success\030\001 \001(\010R\007success\022)\n\003gp" +
+      "s\030\002 \003(\0132\027.bladewatch.v1.GpsPointR\003gps\022\024\n" +
+      "\005error\030\003 \001(\tR\005error2\211\t\n\014TripsService\022N\n\t" +
+      "ListTrips\022\037.bladewatch.v1.ListTripsReque" +
+      "st\032 .bladewatch.v1.ListTripsResponse\022H\n\007" +
+      "GetTrip\022\035.bladewatch.v1.GetTripRequest\032\036" +
+      ".bladewatch.v1.GetTripResponse\022Q\n\nDelete" +
+      "Trip\022 .bladewatch.v1.DeleteTripRequest\032!" +
+      ".bladewatch.v1.DeleteTripResponse\022Q\n\nGet" +
+      "Summary\022 .bladewatch.v1.GetSummaryReques" +
+      "t\032!.bladewatch.v1.GetSummaryResponse\022E\n\006" +
+      "GetDna\022\034.bladewatch.v1.GetDnaRequest\032\035.b" +
+      "ladewatch.v1.GetDnaResponse\022K\n\010GetRange\022" +
+      "\036.bladewatch.v1.GetRangeRequest\032\037.bladew" +
+      "atch.v1.GetRangeResponse\022N\n\tGetConfig\022\037." +
+      "bladewatch.v1.GetConfigRequest\032 .bladewa" +
+      "tch.v1.GetConfigResponse\022N\n\tSetConfig\022\037." +
+      "bladewatch.v1.SetConfigRequest\032 .bladewa" +
+      "tch.v1.SetConfigResponse\022Q\n\nGetStorage\022 " +
+      ".bladewatch.v1.GetStorageRequest\032!.blade" +
+      "watch.v1.GetStorageResponse\022Q\n\nSetStorag" +
+      "e\022 .bladewatch.v1.SetStorageRequest\032!.bl" +
+      "adewatch.v1.SetStorageResponse\022N\n\tSyncTr" +
+      "ips\022\037.bladewatch.v1.SyncTripsRequest\032 .b" +
+      "ladewatch.v1.SyncTripsResponse\022W\n\014GetTel" +
+      "emetry\022\".bladewatch.v1.GetTelemetryReque" +
+      "st\032#.bladewatch.v1.GetTelemetryResponse\022" +
+      "`\n\017GetSimilarTrips\022%.bladewatch.v1.GetSi" +
+      "milarTripsRequest\032&.bladewatch.v1.GetSim" +
+      "ilarTripsResponse\022T\n\013GetGpsTrace\022!.blade" +
+      "watch.v1.GetGpsTraceRequest\032\".bladewatch" +
+      ".v1.GetGpsTraceResponseB\036\n\032net.bladewatc" +
+      "h.app.grpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -555,7 +557,7 @@ public final class Trips extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_SyncTripsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_SyncTripsResponse_descriptor,
-        new java.lang.String[] { "Success", "Error", });
+        new java.lang.String[] { "Success", "Error", "Added", "Removed", "Total", });
     internal_static_bladewatch_v1_GetTelemetryRequest_descriptor =
       getDescriptor().getMessageType(31);
     internal_static_bladewatch_v1_GetTelemetryRequest_fieldAccessorTable = new

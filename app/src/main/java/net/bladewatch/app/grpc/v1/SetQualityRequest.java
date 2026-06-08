@@ -207,6 +207,21 @@ private static final long serialVersionUID = 0L;
     return fps_;
   }
 
+  public static final int RECORDING_SEGMENT_MINUTES_FIELD_NUMBER = 5;
+  private int recordingSegmentMinutes_ = 0;
+  /**
+   * <pre>
+   * Recording segment length in minutes. 0 = keep current.
+   * </pre>
+   *
+   * <code>int32 recording_segment_minutes = 5 [json_name = "recordingSegmentMinutes"];</code>
+   * @return The recordingSegmentMinutes.
+   */
+  @java.lang.Override
+  public int getRecordingSegmentMinutes() {
+    return recordingSegmentMinutes_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -233,6 +248,9 @@ private static final long serialVersionUID = 0L;
     if (fps_ != 0) {
       output.writeInt32(4, fps_);
     }
+    if (recordingSegmentMinutes_ != 0) {
+      output.writeInt32(5, recordingSegmentMinutes_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -249,6 +267,10 @@ private static final long serialVersionUID = 0L;
     if (fps_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(4, fps_);
+    }
+    if (recordingSegmentMinutes_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(5, recordingSegmentMinutes_);
     }
     return size;
   }
@@ -282,6 +304,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getStreamingQuality())) return false;
     if (getFps()
         != other.getFps()) return false;
+    if (getRecordingSegmentMinutes()
+        != other.getRecordingSegmentMinutes()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -301,6 +325,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getStreamingQuality().hashCode();
     hash = (37 * hash) + FPS_FIELD_NUMBER;
     hash = (53 * hash) + getFps();
+    hash = (37 * hash) + RECORDING_SEGMENT_MINUTES_FIELD_NUMBER;
+    hash = (53 * hash) + getRecordingSegmentMinutes();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -436,6 +462,7 @@ private static final long serialVersionUID = 0L;
       codec_ = "";
       streamingQuality_ = "";
       fps_ = 0;
+      recordingSegmentMinutes_ = 0;
       return this;
     }
 
@@ -481,6 +508,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.fps_ = fps_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.recordingSegmentMinutes_ = recordingSegmentMinutes_;
+      }
     }
 
     @java.lang.Override
@@ -512,6 +542,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getFps() != 0) {
         setFps(other.getFps());
+      }
+      if (other.getRecordingSegmentMinutes() != 0) {
+        setRecordingSegmentMinutes(other.getRecordingSegmentMinutes());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -559,6 +592,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 32
+            case 40: {
+              recordingSegmentMinutes_ = input.readInt32();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -892,6 +930,50 @@ private static final long serialVersionUID = 0L;
     public Builder clearFps() {
       bitField0_ = (bitField0_ & ~0x00000008);
       fps_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int recordingSegmentMinutes_ ;
+    /**
+     * <pre>
+     * Recording segment length in minutes. 0 = keep current.
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 5 [json_name = "recordingSegmentMinutes"];</code>
+     * @return The recordingSegmentMinutes.
+     */
+    @java.lang.Override
+    public int getRecordingSegmentMinutes() {
+      return recordingSegmentMinutes_;
+    }
+    /**
+     * <pre>
+     * Recording segment length in minutes. 0 = keep current.
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 5 [json_name = "recordingSegmentMinutes"];</code>
+     * @param value The recordingSegmentMinutes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRecordingSegmentMinutes(int value) {
+
+      recordingSegmentMinutes_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Recording segment length in minutes. 0 = keep current.
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 5 [json_name = "recordingSegmentMinutes"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRecordingSegmentMinutes() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      recordingSegmentMinutes_ = 0;
       onChanged();
       return this;
     }

@@ -79,4 +79,14 @@ public interface SetQualityRequestOrBuilder extends
    * @return The fps.
    */
   int getFps();
+
+  /**
+   * <pre>
+   * Recording segment length in minutes. 0 = keep current.
+   * </pre>
+   *
+   * <code>int32 recording_segment_minutes = 5 [json_name = "recordingSegmentMinutes"];</code>
+   * @return The recordingSegmentMinutes.
+   */
+  int getRecordingSegmentMinutes();
 }

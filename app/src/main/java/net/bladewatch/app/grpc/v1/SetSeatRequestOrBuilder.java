@@ -37,4 +37,32 @@ public interface SetSeatRequestOrBuilder extends
    * @return The level.
    */
   int getLevel();
+
+  /**
+   * <pre>
+   * Full current seat state: cloud API is stateful and requires these on every call.
+   * </pre>
+   *
+   * <code>int32 driver_heat = 4 [json_name = "driverHeat"];</code>
+   * @return The driverHeat.
+   */
+  int getDriverHeat();
+
+  /**
+   * <code>int32 driver_vent = 5 [json_name = "driverVent"];</code>
+   * @return The driverVent.
+   */
+  int getDriverVent();
+
+  /**
+   * <code>int32 passenger_heat = 6 [json_name = "passengerHeat"];</code>
+   * @return The passengerHeat.
+   */
+  int getPassengerHeat();
+
+  /**
+   * <code>int32 passenger_vent = 7 [json_name = "passengerVent"];</code>
+   * @return The passengerVent.
+   */
+  int getPassengerVent();
 }

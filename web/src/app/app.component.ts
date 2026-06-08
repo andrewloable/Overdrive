@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { NavComponent } from './shared/nav/nav.component';
 import { filter, map, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -13,6 +14,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class AppComponent {
   private readonly router = inject(Router);
+  private readonly translate = inject(TranslateService);
+
+  constructor() {
+    const saved = localStorage.getItem('bw_lang') ?? 'en';
+    this.translate.setDefaultLang('en');
+    this.translate.use(saved);
+  }
 
   readonly showNav = toSignal(
     this.router.events.pipe(

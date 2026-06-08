@@ -35,6 +35,7 @@ private static final long serialVersionUID = 0L;
     distancePreset_ = "";
     recordingQuality_ = "";
     recordingCodec_ = "";
+    deterrentAction_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -420,6 +421,116 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CAMERA_FRONT_FIELD_NUMBER = 24;
+  private boolean cameraFront_ = false;
+  /**
+   * <pre>
+   * Per-camera enable flags.
+   * </pre>
+   *
+   * <code>bool camera_front = 24 [json_name = "cameraFront"];</code>
+   * @return The cameraFront.
+   */
+  @java.lang.Override
+  public boolean getCameraFront() {
+    return cameraFront_;
+  }
+
+  public static final int CAMERA_RIGHT_FIELD_NUMBER = 25;
+  private boolean cameraRight_ = false;
+  /**
+   * <code>bool camera_right = 25 [json_name = "cameraRight"];</code>
+   * @return The cameraRight.
+   */
+  @java.lang.Override
+  public boolean getCameraRight() {
+    return cameraRight_;
+  }
+
+  public static final int CAMERA_REAR_FIELD_NUMBER = 26;
+  private boolean cameraRear_ = false;
+  /**
+   * <code>bool camera_rear = 26 [json_name = "cameraRear"];</code>
+   * @return The cameraRear.
+   */
+  @java.lang.Override
+  public boolean getCameraRear() {
+    return cameraRear_;
+  }
+
+  public static final int CAMERA_LEFT_FIELD_NUMBER = 27;
+  private boolean cameraLeft_ = false;
+  /**
+   * <code>bool camera_left = 27 [json_name = "cameraLeft"];</code>
+   * @return The cameraLeft.
+   */
+  @java.lang.Override
+  public boolean getCameraLeft() {
+    return cameraLeft_;
+  }
+
+  public static final int DETERRENT_ACTION_FIELD_NUMBER = 28;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object deterrentAction_ = "";
+  /**
+   * <pre>
+   * Deterrent action: "silent", "flash", "beep", etc.
+   * </pre>
+   *
+   * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+   * @return The deterrentAction.
+   */
+  @java.lang.Override
+  public java.lang.String getDeterrentAction() {
+    java.lang.Object ref = deterrentAction_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deterrentAction_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Deterrent action: "silent", "flash", "beep", etc.
+   * </pre>
+   *
+   * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+   * @return The bytes for deterrentAction.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeterrentActionBytes() {
+    java.lang.Object ref = deterrentAction_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deterrentAction_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DETERRENT_COOLDOWN_SECONDS_FIELD_NUMBER = 29;
+  private int deterrentCooldownSeconds_ = 0;
+  /**
+   * <pre>
+   * Minimum seconds between deterrent triggers.
+   * </pre>
+   *
+   * <code>int32 deterrent_cooldown_seconds = 29 [json_name = "deterrentCooldownSeconds"];</code>
+   * @return The deterrentCooldownSeconds.
+   */
+  @java.lang.Override
+  public int getDeterrentCooldownSeconds() {
+    return deterrentCooldownSeconds_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -502,6 +613,24 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recordingCodec_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 23, recordingCodec_);
+    }
+    if (cameraFront_ != false) {
+      output.writeBool(24, cameraFront_);
+    }
+    if (cameraRight_ != false) {
+      output.writeBool(25, cameraRight_);
+    }
+    if (cameraRear_ != false) {
+      output.writeBool(26, cameraRear_);
+    }
+    if (cameraLeft_ != false) {
+      output.writeBool(27, cameraLeft_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deterrentAction_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 28, deterrentAction_);
+    }
+    if (deterrentCooldownSeconds_ != 0) {
+      output.writeInt32(29, deterrentCooldownSeconds_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -596,6 +725,29 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recordingCodec_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(23, recordingCodec_);
     }
+    if (cameraFront_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(24, cameraFront_);
+    }
+    if (cameraRight_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(25, cameraRight_);
+    }
+    if (cameraRear_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(26, cameraRear_);
+    }
+    if (cameraLeft_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(27, cameraLeft_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deterrentAction_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(28, deterrentAction_);
+    }
+    if (deterrentCooldownSeconds_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(29, deterrentCooldownSeconds_);
+    }
     return size;
   }
   @java.lang.Override
@@ -672,6 +824,18 @@ private static final long serialVersionUID = 0L;
         .equals(other.getRecordingQuality())) return false;
     if (!getRecordingCodec()
         .equals(other.getRecordingCodec())) return false;
+    if (getCameraFront()
+        != other.getCameraFront()) return false;
+    if (getCameraRight()
+        != other.getCameraRight()) return false;
+    if (getCameraRear()
+        != other.getCameraRear()) return false;
+    if (getCameraLeft()
+        != other.getCameraLeft()) return false;
+    if (!getDeterrentAction()
+        .equals(other.getDeterrentAction())) return false;
+    if (getDeterrentCooldownSeconds()
+        != other.getDeterrentCooldownSeconds()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -741,6 +905,22 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getRecordingQuality().hashCode();
     hash = (37 * hash) + RECORDING_CODEC_FIELD_NUMBER;
     hash = (53 * hash) + getRecordingCodec().hashCode();
+    hash = (37 * hash) + CAMERA_FRONT_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCameraFront());
+    hash = (37 * hash) + CAMERA_RIGHT_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCameraRight());
+    hash = (37 * hash) + CAMERA_REAR_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCameraRear());
+    hash = (37 * hash) + CAMERA_LEFT_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCameraLeft());
+    hash = (37 * hash) + DETERRENT_ACTION_FIELD_NUMBER;
+    hash = (53 * hash) + getDeterrentAction().hashCode();
+    hash = (37 * hash) + DETERRENT_COOLDOWN_SECONDS_FIELD_NUMBER;
+    hash = (53 * hash) + getDeterrentCooldownSeconds();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -899,6 +1079,12 @@ private static final long serialVersionUID = 0L;
       alarmBlockThreshold_ = 0;
       recordingQuality_ = "";
       recordingCodec_ = "";
+      cameraFront_ = false;
+      cameraRight_ = false;
+      cameraRear_ = false;
+      cameraLeft_ = false;
+      deterrentAction_ = "";
+      deterrentCooldownSeconds_ = 0;
       return this;
     }
 
@@ -1001,6 +1187,24 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00400000) != 0)) {
         result.recordingCodec_ = recordingCodec_;
       }
+      if (((from_bitField0_ & 0x00800000) != 0)) {
+        result.cameraFront_ = cameraFront_;
+      }
+      if (((from_bitField0_ & 0x01000000) != 0)) {
+        result.cameraRight_ = cameraRight_;
+      }
+      if (((from_bitField0_ & 0x02000000) != 0)) {
+        result.cameraRear_ = cameraRear_;
+      }
+      if (((from_bitField0_ & 0x04000000) != 0)) {
+        result.cameraLeft_ = cameraLeft_;
+      }
+      if (((from_bitField0_ & 0x08000000) != 0)) {
+        result.deterrentAction_ = deterrentAction_;
+      }
+      if (((from_bitField0_ & 0x10000000) != 0)) {
+        result.deterrentCooldownSeconds_ = deterrentCooldownSeconds_;
+      }
     }
 
     @java.lang.Override
@@ -1089,6 +1293,26 @@ private static final long serialVersionUID = 0L;
         recordingCodec_ = other.recordingCodec_;
         bitField0_ |= 0x00400000;
         onChanged();
+      }
+      if (other.getCameraFront() != false) {
+        setCameraFront(other.getCameraFront());
+      }
+      if (other.getCameraRight() != false) {
+        setCameraRight(other.getCameraRight());
+      }
+      if (other.getCameraRear() != false) {
+        setCameraRear(other.getCameraRear());
+      }
+      if (other.getCameraLeft() != false) {
+        setCameraLeft(other.getCameraLeft());
+      }
+      if (!other.getDeterrentAction().isEmpty()) {
+        deterrentAction_ = other.deterrentAction_;
+        bitField0_ |= 0x08000000;
+        onChanged();
+      }
+      if (other.getDeterrentCooldownSeconds() != 0) {
+        setDeterrentCooldownSeconds(other.getDeterrentCooldownSeconds());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1231,6 +1455,36 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00400000;
               break;
             } // case 186
+            case 192: {
+              cameraFront_ = input.readBool();
+              bitField0_ |= 0x00800000;
+              break;
+            } // case 192
+            case 200: {
+              cameraRight_ = input.readBool();
+              bitField0_ |= 0x01000000;
+              break;
+            } // case 200
+            case 208: {
+              cameraRear_ = input.readBool();
+              bitField0_ |= 0x02000000;
+              break;
+            } // case 208
+            case 216: {
+              cameraLeft_ = input.readBool();
+              bitField0_ |= 0x04000000;
+              break;
+            } // case 216
+            case 226: {
+              deterrentAction_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x08000000;
+              break;
+            } // case 226
+            case 232: {
+              deterrentCooldownSeconds_ = input.readInt32();
+              bitField0_ |= 0x10000000;
+              break;
+            } // case 232
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2176,6 +2430,282 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       recordingCodec_ = value;
       bitField0_ |= 0x00400000;
+      onChanged();
+      return this;
+    }
+
+    private boolean cameraFront_ ;
+    /**
+     * <pre>
+     * Per-camera enable flags.
+     * </pre>
+     *
+     * <code>bool camera_front = 24 [json_name = "cameraFront"];</code>
+     * @return The cameraFront.
+     */
+    @java.lang.Override
+    public boolean getCameraFront() {
+      return cameraFront_;
+    }
+    /**
+     * <pre>
+     * Per-camera enable flags.
+     * </pre>
+     *
+     * <code>bool camera_front = 24 [json_name = "cameraFront"];</code>
+     * @param value The cameraFront to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCameraFront(boolean value) {
+
+      cameraFront_ = value;
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-camera enable flags.
+     * </pre>
+     *
+     * <code>bool camera_front = 24 [json_name = "cameraFront"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCameraFront() {
+      bitField0_ = (bitField0_ & ~0x00800000);
+      cameraFront_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean cameraRight_ ;
+    /**
+     * <code>bool camera_right = 25 [json_name = "cameraRight"];</code>
+     * @return The cameraRight.
+     */
+    @java.lang.Override
+    public boolean getCameraRight() {
+      return cameraRight_;
+    }
+    /**
+     * <code>bool camera_right = 25 [json_name = "cameraRight"];</code>
+     * @param value The cameraRight to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCameraRight(boolean value) {
+
+      cameraRight_ = value;
+      bitField0_ |= 0x01000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool camera_right = 25 [json_name = "cameraRight"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCameraRight() {
+      bitField0_ = (bitField0_ & ~0x01000000);
+      cameraRight_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean cameraRear_ ;
+    /**
+     * <code>bool camera_rear = 26 [json_name = "cameraRear"];</code>
+     * @return The cameraRear.
+     */
+    @java.lang.Override
+    public boolean getCameraRear() {
+      return cameraRear_;
+    }
+    /**
+     * <code>bool camera_rear = 26 [json_name = "cameraRear"];</code>
+     * @param value The cameraRear to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCameraRear(boolean value) {
+
+      cameraRear_ = value;
+      bitField0_ |= 0x02000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool camera_rear = 26 [json_name = "cameraRear"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCameraRear() {
+      bitField0_ = (bitField0_ & ~0x02000000);
+      cameraRear_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean cameraLeft_ ;
+    /**
+     * <code>bool camera_left = 27 [json_name = "cameraLeft"];</code>
+     * @return The cameraLeft.
+     */
+    @java.lang.Override
+    public boolean getCameraLeft() {
+      return cameraLeft_;
+    }
+    /**
+     * <code>bool camera_left = 27 [json_name = "cameraLeft"];</code>
+     * @param value The cameraLeft to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCameraLeft(boolean value) {
+
+      cameraLeft_ = value;
+      bitField0_ |= 0x04000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool camera_left = 27 [json_name = "cameraLeft"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCameraLeft() {
+      bitField0_ = (bitField0_ & ~0x04000000);
+      cameraLeft_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object deterrentAction_ = "";
+    /**
+     * <pre>
+     * Deterrent action: "silent", "flash", "beep", etc.
+     * </pre>
+     *
+     * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+     * @return The deterrentAction.
+     */
+    public java.lang.String getDeterrentAction() {
+      java.lang.Object ref = deterrentAction_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deterrentAction_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Deterrent action: "silent", "flash", "beep", etc.
+     * </pre>
+     *
+     * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+     * @return The bytes for deterrentAction.
+     */
+    public com.google.protobuf.ByteString
+        getDeterrentActionBytes() {
+      java.lang.Object ref = deterrentAction_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deterrentAction_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Deterrent action: "silent", "flash", "beep", etc.
+     * </pre>
+     *
+     * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+     * @param value The deterrentAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeterrentAction(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      deterrentAction_ = value;
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Deterrent action: "silent", "flash", "beep", etc.
+     * </pre>
+     *
+     * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeterrentAction() {
+      deterrentAction_ = getDefaultInstance().getDeterrentAction();
+      bitField0_ = (bitField0_ & ~0x08000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Deterrent action: "silent", "flash", "beep", etc.
+     * </pre>
+     *
+     * <code>string deterrent_action = 28 [json_name = "deterrentAction"];</code>
+     * @param value The bytes for deterrentAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeterrentActionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      deterrentAction_ = value;
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+
+    private int deterrentCooldownSeconds_ ;
+    /**
+     * <pre>
+     * Minimum seconds between deterrent triggers.
+     * </pre>
+     *
+     * <code>int32 deterrent_cooldown_seconds = 29 [json_name = "deterrentCooldownSeconds"];</code>
+     * @return The deterrentCooldownSeconds.
+     */
+    @java.lang.Override
+    public int getDeterrentCooldownSeconds() {
+      return deterrentCooldownSeconds_;
+    }
+    /**
+     * <pre>
+     * Minimum seconds between deterrent triggers.
+     * </pre>
+     *
+     * <code>int32 deterrent_cooldown_seconds = 29 [json_name = "deterrentCooldownSeconds"];</code>
+     * @param value The deterrentCooldownSeconds to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeterrentCooldownSeconds(int value) {
+
+      deterrentCooldownSeconds_ = value;
+      bitField0_ |= 0x10000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Minimum seconds between deterrent triggers.
+     * </pre>
+     *
+     * <code>int32 deterrent_cooldown_seconds = 29 [json_name = "deterrentCooldownSeconds"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeterrentCooldownSeconds() {
+      bitField0_ = (bitField0_ & ~0x10000000);
+      deterrentCooldownSeconds_ = 0;
       onChanged();
       return this;
     }

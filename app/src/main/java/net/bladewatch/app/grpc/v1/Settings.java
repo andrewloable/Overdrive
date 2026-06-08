@@ -138,7 +138,7 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
       " \001(\001R\tmbPer2Min\022\036\n\013gb_per_hour\030\004 \001(\001R\tgb" +
       "PerHour\022$\n\016minutes_per_gb\030\005 \001(\005R\014minutes" +
       "PerGb\022-\n\022quality_equivalent\030\006 \001(\tR\021quali" +
-      "tyEquivalent\"\023\n\021GetQualityRequest\"\252\006\n\022Ge" +
+      "tyEquivalent\"\023\n\021GetQualityRequest\"\346\006\n\022Ge" +
       "tQualityResponse\022\030\n\007success\030\001 \001(\010R\007succe" +
       "ss\022+\n\021recording_quality\030\002 \001(\tR\020recording" +
       "Quality\022\024\n\005codec\030\003 \001(\tR\005codec\022\020\n\003fps\030\004 \001" +
@@ -153,16 +153,19 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
       "s\022R\n\013fps_options\030\010 \003(\01321.bladewatch.v1.G" +
       "etQualityResponse.FpsOptionsEntryR\nfpsOp" +
       "tions\022+\n\021native_resolution\030\t \001(\tR\020native" +
-      "Resolution\032j\n\034RecordingQualityOptionsEnt" +
-      "ry\022\020\n\003key\030\001 \001(\tR\003key\0224\n\005value\030\002 \001(\0132\036.bl" +
-      "adewatch.v1.QualityTierInfoR\005value:\0028\001\032?" +
-      "\n\021CodecOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n" +
-      "\005value\030\002 \001(\tR\005value:\0028\001\032=\n\017FpsOptionsEnt" +
-      "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005val" +
-      "ue:\0028\001\"\225\001\n\021SetQualityRequest\022+\n\021recordin" +
-      "g_quality\030\001 \001(\tR\020recordingQuality\022\024\n\005cod" +
-      "ec\030\002 \001(\tR\005codec\022+\n\021streaming_quality\030\003 \001" +
-      "(\tR\020streamingQuality\022\020\n\003fps\030\004 \001(\005R\003fps\"\241" +
+      "Resolution\022:\n\031recording_segment_minutes\030" +
+      "\n \001(\005R\027recordingSegmentMinutes\032j\n\034Record" +
+      "ingQualityOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key" +
+      "\0224\n\005value\030\002 \001(\0132\036.bladewatch.v1.QualityT" +
+      "ierInfoR\005value:\0028\001\032?\n\021CodecOptionsEntry\022" +
+      "\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:" +
+      "\0028\001\032=\n\017FpsOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key" +
+      "\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\321\001\n\021SetQualit" +
+      "yRequest\022+\n\021recording_quality\030\001 \001(\tR\020rec" +
+      "ordingQuality\022\024\n\005codec\030\002 \001(\tR\005codec\022+\n\021s" +
+      "treaming_quality\030\003 \001(\tR\020streamingQuality" +
+      "\022\020\n\003fps\030\004 \001(\005R\003fps\022:\n\031recording_segment_" +
+      "minutes\030\005 \001(\005R\027recordingSegmentMinutes\"\241" +
       "\001\n\022SetQualityResponse\022\030\n\007success\030\001 \001(\010R\007" +
       "success\022+\n\021recording_quality\030\002 \001(\tR\020reco" +
       "rdingQuality\022\024\n\005codec\030\003 \001(\tR\005codec\022\030\n\007me" +
@@ -235,7 +238,7 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_GetQualityResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_GetQualityResponse_descriptor,
-        new java.lang.String[] { "Success", "RecordingQuality", "Codec", "Fps", "RecordingQualityOptions", "ActiveRecordingEstimate", "CodecOptions", "FpsOptions", "NativeResolution", });
+        new java.lang.String[] { "Success", "RecordingQuality", "Codec", "Fps", "RecordingQualityOptions", "ActiveRecordingEstimate", "CodecOptions", "FpsOptions", "NativeResolution", "RecordingSegmentMinutes", });
     internal_static_bladewatch_v1_GetQualityResponse_RecordingQualityOptionsEntry_descriptor =
       internal_static_bladewatch_v1_GetQualityResponse_descriptor.getNestedType(0);
     internal_static_bladewatch_v1_GetQualityResponse_RecordingQualityOptionsEntry_fieldAccessorTable = new
@@ -259,7 +262,7 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_SetQualityRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_SetQualityRequest_descriptor,
-        new java.lang.String[] { "RecordingQuality", "Codec", "StreamingQuality", "Fps", });
+        new java.lang.String[] { "RecordingQuality", "Codec", "StreamingQuality", "Fps", "RecordingSegmentMinutes", });
     internal_static_bladewatch_v1_SetQualityResponse_descriptor =
       getDescriptor().getMessageType(5);
     internal_static_bladewatch_v1_SetQualityResponse_fieldAccessorTable = new

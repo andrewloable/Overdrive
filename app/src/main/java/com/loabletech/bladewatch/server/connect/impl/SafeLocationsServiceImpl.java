@@ -4,6 +4,7 @@ import net.bladewatch.app.server.SafeLocationApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.SafeLocationsService.
@@ -32,27 +33,27 @@ public class SafeLocationsServiceImpl {
                 this::handleToggle);
     }
 
-    private String handleListZones(String req) throws ConnectException {
+    private ConnectResponse handleListZones(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SafeLocationApiHandler.handle("GET", BASE, null, out));
     }
 
-    private String handleAddZone(String req) throws ConnectException {
+    private ConnectResponse handleAddZone(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SafeLocationApiHandler.handle("POST", BASE, req, out));
     }
 
-    private String handleUpdateZone(String req) throws ConnectException {
+    private ConnectResponse handleUpdateZone(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SafeLocationApiHandler.handle("PUT", BASE, req, out));
     }
 
-    private String handleDeleteZone(String req) throws ConnectException {
+    private ConnectResponse handleDeleteZone(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SafeLocationApiHandler.handle("DELETE", BASE, req, out));
     }
 
-    private String handleToggle(String req) throws ConnectException {
+    private ConnectResponse handleToggle(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 SafeLocationApiHandler.handle("POST", BASE + "/toggle", req, out));
     }

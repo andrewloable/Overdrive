@@ -42,14 +42,14 @@ object ConnectClientProvider {
     @Volatile private var cachedAt: Long = 0L
     @Volatile private var cachedStateVersion: Long = -1L
 
-    private val protocolClient: ProtocolClientInterface by lazy {
+    private fun buildProtocolClient(readTimeoutSecs: Long): ProtocolClientInterface {
         val okHttpClient = OkHttpClient.Builder()
             .proxy(Proxy.NO_PROXY)
             .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(readTimeoutSecs, TimeUnit.SECONDS)
             .addInterceptor(jwtInterceptor)
             .build()
-        ProtocolClient(
+        return ProtocolClient(
             httpClient = ConnectOkHttpClient(okHttpClient),
             config = ProtocolClientConfig(
                 host = BASE_URL,
@@ -58,6 +58,11 @@ object ConnectClientProvider {
             )
         )
     }
+
+    private val protocolClient: ProtocolClientInterface by lazy { buildProtocolClient(10) }
+
+    // Long-timeout client for slow operations: volume format (~30-60s), trips DB sync (~120s).
+    private val longTimeoutClient: ProtocolClientInterface by lazy { buildProtocolClient(120) }
 
     private val jwtInterceptor = Interceptor { chain ->
         val jwt = currentJwt()
@@ -99,16 +104,37 @@ object ConnectClientProvider {
         cachedStateVersion = -1L
     }
 
-    @JvmStatic fun authService(): AuthServiceClient = AuthServiceClient(protocolClient)
-    @JvmStatic fun notificationsService(): NotificationsServiceClient = NotificationsServiceClient(protocolClient)
-    @JvmStatic fun recordingsService(): RecordingsServiceClient = RecordingsServiceClient(protocolClient)
-    @JvmStatic fun safeLocationsService(): SafeLocationsServiceClient = SafeLocationsServiceClient(protocolClient)
-    @JvmStatic fun settingsService(): SettingsServiceClient = SettingsServiceClient(protocolClient)
-    @JvmStatic fun storageService(): StorageServiceClient = StorageServiceClient(protocolClient)
-    @JvmStatic fun streamService(): StreamServiceClient = StreamServiceClient(protocolClient)
-    @JvmStatic fun surveillanceService(): SurveillanceServiceClient = SurveillanceServiceClient(protocolClient)
-    @JvmStatic fun systemService(): SystemServiceClient = SystemServiceClient(protocolClient)
-    @JvmStatic fun tripsService(): TripsServiceClient = TripsServiceClient(protocolClient)
-    @JvmStatic fun updatesService(): UpdateServiceClient = UpdateServiceClient(protocolClient)
-    @JvmStatic fun vehicleService(): VehicleServiceClient = VehicleServiceClient(protocolClient)
+    private val authSvc by lazy { AuthServiceClient(protocolClient) }
+    private val notificationsSvc by lazy { NotificationsServiceClient(protocolClient) }
+    private val recordingsSvc by lazy { RecordingsServiceClient(protocolClient) }
+    private val longRecordingsSvc by lazy { RecordingsServiceClient(longTimeoutClient) }
+    private val safeLocationsSvc by lazy { SafeLocationsServiceClient(protocolClient) }
+    private val settingsSvc by lazy { SettingsServiceClient(protocolClient) }
+    private val storageSvc by lazy { StorageServiceClient(protocolClient) }
+    private val longStorageSvc by lazy { StorageServiceClient(longTimeoutClient) }
+    private val streamSvc by lazy { StreamServiceClient(protocolClient) }
+    private val surveillanceSvc by lazy { SurveillanceServiceClient(protocolClient) }
+    private val longSurveillanceSvc by lazy { SurveillanceServiceClient(longTimeoutClient) }
+    private val systemSvc by lazy { SystemServiceClient(protocolClient) }
+    private val tripsSvc by lazy { TripsServiceClient(protocolClient) }
+    private val longTripsSvc by lazy { TripsServiceClient(longTimeoutClient) }
+    private val updatesSvc by lazy { UpdateServiceClient(protocolClient) }
+    private val vehicleSvc by lazy { VehicleServiceClient(protocolClient) }
+
+    @JvmStatic fun authService(): AuthServiceClient = authSvc
+    @JvmStatic fun notificationsService(): NotificationsServiceClient = notificationsSvc
+    @JvmStatic fun recordingsService(): RecordingsServiceClient = recordingsSvc
+    @JvmStatic fun longRecordingsService(): RecordingsServiceClient = longRecordingsSvc
+    @JvmStatic fun safeLocationsService(): SafeLocationsServiceClient = safeLocationsSvc
+    @JvmStatic fun settingsService(): SettingsServiceClient = settingsSvc
+    @JvmStatic fun storageService(): StorageServiceClient = storageSvc
+    @JvmStatic fun longStorageService(): StorageServiceClient = longStorageSvc
+    @JvmStatic fun streamService(): StreamServiceClient = streamSvc
+    @JvmStatic fun surveillanceService(): SurveillanceServiceClient = surveillanceSvc
+    @JvmStatic fun longSurveillanceService(): SurveillanceServiceClient = longSurveillanceSvc
+    @JvmStatic fun systemService(): SystemServiceClient = systemSvc
+    @JvmStatic fun tripsService(): TripsServiceClient = tripsSvc
+    @JvmStatic fun longTripsService(): TripsServiceClient = longTripsSvc
+    @JvmStatic fun updatesService(): UpdateServiceClient = updatesSvc
+    @JvmStatic fun vehicleService(): VehicleServiceClient = vehicleSvc
 }

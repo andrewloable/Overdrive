@@ -51,4 +51,26 @@ public interface SetClimateRequestOrBuilder extends
    * @return The maxCooling.
    */
   boolean getMaxCooling();
+
+  /**
+   * <pre>
+   * Restore params: used when disabling max_cooling to re-apply prior AC state.
+   * </pre>
+   *
+   * <code>bool restore_ac_on = 7 [json_name = "restoreAcOn"];</code>
+   * @return The restoreAcOn.
+   */
+  boolean getRestoreAcOn();
+
+  /**
+   * <code>double restore_temp_c = 8 [json_name = "restoreTempC"];</code>
+   * @return The restoreTempC.
+   */
+  double getRestoreTempC();
+
+  /**
+   * <code>int32 restore_fan_level = 9 [json_name = "restoreFanLevel"];</code>
+   * @return The restoreFanLevel.
+   */
+  int getRestoreFanLevel();
 }

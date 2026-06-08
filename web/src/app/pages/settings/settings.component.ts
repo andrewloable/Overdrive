@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import type { CheckUpdateResponse } from '../../../../gen/bladewatch/v1/update_pb';
 
@@ -12,6 +13,7 @@ import type { CheckUpdateResponse } from '../../../../gen/bladewatch/v1/update_p
 })
 export default class SettingsComponent implements OnInit {
   private readonly clients = inject(ConnectClients);
+  private readonly translate = inject(TranslateService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -71,6 +73,8 @@ export default class SettingsComponent implements OnInit {
     this.saving.set(true);
     try {
       await this.clients.settings.setLocale({ lang: this.lang() });
+      this.translate.use(this.lang());
+      localStorage.setItem('bw_lang', this.lang());
       this.statusMsg.set('Language updated');
     } catch {
       this.statusMsg.set('Failed to save language');

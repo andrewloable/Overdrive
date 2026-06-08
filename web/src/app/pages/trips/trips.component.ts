@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { ConnectClients } from '../../core/connect/connect-clients';
+import { toast } from '../../shared/page-utils';
 import type { TripSummary } from '../../../../gen/bladewatch/v1/trips_pb';
 
 @Component({
@@ -48,8 +49,7 @@ export default class TripsComponent implements OnInit {
       await this.clients.trips.deleteTrip({ id: trip.id });
       this.trips.update(list => list.filter(t => t.id !== trip.id));
       if (this.selectedTrip()?.id === trip.id) this.selectedTrip.set(null);
-      this.statusMsg.set('Trip deleted');
-      setTimeout(() => this.statusMsg.set(''), 2000);
+      toast(this.statusMsg, 'Trip deleted');
     } catch {
       this.statusMsg.set('Delete failed');
     }

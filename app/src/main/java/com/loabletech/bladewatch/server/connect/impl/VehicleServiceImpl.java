@@ -5,6 +5,7 @@ import net.bladewatch.app.server.VehicleControlApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
 import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 
 /**
  * Connect protocol handler for bladewatch.v1.VehicleService.
@@ -60,107 +61,107 @@ public class VehicleServiceImpl {
                 this::handleStopGps);
     }
 
-    private String handleGetState(String req) throws ConnectException {
+    private ConnectResponse handleGetState(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/state", null, out));
     }
 
-    private String handleGetAcDiagnostics(String req) throws ConnectException {
+    private ConnectResponse handleGetAcDiagnostics(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/ac-diagnostics", null, out));
     }
 
-    private String handleGetSeatDiagnostics(String req) throws ConnectException {
+    private ConnectResponse handleGetSeatDiagnostics(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/seat-diagnostics", null, out));
     }
 
-    private String handleLock(String req) throws ConnectException {
+    private ConnectResponse handleLock(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/lock", req, out));
     }
 
-    private String handleUnlock(String req) throws ConnectException {
+    private ConnectResponse handleUnlock(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/unlock", req, out));
     }
 
-    private String handleTrunk(String req) throws ConnectException {
+    private ConnectResponse handleTrunk(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/trunk", req, out));
     }
 
-    private String handleMoveWindow(String req) throws ConnectException {
+    private ConnectResponse handleMoveWindow(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/window", req, out));
     }
 
-    private String handleFlash(String req) throws ConnectException {
+    private ConnectResponse handleFlash(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/flash", req, out));
     }
 
-    private String handleFindCar(String req) throws ConnectException {
+    private ConnectResponse handleFindCar(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/find-car", req, out));
     }
 
-    private String handleSetClimate(String req) throws ConnectException {
+    private ConnectResponse handleSetClimate(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/climate", req, out));
     }
 
-    private String handleSetSeat(String req) throws ConnectException {
+    private ConnectResponse handleSetSeat(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/seat", req, out));
     }
 
-    private String handleSetLights(String req) throws ConnectException {
+    private ConnectResponse handleSetLights(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/lights", req, out));
     }
 
-    private String handleSetAdas(String req) throws ConnectException {
+    private ConnectResponse handleSetAdas(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/adas", req, out));
     }
 
-    private String handleSetBatteryHeat(String req) throws ConnectException {
+    private ConnectResponse handleSetBatteryHeat(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/battery-heat", req, out));
     }
 
-    private String handleGetChargingSchedule(String req) throws ConnectException {
+    private ConnectResponse handleGetChargingSchedule(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/charging-schedule", null, out));
     }
 
-    private String handleSetChargingSchedule(String req) throws ConnectException {
+    private ConnectResponse handleSetChargingSchedule(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/charging-schedule", req, out));
     }
 
-    private String handleGetChargeCap(String req) throws ConnectException {
+    private ConnectResponse handleGetChargeCap(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("GET", "/api/vehicle/charge-cap", null, out));
     }
 
-    private String handleSetChargeCap(String req) throws ConnectException {
+    private ConnectResponse handleSetChargeCap(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 VehicleControlApiHandler.handle("POST", "/api/vehicle/charge-cap", req, out));
     }
 
-    private String handleGetGpsLocation(String req) throws ConnectException {
+    private ConnectResponse handleGetGpsLocation(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 GpsApiHandler.handle("GET", "/api/gps", null, out));
     }
 
-    private String handleStartGps(String req) throws ConnectException {
+    private ConnectResponse handleStartGps(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 GpsApiHandler.handle("POST", "/api/gps/start", req, out));
     }
 
-    private String handleStopGps(String req) throws ConnectException {
+    private ConnectResponse handleStopGps(String req, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
                 GpsApiHandler.handle("POST", "/api/gps/stop", req, out));
     }

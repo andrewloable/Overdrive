@@ -1,9 +1,10 @@
 package net.bladewatch.app.server.connect.impl;
 
 import net.bladewatch.app.daemon.CameraDaemon;
-import net.bladewatch.app.server.HttpResponse;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
 import net.bladewatch.app.server.connect.ConnectException;
+import net.bladewatch.app.server.connect.ConnectHandlerUtil;
+import net.bladewatch.app.server.connect.ConnectResponse;
 import net.bladewatch.app.trips.TripAnalyticsManager;
 import net.bladewatch.app.trips.TripApiHandler;
 
@@ -32,6 +33,8 @@ import org.json.JSONObject;
  *   GetGpsTrace    → GET    /api/trips/{id}/gps
  */
 public class TripsServiceImpl {
+
+    private TripApiHandler cachedHandler;
 
     public void register(ConnectDispatcher dispatcher) {
         dispatcher.register("bladewatch.v1.TripsService", "ListTrips",
@@ -64,98 +67,91 @@ public class TripsServiceImpl {
                 this::handleGetGpsTrace);
     }
 
-    private String invoke(String method, String uri, String body) throws ConnectException {
+    private ConnectResponse invoke(String method, String uri, String body) throws ConnectException {
         TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
         if (tam == null) {
             throw new ConnectException("unavailable", "Trip analytics not initialized");
         }
-        TripApiHandler handler = new TripApiHandler(tam);
+        if (cachedHandler == null) {
+            cachedHandler = new TripApiHandler(tam);
+        }
+        TripApiHandler handler = cachedHandler;
         JSONObject result = handler.handleRequest(uri, method, null, body);
         if (result == null) {
             throw new ConnectException("internal", "No response from TripApiHandler");
         }
+        // Check HTTP-level status before removing the field — _status >= 400 is an error.
+        int status = result.optInt("_status", 200);
         result.remove("_status");
-        return result.toString();
+        if (status >= 400) {
+            String error = result.optString("error", result.optString("message", "Request failed"));
+            String code = status == 404 ? "not_found"
+                    : status == 410 ? "not_found"
+                    : status == 400 ? "invalid_argument"
+                    : "internal";
+            throw new ConnectException(code, error);
+        }
+        return ConnectResponse.of(result.toString());
     }
 
-    private String handleListTrips(String req) throws ConnectException {
+    private ConnectResponse handleListTrips(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips", req);
     }
 
-    private String handleGetTrip(String req) throws ConnectException {
-        try {
-            long id = new JSONObject(req).getLong("id");
-            return invoke("GET", "/api/trips/" + id, req);
-        } catch (Exception e) {
-            throw new ConnectException("invalid_argument", "Missing or invalid trip id");
-        }
+    private ConnectResponse handleGetTrip(String req, String clientIdentity) throws ConnectException {
+        long id = ConnectHandlerUtil.requireLong(req, "id");
+        return invoke("GET", "/api/trips/" + id, req);
     }
 
-    private String handleDeleteTrip(String req) throws ConnectException {
-        try {
-            long id = new JSONObject(req).getLong("id");
-            return invoke("DELETE", "/api/trips/" + id, req);
-        } catch (Exception e) {
-            throw new ConnectException("invalid_argument", "Missing or invalid trip id");
-        }
+    private ConnectResponse handleDeleteTrip(String req, String clientIdentity) throws ConnectException {
+        long id = ConnectHandlerUtil.requireLong(req, "id");
+        return invoke("DELETE", "/api/trips/" + id, req);
     }
 
-    private String handleGetSummary(String req) throws ConnectException {
+    private ConnectResponse handleGetSummary(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips/summary", req);
     }
 
-    private String handleGetDna(String req) throws ConnectException {
+    private ConnectResponse handleGetDna(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips/dna", req);
     }
 
-    private String handleGetRange(String req) throws ConnectException {
+    private ConnectResponse handleGetRange(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips/range", req);
     }
 
-    private String handleGetConfig(String req) throws ConnectException {
+    private ConnectResponse handleGetConfig(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips/config", null);
     }
 
-    private String handleSetConfig(String req) throws ConnectException {
+    private ConnectResponse handleSetConfig(String req, String clientIdentity) throws ConnectException {
         return invoke("POST", "/api/trips/config", req);
     }
 
-    private String handleGetStorage(String req) throws ConnectException {
+    private ConnectResponse handleGetStorage(String req, String clientIdentity) throws ConnectException {
         return invoke("GET", "/api/trips/storage", null);
     }
 
-    private String handleSetStorage(String req) throws ConnectException {
+    private ConnectResponse handleSetStorage(String req, String clientIdentity) throws ConnectException {
         return invoke("POST", "/api/trips/storage", req);
     }
 
-    private String handleSyncTrips(String req) throws ConnectException {
+    private ConnectResponse handleSyncTrips(String req, String clientIdentity) throws ConnectException {
         return invoke("POST", "/api/trips/sync", req);
     }
 
-    private String handleGetTelemetry(String req) throws ConnectException {
-        try {
-            long id = new JSONObject(req).getLong("id");
-            return invoke("GET", "/api/trips/" + id + "/telemetry", req);
-        } catch (Exception e) {
-            throw new ConnectException("invalid_argument", "Missing or invalid trip id");
-        }
+    private ConnectResponse handleGetTelemetry(String req, String clientIdentity) throws ConnectException {
+        long id = ConnectHandlerUtil.requireLong(req, "id");
+        return invoke("GET", "/api/trips/" + id + "/telemetry", req);
     }
 
-    private String handleGetSimilarTrips(String req) throws ConnectException {
-        try {
-            long id = new JSONObject(req).getLong("id");
-            return invoke("GET", "/api/trips/" + id + "/similar", req);
-        } catch (Exception e) {
-            throw new ConnectException("invalid_argument", "Missing or invalid trip id");
-        }
+    private ConnectResponse handleGetSimilarTrips(String req, String clientIdentity) throws ConnectException {
+        long id = ConnectHandlerUtil.requireLong(req, "id");
+        return invoke("GET", "/api/trips/" + id + "/similar", req);
     }
 
-    private String handleGetGpsTrace(String req) throws ConnectException {
-        try {
-            long id = new JSONObject(req).getLong("id");
-            return invoke("GET", "/api/trips/" + id + "/gps", req);
-        } catch (Exception e) {
-            throw new ConnectException("invalid_argument", "Missing or invalid trip id");
-        }
+    private ConnectResponse handleGetGpsTrace(String req, String clientIdentity) throws ConnectException {
+        long id = ConnectHandlerUtil.requireLong(req, "id");
+        return invoke("GET", "/api/trips/" + id + "/gps", req);
     }
 }

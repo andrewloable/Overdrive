@@ -27,4 +27,22 @@ public interface SyncTripsResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <code>int32 added = 3 [json_name = "added"];</code>
+   * @return The added.
+   */
+  int getAdded();
+
+  /**
+   * <code>int32 removed = 4 [json_name = "removed"];</code>
+   * @return The removed.
+   */
+  int getRemoved();
+
+  /**
+   * <code>int32 total = 5 [json_name = "total"];</code>
+   * @return The total.
+   */
+  int getTotal();
 }

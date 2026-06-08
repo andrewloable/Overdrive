@@ -538,6 +538,21 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int RECORDING_SEGMENT_MINUTES_FIELD_NUMBER = 10;
+  private int recordingSegmentMinutes_ = 0;
+  /**
+   * <pre>
+   * Recording segment length in minutes (e.g. 5, 10, 15).
+   * </pre>
+   *
+   * <code>int32 recording_segment_minutes = 10 [json_name = "recordingSegmentMinutes"];</code>
+   * @return The recordingSegmentMinutes.
+   */
+  @java.lang.Override
+  public int getRecordingSegmentMinutes() {
+    return recordingSegmentMinutes_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -587,6 +602,9 @@ java.lang.String defaultValue) {
         8);
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeResolution_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 9, nativeResolution_);
+    }
+    if (recordingSegmentMinutes_ != 0) {
+      output.writeInt32(10, recordingSegmentMinutes_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -643,6 +661,10 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeResolution_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(9, nativeResolution_);
     }
+    if (recordingSegmentMinutes_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(10, recordingSegmentMinutes_);
+    }
     return size;
   }
   @java.lang.Override
@@ -688,6 +710,8 @@ java.lang.String defaultValue) {
         other.internalGetFpsOptions())) return false;
     if (!getNativeResolution()
         .equals(other.getNativeResolution())) return false;
+    if (getRecordingSegmentMinutes()
+        != other.getRecordingSegmentMinutes()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -726,6 +750,8 @@ java.lang.String defaultValue) {
     }
     hash = (37 * hash) + NATIVE_RESOLUTION_FIELD_NUMBER;
     hash = (53 * hash) + getNativeResolution().hashCode();
+    hash = (37 * hash) + RECORDING_SEGMENT_MINUTES_FIELD_NUMBER;
+    hash = (53 * hash) + getRecordingSegmentMinutes();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -906,6 +932,7 @@ java.lang.String defaultValue) {
       internalGetMutableCodecOptions().clear();
       internalGetMutableFpsOptions().clear();
       nativeResolution_ = "";
+      recordingSegmentMinutes_ = 0;
       return this;
     }
 
@@ -972,6 +999,9 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00000100) != 0)) {
         result.nativeResolution_ = nativeResolution_;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.recordingSegmentMinutes_ = recordingSegmentMinutes_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1019,6 +1049,9 @@ java.lang.String defaultValue) {
         nativeResolution_ = other.nativeResolution_;
         bitField0_ |= 0x00000100;
         onChanged();
+      }
+      if (other.getRecordingSegmentMinutes() != 0) {
+        setRecordingSegmentMinutes(other.getRecordingSegmentMinutes());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1105,6 +1138,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 80: {
+              recordingSegmentMinutes_ = input.readInt32();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2068,6 +2106,50 @@ java.lang.String defaultValue) {
       checkByteStringIsUtf8(value);
       nativeResolution_ = value;
       bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private int recordingSegmentMinutes_ ;
+    /**
+     * <pre>
+     * Recording segment length in minutes (e.g. 5, 10, 15).
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 10 [json_name = "recordingSegmentMinutes"];</code>
+     * @return The recordingSegmentMinutes.
+     */
+    @java.lang.Override
+    public int getRecordingSegmentMinutes() {
+      return recordingSegmentMinutes_;
+    }
+    /**
+     * <pre>
+     * Recording segment length in minutes (e.g. 5, 10, 15).
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 10 [json_name = "recordingSegmentMinutes"];</code>
+     * @param value The recordingSegmentMinutes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRecordingSegmentMinutes(int value) {
+
+      recordingSegmentMinutes_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Recording segment length in minutes (e.g. 5, 10, 15).
+     * </pre>
+     *
+     * <code>int32 recording_segment_minutes = 10 [json_name = "recordingSegmentMinutes"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRecordingSegmentMinutes() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      recordingSegmentMinutes_ = 0;
       onChanged();
       return this;
     }

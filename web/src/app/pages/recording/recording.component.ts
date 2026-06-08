@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ConnectClients } from '../../core/connect/connect-clients';
+import { toast } from '../../shared/page-utils';
 import type { RecordingEntry } from '../../../../gen/bladewatch/v1/recordings_pb';
 
 type FilterType = 'ALL' | 'NORMAL' | 'SENTRY' | 'PROXIMITY';
@@ -79,8 +80,7 @@ export default class RecordingComponent implements OnInit {
       await this.clients.recordings.deleteRecording({ filename: rec.filename });
       this.recordings.update(list => list.filter(r => r.filename !== rec.filename));
       if (this.activeVideo()?.filename === rec.filename) this.activeVideo.set(null);
-      this.statusMsg.set('Deleted');
-      setTimeout(() => this.statusMsg.set(''), 2000);
+      toast(this.statusMsg, 'Deleted');
     } catch {
       this.statusMsg.set('Delete failed');
     }

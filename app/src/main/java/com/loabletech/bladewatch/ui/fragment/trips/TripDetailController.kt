@@ -67,9 +67,7 @@ internal class TripDetailController(
         setStatus("Loading trip…")
         val t = Thread({
             val detail = client.fetchTripDetail(tripId)
-            val telemetry = if (detail != null && detail.telemetryFilePath.isNotBlank()) {
-                client.fetchTelemetry(tripId)
-            } else emptyList()
+            val telemetry = if (detail != null) client.fetchTelemetry(tripId) else emptyList()
             if (destroyed) return@Thread
             root.post {
                 if (destroyed) return@post

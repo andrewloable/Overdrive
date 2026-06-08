@@ -69,6 +69,15 @@ message SurveillanceConfig {
   string recording_quality = 22;
   // Codec: H264 or H265.
   string recording_codec = 23;
+  // Per-camera enable flags.
+  bool camera_front = 24;
+  bool camera_right = 25;
+  bool camera_rear = 26;
+  bool camera_left = 27;
+  // Deterrent action: "silent", "flash", "beep", etc.
+  string deterrent_action = 28;
+  // Minimum seconds between deterrent triggers.
+  int32 deterrent_cooldown_seconds = 29;
 }
 
 message GetSurveillanceConfigRequest {}

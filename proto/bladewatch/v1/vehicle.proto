@@ -214,6 +214,10 @@ message SetClimateRequest {
   int32 fan_level = 4;
   int32 wind_mode = 5;
   bool max_cooling = 6;
+  // Restore params: used when disabling max_cooling to re-apply prior AC state.
+  bool restore_ac_on = 7;
+  double restore_temp_c = 8;
+  int32 restore_fan_level = 9;
 }
 
 message SetSeatRequest {
@@ -221,6 +225,11 @@ message SetSeatRequest {
   int32 seat_index = 1;
   string action = 2;
   int32 level = 3;
+  // Full current seat state: cloud API is stateful and requires these on every call.
+  int32 driver_heat = 4;
+  int32 driver_vent = 5;
+  int32 passenger_heat = 6;
+  int32 passenger_vent = 7;
 }
 
 message SetLightsRequest {

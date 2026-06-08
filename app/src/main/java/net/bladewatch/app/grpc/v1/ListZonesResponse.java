@@ -116,6 +116,43 @@ private static final long serialVersionUID = 0L;
     return currentlyInSafeZone_;
   }
 
+  public static final int HAS_GPS_FIELD_NUMBER = 4;
+  private boolean hasGps_ = false;
+  /**
+   * <pre>
+   * Current GPS fix from the daemon, for map centering and add-zone-at-location.
+   * </pre>
+   *
+   * <code>bool has_gps = 4 [json_name = "hasGps"];</code>
+   * @return The hasGps.
+   */
+  @java.lang.Override
+  public boolean getHasGps() {
+    return hasGps_;
+  }
+
+  public static final int CURRENT_LAT_FIELD_NUMBER = 5;
+  private double currentLat_ = 0D;
+  /**
+   * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+   * @return The currentLat.
+   */
+  @java.lang.Override
+  public double getCurrentLat() {
+    return currentLat_;
+  }
+
+  public static final int CURRENT_LNG_FIELD_NUMBER = 6;
+  private double currentLng_ = 0D;
+  /**
+   * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+   * @return The currentLng.
+   */
+  @java.lang.Override
+  public double getCurrentLng() {
+    return currentLng_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -139,6 +176,15 @@ private static final long serialVersionUID = 0L;
     if (currentlyInSafeZone_ != false) {
       output.writeBool(3, currentlyInSafeZone_);
     }
+    if (hasGps_ != false) {
+      output.writeBool(4, hasGps_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(currentLat_) != 0) {
+      output.writeDouble(5, currentLat_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(currentLng_) != 0) {
+      output.writeDouble(6, currentLng_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -159,6 +205,18 @@ private static final long serialVersionUID = 0L;
     if (currentlyInSafeZone_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(3, currentlyInSafeZone_);
+    }
+    if (hasGps_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(4, hasGps_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(currentLat_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(5, currentLat_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(currentLng_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(6, currentLng_);
     }
     return size;
   }
@@ -190,6 +248,14 @@ private static final long serialVersionUID = 0L;
         != other.getFeatureEnabled()) return false;
     if (getCurrentlyInSafeZone()
         != other.getCurrentlyInSafeZone()) return false;
+    if (getHasGps()
+        != other.getHasGps()) return false;
+    if (java.lang.Double.doubleToLongBits(getCurrentLat())
+        != java.lang.Double.doubleToLongBits(
+            other.getCurrentLat())) return false;
+    if (java.lang.Double.doubleToLongBits(getCurrentLng())
+        != java.lang.Double.doubleToLongBits(
+            other.getCurrentLng())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -211,6 +277,15 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + CURRENTLY_IN_SAFE_ZONE_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getCurrentlyInSafeZone());
+    hash = (37 * hash) + HAS_GPS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getHasGps());
+    hash = (37 * hash) + CURRENT_LAT_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getCurrentLat()));
+    hash = (37 * hash) + CURRENT_LNG_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getCurrentLng()));
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -351,6 +426,9 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000001);
       featureEnabled_ = false;
       currentlyInSafeZone_ = false;
+      hasGps_ = false;
+      currentLat_ = 0D;
+      currentLng_ = 0D;
       return this;
     }
 
@@ -403,6 +481,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.currentlyInSafeZone_ = currentlyInSafeZone_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.hasGps_ = hasGps_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.currentLat_ = currentLat_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.currentLng_ = currentLng_;
+      }
     }
 
     @java.lang.Override
@@ -448,6 +535,15 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getCurrentlyInSafeZone() != false) {
         setCurrentlyInSafeZone(other.getCurrentlyInSafeZone());
+      }
+      if (other.getHasGps() != false) {
+        setHasGps(other.getHasGps());
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getCurrentLat()) != 0) {
+        setCurrentLat(other.getCurrentLat());
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getCurrentLng()) != 0) {
+        setCurrentLng(other.getCurrentLng());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -498,6 +594,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 32: {
+              hasGps_ = input.readBool();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 41: {
+              currentLat_ = input.readDouble();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 41
+            case 49: {
+              currentLng_ = input.readDouble();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 49
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -827,6 +938,114 @@ private static final long serialVersionUID = 0L;
     public Builder clearCurrentlyInSafeZone() {
       bitField0_ = (bitField0_ & ~0x00000004);
       currentlyInSafeZone_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean hasGps_ ;
+    /**
+     * <pre>
+     * Current GPS fix from the daemon, for map centering and add-zone-at-location.
+     * </pre>
+     *
+     * <code>bool has_gps = 4 [json_name = "hasGps"];</code>
+     * @return The hasGps.
+     */
+    @java.lang.Override
+    public boolean getHasGps() {
+      return hasGps_;
+    }
+    /**
+     * <pre>
+     * Current GPS fix from the daemon, for map centering and add-zone-at-location.
+     * </pre>
+     *
+     * <code>bool has_gps = 4 [json_name = "hasGps"];</code>
+     * @param value The hasGps to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHasGps(boolean value) {
+
+      hasGps_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Current GPS fix from the daemon, for map centering and add-zone-at-location.
+     * </pre>
+     *
+     * <code>bool has_gps = 4 [json_name = "hasGps"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHasGps() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      hasGps_ = false;
+      onChanged();
+      return this;
+    }
+
+    private double currentLat_ ;
+    /**
+     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * @return The currentLat.
+     */
+    @java.lang.Override
+    public double getCurrentLat() {
+      return currentLat_;
+    }
+    /**
+     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * @param value The currentLat to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrentLat(double value) {
+
+      currentLat_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCurrentLat() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      currentLat_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private double currentLng_ ;
+    /**
+     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * @return The currentLng.
+     */
+    @java.lang.Override
+    public double getCurrentLng() {
+      return currentLng_;
+    }
+    /**
+     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * @param value The currentLng to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrentLng(double value) {
+
+      currentLng_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCurrentLng() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      currentLng_ = 0D;
       onChanged();
       return this;
     }
