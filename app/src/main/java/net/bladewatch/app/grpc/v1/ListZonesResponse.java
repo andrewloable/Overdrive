@@ -108,7 +108,7 @@ private static final long serialVersionUID = 0L;
    * Whether the vehicle is currently inside any zone.
    * </pre>
    *
-   * <code>bool currently_in_safe_zone = 3 [json_name = "currentlyInSafeZone"];</code>
+   * <code>bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];</code>
    * @return The currentlyInSafeZone.
    */
   @java.lang.Override
@@ -134,7 +134,7 @@ private static final long serialVersionUID = 0L;
   public static final int CURRENT_LAT_FIELD_NUMBER = 5;
   private double currentLat_ = 0D;
   /**
-   * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+   * <code>double current_lat = 5 [json_name = "lat"];</code>
    * @return The currentLat.
    */
   @java.lang.Override
@@ -145,7 +145,7 @@ private static final long serialVersionUID = 0L;
   public static final int CURRENT_LNG_FIELD_NUMBER = 6;
   private double currentLng_ = 0D;
   /**
-   * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+   * <code>double current_lng = 6 [json_name = "lng"];</code>
    * @return The currentLng.
    */
   @java.lang.Override
@@ -904,7 +904,7 @@ private static final long serialVersionUID = 0L;
      * Whether the vehicle is currently inside any zone.
      * </pre>
      *
-     * <code>bool currently_in_safe_zone = 3 [json_name = "currentlyInSafeZone"];</code>
+     * <code>bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];</code>
      * @return The currentlyInSafeZone.
      */
     @java.lang.Override
@@ -916,7 +916,7 @@ private static final long serialVersionUID = 0L;
      * Whether the vehicle is currently inside any zone.
      * </pre>
      *
-     * <code>bool currently_in_safe_zone = 3 [json_name = "currentlyInSafeZone"];</code>
+     * <code>bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];</code>
      * @param value The currentlyInSafeZone to set.
      * @return This builder for chaining.
      */
@@ -932,7 +932,7 @@ private static final long serialVersionUID = 0L;
      * Whether the vehicle is currently inside any zone.
      * </pre>
      *
-     * <code>bool currently_in_safe_zone = 3 [json_name = "currentlyInSafeZone"];</code>
+     * <code>bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCurrentlyInSafeZone() {
@@ -988,7 +988,7 @@ private static final long serialVersionUID = 0L;
 
     private double currentLat_ ;
     /**
-     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * <code>double current_lat = 5 [json_name = "lat"];</code>
      * @return The currentLat.
      */
     @java.lang.Override
@@ -996,7 +996,7 @@ private static final long serialVersionUID = 0L;
       return currentLat_;
     }
     /**
-     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * <code>double current_lat = 5 [json_name = "lat"];</code>
      * @param value The currentLat to set.
      * @return This builder for chaining.
      */
@@ -1008,7 +1008,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+     * <code>double current_lat = 5 [json_name = "lat"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCurrentLat() {
@@ -1020,7 +1020,7 @@ private static final long serialVersionUID = 0L;
 
     private double currentLng_ ;
     /**
-     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * <code>double current_lng = 6 [json_name = "lng"];</code>
      * @return The currentLng.
      */
     @java.lang.Override
@@ -1028,7 +1028,7 @@ private static final long serialVersionUID = 0L;
       return currentLng_;
     }
     /**
-     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * <code>double current_lng = 6 [json_name = "lng"];</code>
      * @param value The currentLng to set.
      * @return This builder for chaining.
      */
@@ -1040,7 +1040,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+     * <code>double current_lng = 6 [json_name = "lng"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCurrentLng() {

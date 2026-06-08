@@ -172,7 +172,7 @@ private static final long serialVersionUID = 0L;
   public static final int ACTIVE_FIELD_NUMBER = 6;
   private boolean active_ = false;
   /**
-   * <code>bool active = 6 [json_name = "active"];</code>
+   * <code>bool active = 6 [json_name = "enabled"];</code>
    * @return The active.
    */
   @java.lang.Override
@@ -187,7 +187,7 @@ private static final long serialVersionUID = 0L;
    * Epoch ms when the zone was created.
    * </pre>
    *
-   * <code>int64 created_at_ms = 7 [json_name = "createdAtMs"];</code>
+   * <code>int64 created_at_ms = 7 [json_name = "createdAt"];</code>
    * @return The createdAtMs.
    */
   @java.lang.Override
@@ -896,7 +896,7 @@ private static final long serialVersionUID = 0L;
 
     private boolean active_ ;
     /**
-     * <code>bool active = 6 [json_name = "active"];</code>
+     * <code>bool active = 6 [json_name = "enabled"];</code>
      * @return The active.
      */
     @java.lang.Override
@@ -904,7 +904,7 @@ private static final long serialVersionUID = 0L;
       return active_;
     }
     /**
-     * <code>bool active = 6 [json_name = "active"];</code>
+     * <code>bool active = 6 [json_name = "enabled"];</code>
      * @param value The active to set.
      * @return This builder for chaining.
      */
@@ -916,7 +916,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool active = 6 [json_name = "active"];</code>
+     * <code>bool active = 6 [json_name = "enabled"];</code>
      * @return This builder for chaining.
      */
     public Builder clearActive() {
@@ -932,7 +932,7 @@ private static final long serialVersionUID = 0L;
      * Epoch ms when the zone was created.
      * </pre>
      *
-     * <code>int64 created_at_ms = 7 [json_name = "createdAtMs"];</code>
+     * <code>int64 created_at_ms = 7 [json_name = "createdAt"];</code>
      * @return The createdAtMs.
      */
     @java.lang.Override
@@ -944,7 +944,7 @@ private static final long serialVersionUID = 0L;
      * Epoch ms when the zone was created.
      * </pre>
      *
-     * <code>int64 created_at_ms = 7 [json_name = "createdAtMs"];</code>
+     * <code>int64 created_at_ms = 7 [json_name = "createdAt"];</code>
      * @param value The createdAtMs to set.
      * @return This builder for chaining.
      */
@@ -960,7 +960,7 @@ private static final long serialVersionUID = 0L;
      * Epoch ms when the zone was created.
      * </pre>
      *
-     * <code>int64 created_at_ms = 7 [json_name = "createdAtMs"];</code>
+     * <code>int64 created_at_ms = 7 [json_name = "createdAt"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCreatedAtMs() {

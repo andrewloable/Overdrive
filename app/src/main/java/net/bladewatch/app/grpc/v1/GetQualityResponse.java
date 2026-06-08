@@ -134,7 +134,7 @@ private static final long serialVersionUID = 0L;
    * Current codec name ("H264" or "H265").
    * </pre>
    *
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The codec.
    */
   @java.lang.Override
@@ -155,7 +155,7 @@ private static final long serialVersionUID = 0L;
    * Current codec name ("H264" or "H265").
    * </pre>
    *
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The bytes for codec.
    */
   @java.lang.Override
@@ -180,7 +180,7 @@ private static final long serialVersionUID = 0L;
    * Current FPS setting.
    * </pre>
    *
-   * <code>int32 fps = 4 [json_name = "fps"];</code>
+   * <code>int32 fps = 4 [json_name = "cameraFps"];</code>
    * @return The fps.
    */
   @java.lang.Override
@@ -1290,7 +1290,7 @@ java.lang.String defaultValue) {
      * Current codec name ("H264" or "H265").
      * </pre>
      *
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return The codec.
      */
     public java.lang.String getCodec() {
@@ -1310,7 +1310,7 @@ java.lang.String defaultValue) {
      * Current codec name ("H264" or "H265").
      * </pre>
      *
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return The bytes for codec.
      */
     public com.google.protobuf.ByteString
@@ -1331,7 +1331,7 @@ java.lang.String defaultValue) {
      * Current codec name ("H264" or "H265").
      * </pre>
      *
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @param value The codec to set.
      * @return This builder for chaining.
      */
@@ -1348,7 +1348,7 @@ java.lang.String defaultValue) {
      * Current codec name ("H264" or "H265").
      * </pre>
      *
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCodec() {
@@ -1362,7 +1362,7 @@ java.lang.String defaultValue) {
      * Current codec name ("H264" or "H265").
      * </pre>
      *
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @param value The bytes for codec to set.
      * @return This builder for chaining.
      */
@@ -1382,7 +1382,7 @@ java.lang.String defaultValue) {
      * Current FPS setting.
      * </pre>
      *
-     * <code>int32 fps = 4 [json_name = "fps"];</code>
+     * <code>int32 fps = 4 [json_name = "cameraFps"];</code>
      * @return The fps.
      */
     @java.lang.Override
@@ -1394,7 +1394,7 @@ java.lang.String defaultValue) {
      * Current FPS setting.
      * </pre>
      *
-     * <code>int32 fps = 4 [json_name = "fps"];</code>
+     * <code>int32 fps = 4 [json_name = "cameraFps"];</code>
      * @param value The fps to set.
      * @return This builder for chaining.
      */
@@ -1410,7 +1410,7 @@ java.lang.String defaultValue) {
      * Current FPS setting.
      * </pre>
      *
-     * <code>int32 fps = 4 [json_name = "fps"];</code>
+     * <code>int32 fps = 4 [json_name = "cameraFps"];</code>
      * @return This builder for chaining.
      */
     public Builder clearFps() {

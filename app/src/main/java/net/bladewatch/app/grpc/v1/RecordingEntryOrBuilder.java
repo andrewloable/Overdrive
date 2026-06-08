@@ -50,13 +50,13 @@ public interface RecordingEntryOrBuilder extends
    * Epoch ms extracted from the filename timestamp.
    * </pre>
    *
-   * <code>int64 timestamp_ms = 4 [json_name = "timestampMs"];</code>
+   * <code>int64 timestamp_ms = 4 [json_name = "timestamp"];</code>
    * @return The timestampMs.
    */
   long getTimestampMs();
 
   /**
-   * <code>int64 size_bytes = 5 [json_name = "sizeBytes"];</code>
+   * <code>int64 size_bytes = 5 [json_name = "size"];</code>
    * @return The sizeBytes.
    */
   long getSizeBytes();
@@ -72,7 +72,7 @@ public interface RecordingEntryOrBuilder extends
    * Human-readable date string, e.g. "Jun 8, 2026".
    * </pre>
    *
-   * <code>string date_label = 7 [json_name = "dateLabel"];</code>
+   * <code>string date_label = 7 [json_name = "dateFormatted"];</code>
    * @return The dateLabel.
    */
   java.lang.String getDateLabel();
@@ -81,7 +81,7 @@ public interface RecordingEntryOrBuilder extends
    * Human-readable date string, e.g. "Jun 8, 2026".
    * </pre>
    *
-   * <code>string date_label = 7 [json_name = "dateLabel"];</code>
+   * <code>string date_label = 7 [json_name = "dateFormatted"];</code>
    * @return The bytes for dateLabel.
    */
   com.google.protobuf.ByteString
@@ -92,7 +92,7 @@ public interface RecordingEntryOrBuilder extends
    * Human-readable time string, e.g. "03:42 PM".
    * </pre>
    *
-   * <code>string time_label = 8 [json_name = "timeLabel"];</code>
+   * <code>string time_label = 8 [json_name = "timeFormatted"];</code>
    * @return The timeLabel.
    */
   java.lang.String getTimeLabel();
@@ -101,7 +101,7 @@ public interface RecordingEntryOrBuilder extends
    * Human-readable time string, e.g. "03:42 PM".
    * </pre>
    *
-   * <code>string time_label = 8 [json_name = "timeLabel"];</code>
+   * <code>string time_label = 8 [json_name = "timeFormatted"];</code>
    * @return The bytes for timeLabel.
    */
   com.google.protobuf.ByteString
@@ -159,24 +159,24 @@ public interface RecordingEntryOrBuilder extends
       getDetectedClassesBytes(int index);
 
   /**
-   * <code>string severity = 11 [json_name = "severity"];</code>
+   * <code>string severity = 11 [json_name = "peakSeverity"];</code>
    * @return The severity.
    */
   java.lang.String getSeverity();
   /**
-   * <code>string severity = 11 [json_name = "severity"];</code>
+   * <code>string severity = 11 [json_name = "peakSeverity"];</code>
    * @return The bytes for severity.
    */
   com.google.protobuf.ByteString
       getSeverityBytes();
 
   /**
-   * <code>string proximity = 12 [json_name = "proximity"];</code>
+   * <code>string proximity = 12 [json_name = "peakProximity"];</code>
    * @return The proximity.
    */
   java.lang.String getProximity();
   /**
-   * <code>string proximity = 12 [json_name = "proximity"];</code>
+   * <code>string proximity = 12 [json_name = "peakProximity"];</code>
    * @return The bytes for proximity.
    */
   com.google.protobuf.ByteString

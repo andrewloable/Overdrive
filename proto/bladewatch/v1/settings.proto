@@ -75,9 +75,9 @@ message GetQualityResponse {
   // Current recording quality tier name (e.g. "STANDARD").
   string recording_quality = 2;
   // Current codec name ("H264" or "H265").
-  string codec = 3;
+  string codec = 3 [json_name = "recordingCodec"];
   // Current FPS setting.
-  int32 fps = 4;
+  int32 fps = 4 [json_name = "cameraFps"];
   // Per-tier options keyed by tier name (e.g. "ECONOMY", "STANDARD", etc.).
   map<string, QualityTierInfo> recording_quality_options = 5;
   ActiveRecordingEstimate active_recording_estimate = 6;
@@ -106,7 +106,7 @@ message SetQualityRequest {
 message SetQualityResponse {
   bool success = 1;
   string recording_quality = 2;
-  string codec = 3;
+  string codec = 3 [json_name = "recordingCodec"];
   string message = 4;
   string error = 5;
 }

@@ -120,7 +120,7 @@ private static final long serialVersionUID = 0L;
   public static final int SD_CARD_FREE_BYTES_FIELD_NUMBER = 4;
   private long sdCardFreeBytes_ = 0L;
   /**
-   * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFreeBytes"];</code>
+   * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];</code>
    * @return The sdCardFreeBytes.
    */
   @java.lang.Override
@@ -131,7 +131,7 @@ private static final long serialVersionUID = 0L;
   public static final int SD_CARD_TOTAL_BYTES_FIELD_NUMBER = 5;
   private long sdCardTotalBytes_ = 0L;
   /**
-   * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotalBytes"];</code>
+   * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];</code>
    * @return The sdCardTotalBytes.
    */
   @java.lang.Override
@@ -270,7 +270,7 @@ private static final long serialVersionUID = 0L;
   public static final int CDR_USAGE_BYTES_FIELD_NUMBER = 10;
   private long cdrUsageBytes_ = 0L;
   /**
-   * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsageBytes"];</code>
+   * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];</code>
    * @return The cdrUsageBytes.
    */
   @java.lang.Override
@@ -331,7 +331,7 @@ private static final long serialVersionUID = 0L;
   public static final int CDR_PROTECTED_BYTES_FIELD_NUMBER = 13;
   private long cdrProtectedBytes_ = 0L;
   /**
-   * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedBytes"];</code>
+   * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];</code>
    * @return The cdrProtectedBytes.
    */
   @java.lang.Override
@@ -381,7 +381,7 @@ private static final long serialVersionUID = 0L;
   public static final int CDR_DELETABLE_BYTES_FIELD_NUMBER = 15;
   private long cdrDeletableBytes_ = 0L;
   /**
-   * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableBytes"];</code>
+   * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];</code>
    * @return The cdrDeletableBytes.
    */
   @java.lang.Override
@@ -547,7 +547,7 @@ private static final long serialVersionUID = 0L;
   public static final int LAST_CLEANUP_TIME_MS_FIELD_NUMBER = 25;
   private long lastCleanupTimeMs_ = 0L;
   /**
-   * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTimeMs"];</code>
+   * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];</code>
    * @return The lastCleanupTimeMs.
    */
   @java.lang.Override
@@ -1632,7 +1632,7 @@ private static final long serialVersionUID = 0L;
 
     private long sdCardFreeBytes_ ;
     /**
-     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];</code>
      * @return The sdCardFreeBytes.
      */
     @java.lang.Override
@@ -1640,7 +1640,7 @@ private static final long serialVersionUID = 0L;
       return sdCardFreeBytes_;
     }
     /**
-     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];</code>
      * @param value The sdCardFreeBytes to set.
      * @return This builder for chaining.
      */
@@ -1652,7 +1652,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSdCardFreeBytes() {
@@ -1664,7 +1664,7 @@ private static final long serialVersionUID = 0L;
 
     private long sdCardTotalBytes_ ;
     /**
-     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];</code>
      * @return The sdCardTotalBytes.
      */
     @java.lang.Override
@@ -1672,7 +1672,7 @@ private static final long serialVersionUID = 0L;
       return sdCardTotalBytes_;
     }
     /**
-     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];</code>
      * @param value The sdCardTotalBytes to set.
      * @return This builder for chaining.
      */
@@ -1684,7 +1684,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSdCardTotalBytes() {
@@ -1944,7 +1944,7 @@ private static final long serialVersionUID = 0L;
 
     private long cdrUsageBytes_ ;
     /**
-     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsageBytes"];</code>
+     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];</code>
      * @return The cdrUsageBytes.
      */
     @java.lang.Override
@@ -1952,7 +1952,7 @@ private static final long serialVersionUID = 0L;
       return cdrUsageBytes_;
     }
     /**
-     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsageBytes"];</code>
+     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];</code>
      * @param value The cdrUsageBytes to set.
      * @return This builder for chaining.
      */
@@ -1964,7 +1964,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsageBytes"];</code>
+     * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCdrUsageBytes() {
@@ -2080,7 +2080,7 @@ private static final long serialVersionUID = 0L;
 
     private long cdrProtectedBytes_ ;
     /**
-     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedBytes"];</code>
+     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];</code>
      * @return The cdrProtectedBytes.
      */
     @java.lang.Override
@@ -2088,7 +2088,7 @@ private static final long serialVersionUID = 0L;
       return cdrProtectedBytes_;
     }
     /**
-     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedBytes"];</code>
+     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];</code>
      * @param value The cdrProtectedBytes to set.
      * @return This builder for chaining.
      */
@@ -2100,7 +2100,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedBytes"];</code>
+     * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCdrProtectedBytes() {
@@ -2184,7 +2184,7 @@ private static final long serialVersionUID = 0L;
 
     private long cdrDeletableBytes_ ;
     /**
-     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableBytes"];</code>
+     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];</code>
      * @return The cdrDeletableBytes.
      */
     @java.lang.Override
@@ -2192,7 +2192,7 @@ private static final long serialVersionUID = 0L;
       return cdrDeletableBytes_;
     }
     /**
-     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableBytes"];</code>
+     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];</code>
      * @param value The cdrDeletableBytes to set.
      * @return This builder for chaining.
      */
@@ -2204,7 +2204,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableBytes"];</code>
+     * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCdrDeletableBytes() {
@@ -2584,7 +2584,7 @@ private static final long serialVersionUID = 0L;
 
     private long lastCleanupTimeMs_ ;
     /**
-     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTimeMs"];</code>
+     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];</code>
      * @return The lastCleanupTimeMs.
      */
     @java.lang.Override
@@ -2592,7 +2592,7 @@ private static final long serialVersionUID = 0L;
       return lastCleanupTimeMs_;
     }
     /**
-     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTimeMs"];</code>
+     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];</code>
      * @param value The lastCleanupTimeMs to set.
      * @return This builder for chaining.
      */
@@ -2604,7 +2604,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTimeMs"];</code>
+     * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];</code>
      * @return This builder for chaining.
      */
     public Builder clearLastCleanupTimeMs() {

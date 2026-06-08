@@ -48,6 +48,22 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.PreviewCleanupRequest.class, net.bladewatch.app.grpc.v1.PreviewCleanupRequest.Builder.class);
   }
 
+  public static final int BYTES_TO_FREE_FIELD_NUMBER = 1;
+  private long bytesToFree_ = 0L;
+  /**
+   * <pre>
+   * Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+   * Passed to the REST handler as the ?bytesToFree= query param.
+   * </pre>
+   *
+   * <code>int64 bytes_to_free = 1 [json_name = "bytesToFree"];</code>
+   * @return The bytesToFree.
+   */
+  @java.lang.Override
+  public long getBytesToFree() {
+    return bytesToFree_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -62,7 +78,18 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
+    if (bytesToFree_ != 0L) {
+      output.writeInt64(1, bytesToFree_);
+    }
     getUnknownFields().writeTo(output);
+  }
+  private int computeSerializedSize_0() {
+    int size = 0;
+    if (bytesToFree_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(1, bytesToFree_);
+    }
+    return size;
   }
   @java.lang.Override
   public int getSerializedSize() {
@@ -70,6 +97,7 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
+    size += computeSerializedSize_0();
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -85,6 +113,8 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.PreviewCleanupRequest other = (net.bladewatch.app.grpc.v1.PreviewCleanupRequest) obj;
 
+    if (getBytesToFree()
+        != other.getBytesToFree()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -96,6 +126,9 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
+    hash = (37 * hash) + BYTES_TO_FREE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getBytesToFree());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -226,6 +259,8 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
+      bitField0_ = 0;
+      bytesToFree_ = 0L;
       return this;
     }
 
@@ -252,8 +287,16 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public net.bladewatch.app.grpc.v1.PreviewCleanupRequest buildPartial() {
       net.bladewatch.app.grpc.v1.PreviewCleanupRequest result = new net.bladewatch.app.grpc.v1.PreviewCleanupRequest(this);
+      if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartial0(net.bladewatch.app.grpc.v1.PreviewCleanupRequest result) {
+      int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.bytesToFree_ = bytesToFree_;
+      }
     }
 
     @java.lang.Override
@@ -268,6 +311,9 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.PreviewCleanupRequest other) {
       if (other == net.bladewatch.app.grpc.v1.PreviewCleanupRequest.getDefaultInstance()) return this;
+      if (other.getBytesToFree() != 0L) {
+        setBytesToFree(other.getBytesToFree());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -294,6 +340,11 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
+            case 8: {
+              bytesToFree_ = input.readInt64();
+              bitField0_ |= 0x00000001;
+              break;
+            } // case 8
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -307,6 +358,54 @@ private static final long serialVersionUID = 0L;
       } finally {
         onChanged();
       } // finally
+      return this;
+    }
+    private int bitField0_;
+
+    private long bytesToFree_ ;
+    /**
+     * <pre>
+     * Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+     * Passed to the REST handler as the ?bytesToFree= query param.
+     * </pre>
+     *
+     * <code>int64 bytes_to_free = 1 [json_name = "bytesToFree"];</code>
+     * @return The bytesToFree.
+     */
+    @java.lang.Override
+    public long getBytesToFree() {
+      return bytesToFree_;
+    }
+    /**
+     * <pre>
+     * Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+     * Passed to the REST handler as the ?bytesToFree= query param.
+     * </pre>
+     *
+     * <code>int64 bytes_to_free = 1 [json_name = "bytesToFree"];</code>
+     * @param value The bytesToFree to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBytesToFree(long value) {
+
+      bytesToFree_ = value;
+      bitField0_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+     * Passed to the REST handler as the ?bytesToFree= query param.
+     * </pre>
+     *
+     * <code>int64 bytes_to_free = 1 [json_name = "bytesToFree"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBytesToFree() {
+      bitField0_ = (bitField0_ & ~0x00000001);
+      bytesToFree_ = 0L;
+      onChanged();
       return this;
     }
 

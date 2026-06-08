@@ -6,6 +6,11 @@
 package net.bladewatch.app.grpc.v1;
 
 /**
+ * <pre>
+ * GetHeatmapResponse matches SurveillanceApiHandler.sendHeatmap: a motion grid descriptor, NOT a
+ * JPEG. (was: bytes image_jpeg = 1.)
+ * </pre>
+ *
  * Protobuf type {@code bladewatch.v1.GetHeatmapResponse}
  */
 @com.google.protobuf.Generated
@@ -28,7 +33,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private GetHeatmapResponse() {
-    imageJpeg_ = com.google.protobuf.ByteString.EMPTY;
+    quadrants_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -49,19 +54,78 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.GetHeatmapResponse.class, net.bladewatch.app.grpc.v1.GetHeatmapResponse.Builder.class);
   }
 
-  public static final int IMAGE_JPEG_FIELD_NUMBER = 1;
-  private com.google.protobuf.ByteString imageJpeg_ = com.google.protobuf.ByteString.EMPTY;
+  public static final int GRID_COLS_FIELD_NUMBER = 2;
+  private int gridCols_ = 0;
   /**
-   * <pre>
-   * JPEG-encoded heatmap image bytes.
-   * </pre>
-   *
-   * <code>bytes image_jpeg = 1 [json_name = "imageJpeg"];</code>
-   * @return The imageJpeg.
+   * <code>int32 grid_cols = 2 [json_name = "gridCols"];</code>
+   * @return The gridCols.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getImageJpeg() {
-    return imageJpeg_;
+  public int getGridCols() {
+    return gridCols_;
+  }
+
+  public static final int GRID_ROWS_FIELD_NUMBER = 3;
+  private int gridRows_ = 0;
+  /**
+   * <code>int32 grid_rows = 3 [json_name = "gridRows"];</code>
+   * @return The gridRows.
+   */
+  @java.lang.Override
+  public int getGridRows() {
+    return gridRows_;
+  }
+
+  public static final int VIEW_MODE_FIELD_NUMBER = 4;
+  private int viewMode_ = 0;
+  /**
+   * <code>int32 view_mode = 4 [json_name = "viewMode"];</code>
+   * @return The viewMode.
+   */
+  @java.lang.Override
+  public int getViewMode() {
+    return viewMode_;
+  }
+
+  public static final int QUADRANTS_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant> quadrants_;
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant> getQuadrantsList() {
+    return quadrants_;
+  }
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder> 
+      getQuadrantsOrBuilderList() {
+    return quadrants_;
+  }
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  @java.lang.Override
+  public int getQuadrantsCount() {
+    return quadrants_.size();
+  }
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  @java.lang.Override
+  public net.bladewatch.app.grpc.v1.HeatmapQuadrant getQuadrants(int index) {
+    return quadrants_.get(index);
+  }
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  @java.lang.Override
+  public net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder getQuadrantsOrBuilder(
+      int index) {
+    return quadrants_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
@@ -78,17 +142,43 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!imageJpeg_.isEmpty()) {
-      output.writeBytes(1, imageJpeg_);
+    if (gridCols_ != 0) {
+      output.writeInt32(2, gridCols_);
+    }
+    if (gridRows_ != 0) {
+      output.writeInt32(3, gridRows_);
+    }
+    if (viewMode_ != 0) {
+      output.writeInt32(4, viewMode_);
+    }
+    for (int i = 0; i < quadrants_.size(); i++) {
+      output.writeMessage(5, quadrants_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-    if (!imageJpeg_.isEmpty()) {
+    if (gridCols_ != 0) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(1, imageJpeg_);
+        .computeInt32Size(2, gridCols_);
     }
+    if (gridRows_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(3, gridRows_);
+    }
+    if (viewMode_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(4, viewMode_);
+    }
+
+        {
+          final int count = quadrants_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(quadrants_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -113,8 +203,14 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.GetHeatmapResponse other = (net.bladewatch.app.grpc.v1.GetHeatmapResponse) obj;
 
-    if (!getImageJpeg()
-        .equals(other.getImageJpeg())) return false;
+    if (getGridCols()
+        != other.getGridCols()) return false;
+    if (getGridRows()
+        != other.getGridRows()) return false;
+    if (getViewMode()
+        != other.getViewMode()) return false;
+    if (!getQuadrantsList()
+        .equals(other.getQuadrantsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -126,8 +222,16 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + IMAGE_JPEG_FIELD_NUMBER;
-    hash = (53 * hash) + getImageJpeg().hashCode();
+    hash = (37 * hash) + GRID_COLS_FIELD_NUMBER;
+    hash = (53 * hash) + getGridCols();
+    hash = (37 * hash) + GRID_ROWS_FIELD_NUMBER;
+    hash = (53 * hash) + getGridRows();
+    hash = (37 * hash) + VIEW_MODE_FIELD_NUMBER;
+    hash = (53 * hash) + getViewMode();
+    if (getQuadrantsCount() > 0) {
+      hash = (37 * hash) + QUADRANTS_FIELD_NUMBER;
+      hash = (53 * hash) + getQuadrantsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -226,6 +330,11 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * GetHeatmapResponse matches SurveillanceApiHandler.sendHeatmap: a motion grid descriptor, NOT a
+   * JPEG. (was: bytes image_jpeg = 1.)
+   * </pre>
+   *
    * Protobuf type {@code bladewatch.v1.GetHeatmapResponse}
    */
   public static final class Builder extends
@@ -259,7 +368,16 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      imageJpeg_ = com.google.protobuf.ByteString.EMPTY;
+      gridCols_ = 0;
+      gridRows_ = 0;
+      viewMode_ = 0;
+      if (quadrantsBuilder_ == null) {
+        quadrants_ = java.util.Collections.emptyList();
+      } else {
+        quadrants_ = null;
+        quadrantsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000008);
       return this;
     }
 
@@ -286,15 +404,34 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public net.bladewatch.app.grpc.v1.GetHeatmapResponse buildPartial() {
       net.bladewatch.app.grpc.v1.GetHeatmapResponse result = new net.bladewatch.app.grpc.v1.GetHeatmapResponse(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
+    private void buildPartialRepeatedFields(net.bladewatch.app.grpc.v1.GetHeatmapResponse result) {
+      if (quadrantsBuilder_ == null) {
+        if (((bitField0_ & 0x00000008) != 0)) {
+          quadrants_ = java.util.Collections.unmodifiableList(quadrants_);
+          bitField0_ = (bitField0_ & ~0x00000008);
+        }
+        result.quadrants_ = quadrants_;
+      } else {
+        result.quadrants_ = quadrantsBuilder_.build();
+      }
+    }
+
     private void buildPartial0(net.bladewatch.app.grpc.v1.GetHeatmapResponse result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
-        result.imageJpeg_ = imageJpeg_;
+        result.gridCols_ = gridCols_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.gridRows_ = gridRows_;
+      }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.viewMode_ = viewMode_;
       }
     }
 
@@ -310,8 +447,40 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.GetHeatmapResponse other) {
       if (other == net.bladewatch.app.grpc.v1.GetHeatmapResponse.getDefaultInstance()) return this;
-      if (!other.getImageJpeg().isEmpty()) {
-        setImageJpeg(other.getImageJpeg());
+      if (other.getGridCols() != 0) {
+        setGridCols(other.getGridCols());
+      }
+      if (other.getGridRows() != 0) {
+        setGridRows(other.getGridRows());
+      }
+      if (other.getViewMode() != 0) {
+        setViewMode(other.getViewMode());
+      }
+      if (quadrantsBuilder_ == null) {
+        if (!other.quadrants_.isEmpty()) {
+          if (quadrants_.isEmpty()) {
+            quadrants_ = other.quadrants_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+          } else {
+            ensureQuadrantsIsMutable();
+            quadrants_.addAll(other.quadrants_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.quadrants_.isEmpty()) {
+          if (quadrantsBuilder_.isEmpty()) {
+            quadrantsBuilder_.dispose();
+            quadrantsBuilder_ = null;
+            quadrants_ = other.quadrants_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+            quadrantsBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetQuadrantsFieldBuilder() : null;
+          } else {
+            quadrantsBuilder_.addAllMessages(other.quadrants_);
+          }
+        }
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -339,11 +508,34 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 10: {
-              imageJpeg_ = input.readBytes();
+            case 16: {
+              gridCols_ = input.readInt32();
               bitField0_ |= 0x00000001;
               break;
-            } // case 10
+            } // case 16
+            case 24: {
+              gridRows_ = input.readInt32();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 24
+            case 32: {
+              viewMode_ = input.readInt32();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 32
+            case 42: {
+              net.bladewatch.app.grpc.v1.HeatmapQuadrant m =
+                  input.readMessage(
+                      net.bladewatch.app.grpc.v1.HeatmapQuadrant.parser(),
+                      extensionRegistry);
+              if (quadrantsBuilder_ == null) {
+                ensureQuadrantsIsMutable();
+                quadrants_.add(m);
+              } else {
+                quadrantsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -361,48 +553,340 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private com.google.protobuf.ByteString imageJpeg_ = com.google.protobuf.ByteString.EMPTY;
+    private int gridCols_ ;
     /**
-     * <pre>
-     * JPEG-encoded heatmap image bytes.
-     * </pre>
-     *
-     * <code>bytes image_jpeg = 1 [json_name = "imageJpeg"];</code>
-     * @return The imageJpeg.
+     * <code>int32 grid_cols = 2 [json_name = "gridCols"];</code>
+     * @return The gridCols.
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString getImageJpeg() {
-      return imageJpeg_;
+    public int getGridCols() {
+      return gridCols_;
     }
     /**
-     * <pre>
-     * JPEG-encoded heatmap image bytes.
-     * </pre>
-     *
-     * <code>bytes image_jpeg = 1 [json_name = "imageJpeg"];</code>
-     * @param value The imageJpeg to set.
+     * <code>int32 grid_cols = 2 [json_name = "gridCols"];</code>
+     * @param value The gridCols to set.
      * @return This builder for chaining.
      */
-    public Builder setImageJpeg(com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      imageJpeg_ = value;
+    public Builder setGridCols(int value) {
+
+      gridCols_ = value;
       bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
-     * <pre>
-     * JPEG-encoded heatmap image bytes.
-     * </pre>
-     *
-     * <code>bytes image_jpeg = 1 [json_name = "imageJpeg"];</code>
+     * <code>int32 grid_cols = 2 [json_name = "gridCols"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearImageJpeg() {
+    public Builder clearGridCols() {
       bitField0_ = (bitField0_ & ~0x00000001);
-      imageJpeg_ = getDefaultInstance().getImageJpeg();
+      gridCols_ = 0;
       onChanged();
       return this;
+    }
+
+    private int gridRows_ ;
+    /**
+     * <code>int32 grid_rows = 3 [json_name = "gridRows"];</code>
+     * @return The gridRows.
+     */
+    @java.lang.Override
+    public int getGridRows() {
+      return gridRows_;
+    }
+    /**
+     * <code>int32 grid_rows = 3 [json_name = "gridRows"];</code>
+     * @param value The gridRows to set.
+     * @return This builder for chaining.
+     */
+    public Builder setGridRows(int value) {
+
+      gridRows_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 grid_rows = 3 [json_name = "gridRows"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearGridRows() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      gridRows_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int viewMode_ ;
+    /**
+     * <code>int32 view_mode = 4 [json_name = "viewMode"];</code>
+     * @return The viewMode.
+     */
+    @java.lang.Override
+    public int getViewMode() {
+      return viewMode_;
+    }
+    /**
+     * <code>int32 view_mode = 4 [json_name = "viewMode"];</code>
+     * @param value The viewMode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setViewMode(int value) {
+
+      viewMode_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 view_mode = 4 [json_name = "viewMode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearViewMode() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      viewMode_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant> quadrants_ =
+      java.util.Collections.emptyList();
+    private void ensureQuadrantsIsMutable() {
+      if (!((bitField0_ & 0x00000008) != 0)) {
+        quadrants_ = new java.util.ArrayList<net.bladewatch.app.grpc.v1.HeatmapQuadrant>(quadrants_);
+        bitField0_ |= 0x00000008;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        net.bladewatch.app.grpc.v1.HeatmapQuadrant, net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder, net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder> quadrantsBuilder_;
+
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant> getQuadrantsList() {
+      if (quadrantsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(quadrants_);
+      } else {
+        return quadrantsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public int getQuadrantsCount() {
+      if (quadrantsBuilder_ == null) {
+        return quadrants_.size();
+      } else {
+        return quadrantsBuilder_.getCount();
+      }
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public net.bladewatch.app.grpc.v1.HeatmapQuadrant getQuadrants(int index) {
+      if (quadrantsBuilder_ == null) {
+        return quadrants_.get(index);
+      } else {
+        return quadrantsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder setQuadrants(
+        int index, net.bladewatch.app.grpc.v1.HeatmapQuadrant value) {
+      if (quadrantsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureQuadrantsIsMutable();
+        quadrants_.set(index, value);
+        onChanged();
+      } else {
+        quadrantsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder setQuadrants(
+        int index, net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder builderForValue) {
+      if (quadrantsBuilder_ == null) {
+        ensureQuadrantsIsMutable();
+        quadrants_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        quadrantsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder addQuadrants(net.bladewatch.app.grpc.v1.HeatmapQuadrant value) {
+      if (quadrantsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureQuadrantsIsMutable();
+        quadrants_.add(value);
+        onChanged();
+      } else {
+        quadrantsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder addQuadrants(
+        int index, net.bladewatch.app.grpc.v1.HeatmapQuadrant value) {
+      if (quadrantsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureQuadrantsIsMutable();
+        quadrants_.add(index, value);
+        onChanged();
+      } else {
+        quadrantsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder addQuadrants(
+        net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder builderForValue) {
+      if (quadrantsBuilder_ == null) {
+        ensureQuadrantsIsMutable();
+        quadrants_.add(builderForValue.build());
+        onChanged();
+      } else {
+        quadrantsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder addQuadrants(
+        int index, net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder builderForValue) {
+      if (quadrantsBuilder_ == null) {
+        ensureQuadrantsIsMutable();
+        quadrants_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        quadrantsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder addAllQuadrants(
+        java.lang.Iterable<? extends net.bladewatch.app.grpc.v1.HeatmapQuadrant> values) {
+      if (quadrantsBuilder_ == null) {
+        ensureQuadrantsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, quadrants_);
+        onChanged();
+      } else {
+        quadrantsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder clearQuadrants() {
+      if (quadrantsBuilder_ == null) {
+        quadrants_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+      } else {
+        quadrantsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public Builder removeQuadrants(int index) {
+      if (quadrantsBuilder_ == null) {
+        ensureQuadrantsIsMutable();
+        quadrants_.remove(index);
+        onChanged();
+      } else {
+        quadrantsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder getQuadrantsBuilder(
+        int index) {
+      return internalGetQuadrantsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder getQuadrantsOrBuilder(
+        int index) {
+      if (quadrantsBuilder_ == null) {
+        return quadrants_.get(index);  } else {
+        return quadrantsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public java.util.List<? extends net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder> 
+         getQuadrantsOrBuilderList() {
+      if (quadrantsBuilder_ != null) {
+        return quadrantsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(quadrants_);
+      }
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder addQuadrantsBuilder() {
+      return internalGetQuadrantsFieldBuilder().addBuilder(
+          net.bladewatch.app.grpc.v1.HeatmapQuadrant.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder addQuadrantsBuilder(
+        int index) {
+      return internalGetQuadrantsFieldBuilder().addBuilder(
+          index, net.bladewatch.app.grpc.v1.HeatmapQuadrant.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+     */
+    public java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder> 
+         getQuadrantsBuilderList() {
+      return internalGetQuadrantsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        net.bladewatch.app.grpc.v1.HeatmapQuadrant, net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder, net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder> 
+        internalGetQuadrantsFieldBuilder() {
+      if (quadrantsBuilder_ == null) {
+        quadrantsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            net.bladewatch.app.grpc.v1.HeatmapQuadrant, net.bladewatch.app.grpc.v1.HeatmapQuadrant.Builder, net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder>(
+                quadrants_,
+                ((bitField0_ & 0x00000008) != 0),
+                getParentForChildren(),
+                isClean());
+        quadrants_ = null;
+      }
+      return quadrantsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:bladewatch.v1.GetHeatmapResponse)

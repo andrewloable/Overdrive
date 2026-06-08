@@ -138,9 +138,9 @@ message ClimateStatus {
 message TyrePressure {
   int32 k_pa = 1;
   double psi = 2;
-  int32 temp_c = 3;
+  int32 temp_c = 3 [json_name = "temperatureC"];
   int32 pressure_state = 4;
-  int32 leak_state = 5;
+  int32 leak_state = 5 [json_name = "airLeakState"];
   int32 signal_state = 6;
 }
 

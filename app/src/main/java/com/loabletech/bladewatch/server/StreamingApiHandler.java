@@ -51,7 +51,7 @@ public class StreamingApiHandler {
             handleSetStreamQuality(out, quality);
             return true;
         }
-        if (path.startsWith("/api/stream/view/")) {
+        if (path.startsWith("/api/stream/view/") && method.equals("POST")) {
             int viewMode = Integer.parseInt(path.substring(17));
             handleStreamViewMode(out, viewMode);
             return true;

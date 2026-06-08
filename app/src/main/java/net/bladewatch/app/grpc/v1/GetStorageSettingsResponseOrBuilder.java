@@ -71,13 +71,13 @@ public interface GetStorageSettingsResponseOrBuilder extends
       getSurveillancePathBytes();
 
   /**
-   * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSizeBytes"];</code>
+   * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];</code>
    * @return The recordingsSizeBytes.
    */
   long getRecordingsSizeBytes();
 
   /**
-   * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSizeBytes"];</code>
+   * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];</code>
    * @return The surveillanceSizeBytes.
    */
   long getSurveillanceSizeBytes();
@@ -137,13 +137,13 @@ public interface GetStorageSettingsResponseOrBuilder extends
       getSdCardPathBytes();
 
   /**
-   * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeBytes"];</code>
+   * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];</code>
    * @return The sdCardFreeBytes.
    */
   long getSdCardFreeBytes();
 
   /**
-   * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalBytes"];</code>
+   * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];</code>
    * @return The sdCardTotalBytes.
    */
   long getSdCardTotalBytes();
@@ -173,13 +173,13 @@ public interface GetStorageSettingsResponseOrBuilder extends
       getSdCardTotalFormattedBytes();
 
   /**
-   * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeBytes"];</code>
+   * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];</code>
    * @return The internalFreeBytes.
    */
   long getInternalFreeBytes();
 
   /**
-   * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalBytes"];</code>
+   * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];</code>
    * @return The internalTotalBytes.
    */
   long getInternalTotalBytes();

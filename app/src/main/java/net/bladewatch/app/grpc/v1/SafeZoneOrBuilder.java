@@ -57,7 +57,7 @@ public interface SafeZoneOrBuilder extends
   int getRadiusM();
 
   /**
-   * <code>bool active = 6 [json_name = "active"];</code>
+   * <code>bool active = 6 [json_name = "enabled"];</code>
    * @return The active.
    */
   boolean getActive();
@@ -67,7 +67,7 @@ public interface SafeZoneOrBuilder extends
    * Epoch ms when the zone was created.
    * </pre>
    *
-   * <code>int64 created_at_ms = 7 [json_name = "createdAtMs"];</code>
+   * <code>int64 created_at_ms = 7 [json_name = "createdAt"];</code>
    * @return The createdAtMs.
    */
   long getCreatedAtMs();

@@ -45,7 +45,7 @@ public interface ListZonesResponseOrBuilder extends
    * Whether the vehicle is currently inside any zone.
    * </pre>
    *
-   * <code>bool currently_in_safe_zone = 3 [json_name = "currentlyInSafeZone"];</code>
+   * <code>bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];</code>
    * @return The currentlyInSafeZone.
    */
   boolean getCurrentlyInSafeZone();
@@ -61,13 +61,13 @@ public interface ListZonesResponseOrBuilder extends
   boolean getHasGps();
 
   /**
-   * <code>double current_lat = 5 [json_name = "currentLat"];</code>
+   * <code>double current_lat = 5 [json_name = "lat"];</code>
    * @return The currentLat.
    */
   double getCurrentLat();
 
   /**
-   * <code>double current_lng = 6 [json_name = "currentLng"];</code>
+   * <code>double current_lng = 6 [json_name = "lng"];</code>
    * @return The currentLng.
    */
   double getCurrentLng();

@@ -16,8 +16,10 @@ import com.connectrpc.StreamType
  *  HTTP mapping:
  *    ListZones    GET    /api/surveillance/safe-locations
  *    AddZone      POST   /api/surveillance/safe-locations
- *    UpdateZone   PUT    /api/surveillance/safe-locations?id=xxx
- *    DeleteZone   DELETE /api/surveillance/safe-locations?id=xxx
+ *    UpdateZone   PUT    /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+ *    DeleteZone   DELETE /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+ *    Over Connect the id travels in the request body (UpdateZoneRequest.id / DeleteZoneRequest.id);
+ *    the REST handler accepts either the ?id= query param or the body id.
  *    Toggle       POST   /api/surveillance/safe-locations/toggle
  */
 public class SafeLocationsServiceClient(

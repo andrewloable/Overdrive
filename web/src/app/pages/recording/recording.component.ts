@@ -55,9 +55,9 @@ export default class RecordingComponent implements OnInit {
 
   private async loadStats(): Promise<void> {
     try {
-      const stats = await this.clients.recordings.getStats({});
-      this.usedBytes.set(Number(stats.totalSizeBytes ?? 0));
-      this.totalCount.set(stats.totalCount ?? 0);
+      const resp = await this.clients.recordings.getStats({});
+      this.usedBytes.set(Number(resp.stats?.totalSizeBytes ?? 0));
+      this.totalCount.set(resp.stats?.totalCount ?? 0);
     } catch { /* ignore */ }
   }
 

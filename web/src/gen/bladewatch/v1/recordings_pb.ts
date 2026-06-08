@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bladewatch/v1/recordings.proto.
  */
 export const file_bladewatch_v1_recordings: GenFile = /*@__PURE__*/
-  fileDesc("Ch5ibGFkZXdhdGNoL3YxL3JlY29yZGluZ3MucHJvdG8SDWJsYWRld2F0Y2gudjEimwIKDlJlY29yZGluZ0VudHJ5EhAKCGZpbGVuYW1lGAEgASgJEgwKBHBhdGgYAiABKAkSKgoEdHlwZRgDIAEoDjIcLmJsYWRld2F0Y2gudjEuUmVjb3JkaW5nVHlwZRIUCgx0aW1lc3RhbXBfbXMYBCABKAMSEgoKc2l6ZV9ieXRlcxgFIAEoAxIYChBkdXJhdGlvbl9zZWNvbmRzGAYgASgDEhIKCmRhdGVfbGFiZWwYByABKAkSEgoKdGltZV9sYWJlbBgIIAEoCRISCgpoYXNfZXZlbnRzGAkgASgIEhgKEGRldGVjdGVkX2NsYXNzZXMYCiADKAkSEAoIc2V2ZXJpdHkYCyABKAkSEQoJcHJveGltaXR5GAwgASgJIp0BChVMaXN0UmVjb3JkaW5nc1JlcXVlc3QSDAoEdHlwZRgBIAEoCRIMCgRkYXRlGAIgASgJEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEhQKDGNsYXNzX2ZpbHRlchgFIAEoCRIXCg9zZXZlcml0eV9maWx0ZXIYBiABKAkSGAoQcHJveGltaXR5X2ZpbHRlchgHIAEoCSJ7ChZMaXN0UmVjb3JkaW5nc1Jlc3BvbnNlEjEKCnJlY29yZGluZ3MYASADKAsyHS5ibGFkZXdhdGNoLnYxLlJlY29yZGluZ0VudHJ5Eg0KBXRvdGFsGAIgASgFEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFIhEKD0dldERhdGVzUmVxdWVzdCIhChBHZXREYXRlc1Jlc3BvbnNlEg0KBWRhdGVzGAEgAygJIuwBCg5SZWNvcmRpbmdTdGF0cxIdChVyZWNvcmRpbmdzX3NpemVfYnl0ZXMYASABKAMSHwoXc3VydmVpbGxhbmNlX3NpemVfYnl0ZXMYAiABKAMSHAoUcHJveGltaXR5X3NpemVfYnl0ZXMYAyABKAMSGAoQcmVjb3JkaW5nc19jb3VudBgEIAEoBRIaChJzdXJ2ZWlsbGFuY2VfY291bnQYBSABKAUSFwoPcHJveGltaXR5X2NvdW50GAYgASgFEhgKEHRvdGFsX3NpemVfYnl0ZXMYByABKAMSEwoLdG90YWxfY291bnQYCCABKAUiEQoPR2V0U3RhdHNSZXF1ZXN0IkAKEEdldFN0YXRzUmVzcG9uc2USLAoFc3RhdHMYASABKAsyHS5ibGFkZXdhdGNoLnYxLlJlY29yZGluZ1N0YXRzIioKFkRlbGV0ZVJlY29yZGluZ1JlcXVlc3QSEAoIZmlsZW5hbWUYASABKAkiOQoXRGVsZXRlUmVjb3JkaW5nUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBINCgVlcnJvchgCIAEoCSInChJCYXRjaERlbGV0ZVJlcXVlc3QSEQoJZmlsZW5hbWVzGAEgAygJIlcKE0JhdGNoRGVsZXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdkZWxldGVkGAIgASgFEg4KBmZhaWxlZBgDIAEoBRIOCgZlcnJvcnMYBCADKAkiFAoSU3luY0NhdGFsb2dSZXF1ZXN0IlUKE1N5bmNDYXRhbG9nUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBINCgVhZGRlZBgCIAEoBRIPCgdyZW1vdmVkGAMgASgFEg0KBWVycm9yGAQgASgJIiwKGEdldEluZmxpZ2h0U3RhdHVzUmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIrChlHZXRJbmZsaWdodFN0YXR1c1Jlc3BvbnNlEg4KBnN0YXR1cxgBIAEoCSIrChdHZXRFdmVudFRpbWVsaW5lUmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSJQCgpFdmVudEVudHJ5EhEKCW9mZnNldF9tcxgBIAEoAxIMCgR0eXBlGAIgASgJEg0KBWxhYmVsGAMgASgJEhIKCmNvbmZpZGVuY2UYBCABKAEiRQoYR2V0RXZlbnRUaW1lbGluZVJlc3BvbnNlEikKBmV2ZW50cxgBIAMoCzIZLmJsYWRld2F0Y2gudjEuRXZlbnRFbnRyeSqDAQoNUmVjb3JkaW5nVHlwZRIeChpSRUNPUkRJTkdfVFlQRV9VTlNQRUNJRklFRBAAEhkKFVJFQ09SRElOR19UWVBFX05PUk1BTBABEhkKFVJFQ09SRElOR19UWVBFX1NFTlRSWRACEhwKGFJFQ09SRElOR19UWVBFX1BST1hJTUlUWRADKnUKC0NsYXNzRmlsdGVyEhwKGENMQVNTX0ZJTFRFUl9VTlNQRUNJRklFRBAAEhcKE0NMQVNTX0ZJTFRFUl9QRVJTT04QARIYChRDTEFTU19GSUxURVJfVkVISUNMRRACEhUKEUNMQVNTX0ZJTFRFUl9CSUtFEAMqhAEKDlNldmVyaXR5RmlsdGVyEh8KG1NFVkVSSVRZX0ZJTFRFUl9VTlNQRUNJRklFRBAAEhgKFFNFVkVSSVRZX0ZJTFRFUl9JTkZPEAESGQoVU0VWRVJJVFlfRklMVEVSX0FMRVJUEAISHAoYU0VWRVJJVFlfRklMVEVSX0NSSVRJQ0FMEAMqjQEKD1Byb3hpbWl0eUZpbHRlchIgChxQUk9YSU1JVFlfRklMVEVSX1VOU1BFQ0lGSUVEEAASHwobUFJPWElNSVRZX0ZJTFRFUl9WRVJZX0NMT1NFEAESGgoWUFJPWElNSVRZX0ZJTFRFUl9DTE9TRRACEhsKF1BST1hJTUlUWV9GSUxURVJfTUVESVVNEAMy5wUKEVJlY29yZGluZ3NTZXJ2aWNlEl0KDkxpc3RSZWNvcmRpbmdzEiQuYmxhZGV3YXRjaC52MS5MaXN0UmVjb3JkaW5nc1JlcXVlc3QaJS5ibGFkZXdhdGNoLnYxLkxpc3RSZWNvcmRpbmdzUmVzcG9uc2USSwoIR2V0RGF0ZXMSHi5ibGFkZXdhdGNoLnYxLkdldERhdGVzUmVxdWVzdBofLmJsYWRld2F0Y2gudjEuR2V0RGF0ZXNSZXNwb25zZRJLCghHZXRTdGF0cxIeLmJsYWRld2F0Y2gudjEuR2V0U3RhdHNSZXF1ZXN0Gh8uYmxhZGV3YXRjaC52MS5HZXRTdGF0c1Jlc3BvbnNlEmAKD0RlbGV0ZVJlY29yZGluZxIlLmJsYWRld2F0Y2gudjEuRGVsZXRlUmVjb3JkaW5nUmVxdWVzdBomLmJsYWRld2F0Y2gudjEuRGVsZXRlUmVjb3JkaW5nUmVzcG9uc2USVAoLQmF0Y2hEZWxldGUSIS5ibGFkZXdhdGNoLnYxLkJhdGNoRGVsZXRlUmVxdWVzdBoiLmJsYWRld2F0Y2gudjEuQmF0Y2hEZWxldGVSZXNwb25zZRJUCgtTeW5jQ2F0YWxvZxIhLmJsYWRld2F0Y2gudjEuU3luY0NhdGFsb2dSZXF1ZXN0GiIuYmxhZGV3YXRjaC52MS5TeW5jQ2F0YWxvZ1Jlc3BvbnNlEmYKEUdldEluZmxpZ2h0U3RhdHVzEicuYmxhZGV3YXRjaC52MS5HZXRJbmZsaWdodFN0YXR1c1JlcXVlc3QaKC5ibGFkZXdhdGNoLnYxLkdldEluZmxpZ2h0U3RhdHVzUmVzcG9uc2USYwoQR2V0RXZlbnRUaW1lbGluZRImLmJsYWRld2F0Y2gudjEuR2V0RXZlbnRUaW1lbGluZVJlcXVlc3QaJy5ibGFkZXdhdGNoLnYxLkdldEV2ZW50VGltZWxpbmVSZXNwb25zZUIeChpuZXQuYmxhZGV3YXRjaC5hcHAuZ3JwYy52MVABYgZwcm90bzM");
+  fileDesc("Ch5ibGFkZXdhdGNoL3YxL3JlY29yZGluZ3MucHJvdG8SDWJsYWRld2F0Y2gudjEi5wIKDlJlY29yZGluZ0VudHJ5EhAKCGZpbGVuYW1lGAEgASgJEgwKBHBhdGgYAiABKAkSKgoEdHlwZRgDIAEoDjIcLmJsYWRld2F0Y2gudjEuUmVjb3JkaW5nVHlwZRIfCgx0aW1lc3RhbXBfbXMYBCABKANSCXRpbWVzdGFtcBIYCgpzaXplX2J5dGVzGAUgASgDUgRzaXplEhgKEGR1cmF0aW9uX3NlY29uZHMYBiABKAMSIQoKZGF0ZV9sYWJlbBgHIAEoCVINZGF0ZUZvcm1hdHRlZBIhCgp0aW1lX2xhYmVsGAggASgJUg10aW1lRm9ybWF0dGVkEhIKCmhhc19ldmVudHMYCSABKAgSGAoQZGV0ZWN0ZWRfY2xhc3NlcxgKIAMoCRIeCghzZXZlcml0eRgLIAEoCVIMcGVha1NldmVyaXR5EiAKCXByb3hpbWl0eRgMIAEoCVINcGVha1Byb3hpbWl0eSKdAQoVTGlzdFJlY29yZGluZ3NSZXF1ZXN0EgwKBHR5cGUYASABKAkSDAoEZGF0ZRgCIAEoCRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRIUCgxjbGFzc19maWx0ZXIYBSABKAkSFwoPc2V2ZXJpdHlfZmlsdGVyGAYgASgJEhgKEHByb3hpbWl0eV9maWx0ZXIYByABKAkiewoWTGlzdFJlY29yZGluZ3NSZXNwb25zZRIxCgpyZWNvcmRpbmdzGAEgAygLMh0uYmxhZGV3YXRjaC52MS5SZWNvcmRpbmdFbnRyeRINCgV0b3RhbBgCIAEoBRIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBSIRCg9HZXREYXRlc1JlcXVlc3QiIQoQR2V0RGF0ZXNSZXNwb25zZRINCgVkYXRlcxgBIAMoCSLsAQoOUmVjb3JkaW5nU3RhdHMSHQoVcmVjb3JkaW5nc19zaXplX2J5dGVzGAEgASgDEh8KF3N1cnZlaWxsYW5jZV9zaXplX2J5dGVzGAIgASgDEhwKFHByb3hpbWl0eV9zaXplX2J5dGVzGAMgASgDEhgKEHJlY29yZGluZ3NfY291bnQYBCABKAUSGgoSc3VydmVpbGxhbmNlX2NvdW50GAUgASgFEhcKD3Byb3hpbWl0eV9jb3VudBgGIAEoBRIYChB0b3RhbF9zaXplX2J5dGVzGAcgASgDEhMKC3RvdGFsX2NvdW50GAggASgFIhEKD0dldFN0YXRzUmVxdWVzdCJAChBHZXRTdGF0c1Jlc3BvbnNlEiwKBXN0YXRzGAEgASgLMh0uYmxhZGV3YXRjaC52MS5SZWNvcmRpbmdTdGF0cyIqChZEZWxldGVSZWNvcmRpbmdSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJIjkKF0RlbGV0ZVJlY29yZGluZ1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkiJwoSQmF0Y2hEZWxldGVSZXF1ZXN0EhEKCWZpbGVuYW1lcxgBIAMoCSJXChNCYXRjaERlbGV0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHZGVsZXRlZBgCIAEoBRIOCgZmYWlsZWQYAyABKAUSDgoGZXJyb3JzGAQgAygJIhQKElN5bmNDYXRhbG9nUmVxdWVzdCJVChNTeW5jQ2F0YWxvZ1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFYWRkZWQYAiABKAUSDwoHcmVtb3ZlZBgDIAEoBRINCgVlcnJvchgEIAEoCSIsChhHZXRJbmZsaWdodFN0YXR1c1JlcXVlc3QSEAoIZmlsZW5hbWUYASABKAkiKwoZR2V0SW5mbGlnaHRTdGF0dXNSZXNwb25zZRIOCgZzdGF0dXMYASABKAkiKwoXR2V0RXZlbnRUaW1lbGluZVJlcXVlc3QSEAoIZmlsZW5hbWUYASABKAkiNwoYR2V0RXZlbnRUaW1lbGluZVJlc3BvbnNlEhUKDXRpbWVsaW5lX2pzb24YAiABKAlKBAgBEAIqgwEKDVJlY29yZGluZ1R5cGUSHgoaUkVDT1JESU5HX1RZUEVfVU5TUEVDSUZJRUQQABIZChVSRUNPUkRJTkdfVFlQRV9OT1JNQUwQARIZChVSRUNPUkRJTkdfVFlQRV9TRU5UUlkQAhIcChhSRUNPUkRJTkdfVFlQRV9QUk9YSU1JVFkQAyp1CgtDbGFzc0ZpbHRlchIcChhDTEFTU19GSUxURVJfVU5TUEVDSUZJRUQQABIXChNDTEFTU19GSUxURVJfUEVSU09OEAESGAoUQ0xBU1NfRklMVEVSX1ZFSElDTEUQAhIVChFDTEFTU19GSUxURVJfQklLRRADKoQBCg5TZXZlcml0eUZpbHRlchIfChtTRVZFUklUWV9GSUxURVJfVU5TUEVDSUZJRUQQABIYChRTRVZFUklUWV9GSUxURVJfSU5GTxABEhkKFVNFVkVSSVRZX0ZJTFRFUl9BTEVSVBACEhwKGFNFVkVSSVRZX0ZJTFRFUl9DUklUSUNBTBADKo0BCg9Qcm94aW1pdHlGaWx0ZXISIAocUFJPWElNSVRZX0ZJTFRFUl9VTlNQRUNJRklFRBAAEh8KG1BST1hJTUlUWV9GSUxURVJfVkVSWV9DTE9TRRABEhoKFlBST1hJTUlUWV9GSUxURVJfQ0xPU0UQAhIbChdQUk9YSU1JVFlfRklMVEVSX01FRElVTRADMucFChFSZWNvcmRpbmdzU2VydmljZRJdCg5MaXN0UmVjb3JkaW5ncxIkLmJsYWRld2F0Y2gudjEuTGlzdFJlY29yZGluZ3NSZXF1ZXN0GiUuYmxhZGV3YXRjaC52MS5MaXN0UmVjb3JkaW5nc1Jlc3BvbnNlEksKCEdldERhdGVzEh4uYmxhZGV3YXRjaC52MS5HZXREYXRlc1JlcXVlc3QaHy5ibGFkZXdhdGNoLnYxLkdldERhdGVzUmVzcG9uc2USSwoIR2V0U3RhdHMSHi5ibGFkZXdhdGNoLnYxLkdldFN0YXRzUmVxdWVzdBofLmJsYWRld2F0Y2gudjEuR2V0U3RhdHNSZXNwb25zZRJgCg9EZWxldGVSZWNvcmRpbmcSJS5ibGFkZXdhdGNoLnYxLkRlbGV0ZVJlY29yZGluZ1JlcXVlc3QaJi5ibGFkZXdhdGNoLnYxLkRlbGV0ZVJlY29yZGluZ1Jlc3BvbnNlElQKC0JhdGNoRGVsZXRlEiEuYmxhZGV3YXRjaC52MS5CYXRjaERlbGV0ZVJlcXVlc3QaIi5ibGFkZXdhdGNoLnYxLkJhdGNoRGVsZXRlUmVzcG9uc2USVAoLU3luY0NhdGFsb2cSIS5ibGFkZXdhdGNoLnYxLlN5bmNDYXRhbG9nUmVxdWVzdBoiLmJsYWRld2F0Y2gudjEuU3luY0NhdGFsb2dSZXNwb25zZRJmChFHZXRJbmZsaWdodFN0YXR1cxInLmJsYWRld2F0Y2gudjEuR2V0SW5mbGlnaHRTdGF0dXNSZXF1ZXN0GiguYmxhZGV3YXRjaC52MS5HZXRJbmZsaWdodFN0YXR1c1Jlc3BvbnNlEmMKEEdldEV2ZW50VGltZWxpbmUSJi5ibGFkZXdhdGNoLnYxLkdldEV2ZW50VGltZWxpbmVSZXF1ZXN0GicuYmxhZGV3YXRjaC52MS5HZXRFdmVudFRpbWVsaW5lUmVzcG9uc2VCHgoabmV0LmJsYWRld2F0Y2guYXBwLmdycGMudjFQAWIGcHJvdG8z");
 
 /**
  * RecordingEntry represents one video clip in the catalog.
@@ -36,12 +36,12 @@ export type RecordingEntry = Message<"bladewatch.v1.RecordingEntry"> & {
   /**
    * Epoch ms extracted from the filename timestamp.
    *
-   * @generated from field: int64 timestamp_ms = 4;
+   * @generated from field: int64 timestamp_ms = 4 [json_name = "timestamp"];
    */
   timestampMs: bigint;
 
   /**
-   * @generated from field: int64 size_bytes = 5;
+   * @generated from field: int64 size_bytes = 5 [json_name = "size"];
    */
   sizeBytes: bigint;
 
@@ -53,14 +53,14 @@ export type RecordingEntry = Message<"bladewatch.v1.RecordingEntry"> & {
   /**
    * Human-readable date string, e.g. "Jun 8, 2026".
    *
-   * @generated from field: string date_label = 7;
+   * @generated from field: string date_label = 7 [json_name = "dateFormatted"];
    */
   dateLabel: string;
 
   /**
    * Human-readable time string, e.g. "03:42 PM".
    *
-   * @generated from field: string time_label = 8;
+   * @generated from field: string time_label = 8 [json_name = "timeFormatted"];
    */
   timeLabel: string;
 
@@ -79,12 +79,12 @@ export type RecordingEntry = Message<"bladewatch.v1.RecordingEntry"> & {
   detectedClasses: string[];
 
   /**
-   * @generated from field: string severity = 11;
+   * @generated from field: string severity = 11 [json_name = "peakSeverity"];
    */
   severity: string;
 
   /**
-   * @generated from field: string proximity = 12;
+   * @generated from field: string proximity = 12 [json_name = "peakProximity"];
    */
   proximity: string;
 };
@@ -486,47 +486,18 @@ export const GetEventTimelineRequestSchema: GenMessage<GetEventTimelineRequest> 
   messageDesc(file_bladewatch_v1_recordings, 16);
 
 /**
- * EventEntry is one entry in the JSON sidecar event timeline.
+ * GetEventTimelineResponse carries the event-timeline sidecar verbatim as a JSON string blob.
+ * The sidecar (EventTimelineCollector v3) is a rich object {version,durationMs,events[],actors[],
+ * stats{},heroThumbnail} that does not map to flat fields; clients parse timeline_json themselves.
+ * (was: repeated EventEntry events — a flat shape the emitter never produced.)
  *
- * @generated from message bladewatch.v1.EventEntry
- */
-export type EventEntry = Message<"bladewatch.v1.EventEntry"> & {
-  /**
-   * @generated from field: int64 offset_ms = 1;
-   */
-  offsetMs: bigint;
-
-  /**
-   * @generated from field: string type = 2;
-   */
-  type: string;
-
-  /**
-   * @generated from field: string label = 3;
-   */
-  label: string;
-
-  /**
-   * @generated from field: double confidence = 4;
-   */
-  confidence: number;
-};
-
-/**
- * Describes the message bladewatch.v1.EventEntry.
- * Use `create(EventEntrySchema)` to create a new message.
- */
-export const EventEntrySchema: GenMessage<EventEntry> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_recordings, 17);
-
-/**
  * @generated from message bladewatch.v1.GetEventTimelineResponse
  */
 export type GetEventTimelineResponse = Message<"bladewatch.v1.GetEventTimelineResponse"> & {
   /**
-   * @generated from field: repeated bladewatch.v1.EventEntry events = 1;
+   * @generated from field: string timeline_json = 2;
    */
-  events: EventEntry[];
+  timelineJson: string;
 };
 
 /**
@@ -534,7 +505,7 @@ export type GetEventTimelineResponse = Message<"bladewatch.v1.GetEventTimelineRe
  * Use `create(GetEventTimelineResponseSchema)` to create a new message.
  */
 export const GetEventTimelineResponseSchema: GenMessage<GetEventTimelineResponse> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_recordings, 18);
+  messageDesc(file_bladewatch_v1_recordings, 17);
 
 /**
  * RecordingType filters which recording category to list.

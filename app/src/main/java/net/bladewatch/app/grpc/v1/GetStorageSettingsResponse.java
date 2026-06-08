@@ -204,7 +204,7 @@ private static final long serialVersionUID = 0L;
   public static final int RECORDINGS_SIZE_BYTES_FIELD_NUMBER = 9;
   private long recordingsSizeBytes_ = 0L;
   /**
-   * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSizeBytes"];</code>
+   * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];</code>
    * @return The recordingsSizeBytes.
    */
   @java.lang.Override
@@ -215,7 +215,7 @@ private static final long serialVersionUID = 0L;
   public static final int SURVEILLANCE_SIZE_BYTES_FIELD_NUMBER = 10;
   private long surveillanceSizeBytes_ = 0L;
   /**
-   * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSizeBytes"];</code>
+   * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];</code>
    * @return The surveillanceSizeBytes.
    */
   @java.lang.Override
@@ -376,7 +376,7 @@ private static final long serialVersionUID = 0L;
   public static final int SD_CARD_FREE_BYTES_FIELD_NUMBER = 17;
   private long sdCardFreeBytes_ = 0L;
   /**
-   * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeBytes"];</code>
+   * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];</code>
    * @return The sdCardFreeBytes.
    */
   @java.lang.Override
@@ -387,7 +387,7 @@ private static final long serialVersionUID = 0L;
   public static final int SD_CARD_TOTAL_BYTES_FIELD_NUMBER = 18;
   private long sdCardTotalBytes_ = 0L;
   /**
-   * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalBytes"];</code>
+   * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];</code>
    * @return The sdCardTotalBytes.
    */
   @java.lang.Override
@@ -476,7 +476,7 @@ private static final long serialVersionUID = 0L;
   public static final int INTERNAL_FREE_BYTES_FIELD_NUMBER = 21;
   private long internalFreeBytes_ = 0L;
   /**
-   * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeBytes"];</code>
+   * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];</code>
    * @return The internalFreeBytes.
    */
   @java.lang.Override
@@ -487,7 +487,7 @@ private static final long serialVersionUID = 0L;
   public static final int INTERNAL_TOTAL_BYTES_FIELD_NUMBER = 22;
   private long internalTotalBytes_ = 0L;
   /**
-   * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalBytes"];</code>
+   * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];</code>
    * @return The internalTotalBytes.
    */
   @java.lang.Override
@@ -1759,7 +1759,7 @@ private static final long serialVersionUID = 0L;
 
     private long recordingsSizeBytes_ ;
     /**
-     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSizeBytes"];</code>
+     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];</code>
      * @return The recordingsSizeBytes.
      */
     @java.lang.Override
@@ -1767,7 +1767,7 @@ private static final long serialVersionUID = 0L;
       return recordingsSizeBytes_;
     }
     /**
-     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSizeBytes"];</code>
+     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];</code>
      * @param value The recordingsSizeBytes to set.
      * @return This builder for chaining.
      */
@@ -1779,7 +1779,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSizeBytes"];</code>
+     * <code>int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];</code>
      * @return This builder for chaining.
      */
     public Builder clearRecordingsSizeBytes() {
@@ -1791,7 +1791,7 @@ private static final long serialVersionUID = 0L;
 
     private long surveillanceSizeBytes_ ;
     /**
-     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSizeBytes"];</code>
+     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];</code>
      * @return The surveillanceSizeBytes.
      */
     @java.lang.Override
@@ -1799,7 +1799,7 @@ private static final long serialVersionUID = 0L;
       return surveillanceSizeBytes_;
     }
     /**
-     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSizeBytes"];</code>
+     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];</code>
      * @param value The surveillanceSizeBytes to set.
      * @return This builder for chaining.
      */
@@ -1811,7 +1811,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSizeBytes"];</code>
+     * <code>int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSurveillanceSizeBytes() {
@@ -2135,7 +2135,7 @@ private static final long serialVersionUID = 0L;
 
     private long sdCardFreeBytes_ ;
     /**
-     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];</code>
      * @return The sdCardFreeBytes.
      */
     @java.lang.Override
@@ -2143,7 +2143,7 @@ private static final long serialVersionUID = 0L;
       return sdCardFreeBytes_;
     }
     /**
-     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];</code>
      * @param value The sdCardFreeBytes to set.
      * @return This builder for chaining.
      */
@@ -2155,7 +2155,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeBytes"];</code>
+     * <code>int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSdCardFreeBytes() {
@@ -2167,7 +2167,7 @@ private static final long serialVersionUID = 0L;
 
     private long sdCardTotalBytes_ ;
     /**
-     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];</code>
      * @return The sdCardTotalBytes.
      */
     @java.lang.Override
@@ -2175,7 +2175,7 @@ private static final long serialVersionUID = 0L;
       return sdCardTotalBytes_;
     }
     /**
-     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];</code>
      * @param value The sdCardTotalBytes to set.
      * @return This builder for chaining.
      */
@@ -2187,7 +2187,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalBytes"];</code>
+     * <code>int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSdCardTotalBytes() {
@@ -2343,7 +2343,7 @@ private static final long serialVersionUID = 0L;
 
     private long internalFreeBytes_ ;
     /**
-     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeBytes"];</code>
+     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];</code>
      * @return The internalFreeBytes.
      */
     @java.lang.Override
@@ -2351,7 +2351,7 @@ private static final long serialVersionUID = 0L;
       return internalFreeBytes_;
     }
     /**
-     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeBytes"];</code>
+     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];</code>
      * @param value The internalFreeBytes to set.
      * @return This builder for chaining.
      */
@@ -2363,7 +2363,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeBytes"];</code>
+     * <code>int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];</code>
      * @return This builder for chaining.
      */
     public Builder clearInternalFreeBytes() {
@@ -2375,7 +2375,7 @@ private static final long serialVersionUID = 0L;
 
     private long internalTotalBytes_ ;
     /**
-     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalBytes"];</code>
+     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];</code>
      * @return The internalTotalBytes.
      */
     @java.lang.Override
@@ -2383,7 +2383,7 @@ private static final long serialVersionUID = 0L;
       return internalTotalBytes_;
     }
     /**
-     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalBytes"];</code>
+     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];</code>
      * @param value The internalTotalBytes to set.
      * @return This builder for chaining.
      */
@@ -2395,7 +2395,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalBytes"];</code>
+     * <code>int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];</code>
      * @return This builder for chaining.
      */
     public Builder clearInternalTotalBytes() {

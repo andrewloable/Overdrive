@@ -37,7 +37,6 @@ private static final long serialVersionUID = 0L;
     distanceUnit_ = "";
     locale_ = "";
     safeZoneName_ = "";
-    gpsJson_ = "";
     vehicleDataError_ = "";
   }
 
@@ -660,53 +659,6 @@ private static final long serialVersionUID = 0L;
     return tripStatus_ == null ? net.bladewatch.app.grpc.v1.TripStatus.getDefaultInstance() : tripStatus_;
   }
 
-  public static final int GPS_JSON_FIELD_NUMBER = 22;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object gpsJson_ = "";
-  /**
-   * <pre>
-   * Serialised JSON blob from GpsMonitor.getLocationJson().
-   * </pre>
-   *
-   * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-   * @return The gpsJson.
-   */
-  @java.lang.Override
-  public java.lang.String getGpsJson() {
-    java.lang.Object ref = gpsJson_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      gpsJson_ = s;
-      return s;
-    }
-  }
-  /**
-   * <pre>
-   * Serialised JSON blob from GpsMonitor.getLocationJson().
-   * </pre>
-   *
-   * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-   * @return The bytes for gpsJson.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getGpsJsonBytes() {
-    java.lang.Object ref = gpsJson_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      gpsJson_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
   public static final int NETWORK_FIELD_NUMBER = 23;
   private net.bladewatch.app.grpc.v1.NetworkInfo network_;
   /**
@@ -874,9 +826,6 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000040) != 0)) {
       output.writeMessage(21, getTripStatus());
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(gpsJson_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 22, gpsJson_);
-    }
     if (((bitField0_ & 0x00000080) != 0)) {
       output.writeMessage(23, getNetwork());
     }
@@ -1006,9 +955,6 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(21, getTripStatus());
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(gpsJson_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(22, gpsJson_);
-    }
     if (((bitField0_ & 0x00000080) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(23, getNetwork());
@@ -1103,8 +1049,6 @@ private static final long serialVersionUID = 0L;
       if (!getTripStatus()
           .equals(other.getTripStatus())) return false;
     }
-    if (!getGpsJson()
-        .equals(other.getGpsJson())) return false;
     if (hasNetwork() != other.hasNetwork()) return false;
     if (hasNetwork()) {
       if (!getNetwork()
@@ -1192,8 +1136,6 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + TRIP_STATUS_FIELD_NUMBER;
       hash = (53 * hash) + getTripStatus().hashCode();
     }
-    hash = (37 * hash) + GPS_JSON_FIELD_NUMBER;
-    hash = (53 * hash) + getGpsJson().hashCode();
     if (hasNetwork()) {
       hash = (37 * hash) + NETWORK_FIELD_NUMBER;
       hash = (53 * hash) + getNetwork().hashCode();
@@ -1393,7 +1335,6 @@ private static final long serialVersionUID = 0L;
         tripStatusBuilder_.dispose();
         tripStatusBuilder_ = null;
       }
-      gpsJson_ = "";
       network_ = null;
       if (networkBuilder_ != null) {
         networkBuilder_.dispose();
@@ -1523,15 +1464,12 @@ private static final long serialVersionUID = 0L;
         to_bitField0_ |= 0x00000040;
       }
       if (((from_bitField0_ & 0x00200000) != 0)) {
-        result.gpsJson_ = gpsJson_;
-      }
-      if (((from_bitField0_ & 0x00400000) != 0)) {
         result.network_ = networkBuilder_ == null
             ? network_
             : networkBuilder_.build();
         to_bitField0_ |= 0x00000080;
       }
-      if (((from_bitField0_ & 0x00800000) != 0)) {
+      if (((from_bitField0_ & 0x00400000) != 0)) {
         result.vehicleDataError_ = vehicleDataError_;
       }
       result.bitField0_ |= to_bitField0_;
@@ -1654,17 +1592,12 @@ private static final long serialVersionUID = 0L;
       if (other.hasTripStatus()) {
         mergeTripStatus(other.getTripStatus());
       }
-      if (!other.getGpsJson().isEmpty()) {
-        gpsJson_ = other.gpsJson_;
-        bitField0_ |= 0x00200000;
-        onChanged();
-      }
       if (other.hasNetwork()) {
         mergeNetwork(other.getNetwork());
       }
       if (!other.getVehicleDataError().isEmpty()) {
         vehicleDataError_ = other.vehicleDataError_;
-        bitField0_ |= 0x00800000;
+        bitField0_ |= 0x00400000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1856,21 +1789,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00100000;
               break;
             } // case 170
-            case 178: {
-              gpsJson_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00200000;
-              break;
-            } // case 178
             case 186: {
               input.readMessage(
                   internalGetNetworkFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00400000;
+              bitField0_ |= 0x00200000;
               break;
             } // case 186
             case 194: {
               vehicleDataError_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00800000;
+              bitField0_ |= 0x00400000;
               break;
             } // case 194
             default: {
@@ -3705,98 +3633,6 @@ private static final long serialVersionUID = 0L;
       return tripStatusBuilder_;
     }
 
-    private java.lang.Object gpsJson_ = "";
-    /**
-     * <pre>
-     * Serialised JSON blob from GpsMonitor.getLocationJson().
-     * </pre>
-     *
-     * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-     * @return The gpsJson.
-     */
-    public java.lang.String getGpsJson() {
-      java.lang.Object ref = gpsJson_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        gpsJson_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <pre>
-     * Serialised JSON blob from GpsMonitor.getLocationJson().
-     * </pre>
-     *
-     * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-     * @return The bytes for gpsJson.
-     */
-    public com.google.protobuf.ByteString
-        getGpsJsonBytes() {
-      java.lang.Object ref = gpsJson_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        gpsJson_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <pre>
-     * Serialised JSON blob from GpsMonitor.getLocationJson().
-     * </pre>
-     *
-     * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-     * @param value The gpsJson to set.
-     * @return This builder for chaining.
-     */
-    public Builder setGpsJson(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      gpsJson_ = value;
-      bitField0_ |= 0x00200000;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Serialised JSON blob from GpsMonitor.getLocationJson().
-     * </pre>
-     *
-     * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearGpsJson() {
-      gpsJson_ = getDefaultInstance().getGpsJson();
-      bitField0_ = (bitField0_ & ~0x00200000);
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Serialised JSON blob from GpsMonitor.getLocationJson().
-     * </pre>
-     *
-     * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-     * @param value The bytes for gpsJson to set.
-     * @return This builder for chaining.
-     */
-    public Builder setGpsJsonBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      gpsJson_ = value;
-      bitField0_ |= 0x00200000;
-      onChanged();
-      return this;
-    }
-
     private net.bladewatch.app.grpc.v1.NetworkInfo network_;
     private com.google.protobuf.SingleFieldBuilder<
         net.bladewatch.app.grpc.v1.NetworkInfo, net.bladewatch.app.grpc.v1.NetworkInfo.Builder, net.bladewatch.app.grpc.v1.NetworkInfoOrBuilder> networkBuilder_;
@@ -3805,7 +3641,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the network field is set.
      */
     public boolean hasNetwork() {
-      return ((bitField0_ & 0x00400000) != 0);
+      return ((bitField0_ & 0x00200000) != 0);
     }
     /**
      * <code>.bladewatch.v1.NetworkInfo network = 23 [json_name = "network"];</code>
@@ -3830,7 +3666,7 @@ private static final long serialVersionUID = 0L;
       } else {
         networkBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00400000;
+      bitField0_ |= 0x00200000;
       onChanged();
       return this;
     }
@@ -3844,7 +3680,7 @@ private static final long serialVersionUID = 0L;
       } else {
         networkBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00400000;
+      bitField0_ |= 0x00200000;
       onChanged();
       return this;
     }
@@ -3853,7 +3689,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeNetwork(net.bladewatch.app.grpc.v1.NetworkInfo value) {
       if (networkBuilder_ == null) {
-        if (((bitField0_ & 0x00400000) != 0) &&
+        if (((bitField0_ & 0x00200000) != 0) &&
           network_ != null &&
           network_ != net.bladewatch.app.grpc.v1.NetworkInfo.getDefaultInstance()) {
           getNetworkBuilder().mergeFrom(value);
@@ -3864,7 +3700,7 @@ private static final long serialVersionUID = 0L;
         networkBuilder_.mergeFrom(value);
       }
       if (network_ != null) {
-        bitField0_ |= 0x00400000;
+        bitField0_ |= 0x00200000;
         onChanged();
       }
       return this;
@@ -3873,7 +3709,7 @@ private static final long serialVersionUID = 0L;
      * <code>.bladewatch.v1.NetworkInfo network = 23 [json_name = "network"];</code>
      */
     public Builder clearNetwork() {
-      bitField0_ = (bitField0_ & ~0x00400000);
+      bitField0_ = (bitField0_ & ~0x00200000);
       network_ = null;
       if (networkBuilder_ != null) {
         networkBuilder_.dispose();
@@ -3886,7 +3722,7 @@ private static final long serialVersionUID = 0L;
      * <code>.bladewatch.v1.NetworkInfo network = 23 [json_name = "network"];</code>
      */
     public net.bladewatch.app.grpc.v1.NetworkInfo.Builder getNetworkBuilder() {
-      bitField0_ |= 0x00400000;
+      bitField0_ |= 0x00200000;
       onChanged();
       return internalGetNetworkFieldBuilder().getBuilder();
     }
@@ -3973,7 +3809,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       vehicleDataError_ = value;
-      bitField0_ |= 0x00800000;
+      bitField0_ |= 0x00400000;
       onChanged();
       return this;
     }
@@ -3987,7 +3823,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearVehicleDataError() {
       vehicleDataError_ = getDefaultInstance().getVehicleDataError();
-      bitField0_ = (bitField0_ & ~0x00800000);
+      bitField0_ = (bitField0_ & ~0x00400000);
       onChanged();
       return this;
     }
@@ -4005,7 +3841,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       vehicleDataError_ = value;
-      bitField0_ |= 0x00800000;
+      bitField0_ |= 0x00400000;
       onChanged();
       return this;
     }

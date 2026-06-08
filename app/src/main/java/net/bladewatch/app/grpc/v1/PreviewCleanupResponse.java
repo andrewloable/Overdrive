@@ -104,7 +104,7 @@ private static final long serialVersionUID = 0L;
   public static final int TOTAL_DELETABLE_BYTES_FIELD_NUMBER = 3;
   private long totalDeletableBytes_ = 0L;
   /**
-   * <code>int64 total_deletable_bytes = 3 [json_name = "totalDeletableBytes"];</code>
+   * <code>int64 total_deletable_bytes = 3 [json_name = "totalSize"];</code>
    * @return The totalDeletableBytes.
    */
   @java.lang.Override
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
   public static final int TOTAL_DELETABLE_COUNT_FIELD_NUMBER = 4;
   private int totalDeletableCount_ = 0;
   /**
-   * <code>int32 total_deletable_count = 4 [json_name = "totalDeletableCount"];</code>
+   * <code>int32 total_deletable_count = 4 [json_name = "fileCount"];</code>
    * @return The totalDeletableCount.
    */
   @java.lang.Override
@@ -819,7 +819,7 @@ private static final long serialVersionUID = 0L;
 
     private long totalDeletableBytes_ ;
     /**
-     * <code>int64 total_deletable_bytes = 3 [json_name = "totalDeletableBytes"];</code>
+     * <code>int64 total_deletable_bytes = 3 [json_name = "totalSize"];</code>
      * @return The totalDeletableBytes.
      */
     @java.lang.Override
@@ -827,7 +827,7 @@ private static final long serialVersionUID = 0L;
       return totalDeletableBytes_;
     }
     /**
-     * <code>int64 total_deletable_bytes = 3 [json_name = "totalDeletableBytes"];</code>
+     * <code>int64 total_deletable_bytes = 3 [json_name = "totalSize"];</code>
      * @param value The totalDeletableBytes to set.
      * @return This builder for chaining.
      */
@@ -839,7 +839,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 total_deletable_bytes = 3 [json_name = "totalDeletableBytes"];</code>
+     * <code>int64 total_deletable_bytes = 3 [json_name = "totalSize"];</code>
      * @return This builder for chaining.
      */
     public Builder clearTotalDeletableBytes() {
@@ -851,7 +851,7 @@ private static final long serialVersionUID = 0L;
 
     private int totalDeletableCount_ ;
     /**
-     * <code>int32 total_deletable_count = 4 [json_name = "totalDeletableCount"];</code>
+     * <code>int32 total_deletable_count = 4 [json_name = "fileCount"];</code>
      * @return The totalDeletableCount.
      */
     @java.lang.Override
@@ -859,7 +859,7 @@ private static final long serialVersionUID = 0L;
       return totalDeletableCount_;
     }
     /**
-     * <code>int32 total_deletable_count = 4 [json_name = "totalDeletableCount"];</code>
+     * <code>int32 total_deletable_count = 4 [json_name = "fileCount"];</code>
      * @param value The totalDeletableCount to set.
      * @return This builder for chaining.
      */
@@ -871,7 +871,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int32 total_deletable_count = 4 [json_name = "totalDeletableCount"];</code>
+     * <code>int32 total_deletable_count = 4 [json_name = "fileCount"];</code>
      * @return This builder for chaining.
      */
     public Builder clearTotalDeletableCount() {

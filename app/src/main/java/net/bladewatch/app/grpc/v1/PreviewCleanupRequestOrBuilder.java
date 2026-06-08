@@ -9,4 +9,15 @@ package net.bladewatch.app.grpc.v1;
 public interface PreviewCleanupRequestOrBuilder extends
     // @@protoc_insertion_point(interface_extends:bladewatch.v1.PreviewCleanupRequest)
     com.google.protobuf.MessageOrBuilder {
+
+  /**
+   * <pre>
+   * Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+   * Passed to the REST handler as the ?bytesToFree= query param.
+   * </pre>
+   *
+   * <code>int64 bytes_to_free = 1 [json_name = "bytesToFree"];</code>
+   * @return The bytesToFree.
+   */
+  long getBytesToFree();
 }

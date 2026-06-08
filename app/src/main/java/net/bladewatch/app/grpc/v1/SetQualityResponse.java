@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object codec_ = "";
   /**
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The codec.
    */
   @java.lang.Override
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The bytes for codec.
    */
   @java.lang.Override
@@ -719,7 +719,7 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object codec_ = "";
     /**
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return The codec.
      */
     public java.lang.String getCodec() {
@@ -735,7 +735,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return The bytes for codec.
      */
     public com.google.protobuf.ByteString
@@ -752,7 +752,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @param value The codec to set.
      * @return This builder for chaining.
      */
@@ -765,7 +765,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @return This builder for chaining.
      */
     public Builder clearCodec() {
@@ -775,7 +775,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string codec = 3 [json_name = "codec"];</code>
+     * <code>string codec = 3 [json_name = "recordingCodec"];</code>
      * @param value The bytes for codec to set.
      * @return This builder for chaining.
      */

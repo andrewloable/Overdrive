@@ -11,26 +11,14 @@ public interface GetEventTimelineResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+   * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+   * @return The timelineJson.
    */
-  java.util.List<net.bladewatch.app.grpc.v1.EventEntry> 
-      getEventsList();
+  java.lang.String getTimelineJson();
   /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+   * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+   * @return The bytes for timelineJson.
    */
-  net.bladewatch.app.grpc.v1.EventEntry getEvents(int index);
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  int getEventsCount();
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  java.util.List<? extends net.bladewatch.app.grpc.v1.EventEntryOrBuilder> 
-      getEventsOrBuilderList();
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  net.bladewatch.app.grpc.v1.EventEntryOrBuilder getEventsOrBuilder(
-      int index);
+  com.google.protobuf.ByteString
+      getTimelineJsonBytes();
 }

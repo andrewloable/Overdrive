@@ -73,7 +73,7 @@ private static final long serialVersionUID = 0L;
   public static final int TEMP_C_FIELD_NUMBER = 3;
   private int tempC_ = 0;
   /**
-   * <code>int32 temp_c = 3 [json_name = "tempC"];</code>
+   * <code>int32 temp_c = 3 [json_name = "temperatureC"];</code>
    * @return The tempC.
    */
   @java.lang.Override
@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
   public static final int LEAK_STATE_FIELD_NUMBER = 5;
   private int leakState_ = 0;
   /**
-   * <code>int32 leak_state = 5 [json_name = "leakState"];</code>
+   * <code>int32 leak_state = 5 [json_name = "airLeakState"];</code>
    * @return The leakState.
    */
   @java.lang.Override
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
 
     private int tempC_ ;
     /**
-     * <code>int32 temp_c = 3 [json_name = "tempC"];</code>
+     * <code>int32 temp_c = 3 [json_name = "temperatureC"];</code>
      * @return The tempC.
      */
     @java.lang.Override
@@ -602,7 +602,7 @@ private static final long serialVersionUID = 0L;
       return tempC_;
     }
     /**
-     * <code>int32 temp_c = 3 [json_name = "tempC"];</code>
+     * <code>int32 temp_c = 3 [json_name = "temperatureC"];</code>
      * @param value The tempC to set.
      * @return This builder for chaining.
      */
@@ -614,7 +614,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int32 temp_c = 3 [json_name = "tempC"];</code>
+     * <code>int32 temp_c = 3 [json_name = "temperatureC"];</code>
      * @return This builder for chaining.
      */
     public Builder clearTempC() {
@@ -658,7 +658,7 @@ private static final long serialVersionUID = 0L;
 
     private int leakState_ ;
     /**
-     * <code>int32 leak_state = 5 [json_name = "leakState"];</code>
+     * <code>int32 leak_state = 5 [json_name = "airLeakState"];</code>
      * @return The leakState.
      */
     @java.lang.Override
@@ -666,7 +666,7 @@ private static final long serialVersionUID = 0L;
       return leakState_;
     }
     /**
-     * <code>int32 leak_state = 5 [json_name = "leakState"];</code>
+     * <code>int32 leak_state = 5 [json_name = "airLeakState"];</code>
      * @param value The leakState to set.
      * @return This builder for chaining.
      */
@@ -678,7 +678,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int32 leak_state = 5 [json_name = "leakState"];</code>
+     * <code>int32 leak_state = 5 [json_name = "airLeakState"];</code>
      * @return This builder for chaining.
      */
     public Builder clearLeakState() {

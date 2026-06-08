@@ -41,13 +41,13 @@ public interface PreviewCleanupResponseOrBuilder extends
       int index);
 
   /**
-   * <code>int64 total_deletable_bytes = 3 [json_name = "totalDeletableBytes"];</code>
+   * <code>int64 total_deletable_bytes = 3 [json_name = "totalSize"];</code>
    * @return The totalDeletableBytes.
    */
   long getTotalDeletableBytes();
 
   /**
-   * <code>int32 total_deletable_count = 4 [json_name = "totalDeletableCount"];</code>
+   * <code>int32 total_deletable_count = 4 [json_name = "fileCount"];</code>
    * @return The totalDeletableCount.
    */
   int getTotalDeletableCount();

@@ -23,14 +23,8 @@ public interface PreviewCleanupFileOrBuilder extends
       getPathBytes();
 
   /**
-   * <code>int64 size_bytes = 2 [json_name = "sizeBytes"];</code>
+   * <code>int64 size_bytes = 2 [json_name = "size"];</code>
    * @return The sizeBytes.
    */
   long getSizeBytes();
-
-  /**
-   * <code>int64 age_hours = 3 [json_name = "ageHours"];</code>
-   * @return The ageHours.
-   */
-  long getAgeHours();
 }

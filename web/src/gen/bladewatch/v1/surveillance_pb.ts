@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bladewatch/v1/surveillance.proto.
  */
 export const file_bladewatch_v1_surveillance: GenFile = /*@__PURE__*/
-  fileDesc("CiBibGFkZXdhdGNoL3YxL3N1cnZlaWxsYW5jZS5wcm90bxINYmxhZGV3YXRjaC52MSLDBQoSU3VydmVpbGxhbmNlQ29uZmlnEg8KB2VuYWJsZWQYASABKAgSEwoLc2Vuc2l0aXZpdHkYAiABKAUSEAoIZGlzdGFuY2UYAyABKAUSFQoNc2FkX3RocmVzaG9sZBgEIAEoARIaChJwcmVfcmVjb3JkX3NlY29uZHMYBSABKAUSGwoTcG9zdF9yZWNvcmRfc2Vjb25kcxgGIAEoBRIUCgx0b3RhbF9ibG9ja3MYByABKAUSFgoOZmxhc2hfaW1tdW5pdHkYCCABKAUSEgoKYWlfZW5hYmxlZBgJIAEoCBIVCg1haV9jb25maWRlbmNlGAogASgBEhcKD21pbl9vYmplY3Rfc2l6ZRgLIAEoARIVCg1kZXRlY3RfcGVyc29uGAwgASgIEhIKCmRldGVjdF9jYXIYDSABKAgSEwoLZGV0ZWN0X2Jpa2UYDiABKAgSFwoPZGlzdGFuY2VfcHJlc2V0GA8gASgJEhIKCmJsb2NrX3NpemUYECABKAUSFgoObWF4X2Rpc3RhbmNlX20YESABKAESEgoKbmlnaHRfbW9kZRgSIAEoCBIYChBzaGFkb3dfdGhyZXNob2xkGBMgASgBEhkKEWRlbnNpdHlfdGhyZXNob2xkGBQgASgBEh0KFWFsYXJtX2Jsb2NrX3RocmVzaG9sZBgVIAEoBRIZChFyZWNvcmRpbmdfcXVhbGl0eRgWIAEoCRIXCg9yZWNvcmRpbmdfY29kZWMYFyABKAkSFAoMY2FtZXJhX2Zyb250GBggASgIEhQKDGNhbWVyYV9yaWdodBgZIAEoCBITCgtjYW1lcmFfcmVhchgaIAEoCBITCgtjYW1lcmFfbGVmdBgbIAEoCBIYChBkZXRlcnJlbnRfYWN0aW9uGBwgASgJEiIKGmRldGVycmVudF9jb29sZG93bl9zZWNvbmRzGB0gASgFIh4KHEdldFN1cnZlaWxsYW5jZUNvbmZpZ1JlcXVlc3QiYwodR2V0U3VydmVpbGxhbmNlQ29uZmlnUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIxCgZjb25maWcYAiABKAsyIS5ibGFkZXdhdGNoLnYxLlN1cnZlaWxsYW5jZUNvbmZpZyJRChxTZXRTdXJ2ZWlsbGFuY2VDb25maWdSZXF1ZXN0EjEKBmNvbmZpZxgBIAEoCzIhLmJsYWRld2F0Y2gudjEuU3VydmVpbGxhbmNlQ29uZmlnIj8KHVNldFN1cnZlaWxsYW5jZUNvbmZpZ1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkiHgocR2V0U3VydmVpbGxhbmNlU3RhdHVzUmVxdWVzdCJ9Ch1HZXRTdXJ2ZWlsbGFuY2VTdGF0dXNSZXNwb25zZRIYChBwaXBlbGluZV9ydW5uaW5nGAEgASgIEhsKE3N1cnZlaWxsYW5jZV9hY3RpdmUYAiABKAgSFgoOYWN0aXZlX2NhbWVyYXMYAyADKAUSDQoFZXJyb3IYBCABKAkiGwoZRW5hYmxlU3VydmVpbGxhbmNlUmVxdWVzdCJNChpFbmFibGVTdXJ2ZWlsbGFuY2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkSDQoFZXJyb3IYAyABKAkiHAoaRGlzYWJsZVN1cnZlaWxsYW5jZVJlcXVlc3QiPwobRGlzYWJsZVN1cnZlaWxsYW5jZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCSITChFHZXRIZWF0bWFwUmVxdWVzdCIoChJHZXRIZWF0bWFwUmVzcG9uc2USEgoKaW1hZ2VfanBlZxgBIAEoDCImChJHZXRTbmFwc2hvdFJlcXVlc3QSEAoIcXVhZHJhbnQYASABKAUiOAoTR2V0U25hcHNob3RSZXNwb25zZRISCgppbWFnZV9qcGVnGAEgASgMEg0KBWVycm9yGAIgASgJIhUKE0dldEZpbHRlckxvZ1JlcXVlc3QiRwoORmlsdGVyTG9nRW50cnkSFAoMdGltZXN0YW1wX21zGAEgASgDEg4KBnJlYXNvbhgCIAEoCRIPCgdkZXRhaWxzGAMgASgJIkYKFEdldEZpbHRlckxvZ1Jlc3BvbnNlEi4KB2VudHJpZXMYASADKAsyHS5ibGFkZXdhdGNoLnYxLkZpbHRlckxvZ0VudHJ5IiAKHlN5bmNTdXJ2ZWlsbGFuY2VDYXRhbG9nUmVxdWVzdCJhCh9TeW5jU3VydmVpbGxhbmNlQ2F0YWxvZ1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkSDQoFYWRkZWQYAyABKAUSDwoHcmVtb3ZlZBgEIAEoBSq1AQoORGlzdGFuY2VQcmVzZXQSHwobRElTVEFOQ0VfUFJFU0VUX1VOU1BFQ0lGSUVEEAASGAoURElTVEFOQ0VfUFJFU0VUX05FQVIQARIZChVESVNUQU5DRV9QUkVTRVRfU0hPUlQQAhIaChZESVNUQU5DRV9QUkVTRVRfTUVESVVNEAMSGAoURElTVEFOQ0VfUFJFU0VUX0xPTkcQBBIXChNESVNUQU5DRV9QUkVTRVRfRkFSEAUy/gYKE1N1cnZlaWxsYW5jZVNlcnZpY2USZgoJR2V0Q29uZmlnEisuYmxhZGV3YXRjaC52MS5HZXRTdXJ2ZWlsbGFuY2VDb25maWdSZXF1ZXN0GiwuYmxhZGV3YXRjaC52MS5HZXRTdXJ2ZWlsbGFuY2VDb25maWdSZXNwb25zZRJmCglTZXRDb25maWcSKy5ibGFkZXdhdGNoLnYxLlNldFN1cnZlaWxsYW5jZUNvbmZpZ1JlcXVlc3QaLC5ibGFkZXdhdGNoLnYxLlNldFN1cnZlaWxsYW5jZUNvbmZpZ1Jlc3BvbnNlEmYKCUdldFN0YXR1cxIrLmJsYWRld2F0Y2gudjEuR2V0U3VydmVpbGxhbmNlU3RhdHVzUmVxdWVzdBosLmJsYWRld2F0Y2gudjEuR2V0U3VydmVpbGxhbmNlU3RhdHVzUmVzcG9uc2USXQoGRW5hYmxlEiguYmxhZGV3YXRjaC52MS5FbmFibGVTdXJ2ZWlsbGFuY2VSZXF1ZXN0GikuYmxhZGV3YXRjaC52MS5FbmFibGVTdXJ2ZWlsbGFuY2VSZXNwb25zZRJgCgdEaXNhYmxlEikuYmxhZGV3YXRjaC52MS5EaXNhYmxlU3VydmVpbGxhbmNlUmVxdWVzdBoqLmJsYWRld2F0Y2gudjEuRGlzYWJsZVN1cnZlaWxsYW5jZVJlc3BvbnNlElEKCkdldEhlYXRtYXASIC5ibGFkZXdhdGNoLnYxLkdldEhlYXRtYXBSZXF1ZXN0GiEuYmxhZGV3YXRjaC52MS5HZXRIZWF0bWFwUmVzcG9uc2USVAoLR2V0U25hcHNob3QSIS5ibGFkZXdhdGNoLnYxLkdldFNuYXBzaG90UmVxdWVzdBoiLmJsYWRld2F0Y2gudjEuR2V0U25hcHNob3RSZXNwb25zZRJXCgxHZXRGaWx0ZXJMb2cSIi5ibGFkZXdhdGNoLnYxLkdldEZpbHRlckxvZ1JlcXVlc3QaIy5ibGFkZXdhdGNoLnYxLkdldEZpbHRlckxvZ1Jlc3BvbnNlEmwKC1N5bmNDYXRhbG9nEi0uYmxhZGV3YXRjaC52MS5TeW5jU3VydmVpbGxhbmNlQ2F0YWxvZ1JlcXVlc3QaLi5ibGFkZXdhdGNoLnYxLlN5bmNTdXJ2ZWlsbGFuY2VDYXRhbG9nUmVzcG9uc2VCHgoabmV0LmJsYWRld2F0Y2guYXBwLmdycGMudjFQAWIGcHJvdG8z");
+  fileDesc("CiBibGFkZXdhdGNoL3YxL3N1cnZlaWxsYW5jZS5wcm90bxINYmxhZGV3YXRjaC52MSLDBQoSU3VydmVpbGxhbmNlQ29uZmlnEg8KB2VuYWJsZWQYASABKAgSEwoLc2Vuc2l0aXZpdHkYAiABKAUSEAoIZGlzdGFuY2UYAyABKAUSFQoNc2FkX3RocmVzaG9sZBgEIAEoARIaChJwcmVfcmVjb3JkX3NlY29uZHMYBSABKAUSGwoTcG9zdF9yZWNvcmRfc2Vjb25kcxgGIAEoBRIUCgx0b3RhbF9ibG9ja3MYByABKAUSFgoOZmxhc2hfaW1tdW5pdHkYCCABKAUSEgoKYWlfZW5hYmxlZBgJIAEoCBIVCg1haV9jb25maWRlbmNlGAogASgBEhcKD21pbl9vYmplY3Rfc2l6ZRgLIAEoARIVCg1kZXRlY3RfcGVyc29uGAwgASgIEhIKCmRldGVjdF9jYXIYDSABKAgSEwoLZGV0ZWN0X2Jpa2UYDiABKAgSFwoPZGlzdGFuY2VfcHJlc2V0GA8gASgJEhIKCmJsb2NrX3NpemUYECABKAUSFgoObWF4X2Rpc3RhbmNlX20YESABKAESEgoKbmlnaHRfbW9kZRgSIAEoCBIYChBzaGFkb3dfdGhyZXNob2xkGBMgASgBEhkKEWRlbnNpdHlfdGhyZXNob2xkGBQgASgBEh0KFWFsYXJtX2Jsb2NrX3RocmVzaG9sZBgVIAEoBRIZChFyZWNvcmRpbmdfcXVhbGl0eRgWIAEoCRIXCg9yZWNvcmRpbmdfY29kZWMYFyABKAkSFAoMY2FtZXJhX2Zyb250GBggASgIEhQKDGNhbWVyYV9yaWdodBgZIAEoCBITCgtjYW1lcmFfcmVhchgaIAEoCBITCgtjYW1lcmFfbGVmdBgbIAEoCBIYChBkZXRlcnJlbnRfYWN0aW9uGBwgASgJEiIKGmRldGVycmVudF9jb29sZG93bl9zZWNvbmRzGB0gASgFIh4KHEdldFN1cnZlaWxsYW5jZUNvbmZpZ1JlcXVlc3QiYwodR2V0U3VydmVpbGxhbmNlQ29uZmlnUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIxCgZjb25maWcYAiABKAsyIS5ibGFkZXdhdGNoLnYxLlN1cnZlaWxsYW5jZUNvbmZpZyJRChxTZXRTdXJ2ZWlsbGFuY2VDb25maWdSZXF1ZXN0EjEKBmNvbmZpZxgBIAEoCzIhLmJsYWRld2F0Y2gudjEuU3VydmVpbGxhbmNlQ29uZmlnIj8KHVNldFN1cnZlaWxsYW5jZUNvbmZpZ1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkiHgocR2V0U3VydmVpbGxhbmNlU3RhdHVzUmVxdWVzdCJ7Ch1HZXRTdXJ2ZWlsbGFuY2VTdGF0dXNSZXNwb25zZRIYChBwaXBlbGluZV9ydW5uaW5nGAEgASgIEhsKE3N1cnZlaWxsYW5jZV9hY3RpdmUYAiABKAgSDQoFZXJyb3IYBCABKAlKBAgDEARSDmFjdGl2ZV9jYW1lcmFzIhsKGUVuYWJsZVN1cnZlaWxsYW5jZVJlcXVlc3QiTQoaRW5hYmxlU3VydmVpbGxhbmNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJEg0KBWVycm9yGAMgASgJIhwKGkRpc2FibGVTdXJ2ZWlsbGFuY2VSZXF1ZXN0Ij8KG0Rpc2FibGVTdXJ2ZWlsbGFuY2VSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB21lc3NhZ2UYAiABKAkiEwoRR2V0SGVhdG1hcFJlcXVlc3Qi1gEKD0hlYXRtYXBRdWFkcmFudBIKCgJpZBgBIAEoBRIMCgRuYW1lGAIgASgJEg8KB2VuYWJsZWQYAyABKAgSEgoKc3VwcHJlc3NlZBgEIAEoCBIRCgltZWFuX2x1bWEYBSABKAESFQoNYWN0aXZlX2Jsb2NrcxgGIAEoBRIYChBjb25maXJtZWRfYmxvY2tzGAcgASgFEhQKDHRocmVhdF9sZXZlbBgIIAEoBRIWCg5jb21wb25lbnRfc2l6ZRgJIAEoBRISCgpjb25maWRlbmNlGAogAygBIpIBChJHZXRIZWF0bWFwUmVzcG9uc2USEQoJZ3JpZF9jb2xzGAIgASgFEhEKCWdyaWRfcm93cxgDIAEoBRIRCgl2aWV3X21vZGUYBCABKAUSMQoJcXVhZHJhbnRzGAUgAygLMh4uYmxhZGV3YXRjaC52MS5IZWF0bWFwUXVhZHJhbnRKBAgBEAJSCmltYWdlX2pwZWciJgoSR2V0U25hcHNob3RSZXF1ZXN0EhAKCHF1YWRyYW50GAEgASgFIjgKE0dldFNuYXBzaG90UmVzcG9uc2USEgoKaW1hZ2VfanBlZxgBIAEoDBINCgVlcnJvchgCIAEoCSIVChNHZXRGaWx0ZXJMb2dSZXF1ZXN0IjwKFEdldEZpbHRlckxvZ1Jlc3BvbnNlEg8KB2VudHJpZXMYAiADKAkSDQoFY291bnQYAyABKAVKBAgBEAIiIAoeU3luY1N1cnZlaWxsYW5jZUNhdGFsb2dSZXF1ZXN0ImEKH1N5bmNTdXJ2ZWlsbGFuY2VDYXRhbG9nUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBINCgVlcnJvchgCIAEoCRINCgVhZGRlZBgDIAEoBRIPCgdyZW1vdmVkGAQgASgFKrUBCg5EaXN0YW5jZVByZXNldBIfChtESVNUQU5DRV9QUkVTRVRfVU5TUEVDSUZJRUQQABIYChRESVNUQU5DRV9QUkVTRVRfTkVBUhABEhkKFURJU1RBTkNFX1BSRVNFVF9TSE9SVBACEhoKFkRJU1RBTkNFX1BSRVNFVF9NRURJVU0QAxIYChRESVNUQU5DRV9QUkVTRVRfTE9ORxAEEhcKE0RJU1RBTkNFX1BSRVNFVF9GQVIQBTL+BgoTU3VydmVpbGxhbmNlU2VydmljZRJmCglHZXRDb25maWcSKy5ibGFkZXdhdGNoLnYxLkdldFN1cnZlaWxsYW5jZUNvbmZpZ1JlcXVlc3QaLC5ibGFkZXdhdGNoLnYxLkdldFN1cnZlaWxsYW5jZUNvbmZpZ1Jlc3BvbnNlEmYKCVNldENvbmZpZxIrLmJsYWRld2F0Y2gudjEuU2V0U3VydmVpbGxhbmNlQ29uZmlnUmVxdWVzdBosLmJsYWRld2F0Y2gudjEuU2V0U3VydmVpbGxhbmNlQ29uZmlnUmVzcG9uc2USZgoJR2V0U3RhdHVzEisuYmxhZGV3YXRjaC52MS5HZXRTdXJ2ZWlsbGFuY2VTdGF0dXNSZXF1ZXN0GiwuYmxhZGV3YXRjaC52MS5HZXRTdXJ2ZWlsbGFuY2VTdGF0dXNSZXNwb25zZRJdCgZFbmFibGUSKC5ibGFkZXdhdGNoLnYxLkVuYWJsZVN1cnZlaWxsYW5jZVJlcXVlc3QaKS5ibGFkZXdhdGNoLnYxLkVuYWJsZVN1cnZlaWxsYW5jZVJlc3BvbnNlEmAKB0Rpc2FibGUSKS5ibGFkZXdhdGNoLnYxLkRpc2FibGVTdXJ2ZWlsbGFuY2VSZXF1ZXN0GiouYmxhZGV3YXRjaC52MS5EaXNhYmxlU3VydmVpbGxhbmNlUmVzcG9uc2USUQoKR2V0SGVhdG1hcBIgLmJsYWRld2F0Y2gudjEuR2V0SGVhdG1hcFJlcXVlc3QaIS5ibGFkZXdhdGNoLnYxLkdldEhlYXRtYXBSZXNwb25zZRJUCgtHZXRTbmFwc2hvdBIhLmJsYWRld2F0Y2gudjEuR2V0U25hcHNob3RSZXF1ZXN0GiIuYmxhZGV3YXRjaC52MS5HZXRTbmFwc2hvdFJlc3BvbnNlElcKDEdldEZpbHRlckxvZxIiLmJsYWRld2F0Y2gudjEuR2V0RmlsdGVyTG9nUmVxdWVzdBojLmJsYWRld2F0Y2gudjEuR2V0RmlsdGVyTG9nUmVzcG9uc2USbAoLU3luY0NhdGFsb2cSLS5ibGFkZXdhdGNoLnYxLlN5bmNTdXJ2ZWlsbGFuY2VDYXRhbG9nUmVxdWVzdBouLmJsYWRld2F0Y2gudjEuU3luY1N1cnZlaWxsYW5jZUNhdGFsb2dSZXNwb25zZUIeChpuZXQuYmxhZGV3YXRjaC5hcHAuZ3JwYy52MVABYgZwcm90bzM");
 
 /**
  * SurveillanceConfig is the full configuration sent to/from the pipeline.
@@ -289,13 +289,6 @@ export type GetSurveillanceStatusResponse = Message<"bladewatch.v1.GetSurveillan
   surveillanceActive: boolean;
 
   /**
-   * Camera IDs currently feeding the pipeline.
-   *
-   * @generated from field: repeated int32 active_cameras = 3;
-   */
-  activeCameras: number[];
-
-  /**
    * @generated from field: string error = 4;
    */
   error: string;
@@ -397,15 +390,98 @@ export const GetHeatmapRequestSchema: GenMessage<GetHeatmapRequest> = /*@__PURE_
   messageDesc(file_bladewatch_v1_surveillance, 11);
 
 /**
+ * HeatmapQuadrant is one of the four quadrants in the motion heatmap grid.
+ * Field JSON names already match the REST handler's camelCase keys (no json_name needed).
+ *
+ * @generated from message bladewatch.v1.HeatmapQuadrant
+ */
+export type HeatmapQuadrant = Message<"bladewatch.v1.HeatmapQuadrant"> & {
+  /**
+   * @generated from field: int32 id = 1;
+   */
+  id: number;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: bool enabled = 3;
+   */
+  enabled: boolean;
+
+  /**
+   * @generated from field: bool suppressed = 4;
+   */
+  suppressed: boolean;
+
+  /**
+   * @generated from field: double mean_luma = 5;
+   */
+  meanLuma: number;
+
+  /**
+   * @generated from field: int32 active_blocks = 6;
+   */
+  activeBlocks: number;
+
+  /**
+   * @generated from field: int32 confirmed_blocks = 7;
+   */
+  confirmedBlocks: number;
+
+  /**
+   * @generated from field: int32 threat_level = 8;
+   */
+  threatLevel: number;
+
+  /**
+   * @generated from field: int32 component_size = 9;
+   */
+  componentSize: number;
+
+  /**
+   * Per-block motion confidence (only present for enabled quadrants).
+   *
+   * @generated from field: repeated double confidence = 10;
+   */
+  confidence: number[];
+};
+
+/**
+ * Describes the message bladewatch.v1.HeatmapQuadrant.
+ * Use `create(HeatmapQuadrantSchema)` to create a new message.
+ */
+export const HeatmapQuadrantSchema: GenMessage<HeatmapQuadrant> = /*@__PURE__*/
+  messageDesc(file_bladewatch_v1_surveillance, 12);
+
+/**
+ * GetHeatmapResponse matches SurveillanceApiHandler.sendHeatmap: a motion grid descriptor, NOT a
+ * JPEG. (was: bytes image_jpeg = 1.)
+ *
  * @generated from message bladewatch.v1.GetHeatmapResponse
  */
 export type GetHeatmapResponse = Message<"bladewatch.v1.GetHeatmapResponse"> & {
   /**
-   * JPEG-encoded heatmap image bytes.
-   *
-   * @generated from field: bytes image_jpeg = 1;
+   * @generated from field: int32 grid_cols = 2;
    */
-  imageJpeg: Uint8Array;
+  gridCols: number;
+
+  /**
+   * @generated from field: int32 grid_rows = 3;
+   */
+  gridRows: number;
+
+  /**
+   * @generated from field: int32 view_mode = 4;
+   */
+  viewMode: number;
+
+  /**
+   * @generated from field: repeated bladewatch.v1.HeatmapQuadrant quadrants = 5;
+   */
+  quadrants: HeatmapQuadrant[];
 };
 
 /**
@@ -413,7 +489,7 @@ export type GetHeatmapResponse = Message<"bladewatch.v1.GetHeatmapResponse"> & {
  * Use `create(GetHeatmapResponseSchema)` to create a new message.
  */
 export const GetHeatmapResponseSchema: GenMessage<GetHeatmapResponse> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_surveillance, 12);
+  messageDesc(file_bladewatch_v1_surveillance, 13);
 
 /**
  * @generated from message bladewatch.v1.GetSnapshotRequest
@@ -432,7 +508,7 @@ export type GetSnapshotRequest = Message<"bladewatch.v1.GetSnapshotRequest"> & {
  * Use `create(GetSnapshotRequestSchema)` to create a new message.
  */
 export const GetSnapshotRequestSchema: GenMessage<GetSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_surveillance, 13);
+  messageDesc(file_bladewatch_v1_surveillance, 14);
 
 /**
  * @generated from message bladewatch.v1.GetSnapshotResponse
@@ -456,7 +532,7 @@ export type GetSnapshotResponse = Message<"bladewatch.v1.GetSnapshotResponse"> &
  * Use `create(GetSnapshotResponseSchema)` to create a new message.
  */
 export const GetSnapshotResponseSchema: GenMessage<GetSnapshotResponse> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_surveillance, 14);
+  messageDesc(file_bladewatch_v1_surveillance, 15);
 
 /**
  * @generated from message bladewatch.v1.GetFilterLogRequest
@@ -469,43 +545,24 @@ export type GetFilterLogRequest = Message<"bladewatch.v1.GetFilterLogRequest"> &
  * Use `create(GetFilterLogRequestSchema)` to create a new message.
  */
 export const GetFilterLogRequestSchema: GenMessage<GetFilterLogRequest> = /*@__PURE__*/
-  messageDesc(file_bladewatch_v1_surveillance, 15);
-
-/**
- * @generated from message bladewatch.v1.FilterLogEntry
- */
-export type FilterLogEntry = Message<"bladewatch.v1.FilterLogEntry"> & {
-  /**
-   * @generated from field: int64 timestamp_ms = 1;
-   */
-  timestampMs: bigint;
-
-  /**
-   * @generated from field: string reason = 2;
-   */
-  reason: string;
-
-  /**
-   * @generated from field: string details = 3;
-   */
-  details: string;
-};
-
-/**
- * Describes the message bladewatch.v1.FilterLogEntry.
- * Use `create(FilterLogEntrySchema)` to create a new message.
- */
-export const FilterLogEntrySchema: GenMessage<FilterLogEntry> = /*@__PURE__*/
   messageDesc(file_bladewatch_v1_surveillance, 16);
 
 /**
+ * GetFilterLogResponse matches SurveillanceApiHandler.sendFilterLog: the handler emits plain string
+ * log lines plus a count (was: repeated FilterLogEntry structs, which the handler never produced).
+ *
  * @generated from message bladewatch.v1.GetFilterLogResponse
  */
 export type GetFilterLogResponse = Message<"bladewatch.v1.GetFilterLogResponse"> & {
   /**
-   * @generated from field: repeated bladewatch.v1.FilterLogEntry entries = 1;
+   * @generated from field: repeated string entries = 2;
    */
-  entries: FilterLogEntry[];
+  entries: string[];
+
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count: number;
 };
 
 /**

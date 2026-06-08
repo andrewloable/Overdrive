@@ -11,26 +11,33 @@ public interface GetFilterLogResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @return A list containing the entries.
    */
-  java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry> 
+  java.util.List<java.lang.String>
       getEntriesList();
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-   */
-  net.bladewatch.app.grpc.v1.FilterLogEntry getEntries(int index);
-  /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @return The count of entries.
    */
   int getEntriesCount();
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @param index The index of the element to return.
+   * @return The entries at the given index.
    */
-  java.util.List<? extends net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder> 
-      getEntriesOrBuilderList();
+  java.lang.String getEntries(int index);
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the entries at the given index.
    */
-  net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder getEntriesOrBuilder(
-      int index);
+  com.google.protobuf.ByteString
+      getEntriesBytes(int index);
+
+  /**
+   * <code>int32 count = 3 [json_name = "count"];</code>
+   * @return The count.
+   */
+  int getCount();
 }

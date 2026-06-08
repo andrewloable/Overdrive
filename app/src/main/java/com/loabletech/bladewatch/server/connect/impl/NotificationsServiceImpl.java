@@ -35,8 +35,22 @@ public class NotificationsServiceImpl {
     }
 
     private ConnectResponse handleGetCategories(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // The REST handler merges the registry blob with vapidPublicKey at the root. The proto
+        // expects GetCategoriesResponse{categories_json:"<registry blob>", vapid_public_key}. Reshape
+        // on the Connect side only — the REST handler output is left untouched for the legacy web UI.
+        ConnectResponse raw = ConnectHandlerUtil.captureString(out ->
                 NotificationApiHandler.handle("GET", "/api/notifications/categories", null, out));
+        try {
+            org.json.JSONObject merged = new org.json.JSONObject(raw.body);
+            String vapid = merged.optString("vapidPublicKey", "");
+            merged.remove("vapidPublicKey");
+            org.json.JSONObject wrapped = new org.json.JSONObject();
+            wrapped.put("categoriesJson", merged.toString());
+            wrapped.put("vapidPublicKey", vapid);
+            return ConnectResponse.of(wrapped.toString());
+        } catch (Exception e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handleSubscribe(String req, String clientIdentity) throws ConnectException {

@@ -91,23 +91,12 @@ private static final long serialVersionUID = 0L;
   public static final int SIZE_BYTES_FIELD_NUMBER = 2;
   private long sizeBytes_ = 0L;
   /**
-   * <code>int64 size_bytes = 2 [json_name = "sizeBytes"];</code>
+   * <code>int64 size_bytes = 2 [json_name = "size"];</code>
    * @return The sizeBytes.
    */
   @java.lang.Override
   public long getSizeBytes() {
     return sizeBytes_;
-  }
-
-  public static final int AGE_HOURS_FIELD_NUMBER = 3;
-  private long ageHours_ = 0L;
-  /**
-   * <code>int64 age_hours = 3 [json_name = "ageHours"];</code>
-   * @return The ageHours.
-   */
-  @java.lang.Override
-  public long getAgeHours() {
-    return ageHours_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -130,9 +119,6 @@ private static final long serialVersionUID = 0L;
     if (sizeBytes_ != 0L) {
       output.writeInt64(2, sizeBytes_);
     }
-    if (ageHours_ != 0L) {
-      output.writeInt64(3, ageHours_);
-    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -143,10 +129,6 @@ private static final long serialVersionUID = 0L;
     if (sizeBytes_ != 0L) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(2, sizeBytes_);
-    }
-    if (ageHours_ != 0L) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeInt64Size(3, ageHours_);
     }
     return size;
   }
@@ -176,8 +158,6 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPath())) return false;
     if (getSizeBytes()
         != other.getSizeBytes()) return false;
-    if (getAgeHours()
-        != other.getAgeHours()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -194,9 +174,6 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SIZE_BYTES_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getSizeBytes());
-    hash = (37 * hash) + AGE_HOURS_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-        getAgeHours());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -330,7 +307,6 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       path_ = "";
       sizeBytes_ = 0L;
-      ageHours_ = 0L;
       return this;
     }
 
@@ -370,9 +346,6 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.sizeBytes_ = sizeBytes_;
       }
-      if (((from_bitField0_ & 0x00000004) != 0)) {
-        result.ageHours_ = ageHours_;
-      }
     }
 
     @java.lang.Override
@@ -394,9 +367,6 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getSizeBytes() != 0L) {
         setSizeBytes(other.getSizeBytes());
-      }
-      if (other.getAgeHours() != 0L) {
-        setAgeHours(other.getAgeHours());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -434,11 +404,6 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 16
-            case 24: {
-              ageHours_ = input.readInt64();
-              bitField0_ |= 0x00000004;
-              break;
-            } // case 24
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -530,7 +495,7 @@ private static final long serialVersionUID = 0L;
 
     private long sizeBytes_ ;
     /**
-     * <code>int64 size_bytes = 2 [json_name = "sizeBytes"];</code>
+     * <code>int64 size_bytes = 2 [json_name = "size"];</code>
      * @return The sizeBytes.
      */
     @java.lang.Override
@@ -538,7 +503,7 @@ private static final long serialVersionUID = 0L;
       return sizeBytes_;
     }
     /**
-     * <code>int64 size_bytes = 2 [json_name = "sizeBytes"];</code>
+     * <code>int64 size_bytes = 2 [json_name = "size"];</code>
      * @param value The sizeBytes to set.
      * @return This builder for chaining.
      */
@@ -550,44 +515,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>int64 size_bytes = 2 [json_name = "sizeBytes"];</code>
+     * <code>int64 size_bytes = 2 [json_name = "size"];</code>
      * @return This builder for chaining.
      */
     public Builder clearSizeBytes() {
       bitField0_ = (bitField0_ & ~0x00000002);
       sizeBytes_ = 0L;
-      onChanged();
-      return this;
-    }
-
-    private long ageHours_ ;
-    /**
-     * <code>int64 age_hours = 3 [json_name = "ageHours"];</code>
-     * @return The ageHours.
-     */
-    @java.lang.Override
-    public long getAgeHours() {
-      return ageHours_;
-    }
-    /**
-     * <code>int64 age_hours = 3 [json_name = "ageHours"];</code>
-     * @param value The ageHours to set.
-     * @return This builder for chaining.
-     */
-    public Builder setAgeHours(long value) {
-
-      ageHours_ = value;
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>int64 age_hours = 3 [json_name = "ageHours"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearAgeHours() {
-      bitField0_ = (bitField0_ & ~0x00000004);
-      ageHours_ = 0L;
       onChanged();
       return this;
     }

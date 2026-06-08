@@ -14,8 +14,8 @@ import com.connectrpc.ResponseMessage
  *  HTTP mapping:
  *    GetStatus        GET  /status
  *    GetPerformance   GET  /api/performance (PerformanceApiHandler)
- *    PlayAudioTest    POST /api/audio/test
- *    ListModels       GET  /api/models/
+ *    PlayAudioTest    POST /api/audio/test-avas
+ *    ListModels       GET  /api/models/list
  *    DownloadModel    POST /api/models/download
  */
 public interface SystemServiceClientInterface {

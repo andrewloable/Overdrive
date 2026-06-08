@@ -91,47 +91,46 @@ public final class SafeLocations extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\"bladewatch/v1/safe_locations.proto\022\rbl" +
-      "adewatch.v1\"\251\001\n\010SafeZone\022\016\n\002id\030\001 \001(\tR\002id" +
+      "adewatch.v1\"\250\001\n\010SafeZone\022\016\n\002id\030\001 \001(\tR\002id" +
       "\022\022\n\004name\030\002 \001(\tR\004name\022\020\n\003lat\030\003 \001(\001R\003lat\022\020" +
       "\n\003lng\030\004 \001(\001R\003lng\022\031\n\010radius_m\030\005 \001(\005R\007radi" +
-      "usM\022\026\n\006active\030\006 \001(\010R\006active\022\"\n\rcreated_a" +
-      "t_ms\030\007 \001(\003R\013createdAtMs\"\022\n\020ListZonesRequ" +
-      "est\"\373\001\n\021ListZonesResponse\022-\n\005zones\030\001 \003(\013" +
-      "2\027.bladewatch.v1.SafeZoneR\005zones\022\'\n\017feat" +
-      "ure_enabled\030\002 \001(\010R\016featureEnabled\0223\n\026cur" +
-      "rently_in_safe_zone\030\003 \001(\010R\023currentlyInSa" +
-      "feZone\022\027\n\007has_gps\030\004 \001(\010R\006hasGps\022\037\n\013curre" +
-      "nt_lat\030\005 \001(\001R\ncurrentLat\022\037\n\013current_lng\030" +
-      "\006 \001(\001R\ncurrentLng\"c\n\016AddZoneRequest\022\022\n\004n" +
-      "ame\030\001 \001(\tR\004name\022\020\n\003lat\030\002 \001(\001R\003lat\022\020\n\003lng" +
-      "\030\003 \001(\001R\003lng\022\031\n\010radius_m\030\004 \001(\005R\007radiusM\"n" +
-      "\n\017AddZoneResponse\022\030\n\007success\030\001 \001(\010R\007succ" +
-      "ess\022+\n\004zone\030\002 \001(\0132\027.bladewatch.v1.SafeZo" +
-      "neR\004zone\022\024\n\005error\030\003 \001(\tR\005error\"v\n\021Update" +
-      "ZoneRequest\022\016\n\002id\030\001 \001(\tR\002id\022\022\n\004name\030\002 \001(" +
-      "\tR\004name\022\020\n\003lat\030\003 \001(\001R\003lat\022\020\n\003lng\030\004 \001(\001R\003" +
-      "lng\022\031\n\010radius_m\030\005 \001(\005R\007radiusM\"D\n\022Update" +
-      "ZoneResponse\022\030\n\007success\030\001 \001(\010R\007success\022\024" +
-      "\n\005error\030\002 \001(\tR\005error\"#\n\021DeleteZoneReques" +
-      "t\022\016\n\002id\030\001 \001(\tR\002id\"D\n\022DeleteZoneResponse\022" +
-      "\030\n\007success\030\001 \001(\010R\007success\022\024\n\005error\030\002 \001(\t" +
-      "R\005error\"W\n\032ToggleSafeLocationsRequest\022\030\n" +
-      "\007enabled\030\001 \001(\010R\007enabled\022\037\n\013enabled_set\030\002" +
-      " \001(\010R\nenabledSet\"Q\n\033ToggleSafeLocationsR" +
-      "esponse\022\030\n\007success\030\001 \001(\010R\007success\022\030\n\007ena" +
-      "bled\030\002 \001(\010R\007enabled2\267\003\n\024SafeLocationsSer" +
-      "vice\022N\n\tListZones\022\037.bladewatch.v1.ListZo" +
-      "nesRequest\032 .bladewatch.v1.ListZonesResp" +
-      "onse\022H\n\007AddZone\022\035.bladewatch.v1.AddZoneR" +
-      "equest\032\036.bladewatch.v1.AddZoneResponse\022Q" +
-      "\n\nUpdateZone\022 .bladewatch.v1.UpdateZoneR" +
-      "equest\032!.bladewatch.v1.UpdateZoneRespons" +
-      "e\022Q\n\nDeleteZone\022 .bladewatch.v1.DeleteZo" +
-      "neRequest\032!.bladewatch.v1.DeleteZoneResp" +
-      "onse\022_\n\006Toggle\022).bladewatch.v1.ToggleSaf" +
-      "eLocationsRequest\032*.bladewatch.v1.Toggle" +
-      "SafeLocationsResponseB\036\n\032net.bladewatch." +
-      "app.grpc.v1P\001b\006proto3"
+      "usM\022\027\n\006active\030\006 \001(\010R\007enabled\022 \n\rcreated_" +
+      "at_ms\030\007 \001(\003R\tcreatedAt\"\022\n\020ListZonesReque" +
+      "st\"\344\001\n\021ListZonesResponse\022-\n\005zones\030\001 \003(\0132" +
+      "\027.bladewatch.v1.SafeZoneR\005zones\022\'\n\017featu" +
+      "re_enabled\030\002 \001(\010R\016featureEnabled\022*\n\026curr" +
+      "ently_in_safe_zone\030\003 \001(\010R\ninSafeZone\022\027\n\007" +
+      "has_gps\030\004 \001(\010R\006hasGps\022\030\n\013current_lat\030\005 \001" +
+      "(\001R\003lat\022\030\n\013current_lng\030\006 \001(\001R\003lng\"c\n\016Add" +
+      "ZoneRequest\022\022\n\004name\030\001 \001(\tR\004name\022\020\n\003lat\030\002" +
+      " \001(\001R\003lat\022\020\n\003lng\030\003 \001(\001R\003lng\022\031\n\010radius_m\030" +
+      "\004 \001(\005R\007radiusM\"n\n\017AddZoneResponse\022\030\n\007suc" +
+      "cess\030\001 \001(\010R\007success\022+\n\004zone\030\002 \001(\0132\027.blad" +
+      "ewatch.v1.SafeZoneR\004zone\022\024\n\005error\030\003 \001(\tR" +
+      "\005error\"v\n\021UpdateZoneRequest\022\016\n\002id\030\001 \001(\tR" +
+      "\002id\022\022\n\004name\030\002 \001(\tR\004name\022\020\n\003lat\030\003 \001(\001R\003la" +
+      "t\022\020\n\003lng\030\004 \001(\001R\003lng\022\031\n\010radius_m\030\005 \001(\005R\007r" +
+      "adiusM\"D\n\022UpdateZoneResponse\022\030\n\007success\030" +
+      "\001 \001(\010R\007success\022\024\n\005error\030\002 \001(\tR\005error\"#\n\021" +
+      "DeleteZoneRequest\022\016\n\002id\030\001 \001(\tR\002id\"D\n\022Del" +
+      "eteZoneResponse\022\030\n\007success\030\001 \001(\010R\007succes" +
+      "s\022\024\n\005error\030\002 \001(\tR\005error\"W\n\032ToggleSafeLoc" +
+      "ationsRequest\022\030\n\007enabled\030\001 \001(\010R\007enabled\022" +
+      "\037\n\013enabled_set\030\002 \001(\010R\nenabledSet\"Q\n\033Togg" +
+      "leSafeLocationsResponse\022\030\n\007success\030\001 \001(\010" +
+      "R\007success\022\030\n\007enabled\030\002 \001(\010R\007enabled2\267\003\n\024" +
+      "SafeLocationsService\022N\n\tListZones\022\037.blad" +
+      "ewatch.v1.ListZonesRequest\032 .bladewatch." +
+      "v1.ListZonesResponse\022H\n\007AddZone\022\035.bladew" +
+      "atch.v1.AddZoneRequest\032\036.bladewatch.v1.A" +
+      "ddZoneResponse\022Q\n\nUpdateZone\022 .bladewatc" +
+      "h.v1.UpdateZoneRequest\032!.bladewatch.v1.U" +
+      "pdateZoneResponse\022Q\n\nDeleteZone\022 .bladew" +
+      "atch.v1.DeleteZoneRequest\032!.bladewatch.v" +
+      "1.DeleteZoneResponse\022_\n\006Toggle\022).bladewa" +
+      "tch.v1.ToggleSafeLocationsRequest\032*.blad" +
+      "ewatch.v1.ToggleSafeLocationsResponseB\036\n" +
+      "\032net.bladewatch.app.grpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

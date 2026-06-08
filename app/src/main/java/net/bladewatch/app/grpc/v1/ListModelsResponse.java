@@ -49,17 +49,6 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.ListModelsResponse.class, net.bladewatch.app.grpc.v1.ListModelsResponse.Builder.class);
   }
 
-  public static final int SUCCESS_FIELD_NUMBER = 1;
-  private boolean success_ = false;
-  /**
-   * <code>bool success = 1 [json_name = "success"];</code>
-   * @return The success.
-   */
-  @java.lang.Override
-  public boolean getSuccess() {
-    return success_;
-  }
-
   public static final int MODELS_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
   private java.util.List<net.bladewatch.app.grpc.v1.ModelInfo> models_;
@@ -115,9 +104,6 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (success_ != false) {
-      output.writeBool(1, success_);
-    }
     for (int i = 0; i < models_.size(); i++) {
       output.writeMessage(2, models_.get(i));
     }
@@ -125,10 +111,6 @@ private static final long serialVersionUID = 0L;
   }
   private int computeSerializedSize_0() {
     int size = 0;
-    if (success_ != false) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(1, success_);
-    }
 
         {
           final int count = models_.size();
@@ -162,8 +144,6 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.ListModelsResponse other = (net.bladewatch.app.grpc.v1.ListModelsResponse) obj;
 
-    if (getSuccess()
-        != other.getSuccess()) return false;
     if (!getModelsList()
         .equals(other.getModelsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -177,9 +157,6 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + SUCCESS_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getSuccess());
     if (getModelsCount() > 0) {
       hash = (37 * hash) + MODELS_FIELD_NUMBER;
       hash = (53 * hash) + getModelsList().hashCode();
@@ -315,14 +292,13 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      success_ = false;
       if (modelsBuilder_ == null) {
         models_ = java.util.Collections.emptyList();
       } else {
         models_ = null;
         modelsBuilder_.clear();
       }
-      bitField0_ = (bitField0_ & ~0x00000002);
+      bitField0_ = (bitField0_ & ~0x00000001);
       return this;
     }
 
@@ -357,9 +333,9 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartialRepeatedFields(net.bladewatch.app.grpc.v1.ListModelsResponse result) {
       if (modelsBuilder_ == null) {
-        if (((bitField0_ & 0x00000002) != 0)) {
+        if (((bitField0_ & 0x00000001) != 0)) {
           models_ = java.util.Collections.unmodifiableList(models_);
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000001);
         }
         result.models_ = models_;
       } else {
@@ -369,9 +345,6 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartial0(net.bladewatch.app.grpc.v1.ListModelsResponse result) {
       int from_bitField0_ = bitField0_;
-      if (((from_bitField0_ & 0x00000001) != 0)) {
-        result.success_ = success_;
-      }
     }
 
     @java.lang.Override
@@ -386,14 +359,11 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.ListModelsResponse other) {
       if (other == net.bladewatch.app.grpc.v1.ListModelsResponse.getDefaultInstance()) return this;
-      if (other.getSuccess() != false) {
-        setSuccess(other.getSuccess());
-      }
       if (modelsBuilder_ == null) {
         if (!other.models_.isEmpty()) {
           if (models_.isEmpty()) {
             models_ = other.models_;
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000001);
           } else {
             ensureModelsIsMutable();
             models_.addAll(other.models_);
@@ -406,7 +376,7 @@ private static final long serialVersionUID = 0L;
             modelsBuilder_.dispose();
             modelsBuilder_ = null;
             models_ = other.models_;
-            bitField0_ = (bitField0_ & ~0x00000002);
+            bitField0_ = (bitField0_ & ~0x00000001);
             modelsBuilder_ = 
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetModelsFieldBuilder() : null;
@@ -441,11 +411,6 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 8: {
-              success_ = input.readBool();
-              bitField0_ |= 0x00000001;
-              break;
-            } // case 8
             case 18: {
               net.bladewatch.app.grpc.v1.ModelInfo m =
                   input.readMessage(
@@ -476,44 +441,12 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private boolean success_ ;
-    /**
-     * <code>bool success = 1 [json_name = "success"];</code>
-     * @return The success.
-     */
-    @java.lang.Override
-    public boolean getSuccess() {
-      return success_;
-    }
-    /**
-     * <code>bool success = 1 [json_name = "success"];</code>
-     * @param value The success to set.
-     * @return This builder for chaining.
-     */
-    public Builder setSuccess(boolean value) {
-
-      success_ = value;
-      bitField0_ |= 0x00000001;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>bool success = 1 [json_name = "success"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearSuccess() {
-      bitField0_ = (bitField0_ & ~0x00000001);
-      success_ = false;
-      onChanged();
-      return this;
-    }
-
     private java.util.List<net.bladewatch.app.grpc.v1.ModelInfo> models_ =
       java.util.Collections.emptyList();
     private void ensureModelsIsMutable() {
-      if (!((bitField0_ & 0x00000002) != 0)) {
+      if (!((bitField0_ & 0x00000001) != 0)) {
         models_ = new java.util.ArrayList<net.bladewatch.app.grpc.v1.ModelInfo>(models_);
-        bitField0_ |= 0x00000002;
+        bitField0_ |= 0x00000001;
        }
     }
 
@@ -663,7 +596,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearModels() {
       if (modelsBuilder_ == null) {
         models_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
       } else {
         modelsBuilder_.clear();
@@ -740,7 +673,7 @@ private static final long serialVersionUID = 0L;
         modelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
             net.bladewatch.app.grpc.v1.ModelInfo, net.bladewatch.app.grpc.v1.ModelInfo.Builder, net.bladewatch.app.grpc.v1.ModelInfoOrBuilder>(
                 models_,
-                ((bitField0_ & 0x00000002) != 0),
+                ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
                 isClean());
         models_ = null;

@@ -101,8 +101,10 @@ message GetSurveillanceStatusRequest {}
 message GetSurveillanceStatusResponse {
   bool pipeline_running = 1;
   bool surveillance_active = 2;
-  // Camera IDs currently feeding the pipeline.
-  repeated int32 active_cameras = 3;
+  // active_cameras (3) removed: the daemon never populates it and no consumer reads it
+  // (clients read pipeline_running / surveillance_active only).
+  reserved 3;
+  reserved "active_cameras";
   string error = 4;
 }
 
@@ -123,9 +125,31 @@ message DisableSurveillanceResponse {
 
 message GetHeatmapRequest {}
 
+// HeatmapQuadrant is one of the four quadrants in the motion heatmap grid.
+// Field JSON names already match the REST handler's camelCase keys (no json_name needed).
+message HeatmapQuadrant {
+  int32 id = 1;
+  string name = 2;
+  bool enabled = 3;
+  bool suppressed = 4;
+  double mean_luma = 5;
+  int32 active_blocks = 6;
+  int32 confirmed_blocks = 7;
+  int32 threat_level = 8;
+  int32 component_size = 9;
+  // Per-block motion confidence (only present for enabled quadrants).
+  repeated double confidence = 10;
+}
+
+// GetHeatmapResponse matches SurveillanceApiHandler.sendHeatmap: a motion grid descriptor, NOT a
+// JPEG. (was: bytes image_jpeg = 1.)
 message GetHeatmapResponse {
-  // JPEG-encoded heatmap image bytes.
-  bytes image_jpeg = 1;
+  reserved 1;
+  reserved "image_jpeg";
+  int32 grid_cols = 2;
+  int32 grid_rows = 3;
+  int32 view_mode = 4;
+  repeated HeatmapQuadrant quadrants = 5;
 }
 
 message GetSnapshotRequest {
@@ -141,14 +165,12 @@ message GetSnapshotResponse {
 
 message GetFilterLogRequest {}
 
-message FilterLogEntry {
-  int64 timestamp_ms = 1;
-  string reason = 2;
-  string details = 3;
-}
-
+// GetFilterLogResponse matches SurveillanceApiHandler.sendFilterLog: the handler emits plain string
+// log lines plus a count (was: repeated FilterLogEntry structs, which the handler never produced).
 message GetFilterLogResponse {
-  repeated FilterLogEntry entries = 1;
+  reserved 1; // was repeated FilterLogEntry entries
+  repeated string entries = 2;
+  int32 count = 3;
 }
 
 message SyncSurveillanceCatalogRequest {}

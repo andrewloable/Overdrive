@@ -41,7 +41,7 @@ public interface GetQualityResponseOrBuilder extends
    * Current codec name ("H264" or "H265").
    * </pre>
    *
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The codec.
    */
   java.lang.String getCodec();
@@ -50,7 +50,7 @@ public interface GetQualityResponseOrBuilder extends
    * Current codec name ("H264" or "H265").
    * </pre>
    *
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The bytes for codec.
    */
   com.google.protobuf.ByteString
@@ -61,7 +61,7 @@ public interface GetQualityResponseOrBuilder extends
    * Current FPS setting.
    * </pre>
    *
-   * <code>int32 fps = 4 [json_name = "fps"];</code>
+   * <code>int32 fps = 4 [json_name = "cameraFps"];</code>
    * @return The fps.
    */
   int getFps();

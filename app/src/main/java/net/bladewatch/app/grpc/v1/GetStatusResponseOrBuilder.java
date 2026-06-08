@@ -322,26 +322,6 @@ public interface GetStatusResponseOrBuilder extends
   net.bladewatch.app.grpc.v1.TripStatusOrBuilder getTripStatusOrBuilder();
 
   /**
-   * <pre>
-   * Serialised JSON blob from GpsMonitor.getLocationJson().
-   * </pre>
-   *
-   * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-   * @return The gpsJson.
-   */
-  java.lang.String getGpsJson();
-  /**
-   * <pre>
-   * Serialised JSON blob from GpsMonitor.getLocationJson().
-   * </pre>
-   *
-   * <code>string gps_json = 22 [json_name = "gpsJson"];</code>
-   * @return The bytes for gpsJson.
-   */
-  com.google.protobuf.ByteString
-      getGpsJsonBytes();
-
-  /**
    * <code>.bladewatch.v1.NetworkInfo network = 23 [json_name = "network"];</code>
    * @return Whether the network field is set.
    */

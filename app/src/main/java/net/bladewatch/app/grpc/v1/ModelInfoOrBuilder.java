@@ -23,18 +23,6 @@ public interface ModelInfoOrBuilder extends
       getNameBytes();
 
   /**
-   * <code>string url = 2 [json_name = "url"];</code>
-   * @return The url.
-   */
-  java.lang.String getUrl();
-  /**
-   * <code>string url = 2 [json_name = "url"];</code>
-   * @return The bytes for url.
-   */
-  com.google.protobuf.ByteString
-      getUrlBytes();
-
-  /**
    * <code>bool downloaded = 3 [json_name = "downloaded"];</code>
    * @return The downloaded.
    */

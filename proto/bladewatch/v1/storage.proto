@@ -55,20 +55,20 @@ message GetStorageSettingsResponse {
   int64 max_limit_mb_sd_card = 6;
   string recordings_path = 7;
   string surveillance_path = 8;
-  int64 recordings_size_bytes = 9;
-  int64 surveillance_size_bytes = 10;
+  int64 recordings_size_bytes = 9 [json_name = "recordingsSize"];
+  int64 surveillance_size_bytes = 10 [json_name = "surveillanceSize"];
   int32 recordings_count = 11;
   int32 surveillance_count = 12;
   string recordings_storage_type = 13;
   string surveillance_storage_type = 14;
   bool sd_card_available = 15;
   string sd_card_path = 16;
-  int64 sd_card_free_bytes = 17;
-  int64 sd_card_total_bytes = 18;
+  int64 sd_card_free_bytes = 17 [json_name = "sdCardFreeSpace"];
+  int64 sd_card_total_bytes = 18 [json_name = "sdCardTotalSpace"];
   string sd_card_free_formatted = 19;
   string sd_card_total_formatted = 20;
-  int64 internal_free_bytes = 21;
-  int64 internal_total_bytes = 22;
+  int64 internal_free_bytes = 21 [json_name = "internalFreeSpace"];
+  int64 internal_total_bytes = 22 [json_name = "internalTotalSpace"];
   string internal_free_formatted = 23;
   string internal_total_formatted = 24;
 }
@@ -91,18 +91,18 @@ message GetExternalStorageResponse {
   bool success = 1;
   bool sd_card_available = 2;
   string sd_card_path = 3;
-  int64 sd_card_free_bytes = 4;
-  int64 sd_card_total_bytes = 5;
+  int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];
+  int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];
   string sd_card_free_formatted = 6;
   string sd_card_total_formatted = 7;
   int32 sd_card_used_percent = 8;
   string cdr_path = 9;
-  int64 cdr_usage_bytes = 10;
+  int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];
   string cdr_usage_formatted = 11;
   int32 cdr_file_count = 12;
-  int64 cdr_protected_bytes = 13;
+  int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];
   string cdr_protected_formatted = 14;
-  int64 cdr_deletable_bytes = 15;
+  int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];
   string cdr_deletable_formatted = 16;
   bool cleanup_enabled = 17;
   int64 reserved_space_mb = 18;
@@ -112,7 +112,7 @@ message GetExternalStorageResponse {
   int64 total_bytes_freed = 22;
   string total_bytes_freed_formatted = 23;
   int32 total_files_deleted = 24;
-  int64 last_cleanup_time_ms = 25;
+  int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];
   bool bladewatch_uses_sd_card = 26;
   bool recommend_auto_cleanup = 27;
 }
@@ -145,19 +145,24 @@ message TriggerCleanupResponse {
   string error = 5;
 }
 
-message PreviewCleanupRequest {}
+message PreviewCleanupRequest {
+  // Optional target bytes to free for the preview. 0 = use the handler default (500 MB).
+  // Passed to the REST handler as the ?bytesToFree= query param.
+  int64 bytes_to_free = 1;
+}
 
 message PreviewCleanupFile {
   string path = 1;
-  int64 size_bytes = 2;
-  int64 age_hours = 3;
+  int64 size_bytes = 2 [json_name = "size"];
+  reserved 3; // was age_hours — never emitted by the REST handler (no data source)
+  reserved "age_hours";
 }
 
 message PreviewCleanupResponse {
   bool success = 1;
   repeated PreviewCleanupFile files = 2;
-  int64 total_deletable_bytes = 3;
-  int32 total_deletable_count = 4;
+  int64 total_deletable_bytes = 3 [json_name = "totalSize"];
+  int32 total_deletable_count = 4 [json_name = "fileCount"];
 }
 
 message RefreshExternalStorageRequest {}

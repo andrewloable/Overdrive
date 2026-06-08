@@ -48,8 +48,19 @@ public class SystemServiceImpl {
     }
 
     private ConnectResponse handleGetPerformance(String req, String clientIdentity) throws ConnectException {
-        return ConnectHandlerUtil.captureString(out ->
+        // The REST handler returns the raw performance object; the proto + Angular consumer expect
+        // GetPerformanceResponse{success, performance_json:"<stringified raw>"}. Wrap on the Connect
+        // side only — the REST handler output is left untouched for the legacy web UI.
+        ConnectResponse raw = ConnectHandlerUtil.captureString(out ->
                 PerformanceApiHandler.handle("GET", "/api/performance", null, out));
+        try {
+            org.json.JSONObject wrapped = new org.json.JSONObject();
+            wrapped.put("success", true);
+            wrapped.put("performanceJson", raw.body);
+            return ConnectResponse.of(wrapped.toString());
+        } catch (Exception e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
     }
 
     private ConnectResponse handlePlayAudioTest(String req, String clientIdentity) throws ConnectException {

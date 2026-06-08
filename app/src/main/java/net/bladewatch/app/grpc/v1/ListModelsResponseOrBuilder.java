@@ -11,12 +11,6 @@ public interface ListModelsResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>bool success = 1 [json_name = "success"];</code>
-   * @return The success.
-   */
-  boolean getSuccess();
-
-  /**
    * <code>repeated .bladewatch.v1.ModelInfo models = 2 [json_name = "models"];</code>
    */
   java.util.List<net.bladewatch.app.grpc.v1.ModelInfo> 

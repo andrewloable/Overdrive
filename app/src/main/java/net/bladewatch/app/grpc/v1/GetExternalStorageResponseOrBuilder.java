@@ -35,13 +35,13 @@ public interface GetExternalStorageResponseOrBuilder extends
       getSdCardPathBytes();
 
   /**
-   * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFreeBytes"];</code>
+   * <code>int64 sd_card_free_bytes = 4 [json_name = "sdCardFree"];</code>
    * @return The sdCardFreeBytes.
    */
   long getSdCardFreeBytes();
 
   /**
-   * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotalBytes"];</code>
+   * <code>int64 sd_card_total_bytes = 5 [json_name = "sdCardTotal"];</code>
    * @return The sdCardTotalBytes.
    */
   long getSdCardTotalBytes();
@@ -89,7 +89,7 @@ public interface GetExternalStorageResponseOrBuilder extends
       getCdrPathBytes();
 
   /**
-   * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsageBytes"];</code>
+   * <code>int64 cdr_usage_bytes = 10 [json_name = "cdrUsage"];</code>
    * @return The cdrUsageBytes.
    */
   long getCdrUsageBytes();
@@ -113,7 +113,7 @@ public interface GetExternalStorageResponseOrBuilder extends
   int getCdrFileCount();
 
   /**
-   * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedBytes"];</code>
+   * <code>int64 cdr_protected_bytes = 13 [json_name = "cdrProtectedSize"];</code>
    * @return The cdrProtectedBytes.
    */
   long getCdrProtectedBytes();
@@ -131,7 +131,7 @@ public interface GetExternalStorageResponseOrBuilder extends
       getCdrProtectedFormattedBytes();
 
   /**
-   * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableBytes"];</code>
+   * <code>int64 cdr_deletable_bytes = 15 [json_name = "cdrDeletableSize"];</code>
    * @return The cdrDeletableBytes.
    */
   long getCdrDeletableBytes();
@@ -203,7 +203,7 @@ public interface GetExternalStorageResponseOrBuilder extends
   int getTotalFilesDeleted();
 
   /**
-   * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTimeMs"];</code>
+   * <code>int64 last_cleanup_time_ms = 25 [json_name = "lastCleanupTime"];</code>
    * @return The lastCleanupTimeMs.
    */
   long getLastCleanupTimeMs();

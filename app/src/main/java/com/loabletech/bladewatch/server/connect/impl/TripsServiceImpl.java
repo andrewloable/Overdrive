@@ -8,6 +8,7 @@ import net.bladewatch.app.server.connect.ConnectResponse;
 import net.bladewatch.app.trips.TripAnalyticsManager;
 import net.bladewatch.app.trips.TripApiHandler;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -67,7 +68,11 @@ public class TripsServiceImpl {
                 this::handleGetGpsTrace);
     }
 
-    private ConnectResponse invoke(String method, String uri, String body) throws ConnectException {
+    /**
+     * Run the REST handler and return its JSON body (after HTTP status check), so callers can
+     * reshape the payload to match the proto wire shape before serialising.
+     */
+    private JSONObject invokeJson(String method, String uri, String body) throws ConnectException {
         TripAnalyticsManager tam = CameraDaemon.getTripAnalyticsManager();
         if (tam == null) {
             throw new ConnectException("unavailable", "Trip analytics not initialized");
@@ -90,7 +95,29 @@ public class TripsServiceImpl {
                     : "internal";
             throw new ConnectException(code, error);
         }
-        return ConnectResponse.of(result.toString());
+        return result;
+    }
+
+    private ConnectResponse invoke(String method, String uri, String body) throws ConnectException {
+        return ConnectResponse.of(invokeJson(method, uri, body).toString());
+    }
+
+    /**
+     * Wrap each element of a JSON array under {@code field} as a stringified-JSON blob, matching
+     * proto messages that model the element as a single opaque {@code string <field>_json}.
+     * e.g. telemetry [{t,s,..}] → [{"sampleJson":"{...}"}] so the Kotlin/TS client parses the blob.
+     */
+    private static void wrapArrayAsJsonBlob(JSONObject root, String arrayKey, String blobField)
+            throws org.json.JSONException {
+        JSONArray arr = root.optJSONArray(arrayKey);
+        if (arr == null) return;
+        JSONArray wrapped = new JSONArray();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject el = arr.optJSONObject(i);
+            if (el == null) continue;
+            wrapped.put(new JSONObject().put(blobField, el.toString()));
+        }
+        root.put(arrayKey, wrapped);
     }
 
     private ConnectResponse handleListTrips(String req, String clientIdentity) throws ConnectException {
@@ -99,7 +126,20 @@ public class TripsServiceImpl {
 
     private ConnectResponse handleGetTrip(String req, String clientIdentity) throws ConnectException {
         long id = ConnectHandlerUtil.requireLong(req, "id");
-        return invoke("GET", "/api/trips/" + id, req);
+        JSONObject result = invokeJson("GET", "/api/trips/" + id, req);
+        // TripApiHandler emits a FLAT trip object; the proto TripDetail expects a nested `summary`
+        // (TripSummary) plus the DNA/elevation/micro_moments fields at the top level. Nest a copy of
+        // the flat trip under `summary` — TripSummary parsing ignores the extra keys, and the
+        // top-level TripDetail fields still parse from the flat trip.
+        try {
+            JSONObject trip = result.optJSONObject("trip");
+            if (trip != null && !trip.has("summary")) {
+                trip.put("summary", new JSONObject(trip.toString()));
+            }
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
+        return ConnectResponse.of(result.toString());
     }
 
     private ConnectResponse handleDeleteTrip(String req, String clientIdentity) throws ConnectException {
@@ -108,7 +148,14 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetSummary(String req, String clientIdentity) throws ConnectException {
-        return invoke("GET", "/api/trips/summary", req);
+        JSONObject result = invokeJson("GET", "/api/trips/summary", req);
+        // proto WeeklyRollupEntry models each entry as a single string rollup_json blob.
+        try {
+            wrapArrayAsJsonBlob(result, "summary", "rollupJson");
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
+        return ConnectResponse.of(result.toString());
     }
 
     private ConnectResponse handleGetDna(String req, String clientIdentity) throws ConnectException {
@@ -116,7 +163,19 @@ public class TripsServiceImpl {
     }
 
     private ConnectResponse handleGetRange(String req, String clientIdentity) throws ConnectException {
-        return invoke("GET", "/api/trips/range", req);
+        JSONObject result = invokeJson("GET", "/api/trips/range", req);
+        // proto GetRangeResponse models the estimate as a single string range_json blob; the handler
+        // emits it as a nested `range` object.
+        try {
+            JSONObject range = result.optJSONObject("range");
+            if (range != null) {
+                result.put("rangeJson", range.toString());
+                result.remove("range");
+            }
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
+        return ConnectResponse.of(result.toString());
     }
 
     private ConnectResponse handleGetConfig(String req, String clientIdentity) throws ConnectException {
@@ -141,7 +200,14 @@ public class TripsServiceImpl {
 
     private ConnectResponse handleGetTelemetry(String req, String clientIdentity) throws ConnectException {
         long id = ConnectHandlerUtil.requireLong(req, "id");
-        return invoke("GET", "/api/trips/" + id + "/telemetry", req);
+        JSONObject result = invokeJson("GET", "/api/trips/" + id + "/telemetry", req);
+        // proto TelemetrySample models each sample as a single string sample_json blob.
+        try {
+            wrapArrayAsJsonBlob(result, "telemetry", "sampleJson");
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
+        return ConnectResponse.of(result.toString());
     }
 
     private ConnectResponse handleGetSimilarTrips(String req, String clientIdentity) throws ConnectException {
@@ -151,6 +217,22 @@ public class TripsServiceImpl {
 
     private ConnectResponse handleGetGpsTrace(String req, String clientIdentity) throws ConnectException {
         long id = ConnectHandlerUtil.requireLong(req, "id");
-        return invoke("GET", "/api/trips/" + id + "/gps", req);
+        JSONObject result = invokeJson("GET", "/api/trips/" + id + "/gps", req);
+        // Handler emits gps as positional arrays [[lat,lon],...]; proto GpsPoint expects {lat,lon}.
+        try {
+            JSONArray gps = result.optJSONArray("gps");
+            if (gps != null) {
+                JSONArray pts = new JSONArray();
+                for (int i = 0; i < gps.length(); i++) {
+                    JSONArray p = gps.optJSONArray(i);
+                    if (p == null || p.length() < 2) continue;
+                    pts.put(new JSONObject().put("lat", p.optDouble(0)).put("lon", p.optDouble(1)));
+                }
+                result.put("gps", pts);
+            }
+        } catch (org.json.JSONException e) {
+            throw new ConnectException("internal", "An internal error occurred");
+        }
+        return ConnectResponse.of(result.toString());
     }
 }

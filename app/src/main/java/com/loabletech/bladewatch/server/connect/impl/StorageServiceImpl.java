@@ -74,8 +74,18 @@ public class StorageServiceImpl {
     }
 
     private ConnectResponse handlePreviewCleanup(String req, String clientIdentity) throws ConnectException {
+        // Optional bytes_to_free (canonical JSON "bytesToFree"); 0/absent = handler default.
+        long bytesToFree = 0L;
+        if (req != null && !req.isEmpty()) {
+            try {
+                bytesToFree = new org.json.JSONObject(req).optLong("bytesToFree", 0L);
+            } catch (Exception ignored) {}
+        }
+        final String path = bytesToFree > 0
+                ? "/api/storage/external/preview?bytesToFree=" + bytesToFree
+                : "/api/storage/external/preview";
         return ConnectHandlerUtil.captureString(out ->
-                ExternalStorageApiHandler.handle("/api/storage/external/preview", "GET", null, out));
+                ExternalStorageApiHandler.handle(path, "GET", null, out));
     }
 
     private ConnectResponse handleRefreshExternalStorage(String req, String clientIdentity) throws ConnectException {

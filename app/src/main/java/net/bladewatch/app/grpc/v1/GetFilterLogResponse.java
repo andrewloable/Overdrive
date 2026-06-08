@@ -6,6 +6,11 @@
 package net.bladewatch.app.grpc.v1;
 
 /**
+ * <pre>
+ * GetFilterLogResponse matches SurveillanceApiHandler.sendFilterLog: the handler emits plain string
+ * log lines plus a count (was: repeated FilterLogEntry structs, which the handler never produced).
+ * </pre>
+ *
  * Protobuf type {@code bladewatch.v1.GetFilterLogResponse}
  */
 @com.google.protobuf.Generated
@@ -28,7 +33,8 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private GetFilterLogResponse() {
-    entries_ = java.util.Collections.emptyList();
+    entries_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -49,45 +55,52 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.GetFilterLogResponse.class, net.bladewatch.app.grpc.v1.GetFilterLogResponse.Builder.class);
   }
 
-  public static final int ENTRIES_FIELD_NUMBER = 1;
+  public static final int ENTRIES_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry> entries_;
+  private com.google.protobuf.LazyStringArrayList entries_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @return A list containing the entries.
    */
-  @java.lang.Override
-  public java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry> getEntriesList() {
+  public com.google.protobuf.ProtocolStringList
+      getEntriesList() {
     return entries_;
   }
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @return The count of entries.
    */
-  @java.lang.Override
-  public java.util.List<? extends net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder> 
-      getEntriesOrBuilderList() {
-    return entries_;
-  }
-  /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-   */
-  @java.lang.Override
   public int getEntriesCount() {
     return entries_.size();
   }
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @param index The index of the element to return.
+   * @return The entries at the given index.
    */
-  @java.lang.Override
-  public net.bladewatch.app.grpc.v1.FilterLogEntry getEntries(int index) {
+  public java.lang.String getEntries(int index) {
     return entries_.get(index);
   }
   /**
-   * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+   * <code>repeated string entries = 2 [json_name = "entries"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the entries at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getEntriesBytes(int index) {
+    return entries_.getByteString(index);
+  }
+
+  public static final int COUNT_FIELD_NUMBER = 3;
+  private int count_ = 0;
+  /**
+   * <code>int32 count = 3 [json_name = "count"];</code>
+   * @return The count.
    */
   @java.lang.Override
-  public net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder getEntriesOrBuilder(
-      int index) {
-    return entries_.get(index);
+  public int getCount() {
+    return count_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -105,21 +118,27 @@ private static final long serialVersionUID = 0L;
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     for (int i = 0; i < entries_.size(); i++) {
-      output.writeMessage(1, entries_.get(i));
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, entries_.getRaw(i));
+    }
+    if (count_ != 0) {
+      output.writeInt32(3, count_);
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-
-        {
-          final int count = entries_.size();
-          for (int i = 0; i < count; i++) {
-            size += com.google.protobuf.CodedOutputStream
-              .computeMessageSizeNoTag(entries_.get(i));
-          }
-          size += 1 * count;
-        }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < entries_.size(); i++) {
+        dataSize += computeStringSizeNoTag(entries_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getEntriesList().size();
+    }
+    if (count_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(3, count_);
+    }
     return size;
   }
   @java.lang.Override
@@ -146,6 +165,8 @@ private static final long serialVersionUID = 0L;
 
     if (!getEntriesList()
         .equals(other.getEntriesList())) return false;
+    if (getCount()
+        != other.getCount()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -161,6 +182,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ENTRIES_FIELD_NUMBER;
       hash = (53 * hash) + getEntriesList().hashCode();
     }
+    hash = (37 * hash) + COUNT_FIELD_NUMBER;
+    hash = (53 * hash) + getCount();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -259,6 +282,11 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * GetFilterLogResponse matches SurveillanceApiHandler.sendFilterLog: the handler emits plain string
+   * log lines plus a count (was: repeated FilterLogEntry structs, which the handler never produced).
+   * </pre>
+   *
    * Protobuf type {@code bladewatch.v1.GetFilterLogResponse}
    */
   public static final class Builder extends
@@ -292,13 +320,9 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      if (entriesBuilder_ == null) {
-        entries_ = java.util.Collections.emptyList();
-      } else {
-        entries_ = null;
-        entriesBuilder_.clear();
-      }
-      bitField0_ = (bitField0_ & ~0x00000001);
+      entries_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
+      count_ = 0;
       return this;
     }
 
@@ -325,26 +349,20 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public net.bladewatch.app.grpc.v1.GetFilterLogResponse buildPartial() {
       net.bladewatch.app.grpc.v1.GetFilterLogResponse result = new net.bladewatch.app.grpc.v1.GetFilterLogResponse(this);
-      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(net.bladewatch.app.grpc.v1.GetFilterLogResponse result) {
-      if (entriesBuilder_ == null) {
-        if (((bitField0_ & 0x00000001) != 0)) {
-          entries_ = java.util.Collections.unmodifiableList(entries_);
-          bitField0_ = (bitField0_ & ~0x00000001);
-        }
-        result.entries_ = entries_;
-      } else {
-        result.entries_ = entriesBuilder_.build();
-      }
-    }
-
     private void buildPartial0(net.bladewatch.app.grpc.v1.GetFilterLogResponse result) {
       int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        entries_.makeImmutable();
+        result.entries_ = entries_;
+      }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.count_ = count_;
+      }
     }
 
     @java.lang.Override
@@ -359,31 +377,18 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.GetFilterLogResponse other) {
       if (other == net.bladewatch.app.grpc.v1.GetFilterLogResponse.getDefaultInstance()) return this;
-      if (entriesBuilder_ == null) {
-        if (!other.entries_.isEmpty()) {
-          if (entries_.isEmpty()) {
-            entries_ = other.entries_;
-            bitField0_ = (bitField0_ & ~0x00000001);
-          } else {
-            ensureEntriesIsMutable();
-            entries_.addAll(other.entries_);
-          }
-          onChanged();
+      if (!other.entries_.isEmpty()) {
+        if (entries_.isEmpty()) {
+          entries_ = other.entries_;
+          bitField0_ |= 0x00000001;
+        } else {
+          ensureEntriesIsMutable();
+          entries_.addAll(other.entries_);
         }
-      } else {
-        if (!other.entries_.isEmpty()) {
-          if (entriesBuilder_.isEmpty()) {
-            entriesBuilder_.dispose();
-            entriesBuilder_ = null;
-            entries_ = other.entries_;
-            bitField0_ = (bitField0_ & ~0x00000001);
-            entriesBuilder_ = 
-              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                 internalGetEntriesFieldBuilder() : null;
-          } else {
-            entriesBuilder_.addAllMessages(other.entries_);
-          }
-        }
+        onChanged();
+      }
+      if (other.getCount() != 0) {
+        setCount(other.getCount());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -411,19 +416,16 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 10: {
-              net.bladewatch.app.grpc.v1.FilterLogEntry m =
-                  input.readMessage(
-                      net.bladewatch.app.grpc.v1.FilterLogEntry.parser(),
-                      extensionRegistry);
-              if (entriesBuilder_ == null) {
-                ensureEntriesIsMutable();
-                entries_.add(m);
-              } else {
-                entriesBuilder_.addMessage(m);
-              }
+            case 18: {
+              ensureEntriesIsMutable();
+              entries_.add(input.readStringRequireUtf8());
               break;
-            } // case 10
+            } // case 18
+            case 24: {
+              count_ = input.readInt32();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 24
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -441,244 +443,147 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry> entries_ =
-      java.util.Collections.emptyList();
+    private com.google.protobuf.LazyStringArrayList entries_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
     private void ensureEntriesIsMutable() {
-      if (!((bitField0_ & 0x00000001) != 0)) {
-        entries_ = new java.util.ArrayList<net.bladewatch.app.grpc.v1.FilterLogEntry>(entries_);
-        bitField0_ |= 0x00000001;
-       }
-    }
-
-    private com.google.protobuf.RepeatedFieldBuilder<
-        net.bladewatch.app.grpc.v1.FilterLogEntry, net.bladewatch.app.grpc.v1.FilterLogEntry.Builder, net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder> entriesBuilder_;
-
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry> getEntriesList() {
-      if (entriesBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(entries_);
-      } else {
-        return entriesBuilder_.getMessageList();
+      if (!entries_.isModifiable()) {
+        entries_ = new com.google.protobuf.LazyStringArrayList(entries_);
       }
+      bitField0_ |= 0x00000001;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @return A list containing the entries.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getEntriesList() {
+      entries_.makeImmutable();
+      return entries_;
+    }
+    /**
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @return The count of entries.
      */
     public int getEntriesCount() {
-      if (entriesBuilder_ == null) {
-        return entries_.size();
-      } else {
-        return entriesBuilder_.getCount();
-      }
+      return entries_.size();
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param index The index of the element to return.
+     * @return The entries at the given index.
      */
-    public net.bladewatch.app.grpc.v1.FilterLogEntry getEntries(int index) {
-      if (entriesBuilder_ == null) {
-        return entries_.get(index);
-      } else {
-        return entriesBuilder_.getMessage(index);
-      }
+    public java.lang.String getEntries(int index) {
+      return entries_.get(index);
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the entries at the given index.
      */
-    public Builder setEntries(
-        int index, net.bladewatch.app.grpc.v1.FilterLogEntry value) {
-      if (entriesBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEntriesIsMutable();
-        entries_.set(index, value);
-        onChanged();
-      } else {
-        entriesBuilder_.setMessage(index, value);
-      }
-      return this;
+    public com.google.protobuf.ByteString
+        getEntriesBytes(int index) {
+      return entries_.getByteString(index);
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param index The index to set the value at.
+     * @param value The entries to set.
+     * @return This builder for chaining.
      */
     public Builder setEntries(
-        int index, net.bladewatch.app.grpc.v1.FilterLogEntry.Builder builderForValue) {
-      if (entriesBuilder_ == null) {
-        ensureEntriesIsMutable();
-        entries_.set(index, builderForValue.build());
-        onChanged();
-      } else {
-        entriesBuilder_.setMessage(index, builderForValue.build());
-      }
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureEntriesIsMutable();
+      entries_.set(index, value);
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public Builder addEntries(net.bladewatch.app.grpc.v1.FilterLogEntry value) {
-      if (entriesBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEntriesIsMutable();
-        entries_.add(value);
-        onChanged();
-      } else {
-        entriesBuilder_.addMessage(value);
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param value The entries to add.
+     * @return This builder for chaining.
      */
     public Builder addEntries(
-        int index, net.bladewatch.app.grpc.v1.FilterLogEntry value) {
-      if (entriesBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEntriesIsMutable();
-        entries_.add(index, value);
-        onChanged();
-      } else {
-        entriesBuilder_.addMessage(index, value);
-      }
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureEntriesIsMutable();
+      entries_.add(value);
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public Builder addEntries(
-        net.bladewatch.app.grpc.v1.FilterLogEntry.Builder builderForValue) {
-      if (entriesBuilder_ == null) {
-        ensureEntriesIsMutable();
-        entries_.add(builderForValue.build());
-        onChanged();
-      } else {
-        entriesBuilder_.addMessage(builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public Builder addEntries(
-        int index, net.bladewatch.app.grpc.v1.FilterLogEntry.Builder builderForValue) {
-      if (entriesBuilder_ == null) {
-        ensureEntriesIsMutable();
-        entries_.add(index, builderForValue.build());
-        onChanged();
-      } else {
-        entriesBuilder_.addMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param values The entries to add.
+     * @return This builder for chaining.
      */
     public Builder addAllEntries(
-        java.lang.Iterable<? extends net.bladewatch.app.grpc.v1.FilterLogEntry> values) {
-      if (entriesBuilder_ == null) {
-        ensureEntriesIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, entries_);
-        onChanged();
-      } else {
-        entriesBuilder_.addAllMessages(values);
-      }
+        java.lang.Iterable<java.lang.String> values) {
+      ensureEntriesIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, entries_);
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @return This builder for chaining.
      */
     public Builder clearEntries() {
-      if (entriesBuilder_ == null) {
-        entries_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-      } else {
-        entriesBuilder_.clear();
-      }
+      entries_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000001);;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>repeated string entries = 2 [json_name = "entries"];</code>
+     * @param value The bytes of the entries to add.
+     * @return This builder for chaining.
      */
-    public Builder removeEntries(int index) {
-      if (entriesBuilder_ == null) {
-        ensureEntriesIsMutable();
-        entries_.remove(index);
-        onChanged();
-      } else {
-        entriesBuilder_.remove(index);
-      }
+    public Builder addEntriesBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureEntriesIsMutable();
+      entries_.add(value);
+      bitField0_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+
+    private int count_ ;
+    /**
+     * <code>int32 count = 3 [json_name = "count"];</code>
+     * @return The count.
+     */
+    @java.lang.Override
+    public int getCount() {
+      return count_;
+    }
+    /**
+     * <code>int32 count = 3 [json_name = "count"];</code>
+     * @param value The count to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCount(int value) {
+
+      count_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
+     * <code>int32 count = 3 [json_name = "count"];</code>
+     * @return This builder for chaining.
      */
-    public net.bladewatch.app.grpc.v1.FilterLogEntry.Builder getEntriesBuilder(
-        int index) {
-      return internalGetEntriesFieldBuilder().getBuilder(index);
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder getEntriesOrBuilder(
-        int index) {
-      if (entriesBuilder_ == null) {
-        return entries_.get(index);  } else {
-        return entriesBuilder_.getMessageOrBuilder(index);
-      }
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public java.util.List<? extends net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder> 
-         getEntriesOrBuilderList() {
-      if (entriesBuilder_ != null) {
-        return entriesBuilder_.getMessageOrBuilderList();
-      } else {
-        return java.util.Collections.unmodifiableList(entries_);
-      }
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.FilterLogEntry.Builder addEntriesBuilder() {
-      return internalGetEntriesFieldBuilder().addBuilder(
-          net.bladewatch.app.grpc.v1.FilterLogEntry.getDefaultInstance());
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.FilterLogEntry.Builder addEntriesBuilder(
-        int index) {
-      return internalGetEntriesFieldBuilder().addBuilder(
-          index, net.bladewatch.app.grpc.v1.FilterLogEntry.getDefaultInstance());
-    }
-    /**
-     * <code>repeated .bladewatch.v1.FilterLogEntry entries = 1 [json_name = "entries"];</code>
-     */
-    public java.util.List<net.bladewatch.app.grpc.v1.FilterLogEntry.Builder> 
-         getEntriesBuilderList() {
-      return internalGetEntriesFieldBuilder().getBuilderList();
-    }
-    private com.google.protobuf.RepeatedFieldBuilder<
-        net.bladewatch.app.grpc.v1.FilterLogEntry, net.bladewatch.app.grpc.v1.FilterLogEntry.Builder, net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder> 
-        internalGetEntriesFieldBuilder() {
-      if (entriesBuilder_ == null) {
-        entriesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            net.bladewatch.app.grpc.v1.FilterLogEntry, net.bladewatch.app.grpc.v1.FilterLogEntry.Builder, net.bladewatch.app.grpc.v1.FilterLogEntryOrBuilder>(
-                entries_,
-                ((bitField0_ & 0x00000001) != 0),
-                getParentForChildren(),
-                isClean());
-        entries_ = null;
-      }
-      return entriesBuilder_;
+    public Builder clearCount() {
+      bitField0_ = (bitField0_ & ~0x00000002);
+      count_ = 0;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:bladewatch.v1.GetFilterLogResponse)

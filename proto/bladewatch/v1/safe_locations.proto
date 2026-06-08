@@ -10,8 +10,10 @@ option java_multiple_files = true;
 // HTTP mapping:
 //   ListZones    GET    /api/surveillance/safe-locations
 //   AddZone      POST   /api/surveillance/safe-locations
-//   UpdateZone   PUT    /api/surveillance/safe-locations?id=xxx
-//   DeleteZone   DELETE /api/surveillance/safe-locations?id=xxx
+//   UpdateZone   PUT    /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+//   DeleteZone   DELETE /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+//   Over Connect the id travels in the request body (UpdateZoneRequest.id / DeleteZoneRequest.id);
+//   the REST handler accepts either the ?id= query param or the body id.
 //   Toggle       POST   /api/surveillance/safe-locations/toggle
 service SafeLocationsService {
   rpc ListZones(ListZonesRequest) returns (ListZonesResponse);
@@ -29,9 +31,9 @@ message SafeZone {
   double lng = 4;
   // Radius in metres.
   int32 radius_m = 5;
-  bool active = 6;
+  bool active = 6 [json_name = "enabled"];
   // Epoch ms when the zone was created.
-  int64 created_at_ms = 7;
+  int64 created_at_ms = 7 [json_name = "createdAt"];
 }
 
 message ListZonesRequest {}
@@ -40,11 +42,11 @@ message ListZonesResponse {
   repeated SafeZone zones = 1;
   bool feature_enabled = 2;
   // Whether the vehicle is currently inside any zone.
-  bool currently_in_safe_zone = 3;
+  bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];
   // Current GPS fix from the daemon, for map centering and add-zone-at-location.
   bool has_gps = 4;
-  double current_lat = 5;
-  double current_lng = 6;
+  double current_lat = 5 [json_name = "lat"];
+  double current_lng = 6 [json_name = "lng"];
 }
 
 message AddZoneRequest {

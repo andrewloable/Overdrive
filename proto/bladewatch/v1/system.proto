@@ -11,8 +11,8 @@ option java_multiple_files = true;
 // HTTP mapping:
 //   GetStatus        GET  /status
 //   GetPerformance   GET  /api/performance (PerformanceApiHandler)
-//   PlayAudioTest    POST /api/audio/test
-//   ListModels       GET  /api/models/
+//   PlayAudioTest    POST /api/audio/test-avas
+//   ListModels       GET  /api/models/list
 //   DownloadModel    POST /api/models/download
 service SystemService {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
@@ -25,9 +25,11 @@ service SystemService {
 // BatteryInfo carries the Android battery level and charge state.
 message BatteryInfo {
   int32 level = 1;
-  int32 status = 2;
-  bool is_charging = 3;
-  string status_string = 4;
+  // status (2), is_charging (3), status_string (4) removed: BatteryMonitor.getBatteryInfo() never
+  // emits them and the only consumer (dashboard) reads battery.level. Charging state is delivered
+  // separately via ChargingInfo (status.charging).
+  reserved 2, 3, 4;
+  reserved "status", "is_charging", "status_string";
 }
 
 // ChargingInfo carries BYD BMS charging power and state.
@@ -131,8 +133,11 @@ message GetStatusResponse {
   bool gpu_surveillance = 19;
   RecordingStatus recording_status = 20;
   TripStatus trip_status = 21;
-  // Serialised JSON blob from GpsMonitor.getLocationJson().
-  string gps_json = 22;
+  // was gps_json (field 22): the /status REST payload emits a nested "gps" object
+  // (GpsMonitor.getLocationJson()), never a "gpsJson" string, and no client consumes it from
+  // /status. GPS is sourced from VehicleService.GetGpsLocation instead.
+  reserved 22;
+  reserved "gps_json";
   NetworkInfo network = 23;
   // Populated only when vehicle data block throws.
   string vehicle_data_error = 24;
@@ -160,7 +165,10 @@ message PlayAudioTestResponse {
 // ModelInfo describes one downloadable AI model.
 message ModelInfo {
   string name = 1;
-  string url = 2;
+  // url (2) removed: models are bundled in the APK (download is a stub); the list handler never
+  // emits a url and no client consumes one.
+  reserved 2;
+  reserved "url";
   bool downloaded = 3;
   int64 size_bytes = 4;
 }
@@ -168,7 +176,10 @@ message ModelInfo {
 message ListModelsRequest {}
 
 message ListModelsResponse {
-  bool success = 1;
+  // success (1) removed: the /api/models/list handler returns {models, default} with no success
+  // field and no client consumes one.
+  reserved 1;
+  reserved "success";
   repeated ModelInfo models = 2;
 }
 

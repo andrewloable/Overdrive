@@ -6,6 +6,13 @@
 package net.bladewatch.app.grpc.v1;
 
 /**
+ * <pre>
+ * GetEventTimelineResponse carries the event-timeline sidecar verbatim as a JSON string blob.
+ * The sidecar (EventTimelineCollector v3) is a rich object {version,durationMs,events[],actors[],
+ * stats{},heroThumbnail} that does not map to flat fields; clients parse timeline_json themselves.
+ * (was: repeated EventEntry events — a flat shape the emitter never produced.)
+ * </pre>
+ *
  * Protobuf type {@code bladewatch.v1.GetEventTimelineResponse}
  */
 @com.google.protobuf.Generated
@@ -28,7 +35,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private GetEventTimelineResponse() {
-    events_ = java.util.Collections.emptyList();
+    timelineJson_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -49,45 +56,43 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.GetEventTimelineResponse.class, net.bladewatch.app.grpc.v1.GetEventTimelineResponse.Builder.class);
   }
 
-  public static final int EVENTS_FIELD_NUMBER = 1;
+  public static final int TIMELINE_JSON_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private java.util.List<net.bladewatch.app.grpc.v1.EventEntry> events_;
+  private volatile java.lang.Object timelineJson_ = "";
   /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+   * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+   * @return The timelineJson.
    */
   @java.lang.Override
-  public java.util.List<net.bladewatch.app.grpc.v1.EventEntry> getEventsList() {
-    return events_;
+  public java.lang.String getTimelineJson() {
+    java.lang.Object ref = timelineJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      timelineJson_ = s;
+      return s;
+    }
   }
   /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+   * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+   * @return The bytes for timelineJson.
    */
   @java.lang.Override
-  public java.util.List<? extends net.bladewatch.app.grpc.v1.EventEntryOrBuilder> 
-      getEventsOrBuilderList() {
-    return events_;
-  }
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  @java.lang.Override
-  public int getEventsCount() {
-    return events_.size();
-  }
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  @java.lang.Override
-  public net.bladewatch.app.grpc.v1.EventEntry getEvents(int index) {
-    return events_.get(index);
-  }
-  /**
-   * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-   */
-  @java.lang.Override
-  public net.bladewatch.app.grpc.v1.EventEntryOrBuilder getEventsOrBuilder(
-      int index) {
-    return events_.get(index);
+  public com.google.protobuf.ByteString
+      getTimelineJsonBytes() {
+    java.lang.Object ref = timelineJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      timelineJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   private byte memoizedIsInitialized = -1;
@@ -104,22 +109,16 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    for (int i = 0; i < events_.size(); i++) {
-      output.writeMessage(1, events_.get(i));
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(timelineJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, timelineJson_);
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-
-        {
-          final int count = events_.size();
-          for (int i = 0; i < count; i++) {
-            size += com.google.protobuf.CodedOutputStream
-              .computeMessageSizeNoTag(events_.get(i));
-          }
-          size += 1 * count;
-        }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(timelineJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, timelineJson_);
+    }
     return size;
   }
   @java.lang.Override
@@ -144,8 +143,8 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.GetEventTimelineResponse other = (net.bladewatch.app.grpc.v1.GetEventTimelineResponse) obj;
 
-    if (!getEventsList()
-        .equals(other.getEventsList())) return false;
+    if (!getTimelineJson()
+        .equals(other.getTimelineJson())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -157,10 +156,8 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (getEventsCount() > 0) {
-      hash = (37 * hash) + EVENTS_FIELD_NUMBER;
-      hash = (53 * hash) + getEventsList().hashCode();
-    }
+    hash = (37 * hash) + TIMELINE_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getTimelineJson().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -259,6 +256,13 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * GetEventTimelineResponse carries the event-timeline sidecar verbatim as a JSON string blob.
+   * The sidecar (EventTimelineCollector v3) is a rich object {version,durationMs,events[],actors[],
+   * stats{},heroThumbnail} that does not map to flat fields; clients parse timeline_json themselves.
+   * (was: repeated EventEntry events — a flat shape the emitter never produced.)
+   * </pre>
+   *
    * Protobuf type {@code bladewatch.v1.GetEventTimelineResponse}
    */
   public static final class Builder extends
@@ -292,13 +296,7 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      if (eventsBuilder_ == null) {
-        events_ = java.util.Collections.emptyList();
-      } else {
-        events_ = null;
-        eventsBuilder_.clear();
-      }
-      bitField0_ = (bitField0_ & ~0x00000001);
+      timelineJson_ = "";
       return this;
     }
 
@@ -325,26 +323,16 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public net.bladewatch.app.grpc.v1.GetEventTimelineResponse buildPartial() {
       net.bladewatch.app.grpc.v1.GetEventTimelineResponse result = new net.bladewatch.app.grpc.v1.GetEventTimelineResponse(this);
-      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(net.bladewatch.app.grpc.v1.GetEventTimelineResponse result) {
-      if (eventsBuilder_ == null) {
-        if (((bitField0_ & 0x00000001) != 0)) {
-          events_ = java.util.Collections.unmodifiableList(events_);
-          bitField0_ = (bitField0_ & ~0x00000001);
-        }
-        result.events_ = events_;
-      } else {
-        result.events_ = eventsBuilder_.build();
-      }
-    }
-
     private void buildPartial0(net.bladewatch.app.grpc.v1.GetEventTimelineResponse result) {
       int from_bitField0_ = bitField0_;
+      if (((from_bitField0_ & 0x00000001) != 0)) {
+        result.timelineJson_ = timelineJson_;
+      }
     }
 
     @java.lang.Override
@@ -359,31 +347,10 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.GetEventTimelineResponse other) {
       if (other == net.bladewatch.app.grpc.v1.GetEventTimelineResponse.getDefaultInstance()) return this;
-      if (eventsBuilder_ == null) {
-        if (!other.events_.isEmpty()) {
-          if (events_.isEmpty()) {
-            events_ = other.events_;
-            bitField0_ = (bitField0_ & ~0x00000001);
-          } else {
-            ensureEventsIsMutable();
-            events_.addAll(other.events_);
-          }
-          onChanged();
-        }
-      } else {
-        if (!other.events_.isEmpty()) {
-          if (eventsBuilder_.isEmpty()) {
-            eventsBuilder_.dispose();
-            eventsBuilder_ = null;
-            events_ = other.events_;
-            bitField0_ = (bitField0_ & ~0x00000001);
-            eventsBuilder_ = 
-              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                 internalGetEventsFieldBuilder() : null;
-          } else {
-            eventsBuilder_.addAllMessages(other.events_);
-          }
-        }
+      if (!other.getTimelineJson().isEmpty()) {
+        timelineJson_ = other.timelineJson_;
+        bitField0_ |= 0x00000001;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -411,19 +378,11 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 10: {
-              net.bladewatch.app.grpc.v1.EventEntry m =
-                  input.readMessage(
-                      net.bladewatch.app.grpc.v1.EventEntry.parser(),
-                      extensionRegistry);
-              if (eventsBuilder_ == null) {
-                ensureEventsIsMutable();
-                events_.add(m);
-              } else {
-                eventsBuilder_.addMessage(m);
-              }
+            case 18: {
+              timelineJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000001;
               break;
-            } // case 10
+            } // case 18
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -441,244 +400,76 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<net.bladewatch.app.grpc.v1.EventEntry> events_ =
-      java.util.Collections.emptyList();
-    private void ensureEventsIsMutable() {
-      if (!((bitField0_ & 0x00000001) != 0)) {
-        events_ = new java.util.ArrayList<net.bladewatch.app.grpc.v1.EventEntry>(events_);
-        bitField0_ |= 0x00000001;
-       }
-    }
-
-    private com.google.protobuf.RepeatedFieldBuilder<
-        net.bladewatch.app.grpc.v1.EventEntry, net.bladewatch.app.grpc.v1.EventEntry.Builder, net.bladewatch.app.grpc.v1.EventEntryOrBuilder> eventsBuilder_;
-
+    private java.lang.Object timelineJson_ = "";
     /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+     * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+     * @return The timelineJson.
      */
-    public java.util.List<net.bladewatch.app.grpc.v1.EventEntry> getEventsList() {
-      if (eventsBuilder_ == null) {
-        return java.util.Collections.unmodifiableList(events_);
+    public java.lang.String getTimelineJson() {
+      java.lang.Object ref = timelineJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        timelineJson_ = s;
+        return s;
       } else {
-        return eventsBuilder_.getMessageList();
+        return (java.lang.String) ref;
       }
     }
     /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+     * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+     * @return The bytes for timelineJson.
      */
-    public int getEventsCount() {
-      if (eventsBuilder_ == null) {
-        return events_.size();
+    public com.google.protobuf.ByteString
+        getTimelineJsonBytes() {
+      java.lang.Object ref = timelineJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        timelineJson_ = b;
+        return b;
       } else {
-        return eventsBuilder_.getCount();
+        return (com.google.protobuf.ByteString) ref;
       }
     }
     /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+     * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+     * @param value The timelineJson to set.
+     * @return This builder for chaining.
      */
-    public net.bladewatch.app.grpc.v1.EventEntry getEvents(int index) {
-      if (eventsBuilder_ == null) {
-        return events_.get(index);
-      } else {
-        return eventsBuilder_.getMessage(index);
-      }
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder setEvents(
-        int index, net.bladewatch.app.grpc.v1.EventEntry value) {
-      if (eventsBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEventsIsMutable();
-        events_.set(index, value);
-        onChanged();
-      } else {
-        eventsBuilder_.setMessage(index, value);
-      }
+    public Builder setTimelineJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      timelineJson_ = value;
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+     * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+     * @return This builder for chaining.
      */
-    public Builder setEvents(
-        int index, net.bladewatch.app.grpc.v1.EventEntry.Builder builderForValue) {
-      if (eventsBuilder_ == null) {
-        ensureEventsIsMutable();
-        events_.set(index, builderForValue.build());
-        onChanged();
-      } else {
-        eventsBuilder_.setMessage(index, builderForValue.build());
-      }
+    public Builder clearTimelineJson() {
+      timelineJson_ = getDefaultInstance().getTimelineJson();
+      bitField0_ = (bitField0_ & ~0x00000001);
+      onChanged();
       return this;
     }
     /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
+     * <code>string timeline_json = 2 [json_name = "timelineJson"];</code>
+     * @param value The bytes for timelineJson to set.
+     * @return This builder for chaining.
      */
-    public Builder addEvents(net.bladewatch.app.grpc.v1.EventEntry value) {
-      if (eventsBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEventsIsMutable();
-        events_.add(value);
-        onChanged();
-      } else {
-        eventsBuilder_.addMessage(value);
-      }
+    public Builder setTimelineJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      timelineJson_ = value;
+      bitField0_ |= 0x00000001;
+      onChanged();
       return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder addEvents(
-        int index, net.bladewatch.app.grpc.v1.EventEntry value) {
-      if (eventsBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        ensureEventsIsMutable();
-        events_.add(index, value);
-        onChanged();
-      } else {
-        eventsBuilder_.addMessage(index, value);
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder addEvents(
-        net.bladewatch.app.grpc.v1.EventEntry.Builder builderForValue) {
-      if (eventsBuilder_ == null) {
-        ensureEventsIsMutable();
-        events_.add(builderForValue.build());
-        onChanged();
-      } else {
-        eventsBuilder_.addMessage(builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder addEvents(
-        int index, net.bladewatch.app.grpc.v1.EventEntry.Builder builderForValue) {
-      if (eventsBuilder_ == null) {
-        ensureEventsIsMutable();
-        events_.add(index, builderForValue.build());
-        onChanged();
-      } else {
-        eventsBuilder_.addMessage(index, builderForValue.build());
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder addAllEvents(
-        java.lang.Iterable<? extends net.bladewatch.app.grpc.v1.EventEntry> values) {
-      if (eventsBuilder_ == null) {
-        ensureEventsIsMutable();
-        com.google.protobuf.AbstractMessageLite.Builder.addAll(
-            values, events_);
-        onChanged();
-      } else {
-        eventsBuilder_.addAllMessages(values);
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder clearEvents() {
-      if (eventsBuilder_ == null) {
-        events_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-      } else {
-        eventsBuilder_.clear();
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public Builder removeEvents(int index) {
-      if (eventsBuilder_ == null) {
-        ensureEventsIsMutable();
-        events_.remove(index);
-        onChanged();
-      } else {
-        eventsBuilder_.remove(index);
-      }
-      return this;
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.EventEntry.Builder getEventsBuilder(
-        int index) {
-      return internalGetEventsFieldBuilder().getBuilder(index);
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.EventEntryOrBuilder getEventsOrBuilder(
-        int index) {
-      if (eventsBuilder_ == null) {
-        return events_.get(index);  } else {
-        return eventsBuilder_.getMessageOrBuilder(index);
-      }
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public java.util.List<? extends net.bladewatch.app.grpc.v1.EventEntryOrBuilder> 
-         getEventsOrBuilderList() {
-      if (eventsBuilder_ != null) {
-        return eventsBuilder_.getMessageOrBuilderList();
-      } else {
-        return java.util.Collections.unmodifiableList(events_);
-      }
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.EventEntry.Builder addEventsBuilder() {
-      return internalGetEventsFieldBuilder().addBuilder(
-          net.bladewatch.app.grpc.v1.EventEntry.getDefaultInstance());
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public net.bladewatch.app.grpc.v1.EventEntry.Builder addEventsBuilder(
-        int index) {
-      return internalGetEventsFieldBuilder().addBuilder(
-          index, net.bladewatch.app.grpc.v1.EventEntry.getDefaultInstance());
-    }
-    /**
-     * <code>repeated .bladewatch.v1.EventEntry events = 1 [json_name = "events"];</code>
-     */
-    public java.util.List<net.bladewatch.app.grpc.v1.EventEntry.Builder> 
-         getEventsBuilderList() {
-      return internalGetEventsFieldBuilder().getBuilderList();
-    }
-    private com.google.protobuf.RepeatedFieldBuilder<
-        net.bladewatch.app.grpc.v1.EventEntry, net.bladewatch.app.grpc.v1.EventEntry.Builder, net.bladewatch.app.grpc.v1.EventEntryOrBuilder> 
-        internalGetEventsFieldBuilder() {
-      if (eventsBuilder_ == null) {
-        eventsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            net.bladewatch.app.grpc.v1.EventEntry, net.bladewatch.app.grpc.v1.EventEntry.Builder, net.bladewatch.app.grpc.v1.EventEntryOrBuilder>(
-                events_,
-                ((bitField0_ & 0x00000001) != 0),
-                getParentForChildren(),
-                isClean());
-        events_ = null;
-      }
-      return eventsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:bladewatch.v1.GetEventTimelineResponse)

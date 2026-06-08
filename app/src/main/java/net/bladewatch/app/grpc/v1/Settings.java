@@ -138,78 +138,79 @@ public final class Settings extends com.google.protobuf.GeneratedFile {
       " \001(\001R\tmbPer2Min\022\036\n\013gb_per_hour\030\004 \001(\001R\tgb" +
       "PerHour\022$\n\016minutes_per_gb\030\005 \001(\005R\014minutes" +
       "PerGb\022-\n\022quality_equivalent\030\006 \001(\tR\021quali" +
-      "tyEquivalent\"\023\n\021GetQualityRequest\"\346\006\n\022Ge" +
+      "tyEquivalent\"\023\n\021GetQualityRequest\"\365\006\n\022Ge" +
       "tQualityResponse\022\030\n\007success\030\001 \001(\010R\007succe" +
       "ss\022+\n\021recording_quality\030\002 \001(\tR\020recording" +
-      "Quality\022\024\n\005codec\030\003 \001(\tR\005codec\022\020\n\003fps\030\004 \001" +
-      "(\005R\003fps\022z\n\031recording_quality_options\030\005 \003" +
-      "(\0132>.bladewatch.v1.GetQualityResponse.Re" +
-      "cordingQualityOptionsEntryR\027recordingQua" +
-      "lityOptions\022b\n\031active_recording_estimate" +
-      "\030\006 \001(\0132&.bladewatch.v1.ActiveRecordingEs" +
-      "timateR\027activeRecordingEstimate\022X\n\rcodec" +
-      "_options\030\007 \003(\01323.bladewatch.v1.GetQualit" +
-      "yResponse.CodecOptionsEntryR\014codecOption" +
-      "s\022R\n\013fps_options\030\010 \003(\01321.bladewatch.v1.G" +
-      "etQualityResponse.FpsOptionsEntryR\nfpsOp" +
-      "tions\022+\n\021native_resolution\030\t \001(\tR\020native" +
-      "Resolution\022:\n\031recording_segment_minutes\030" +
-      "\n \001(\005R\027recordingSegmentMinutes\032j\n\034Record" +
-      "ingQualityOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key" +
-      "\0224\n\005value\030\002 \001(\0132\036.bladewatch.v1.QualityT" +
-      "ierInfoR\005value:\0028\001\032?\n\021CodecOptionsEntry\022" +
-      "\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:" +
-      "\0028\001\032=\n\017FpsOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key" +
-      "\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\321\001\n\021SetQualit" +
-      "yRequest\022+\n\021recording_quality\030\001 \001(\tR\020rec" +
-      "ordingQuality\022\024\n\005codec\030\002 \001(\tR\005codec\022+\n\021s" +
-      "treaming_quality\030\003 \001(\tR\020streamingQuality" +
-      "\022\020\n\003fps\030\004 \001(\005R\003fps\022:\n\031recording_segment_" +
-      "minutes\030\005 \001(\005R\027recordingSegmentMinutes\"\241" +
-      "\001\n\022SetQualityResponse\022\030\n\007success\030\001 \001(\010R\007" +
-      "success\022+\n\021recording_quality\030\002 \001(\tR\020reco" +
-      "rdingQuality\022\024\n\005codec\030\003 \001(\tR\005codec\022\030\n\007me" +
-      "ssage\030\004 \001(\tR\007message\022\024\n\005error\030\005 \001(\tR\005err" +
-      "or\"\026\n\024GetAppearanceRequest\"_\n\025GetAppeara" +
-      "nceResponse\022\030\n\007success\030\001 \001(\010R\007success\022\024\n" +
-      "\005theme\030\002 \001(\tR\005theme\022\026\n\006locale\030\003 \001(\tR\006loc" +
-      "ale\"D\n\024SetAppearanceRequest\022\024\n\005theme\030\001 \001" +
-      "(\tR\005theme\022\026\n\006locale\030\002 \001(\tR\006locale\"u\n\025Set" +
-      "AppearanceResponse\022\030\n\007success\030\001 \001(\010R\007suc" +
-      "cess\022\024\n\005theme\030\002 \001(\tR\005theme\022\026\n\006locale\030\003 \001" +
-      "(\tR\006locale\022\024\n\005error\030\004 \001(\tR\005error\"\022\n\020GetL" +
-      "ocaleRequest\"\264\001\n\021GetLocaleResponse\022\022\n\004la" +
-      "ng\030\001 \001(\tR\004lang\022M\n\tsupported\030\002 \003(\0132/.blad" +
-      "ewatch.v1.GetLocaleResponse.SupportedEnt" +
-      "ryR\tsupported\032<\n\016SupportedEntry\022\020\n\003key\030\001" +
-      " \001(\tR\003key\022\024\n\005value\030\002 \001(\010R\005value:\0028\001\"&\n\020S" +
-      "etLocaleRequest\022\022\n\004lang\030\001 \001(\tR\004lang\"\'\n\021S" +
-      "etLocaleResponse\022\022\n\004lang\030\001 \001(\tR\004lang*\354\001\n" +
-      "\024RecordingQualityTier\022&\n\"RECORDING_QUALI" +
-      "TY_TIER_UNSPECIFIED\020\000\022\"\n\036RECORDING_QUALI" +
-      "TY_TIER_ECONOMY\020\001\022#\n\037RECORDING_QUALITY_T" +
-      "IER_STANDARD\020\002\022\037\n\033RECORDING_QUALITY_TIER" +
-      "_HIGH\020\003\022\"\n\036RECORDING_QUALITY_TIER_PREMIU" +
-      "M\020\004\022\036\n\032RECORDING_QUALITY_TIER_MAX\020\005*U\n\nV" +
-      "ideoCodec\022\033\n\027VIDEO_CODEC_UNSPECIFIED\020\000\022\024" +
-      "\n\020VIDEO_CODEC_H264\020\001\022\024\n\020VIDEO_CODEC_H265" +
-      "\020\002*b\n\010AppTheme\022\031\n\025APP_THEME_UNSPECIFIED\020" +
-      "\000\022\022\n\016APP_THEME_DARK\020\001\022\023\n\017APP_THEME_LIGHT" +
-      "\020\002\022\022\n\016APP_THEME_AUTO\020\0032\217\004\n\017SettingsServi" +
-      "ce\022Q\n\nGetQuality\022 .bladewatch.v1.GetQual" +
-      "ityRequest\032!.bladewatch.v1.GetQualityRes" +
-      "ponse\022Q\n\nSetQuality\022 .bladewatch.v1.SetQ" +
-      "ualityRequest\032!.bladewatch.v1.SetQuality" +
-      "Response\022Z\n\rGetAppearance\022#.bladewatch.v" +
-      "1.GetAppearanceRequest\032$.bladewatch.v1.G" +
-      "etAppearanceResponse\022Z\n\rSetAppearance\022#." +
-      "bladewatch.v1.SetAppearanceRequest\032$.bla" +
-      "dewatch.v1.SetAppearanceResponse\022N\n\tGetL" +
-      "ocale\022\037.bladewatch.v1.GetLocaleRequest\032 " +
-      ".bladewatch.v1.GetLocaleResponse\022N\n\tSetL" +
-      "ocale\022\037.bladewatch.v1.SetLocaleRequest\032 " +
-      ".bladewatch.v1.SetLocaleResponseB\036\n\032net." +
-      "bladewatch.app.grpc.v1P\001b\006proto3"
+      "Quality\022\035\n\005codec\030\003 \001(\tR\016recordingCodec\022\026" +
+      "\n\003fps\030\004 \001(\005R\tcameraFps\022z\n\031recording_qual" +
+      "ity_options\030\005 \003(\0132>.bladewatch.v1.GetQua" +
+      "lityResponse.RecordingQualityOptionsEntr" +
+      "yR\027recordingQualityOptions\022b\n\031active_rec" +
+      "ording_estimate\030\006 \001(\0132&.bladewatch.v1.Ac" +
+      "tiveRecordingEstimateR\027activeRecordingEs" +
+      "timate\022X\n\rcodec_options\030\007 \003(\01323.bladewat" +
+      "ch.v1.GetQualityResponse.CodecOptionsEnt" +
+      "ryR\014codecOptions\022R\n\013fps_options\030\010 \003(\01321." +
+      "bladewatch.v1.GetQualityResponse.FpsOpti" +
+      "onsEntryR\nfpsOptions\022+\n\021native_resolutio" +
+      "n\030\t \001(\tR\020nativeResolution\022:\n\031recording_s" +
+      "egment_minutes\030\n \001(\005R\027recordingSegmentMi" +
+      "nutes\032j\n\034RecordingQualityOptionsEntry\022\020\n" +
+      "\003key\030\001 \001(\tR\003key\0224\n\005value\030\002 \001(\0132\036.bladewa" +
+      "tch.v1.QualityTierInfoR\005value:\0028\001\032?\n\021Cod" +
+      "ecOptionsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
+      "e\030\002 \001(\tR\005value:\0028\001\032=\n\017FpsOptionsEntry\022\020\n" +
+      "\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028" +
+      "\001\"\321\001\n\021SetQualityRequest\022+\n\021recording_qua" +
+      "lity\030\001 \001(\tR\020recordingQuality\022\024\n\005codec\030\002 " +
+      "\001(\tR\005codec\022+\n\021streaming_quality\030\003 \001(\tR\020s" +
+      "treamingQuality\022\020\n\003fps\030\004 \001(\005R\003fps\022:\n\031rec" +
+      "ording_segment_minutes\030\005 \001(\005R\027recordingS" +
+      "egmentMinutes\"\252\001\n\022SetQualityResponse\022\030\n\007" +
+      "success\030\001 \001(\010R\007success\022+\n\021recording_qual" +
+      "ity\030\002 \001(\tR\020recordingQuality\022\035\n\005codec\030\003 \001" +
+      "(\tR\016recordingCodec\022\030\n\007message\030\004 \001(\tR\007mes" +
+      "sage\022\024\n\005error\030\005 \001(\tR\005error\"\026\n\024GetAppeara" +
+      "nceRequest\"_\n\025GetAppearanceResponse\022\030\n\007s" +
+      "uccess\030\001 \001(\010R\007success\022\024\n\005theme\030\002 \001(\tR\005th" +
+      "eme\022\026\n\006locale\030\003 \001(\tR\006locale\"D\n\024SetAppear" +
+      "anceRequest\022\024\n\005theme\030\001 \001(\tR\005theme\022\026\n\006loc" +
+      "ale\030\002 \001(\tR\006locale\"u\n\025SetAppearanceRespon" +
+      "se\022\030\n\007success\030\001 \001(\010R\007success\022\024\n\005theme\030\002 " +
+      "\001(\tR\005theme\022\026\n\006locale\030\003 \001(\tR\006locale\022\024\n\005er" +
+      "ror\030\004 \001(\tR\005error\"\022\n\020GetLocaleRequest\"\264\001\n" +
+      "\021GetLocaleResponse\022\022\n\004lang\030\001 \001(\tR\004lang\022M" +
+      "\n\tsupported\030\002 \003(\0132/.bladewatch.v1.GetLoc" +
+      "aleResponse.SupportedEntryR\tsupported\032<\n" +
+      "\016SupportedEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
+      "ue\030\002 \001(\010R\005value:\0028\001\"&\n\020SetLocaleRequest\022" +
+      "\022\n\004lang\030\001 \001(\tR\004lang\"\'\n\021SetLocaleResponse" +
+      "\022\022\n\004lang\030\001 \001(\tR\004lang*\354\001\n\024RecordingQualit" +
+      "yTier\022&\n\"RECORDING_QUALITY_TIER_UNSPECIF" +
+      "IED\020\000\022\"\n\036RECORDING_QUALITY_TIER_ECONOMY\020" +
+      "\001\022#\n\037RECORDING_QUALITY_TIER_STANDARD\020\002\022\037" +
+      "\n\033RECORDING_QUALITY_TIER_HIGH\020\003\022\"\n\036RECOR" +
+      "DING_QUALITY_TIER_PREMIUM\020\004\022\036\n\032RECORDING" +
+      "_QUALITY_TIER_MAX\020\005*U\n\nVideoCodec\022\033\n\027VID" +
+      "EO_CODEC_UNSPECIFIED\020\000\022\024\n\020VIDEO_CODEC_H2" +
+      "64\020\001\022\024\n\020VIDEO_CODEC_H265\020\002*b\n\010AppTheme\022\031" +
+      "\n\025APP_THEME_UNSPECIFIED\020\000\022\022\n\016APP_THEME_D" +
+      "ARK\020\001\022\023\n\017APP_THEME_LIGHT\020\002\022\022\n\016APP_THEME_" +
+      "AUTO\020\0032\217\004\n\017SettingsService\022Q\n\nGetQuality" +
+      "\022 .bladewatch.v1.GetQualityRequest\032!.bla" +
+      "dewatch.v1.GetQualityResponse\022Q\n\nSetQual" +
+      "ity\022 .bladewatch.v1.SetQualityRequest\032!." +
+      "bladewatch.v1.SetQualityResponse\022Z\n\rGetA" +
+      "ppearance\022#.bladewatch.v1.GetAppearanceR" +
+      "equest\032$.bladewatch.v1.GetAppearanceResp" +
+      "onse\022Z\n\rSetAppearance\022#.bladewatch.v1.Se" +
+      "tAppearanceRequest\032$.bladewatch.v1.SetAp" +
+      "pearanceResponse\022N\n\tGetLocale\022\037.bladewat" +
+      "ch.v1.GetLocaleRequest\032 .bladewatch.v1.G" +
+      "etLocaleResponse\022N\n\tSetLocale\022\037.bladewat" +
+      "ch.v1.SetLocaleRequest\032 .bladewatch.v1.S" +
+      "etLocaleResponseB\036\n\032net.bladewatch.app.g" +
+      "rpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

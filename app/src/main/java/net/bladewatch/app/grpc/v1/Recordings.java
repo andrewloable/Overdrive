@@ -112,11 +112,6 @@ public final class Recordings extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_bladewatch_v1_GetEventTimelineRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_bladewatch_v1_EventEntry_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_bladewatch_v1_EventEntry_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_bladewatch_v1_GetEventTimelineResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -131,94 +126,91 @@ public final class Recordings extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\036bladewatch/v1/recordings.proto\022\rbladew" +
-      "atch.v1\"\241\003\n\016RecordingEntry\022\032\n\010filename\030\001" +
+      "atch.v1\"\252\003\n\016RecordingEntry\022\032\n\010filename\030\001" +
       " \001(\tR\010filename\022\022\n\004path\030\002 \001(\tR\004path\0220\n\004ty" +
       "pe\030\003 \001(\0162\034.bladewatch.v1.RecordingTypeR\004" +
-      "type\022!\n\014timestamp_ms\030\004 \001(\003R\013timestampMs\022" +
-      "\035\n\nsize_bytes\030\005 \001(\003R\tsizeBytes\022)\n\020durati" +
-      "on_seconds\030\006 \001(\003R\017durationSeconds\022\035\n\ndat" +
-      "e_label\030\007 \001(\tR\tdateLabel\022\035\n\ntime_label\030\010" +
-      " \001(\tR\ttimeLabel\022\035\n\nhas_events\030\t \001(\010R\thas" +
-      "Events\022)\n\020detected_classes\030\n \003(\tR\017detect" +
-      "edClasses\022\032\n\010severity\030\013 \001(\tR\010severity\022\034\n" +
-      "\tproximity\030\014 \001(\tR\tproximity\"\347\001\n\025ListReco" +
-      "rdingsRequest\022\022\n\004type\030\001 \001(\tR\004type\022\022\n\004dat" +
-      "e\030\002 \001(\tR\004date\022\022\n\004page\030\003 \001(\005R\004page\022\033\n\tpag" +
-      "e_size\030\004 \001(\005R\010pageSize\022!\n\014class_filter\030\005" +
-      " \001(\tR\013classFilter\022\'\n\017severity_filter\030\006 \001" +
-      "(\tR\016severityFilter\022)\n\020proximity_filter\030\007" +
-      " \001(\tR\017proximityFilter\"\236\001\n\026ListRecordings" +
-      "Response\022=\n\nrecordings\030\001 \003(\0132\035.bladewatc" +
-      "h.v1.RecordingEntryR\nrecordings\022\024\n\005total" +
-      "\030\002 \001(\005R\005total\022\022\n\004page\030\003 \001(\005R\004page\022\033\n\tpag" +
-      "e_size\030\004 \001(\005R\010pageSize\"\021\n\017GetDatesReques" +
-      "t\"(\n\020GetDatesResponse\022\024\n\005dates\030\001 \003(\tR\005da" +
-      "tes\"\374\002\n\016RecordingStats\0222\n\025recordings_siz" +
-      "e_bytes\030\001 \001(\003R\023recordingsSizeBytes\0226\n\027su" +
-      "rveillance_size_bytes\030\002 \001(\003R\025surveillanc" +
-      "eSizeBytes\0220\n\024proximity_size_bytes\030\003 \001(\003" +
-      "R\022proximitySizeBytes\022)\n\020recordings_count" +
-      "\030\004 \001(\005R\017recordingsCount\022-\n\022surveillance_" +
-      "count\030\005 \001(\005R\021surveillanceCount\022\'\n\017proxim" +
-      "ity_count\030\006 \001(\005R\016proximityCount\022(\n\020total" +
-      "_size_bytes\030\007 \001(\003R\016totalSizeBytes\022\037\n\013tot" +
-      "al_count\030\010 \001(\005R\ntotalCount\"\021\n\017GetStatsRe" +
-      "quest\"G\n\020GetStatsResponse\0223\n\005stats\030\001 \001(\013" +
-      "2\035.bladewatch.v1.RecordingStatsR\005stats\"4" +
-      "\n\026DeleteRecordingRequest\022\032\n\010filename\030\001 \001" +
-      "(\tR\010filename\"I\n\027DeleteRecordingResponse\022" +
-      "\030\n\007success\030\001 \001(\010R\007success\022\024\n\005error\030\002 \001(\t" +
-      "R\005error\"2\n\022BatchDeleteRequest\022\034\n\tfilenam" +
-      "es\030\001 \003(\tR\tfilenames\"y\n\023BatchDeleteRespon" +
-      "se\022\030\n\007success\030\001 \001(\010R\007success\022\030\n\007deleted\030" +
-      "\002 \001(\005R\007deleted\022\026\n\006failed\030\003 \001(\005R\006failed\022\026" +
-      "\n\006errors\030\004 \003(\tR\006errors\"\024\n\022SyncCatalogReq" +
-      "uest\"u\n\023SyncCatalogResponse\022\030\n\007success\030\001" +
-      " \001(\010R\007success\022\024\n\005added\030\002 \001(\005R\005added\022\030\n\007r" +
-      "emoved\030\003 \001(\005R\007removed\022\024\n\005error\030\004 \001(\tR\005er" +
-      "ror\"6\n\030GetInflightStatusRequest\022\032\n\010filen" +
-      "ame\030\001 \001(\tR\010filename\"3\n\031GetInflightStatus" +
-      "Response\022\026\n\006status\030\001 \001(\tR\006status\"5\n\027GetE" +
-      "ventTimelineRequest\022\032\n\010filename\030\001 \001(\tR\010f" +
-      "ilename\"s\n\nEventEntry\022\033\n\toffset_ms\030\001 \001(\003" +
-      "R\010offsetMs\022\022\n\004type\030\002 \001(\tR\004type\022\024\n\005label\030" +
-      "\003 \001(\tR\005label\022\036\n\nconfidence\030\004 \001(\001R\nconfid" +
-      "ence\"M\n\030GetEventTimelineResponse\0221\n\006even" +
-      "ts\030\001 \003(\0132\031.bladewatch.v1.EventEntryR\006eve" +
-      "nts*\203\001\n\rRecordingType\022\036\n\032RECORDING_TYPE_" +
-      "UNSPECIFIED\020\000\022\031\n\025RECORDING_TYPE_NORMAL\020\001" +
-      "\022\031\n\025RECORDING_TYPE_SENTRY\020\002\022\034\n\030RECORDING" +
-      "_TYPE_PROXIMITY\020\003*u\n\013ClassFilter\022\034\n\030CLAS" +
-      "S_FILTER_UNSPECIFIED\020\000\022\027\n\023CLASS_FILTER_P" +
-      "ERSON\020\001\022\030\n\024CLASS_FILTER_VEHICLE\020\002\022\025\n\021CLA" +
-      "SS_FILTER_BIKE\020\003*\204\001\n\016SeverityFilter\022\037\n\033S" +
-      "EVERITY_FILTER_UNSPECIFIED\020\000\022\030\n\024SEVERITY" +
-      "_FILTER_INFO\020\001\022\031\n\025SEVERITY_FILTER_ALERT\020" +
-      "\002\022\034\n\030SEVERITY_FILTER_CRITICAL\020\003*\215\001\n\017Prox" +
-      "imityFilter\022 \n\034PROXIMITY_FILTER_UNSPECIF" +
-      "IED\020\000\022\037\n\033PROXIMITY_FILTER_VERY_CLOSE\020\001\022\032" +
-      "\n\026PROXIMITY_FILTER_CLOSE\020\002\022\033\n\027PROXIMITY_" +
-      "FILTER_MEDIUM\020\0032\347\005\n\021RecordingsService\022]\n" +
-      "\016ListRecordings\022$.bladewatch.v1.ListReco" +
-      "rdingsRequest\032%.bladewatch.v1.ListRecord" +
-      "ingsResponse\022K\n\010GetDates\022\036.bladewatch.v1" +
-      ".GetDatesRequest\032\037.bladewatch.v1.GetDate" +
-      "sResponse\022K\n\010GetStats\022\036.bladewatch.v1.Ge" +
-      "tStatsRequest\032\037.bladewatch.v1.GetStatsRe" +
-      "sponse\022`\n\017DeleteRecording\022%.bladewatch.v" +
-      "1.DeleteRecordingRequest\032&.bladewatch.v1" +
-      ".DeleteRecordingResponse\022T\n\013BatchDelete\022" +
-      "!.bladewatch.v1.BatchDeleteRequest\032\".bla" +
-      "dewatch.v1.BatchDeleteResponse\022T\n\013SyncCa" +
-      "talog\022!.bladewatch.v1.SyncCatalogRequest" +
-      "\032\".bladewatch.v1.SyncCatalogResponse\022f\n\021" +
-      "GetInflightStatus\022\'.bladewatch.v1.GetInf" +
-      "lightStatusRequest\032(.bladewatch.v1.GetIn" +
-      "flightStatusResponse\022c\n\020GetEventTimeline" +
-      "\022&.bladewatch.v1.GetEventTimelineRequest" +
-      "\032\'.bladewatch.v1.GetEventTimelineRespons" +
-      "eB\036\n\032net.bladewatch.app.grpc.v1P\001b\006proto" +
-      "3"
+      "type\022\037\n\014timestamp_ms\030\004 \001(\003R\ttimestamp\022\030\n" +
+      "\nsize_bytes\030\005 \001(\003R\004size\022)\n\020duration_seco" +
+      "nds\030\006 \001(\003R\017durationSeconds\022!\n\ndate_label" +
+      "\030\007 \001(\tR\rdateFormatted\022!\n\ntime_label\030\010 \001(" +
+      "\tR\rtimeFormatted\022\035\n\nhas_events\030\t \001(\010R\tha" +
+      "sEvents\022)\n\020detected_classes\030\n \003(\tR\017detec" +
+      "tedClasses\022\036\n\010severity\030\013 \001(\tR\014peakSeveri" +
+      "ty\022 \n\tproximity\030\014 \001(\tR\rpeakProximity\"\347\001\n" +
+      "\025ListRecordingsRequest\022\022\n\004type\030\001 \001(\tR\004ty" +
+      "pe\022\022\n\004date\030\002 \001(\tR\004date\022\022\n\004page\030\003 \001(\005R\004pa" +
+      "ge\022\033\n\tpage_size\030\004 \001(\005R\010pageSize\022!\n\014class" +
+      "_filter\030\005 \001(\tR\013classFilter\022\'\n\017severity_f" +
+      "ilter\030\006 \001(\tR\016severityFilter\022)\n\020proximity" +
+      "_filter\030\007 \001(\tR\017proximityFilter\"\236\001\n\026ListR" +
+      "ecordingsResponse\022=\n\nrecordings\030\001 \003(\0132\035." +
+      "bladewatch.v1.RecordingEntryR\nrecordings" +
+      "\022\024\n\005total\030\002 \001(\005R\005total\022\022\n\004page\030\003 \001(\005R\004pa" +
+      "ge\022\033\n\tpage_size\030\004 \001(\005R\010pageSize\"\021\n\017GetDa" +
+      "tesRequest\"(\n\020GetDatesResponse\022\024\n\005dates\030" +
+      "\001 \003(\tR\005dates\"\374\002\n\016RecordingStats\0222\n\025recor" +
+      "dings_size_bytes\030\001 \001(\003R\023recordingsSizeBy" +
+      "tes\0226\n\027surveillance_size_bytes\030\002 \001(\003R\025su" +
+      "rveillanceSizeBytes\0220\n\024proximity_size_by" +
+      "tes\030\003 \001(\003R\022proximitySizeBytes\022)\n\020recordi" +
+      "ngs_count\030\004 \001(\005R\017recordingsCount\022-\n\022surv" +
+      "eillance_count\030\005 \001(\005R\021surveillanceCount\022" +
+      "\'\n\017proximity_count\030\006 \001(\005R\016proximityCount" +
+      "\022(\n\020total_size_bytes\030\007 \001(\003R\016totalSizeByt" +
+      "es\022\037\n\013total_count\030\010 \001(\005R\ntotalCount\"\021\n\017G" +
+      "etStatsRequest\"G\n\020GetStatsResponse\0223\n\005st" +
+      "ats\030\001 \001(\0132\035.bladewatch.v1.RecordingStats" +
+      "R\005stats\"4\n\026DeleteRecordingRequest\022\032\n\010fil" +
+      "ename\030\001 \001(\tR\010filename\"I\n\027DeleteRecording" +
+      "Response\022\030\n\007success\030\001 \001(\010R\007success\022\024\n\005er" +
+      "ror\030\002 \001(\tR\005error\"2\n\022BatchDeleteRequest\022\034" +
+      "\n\tfilenames\030\001 \003(\tR\tfilenames\"y\n\023BatchDel" +
+      "eteResponse\022\030\n\007success\030\001 \001(\010R\007success\022\030\n" +
+      "\007deleted\030\002 \001(\005R\007deleted\022\026\n\006failed\030\003 \001(\005R" +
+      "\006failed\022\026\n\006errors\030\004 \003(\tR\006errors\"\024\n\022SyncC" +
+      "atalogRequest\"u\n\023SyncCatalogResponse\022\030\n\007" +
+      "success\030\001 \001(\010R\007success\022\024\n\005added\030\002 \001(\005R\005a" +
+      "dded\022\030\n\007removed\030\003 \001(\005R\007removed\022\024\n\005error\030" +
+      "\004 \001(\tR\005error\"6\n\030GetInflightStatusRequest" +
+      "\022\032\n\010filename\030\001 \001(\tR\010filename\"3\n\031GetInfli" +
+      "ghtStatusResponse\022\026\n\006status\030\001 \001(\tR\006statu" +
+      "s\"5\n\027GetEventTimelineRequest\022\032\n\010filename" +
+      "\030\001 \001(\tR\010filename\"E\n\030GetEventTimelineResp" +
+      "onse\022#\n\rtimeline_json\030\002 \001(\tR\014timelineJso" +
+      "nJ\004\010\001\020\002*\203\001\n\rRecordingType\022\036\n\032RECORDING_T" +
+      "YPE_UNSPECIFIED\020\000\022\031\n\025RECORDING_TYPE_NORM" +
+      "AL\020\001\022\031\n\025RECORDING_TYPE_SENTRY\020\002\022\034\n\030RECOR" +
+      "DING_TYPE_PROXIMITY\020\003*u\n\013ClassFilter\022\034\n\030" +
+      "CLASS_FILTER_UNSPECIFIED\020\000\022\027\n\023CLASS_FILT" +
+      "ER_PERSON\020\001\022\030\n\024CLASS_FILTER_VEHICLE\020\002\022\025\n" +
+      "\021CLASS_FILTER_BIKE\020\003*\204\001\n\016SeverityFilter\022" +
+      "\037\n\033SEVERITY_FILTER_UNSPECIFIED\020\000\022\030\n\024SEVE" +
+      "RITY_FILTER_INFO\020\001\022\031\n\025SEVERITY_FILTER_AL" +
+      "ERT\020\002\022\034\n\030SEVERITY_FILTER_CRITICAL\020\003*\215\001\n\017" +
+      "ProximityFilter\022 \n\034PROXIMITY_FILTER_UNSP" +
+      "ECIFIED\020\000\022\037\n\033PROXIMITY_FILTER_VERY_CLOSE" +
+      "\020\001\022\032\n\026PROXIMITY_FILTER_CLOSE\020\002\022\033\n\027PROXIM" +
+      "ITY_FILTER_MEDIUM\020\0032\347\005\n\021RecordingsServic" +
+      "e\022]\n\016ListRecordings\022$.bladewatch.v1.List" +
+      "RecordingsRequest\032%.bladewatch.v1.ListRe" +
+      "cordingsResponse\022K\n\010GetDates\022\036.bladewatc" +
+      "h.v1.GetDatesRequest\032\037.bladewatch.v1.Get" +
+      "DatesResponse\022K\n\010GetStats\022\036.bladewatch.v" +
+      "1.GetStatsRequest\032\037.bladewatch.v1.GetSta" +
+      "tsResponse\022`\n\017DeleteRecording\022%.bladewat" +
+      "ch.v1.DeleteRecordingRequest\032&.bladewatc" +
+      "h.v1.DeleteRecordingResponse\022T\n\013BatchDel" +
+      "ete\022!.bladewatch.v1.BatchDeleteRequest\032\"" +
+      ".bladewatch.v1.BatchDeleteResponse\022T\n\013Sy" +
+      "ncCatalog\022!.bladewatch.v1.SyncCatalogReq" +
+      "uest\032\".bladewatch.v1.SyncCatalogResponse" +
+      "\022f\n\021GetInflightStatus\022\'.bladewatch.v1.Ge" +
+      "tInflightStatusRequest\032(.bladewatch.v1.G" +
+      "etInflightStatusResponse\022c\n\020GetEventTime" +
+      "line\022&.bladewatch.v1.GetEventTimelineReq" +
+      "uest\032\'.bladewatch.v1.GetEventTimelineRes" +
+      "ponseB\036\n\032net.bladewatch.app.grpc.v1P\001b\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -326,18 +318,12 @@ public final class Recordings extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_GetEventTimelineRequest_descriptor,
         new java.lang.String[] { "Filename", });
-    internal_static_bladewatch_v1_EventEntry_descriptor =
-      getDescriptor().getMessageType(17);
-    internal_static_bladewatch_v1_EventEntry_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-        internal_static_bladewatch_v1_EventEntry_descriptor,
-        new java.lang.String[] { "OffsetMs", "Type", "Label", "Confidence", });
     internal_static_bladewatch_v1_GetEventTimelineResponse_descriptor =
-      getDescriptor().getMessageType(18);
+      getDescriptor().getMessageType(17);
     internal_static_bladewatch_v1_GetEventTimelineResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_GetEventTimelineResponse_descriptor,
-        new java.lang.String[] { "Events", });
+        new java.lang.String[] { "TimelineJson", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

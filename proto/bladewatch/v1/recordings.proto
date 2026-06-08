@@ -65,19 +65,19 @@ message RecordingEntry {
   string path = 2;
   RecordingType type = 3;
   // Epoch ms extracted from the filename timestamp.
-  int64 timestamp_ms = 4;
-  int64 size_bytes = 5;
+  int64 timestamp_ms = 4 [json_name = "timestamp"];
+  int64 size_bytes = 5 [json_name = "size"];
   int64 duration_seconds = 6;
   // Human-readable date string, e.g. "Jun 8, 2026".
-  string date_label = 7;
+  string date_label = 7 [json_name = "dateFormatted"];
   // Human-readable time string, e.g. "03:42 PM".
-  string time_label = 8;
+  string time_label = 8 [json_name = "timeFormatted"];
   // Whether a JSON sidecar with event timeline exists for this clip.
   bool has_events = 9;
   // AI detection classes present in sidecar (e.g. "person", "vehicle").
   repeated string detected_classes = 10;
-  string severity = 11;
-  string proximity = 12;
+  string severity = 11 [json_name = "peakSeverity"];
+  string proximity = 12 [json_name = "peakProximity"];
 }
 
 message ListRecordingsRequest {
@@ -168,14 +168,11 @@ message GetEventTimelineRequest {
   string filename = 1;
 }
 
-// EventEntry is one entry in the JSON sidecar event timeline.
-message EventEntry {
-  int64 offset_ms = 1;
-  string type = 2;
-  string label = 3;
-  double confidence = 4;
-}
-
+// GetEventTimelineResponse carries the event-timeline sidecar verbatim as a JSON string blob.
+// The sidecar (EventTimelineCollector v3) is a rich object {version,durationMs,events[],actors[],
+// stats{},heroThumbnail} that does not map to flat fields; clients parse timeline_json themselves.
+// (was: repeated EventEntry events — a flat shape the emitter never produced.)
 message GetEventTimelineResponse {
-  repeated EventEntry events = 1;
+  reserved 1; // was repeated EventEntry events
+  string timeline_json = 2 [json_name = "timelineJson"];
 }

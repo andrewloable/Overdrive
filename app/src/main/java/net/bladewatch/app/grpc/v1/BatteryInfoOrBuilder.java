@@ -15,28 +15,4 @@ public interface BatteryInfoOrBuilder extends
    * @return The level.
    */
   int getLevel();
-
-  /**
-   * <code>int32 status = 2 [json_name = "status"];</code>
-   * @return The status.
-   */
-  int getStatus();
-
-  /**
-   * <code>bool is_charging = 3 [json_name = "isCharging"];</code>
-   * @return The isCharging.
-   */
-  boolean getIsCharging();
-
-  /**
-   * <code>string status_string = 4 [json_name = "statusString"];</code>
-   * @return The statusString.
-   */
-  java.lang.String getStatusString();
-  /**
-   * <code>string status_string = 4 [json_name = "statusString"];</code>
-   * @return The bytes for statusString.
-   */
-  com.google.protobuf.ByteString
-      getStatusStringBytes();
 }

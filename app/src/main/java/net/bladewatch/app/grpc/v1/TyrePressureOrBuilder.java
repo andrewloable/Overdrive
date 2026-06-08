@@ -23,7 +23,7 @@ public interface TyrePressureOrBuilder extends
   double getPsi();
 
   /**
-   * <code>int32 temp_c = 3 [json_name = "tempC"];</code>
+   * <code>int32 temp_c = 3 [json_name = "temperatureC"];</code>
    * @return The tempC.
    */
   int getTempC();
@@ -35,7 +35,7 @@ public interface TyrePressureOrBuilder extends
   int getPressureState();
 
   /**
-   * <code>int32 leak_state = 5 [json_name = "leakState"];</code>
+   * <code>int32 leak_state = 5 [json_name = "airLeakState"];</code>
    * @return The leakState.
    */
   int getLeakState();

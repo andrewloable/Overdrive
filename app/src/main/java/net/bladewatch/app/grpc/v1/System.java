@@ -136,96 +136,94 @@ public final class System extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\032bladewatch/v1/system.proto\022\rbladewatch" +
-      ".v1\"\201\001\n\013BatteryInfo\022\024\n\005level\030\001 \001(\005R\005leve" +
-      "l\022\026\n\006status\030\002 \001(\005R\006status\022\037\n\013is_charging" +
-      "\030\003 \001(\010R\nisCharging\022#\n\rstatus_string\030\004 \001(" +
-      "\tR\014statusString\"\327\001\n\014ChargingInfo\022\035\n\nstat" +
-      "e_name\030\001 \001(\tR\tstateName\022\026\n\006status\030\002 \001(\tR" +
-      "\006status\022+\n\022charging_power_k_w\030\003 \001(\001R\017cha" +
-      "rgingPowerKW\022%\n\016is_discharging\030\004 \001(\010R\ris" +
-      "Discharging\022\031\n\010is_error\030\005 \001(\010R\007isError\022!" +
-      "\n\014is_estimated\030\006 \001(\010R\013isEstimated\"s\n\007Soc" +
-      "Info\022\030\n\007percent\030\001 \001(\001R\007percent\022\025\n\006is_low" +
-      "\030\002 \001(\010R\005isLow\022\037\n\013is_critical\030\003 \001(\010R\nisCr" +
-      "itical\022\026\n\006status\030\004 \001(\tR\006status\"\354\001\n\tRange" +
-      "Info\022\"\n\relec_range_km\030\001 \001(\001R\013elecRangeKm" +
-      "\022\"\n\rfuel_range_km\030\002 \001(\001R\013fuelRangeKm\022$\n\016" +
-      "total_range_km\030\003 \001(\001R\014totalRangeKm\022\025\n\006is" +
-      "_low\030\004 \001(\010R\005isLow\022\037\n\013is_critical\030\005 \001(\010R\n" +
-      "isCritical\022\026\n\006status\030\006 \001(\tR\006status\022!\n\014fu" +
-      "el_percent\030\007 \001(\001R\013fuelPercent\"#\n\007SohInfo" +
-      "\022\030\n\007percent\030\001 \001(\001R\007percent\"\263\001\n\017Recording" +
-      "Status\022\'\n\017configured_mode\030\001 \001(\tR\016configu" +
-      "redMode\022!\n\014is_recording\030\002 \001(\010R\013isRecordi" +
-      "ng\022)\n\020pipeline_running\030\003 \001(\010R\017pipelineRu" +
-      "nning\022\022\n\004gear\030\004 \001(\tR\004gear\022\025\n\006acc_on\030\005 \001(" +
-      "\010R\005accOn\"\233\001\n\nTripStatus\022\030\n\007enabled\030\001 \001(\010" +
-      "R\007enabled\022\037\n\013trip_active\030\002 \001(\010R\ntripActi" +
-      "ve\022&\n\017trip_start_time\030\003 \001(\003R\rtripStartTi" +
-      "me\022*\n\021trip_duration_sec\030\004 \001(\003R\017tripDurat" +
-      "ionSec\"\270\001\n\013NetworkInfo\022\022\n\004type\030\001 \001(\tR\004ty" +
-      "pe\022\022\n\004ssid\030\002 \001(\tR\004ssid\022\016\n\002ip\030\003 \001(\tR\002ip\022(" +
-      "\n\020lan_http_enabled\030\004 \001(\010R\016lanHttpEnabled" +
-      "\022\033\n\thttp_bind\030\005 \001(\tR\010httpBind\022*\n\021http_mo" +
-      "de_warning\030\006 \001(\tR\017httpModeWarning\"s\n\rGps" +
-      "StatusInfo\022\020\n\003lat\030\001 \001(\001R\003lat\022\020\n\003lng\030\002 \001(" +
-      "\001R\003lng\022\033\n\tspeed_kmh\030\003 \001(\001R\010speedKmh\022!\n\014h" +
-      "as_location\030\004 \001(\010R\013hasLocation\"\022\n\020GetSta" +
-      "tusRequest\"\332\007\n\021GetStatusResponse\022\033\n\tdevi" +
-      "ce_id\030\001 \001(\tR\010deviceId\022,\n\022vehicle_data_re" +
-      "ady\030\002 \001(\010R\020vehicleDataReady\022\037\n\013app_versi" +
-      "on\030\003 \001(\tR\nappVersion\022\034\n\trecording\030\004 \003(\005R" +
-      "\trecording\022\030\n\007viewing\030\005 \003(\005R\007viewing\022\026\n\006" +
-      "active\030\006 \003(\005R\006active\022\034\n\tavailable\030\007 \003(\005R" +
-      "\tavailable\0224\n\007battery\030\010 \001(\0132\032.bladewatch" +
-      ".v1.BatteryInfoR\007battery\022\020\n\003acc\030\t \001(\010R\003a" +
-      "cc\0227\n\010charging\030\n \001(\0132\033.bladewatch.v1.Cha" +
-      "rgingInfoR\010charging\022(\n\003soc\030\013 \001(\0132\026.blade" +
-      "watch.v1.SocInfoR\003soc\022.\n\005range\030\014 \001(\0132\030.b" +
-      "ladewatch.v1.RangeInfoR\005range\022(\n\003soh\030\r \001" +
-      "(\0132\026.bladewatch.v1.SohInfoR\003soh\022#\n\rdista" +
-      "nce_unit\030\016 \001(\tR\014distanceUnit\022\026\n\006locale\030\017" +
-      " \001(\tR\006locale\0220\n\024safe_zone_suppressed\030\020 \001" +
-      "(\010R\022safeZoneSuppressed\022 \n\014in_safe_zone\030\021" +
-      " \001(\010R\ninSafeZone\022$\n\016safe_zone_name\030\022 \001(\t" +
-      "R\014safeZoneName\022)\n\020gpu_surveillance\030\023 \001(\010" +
-      "R\017gpuSurveillance\022I\n\020recording_status\030\024 " +
-      "\001(\0132\036.bladewatch.v1.RecordingStatusR\017rec" +
-      "ordingStatus\022:\n\013trip_status\030\025 \001(\0132\031.blad" +
-      "ewatch.v1.TripStatusR\ntripStatus\022\031\n\010gps_" +
-      "json\030\026 \001(\tR\007gpsJson\0224\n\007network\030\027 \001(\0132\032.b" +
-      "ladewatch.v1.NetworkInfoR\007network\022,\n\022veh" +
-      "icle_data_error\030\030 \001(\tR\020vehicleDataError\"" +
-      "\027\n\025GetPerformanceRequest\"]\n\026GetPerforman" +
-      "ceResponse\022\030\n\007success\030\001 \001(\010R\007success\022)\n\020" +
-      "performance_json\030\002 \001(\tR\017performanceJson\"" +
-      "7\n\024PlayAudioTestRequest\022\037\n\013duration_ms\030\001" +
-      " \001(\005R\ndurationMs\"a\n\025PlayAudioTestRespons" +
-      "e\022\030\n\007success\030\001 \001(\010R\007success\022\030\n\007message\030\002" +
-      " \001(\tR\007message\022\024\n\005error\030\003 \001(\tR\005error\"p\n\tM" +
-      "odelInfo\022\022\n\004name\030\001 \001(\tR\004name\022\020\n\003url\030\002 \001(" +
-      "\tR\003url\022\036\n\ndownloaded\030\003 \001(\010R\ndownloaded\022\035" +
-      "\n\nsize_bytes\030\004 \001(\003R\tsizeBytes\"\023\n\021ListMod" +
-      "elsRequest\"`\n\022ListModelsResponse\022\030\n\007succ" +
-      "ess\030\001 \001(\010R\007success\0220\n\006models\030\002 \003(\0132\030.bla" +
-      "dewatch.v1.ModelInfoR\006models\"<\n\024Download" +
-      "ModelRequest\022\020\n\003url\030\001 \001(\tR\003url\022\022\n\004name\030\002" +
-      " \001(\tR\004name\"a\n\025DownloadModelResponse\022\030\n\007s" +
-      "uccess\030\001 \001(\010R\007success\022\030\n\007message\030\002 \001(\tR\007" +
-      "message\022\024\n\005error\030\003 \001(\tR\005error2\311\003\n\rSystem" +
-      "Service\022N\n\tGetStatus\022\037.bladewatch.v1.Get" +
-      "StatusRequest\032 .bladewatch.v1.GetStatusR" +
-      "esponse\022]\n\016GetPerformance\022$.bladewatch.v" +
-      "1.GetPerformanceRequest\032%.bladewatch.v1." +
-      "GetPerformanceResponse\022Z\n\rPlayAudioTest\022" +
-      "#.bladewatch.v1.PlayAudioTestRequest\032$.b" +
-      "ladewatch.v1.PlayAudioTestResponse\022Q\n\nLi" +
-      "stModels\022 .bladewatch.v1.ListModelsReque" +
-      "st\032!.bladewatch.v1.ListModelsResponse\022Z\n" +
-      "\rDownloadModel\022#.bladewatch.v1.DownloadM" +
-      "odelRequest\032$.bladewatch.v1.DownloadMode" +
-      "lResponseB\036\n\032net.bladewatch.app.grpc.v1P" +
-      "\001b\006proto3"
+      ".v1\"Y\n\013BatteryInfo\022\024\n\005level\030\001 \001(\005R\005level" +
+      "J\004\010\002\020\003J\004\010\003\020\004J\004\010\004\020\005R\006statusR\013is_chargingR" +
+      "\rstatus_string\"\327\001\n\014ChargingInfo\022\035\n\nstate" +
+      "_name\030\001 \001(\tR\tstateName\022\026\n\006status\030\002 \001(\tR\006" +
+      "status\022+\n\022charging_power_k_w\030\003 \001(\001R\017char" +
+      "gingPowerKW\022%\n\016is_discharging\030\004 \001(\010R\risD" +
+      "ischarging\022\031\n\010is_error\030\005 \001(\010R\007isError\022!\n" +
+      "\014is_estimated\030\006 \001(\010R\013isEstimated\"s\n\007SocI" +
+      "nfo\022\030\n\007percent\030\001 \001(\001R\007percent\022\025\n\006is_low\030" +
+      "\002 \001(\010R\005isLow\022\037\n\013is_critical\030\003 \001(\010R\nisCri" +
+      "tical\022\026\n\006status\030\004 \001(\tR\006status\"\354\001\n\tRangeI" +
+      "nfo\022\"\n\relec_range_km\030\001 \001(\001R\013elecRangeKm\022" +
+      "\"\n\rfuel_range_km\030\002 \001(\001R\013fuelRangeKm\022$\n\016t" +
+      "otal_range_km\030\003 \001(\001R\014totalRangeKm\022\025\n\006is_" +
+      "low\030\004 \001(\010R\005isLow\022\037\n\013is_critical\030\005 \001(\010R\ni" +
+      "sCritical\022\026\n\006status\030\006 \001(\tR\006status\022!\n\014fue" +
+      "l_percent\030\007 \001(\001R\013fuelPercent\"#\n\007SohInfo\022" +
+      "\030\n\007percent\030\001 \001(\001R\007percent\"\263\001\n\017RecordingS" +
+      "tatus\022\'\n\017configured_mode\030\001 \001(\tR\016configur" +
+      "edMode\022!\n\014is_recording\030\002 \001(\010R\013isRecordin" +
+      "g\022)\n\020pipeline_running\030\003 \001(\010R\017pipelineRun" +
+      "ning\022\022\n\004gear\030\004 \001(\tR\004gear\022\025\n\006acc_on\030\005 \001(\010" +
+      "R\005accOn\"\233\001\n\nTripStatus\022\030\n\007enabled\030\001 \001(\010R" +
+      "\007enabled\022\037\n\013trip_active\030\002 \001(\010R\ntripActiv" +
+      "e\022&\n\017trip_start_time\030\003 \001(\003R\rtripStartTim" +
+      "e\022*\n\021trip_duration_sec\030\004 \001(\003R\017tripDurati" +
+      "onSec\"\270\001\n\013NetworkInfo\022\022\n\004type\030\001 \001(\tR\004typ" +
+      "e\022\022\n\004ssid\030\002 \001(\tR\004ssid\022\016\n\002ip\030\003 \001(\tR\002ip\022(\n" +
+      "\020lan_http_enabled\030\004 \001(\010R\016lanHttpEnabled\022" +
+      "\033\n\thttp_bind\030\005 \001(\tR\010httpBind\022*\n\021http_mod" +
+      "e_warning\030\006 \001(\tR\017httpModeWarning\"s\n\rGpsS" +
+      "tatusInfo\022\020\n\003lat\030\001 \001(\001R\003lat\022\020\n\003lng\030\002 \001(\001" +
+      "R\003lng\022\033\n\tspeed_kmh\030\003 \001(\001R\010speedKmh\022!\n\014ha" +
+      "s_location\030\004 \001(\010R\013hasLocation\"\022\n\020GetStat" +
+      "usRequest\"\317\007\n\021GetStatusResponse\022\033\n\tdevic" +
+      "e_id\030\001 \001(\tR\010deviceId\022,\n\022vehicle_data_rea" +
+      "dy\030\002 \001(\010R\020vehicleDataReady\022\037\n\013app_versio" +
+      "n\030\003 \001(\tR\nappVersion\022\034\n\trecording\030\004 \003(\005R\t" +
+      "recording\022\030\n\007viewing\030\005 \003(\005R\007viewing\022\026\n\006a" +
+      "ctive\030\006 \003(\005R\006active\022\034\n\tavailable\030\007 \003(\005R\t" +
+      "available\0224\n\007battery\030\010 \001(\0132\032.bladewatch." +
+      "v1.BatteryInfoR\007battery\022\020\n\003acc\030\t \001(\010R\003ac" +
+      "c\0227\n\010charging\030\n \001(\0132\033.bladewatch.v1.Char" +
+      "gingInfoR\010charging\022(\n\003soc\030\013 \001(\0132\026.bladew" +
+      "atch.v1.SocInfoR\003soc\022.\n\005range\030\014 \001(\0132\030.bl" +
+      "adewatch.v1.RangeInfoR\005range\022(\n\003soh\030\r \001(" +
+      "\0132\026.bladewatch.v1.SohInfoR\003soh\022#\n\rdistan" +
+      "ce_unit\030\016 \001(\tR\014distanceUnit\022\026\n\006locale\030\017 " +
+      "\001(\tR\006locale\0220\n\024safe_zone_suppressed\030\020 \001(" +
+      "\010R\022safeZoneSuppressed\022 \n\014in_safe_zone\030\021 " +
+      "\001(\010R\ninSafeZone\022$\n\016safe_zone_name\030\022 \001(\tR" +
+      "\014safeZoneName\022)\n\020gpu_surveillance\030\023 \001(\010R" +
+      "\017gpuSurveillance\022I\n\020recording_status\030\024 \001" +
+      "(\0132\036.bladewatch.v1.RecordingStatusR\017reco" +
+      "rdingStatus\022:\n\013trip_status\030\025 \001(\0132\031.blade" +
+      "watch.v1.TripStatusR\ntripStatus\0224\n\007netwo" +
+      "rk\030\027 \001(\0132\032.bladewatch.v1.NetworkInfoR\007ne" +
+      "twork\022,\n\022vehicle_data_error\030\030 \001(\tR\020vehic" +
+      "leDataErrorJ\004\010\026\020\027R\010gps_json\"\027\n\025GetPerfor" +
+      "manceRequest\"]\n\026GetPerformanceResponse\022\030" +
+      "\n\007success\030\001 \001(\010R\007success\022)\n\020performance_" +
+      "json\030\002 \001(\tR\017performanceJson\"7\n\024PlayAudio" +
+      "TestRequest\022\037\n\013duration_ms\030\001 \001(\005R\ndurati" +
+      "onMs\"a\n\025PlayAudioTestResponse\022\030\n\007success" +
+      "\030\001 \001(\010R\007success\022\030\n\007message\030\002 \001(\tR\007messag" +
+      "e\022\024\n\005error\030\003 \001(\tR\005error\"i\n\tModelInfo\022\022\n\004" +
+      "name\030\001 \001(\tR\004name\022\036\n\ndownloaded\030\003 \001(\010R\ndo" +
+      "wnloaded\022\035\n\nsize_bytes\030\004 \001(\003R\tsizeBytesJ" +
+      "\004\010\002\020\003R\003url\"\023\n\021ListModelsRequest\"U\n\022ListM" +
+      "odelsResponse\0220\n\006models\030\002 \003(\0132\030.bladewat" +
+      "ch.v1.ModelInfoR\006modelsJ\004\010\001\020\002R\007success\"<" +
+      "\n\024DownloadModelRequest\022\020\n\003url\030\001 \001(\tR\003url" +
+      "\022\022\n\004name\030\002 \001(\tR\004name\"a\n\025DownloadModelRes" +
+      "ponse\022\030\n\007success\030\001 \001(\010R\007success\022\030\n\007messa" +
+      "ge\030\002 \001(\tR\007message\022\024\n\005error\030\003 \001(\tR\005error2" +
+      "\311\003\n\rSystemService\022N\n\tGetStatus\022\037.bladewa" +
+      "tch.v1.GetStatusRequest\032 .bladewatch.v1." +
+      "GetStatusResponse\022]\n\016GetPerformance\022$.bl" +
+      "adewatch.v1.GetPerformanceRequest\032%.blad" +
+      "ewatch.v1.GetPerformanceResponse\022Z\n\rPlay" +
+      "AudioTest\022#.bladewatch.v1.PlayAudioTestR" +
+      "equest\032$.bladewatch.v1.PlayAudioTestResp" +
+      "onse\022Q\n\nListModels\022 .bladewatch.v1.ListM" +
+      "odelsRequest\032!.bladewatch.v1.ListModelsR" +
+      "esponse\022Z\n\rDownloadModel\022#.bladewatch.v1" +
+      ".DownloadModelRequest\032$.bladewatch.v1.Do" +
+      "wnloadModelResponseB\036\n\032net.bladewatch.ap" +
+      "p.grpc.v1P\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -236,7 +234,7 @@ public final class System extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_BatteryInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_BatteryInfo_descriptor,
-        new java.lang.String[] { "Level", "Status", "IsCharging", "StatusString", });
+        new java.lang.String[] { "Level", });
     internal_static_bladewatch_v1_ChargingInfo_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_bladewatch_v1_ChargingInfo_fieldAccessorTable = new
@@ -296,7 +294,7 @@ public final class System extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_GetStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_GetStatusResponse_descriptor,
-        new java.lang.String[] { "DeviceId", "VehicleDataReady", "AppVersion", "Recording", "Viewing", "Active", "Available", "Battery", "Acc", "Charging", "Soc", "Range", "Soh", "DistanceUnit", "Locale", "SafeZoneSuppressed", "InSafeZone", "SafeZoneName", "GpuSurveillance", "RecordingStatus", "TripStatus", "GpsJson", "Network", "VehicleDataError", });
+        new java.lang.String[] { "DeviceId", "VehicleDataReady", "AppVersion", "Recording", "Viewing", "Active", "Available", "Battery", "Acc", "Charging", "Soc", "Range", "Soh", "DistanceUnit", "Locale", "SafeZoneSuppressed", "InSafeZone", "SafeZoneName", "GpuSurveillance", "RecordingStatus", "TripStatus", "Network", "VehicleDataError", });
     internal_static_bladewatch_v1_GetPerformanceRequest_descriptor =
       getDescriptor().getMessageType(11);
     internal_static_bladewatch_v1_GetPerformanceRequest_fieldAccessorTable = new
@@ -326,7 +324,7 @@ public final class System extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_ModelInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_ModelInfo_descriptor,
-        new java.lang.String[] { "Name", "Url", "Downloaded", "SizeBytes", });
+        new java.lang.String[] { "Name", "Downloaded", "SizeBytes", });
     internal_static_bladewatch_v1_ListModelsRequest_descriptor =
       getDescriptor().getMessageType(16);
     internal_static_bladewatch_v1_ListModelsRequest_fieldAccessorTable = new
@@ -338,7 +336,7 @@ public final class System extends com.google.protobuf.GeneratedFile {
     internal_static_bladewatch_v1_ListModelsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_bladewatch_v1_ListModelsResponse_descriptor,
-        new java.lang.String[] { "Success", "Models", });
+        new java.lang.String[] { "Models", });
     internal_static_bladewatch_v1_DownloadModelRequest_descriptor =
       getDescriptor().getMessageType(18);
     internal_static_bladewatch_v1_DownloadModelRequest_fieldAccessorTable = new

@@ -23,35 +23,6 @@ public interface GetSurveillanceStatusResponseOrBuilder extends
   boolean getSurveillanceActive();
 
   /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @return A list containing the activeCameras.
-   */
-  java.util.List<java.lang.Integer> getActiveCamerasList();
-  /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @return The count of activeCameras.
-   */
-  int getActiveCamerasCount();
-  /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @param index The index of the element to return.
-   * @return The activeCameras at the given index.
-   */
-  int getActiveCameras(int index);
-
-  /**
    * <code>string error = 4 [json_name = "error"];</code>
    * @return The error.
    */

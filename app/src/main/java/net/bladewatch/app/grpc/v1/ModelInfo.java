@@ -33,7 +33,6 @@ private static final long serialVersionUID = 0L;
   }
   private ModelInfo() {
     name_ = "";
-    url_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -93,45 +92,6 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int URL_FIELD_NUMBER = 2;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object url_ = "";
-  /**
-   * <code>string url = 2 [json_name = "url"];</code>
-   * @return The url.
-   */
-  @java.lang.Override
-  public java.lang.String getUrl() {
-    java.lang.Object ref = url_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      url_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string url = 2 [json_name = "url"];</code>
-   * @return The bytes for url.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getUrlBytes() {
-    java.lang.Object ref = url_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      url_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
   public static final int DOWNLOADED_FIELD_NUMBER = 3;
   private boolean downloaded_ = false;
   /**
@@ -171,9 +131,6 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, name_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(url_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 2, url_);
-    }
     if (downloaded_ != false) {
       output.writeBool(3, downloaded_);
     }
@@ -186,9 +143,6 @@ private static final long serialVersionUID = 0L;
     int size = 0;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(1, name_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(url_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, url_);
     }
     if (downloaded_ != false) {
       size += com.google.protobuf.CodedOutputStream
@@ -224,8 +178,6 @@ private static final long serialVersionUID = 0L;
 
     if (!getName()
         .equals(other.getName())) return false;
-    if (!getUrl()
-        .equals(other.getUrl())) return false;
     if (getDownloaded()
         != other.getDownloaded()) return false;
     if (getSizeBytes()
@@ -243,8 +195,6 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
-    hash = (37 * hash) + URL_FIELD_NUMBER;
-    hash = (53 * hash) + getUrl().hashCode();
     hash = (37 * hash) + DOWNLOADED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getDownloaded());
@@ -387,7 +337,6 @@ private static final long serialVersionUID = 0L;
       super.clear();
       bitField0_ = 0;
       name_ = "";
-      url_ = "";
       downloaded_ = false;
       sizeBytes_ = 0L;
       return this;
@@ -427,12 +376,9 @@ private static final long serialVersionUID = 0L;
         result.name_ = name_;
       }
       if (((from_bitField0_ & 0x00000002) != 0)) {
-        result.url_ = url_;
-      }
-      if (((from_bitField0_ & 0x00000004) != 0)) {
         result.downloaded_ = downloaded_;
       }
-      if (((from_bitField0_ & 0x00000008) != 0)) {
+      if (((from_bitField0_ & 0x00000004) != 0)) {
         result.sizeBytes_ = sizeBytes_;
       }
     }
@@ -452,11 +398,6 @@ private static final long serialVersionUID = 0L;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
         bitField0_ |= 0x00000001;
-        onChanged();
-      }
-      if (!other.getUrl().isEmpty()) {
-        url_ = other.url_;
-        bitField0_ |= 0x00000002;
         onChanged();
       }
       if (other.getDownloaded() != false) {
@@ -496,19 +437,14 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 10
-            case 18: {
-              url_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000002;
-              break;
-            } // case 18
             case 24: {
               downloaded_ = input.readBool();
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000002;
               break;
             } // case 24
             case 32: {
               sizeBytes_ = input.readInt64();
-              bitField0_ |= 0x00000008;
+              bitField0_ |= 0x00000004;
               break;
             } // case 32
             default: {
@@ -600,78 +536,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object url_ = "";
-    /**
-     * <code>string url = 2 [json_name = "url"];</code>
-     * @return The url.
-     */
-    public java.lang.String getUrl() {
-      java.lang.Object ref = url_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        url_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string url = 2 [json_name = "url"];</code>
-     * @return The bytes for url.
-     */
-    public com.google.protobuf.ByteString
-        getUrlBytes() {
-      java.lang.Object ref = url_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        url_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string url = 2 [json_name = "url"];</code>
-     * @param value The url to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUrl(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      url_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string url = 2 [json_name = "url"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearUrl() {
-      url_ = getDefaultInstance().getUrl();
-      bitField0_ = (bitField0_ & ~0x00000002);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string url = 2 [json_name = "url"];</code>
-     * @param value The bytes for url to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUrlBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      url_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-
     private boolean downloaded_ ;
     /**
      * <code>bool downloaded = 3 [json_name = "downloaded"];</code>
@@ -689,7 +553,7 @@ private static final long serialVersionUID = 0L;
     public Builder setDownloaded(boolean value) {
 
       downloaded_ = value;
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }
@@ -698,7 +562,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearDownloaded() {
-      bitField0_ = (bitField0_ & ~0x00000004);
+      bitField0_ = (bitField0_ & ~0x00000002);
       downloaded_ = false;
       onChanged();
       return this;
@@ -721,7 +585,7 @@ private static final long serialVersionUID = 0L;
     public Builder setSizeBytes(long value) {
 
       sizeBytes_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
@@ -730,7 +594,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearSizeBytes() {
-      bitField0_ = (bitField0_ & ~0x00000008);
+      bitField0_ = (bitField0_ & ~0x00000004);
       sizeBytes_ = 0L;
       onChanged();
       return this;

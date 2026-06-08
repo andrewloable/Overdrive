@@ -961,6 +961,9 @@ public class RecordingsApiHandler {
                     JSONObject side = new JSONObject(sb.toString());
                     int sideVersion = side.optInt("version", 2);
                     rec.put("schemaVersion", sideVersion);
+                    // Clip duration from the sidecar (v3) — avoids a MediaMetadataRetriever probe.
+                    long sideDurationMs = side.optLong("durationMs", 0);
+                    if (sideDurationMs > 0) rec.put("durationSeconds", sideDurationMs / 1000);
                     JSONObject stats = side.optJSONObject("stats");
                     if (stats != null) {
                         // v2 fields (always present)
@@ -1021,12 +1024,43 @@ public class RecordingsApiHandler {
                 // Sidecar parse failure is non-fatal; recording still appears in list.
             }
 
+            // Duration: fall back to a one-time MediaMetadataRetriever probe when the sidecar did not
+            // supply it (e.g. normal dashcam clips). parseRecording is cached per file, so this runs
+            // at most once per recording.
+            if (!rec.has("durationSeconds")) {
+                long durSec = probeDurationSeconds(file);
+                if (durSec > 0) rec.put("durationSeconds", durSec);
+            }
+
             return rec;
         } catch (Exception e) {
             return null;
         }
     }
-    
+
+    /**
+     * Probe a recording's duration (seconds) via MediaMetadataRetriever. Returns 0 on failure.
+     * Heavier than a file-stat, so callers should cache the result (parseRecording does).
+     */
+    private static long probeDurationSeconds(File file) {
+        MediaMetadataRetriever retriever = null;
+        try {
+            retriever = new MediaMetadataRetriever();
+            retriever.setDataSource(file.getAbsolutePath());
+            String d = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+            if (d != null) {
+                return Long.parseLong(d.trim()) / 1000L;
+            }
+        } catch (Exception ignored) {
+            // Unreadable/partial mp4 (e.g. in-flight) — duration just stays 0.
+        } finally {
+            if (retriever != null) {
+                try { retriever.release(); } catch (Exception ignored) {}
+            }
+        }
+        return 0L;
+    }
+
     /**
      * Get dates that have recordings (for calendar highlighting).
      */

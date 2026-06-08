@@ -29,12 +29,12 @@ public interface SetQualityResponseOrBuilder extends
       getRecordingQualityBytes();
 
   /**
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The codec.
    */
   java.lang.String getCodec();
   /**
-   * <code>string codec = 3 [json_name = "codec"];</code>
+   * <code>string codec = 3 [json_name = "recordingCodec"];</code>
    * @return The bytes for codec.
    */
   com.google.protobuf.ByteString

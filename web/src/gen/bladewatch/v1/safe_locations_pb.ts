@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file bladewatch/v1/safe_locations.proto.
  */
 export const file_bladewatch_v1_safe_locations: GenFile = /*@__PURE__*/
-  fileDesc("CiJibGFkZXdhdGNoL3YxL3NhZmVfbG9jYXRpb25zLnByb3RvEg1ibGFkZXdhdGNoLnYxIncKCFNhZmVab25lEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSCwoDbGF0GAMgASgBEgsKA2xuZxgEIAEoARIQCghyYWRpdXNfbRgFIAEoBRIOCgZhY3RpdmUYBiABKAgSFQoNY3JlYXRlZF9hdF9tcxgHIAEoAyISChBMaXN0Wm9uZXNSZXF1ZXN0Iq8BChFMaXN0Wm9uZXNSZXNwb25zZRImCgV6b25lcxgBIAMoCzIXLmJsYWRld2F0Y2gudjEuU2FmZVpvbmUSFwoPZmVhdHVyZV9lbmFibGVkGAIgASgIEh4KFmN1cnJlbnRseV9pbl9zYWZlX3pvbmUYAyABKAgSDwoHaGFzX2dwcxgEIAEoCBITCgtjdXJyZW50X2xhdBgFIAEoARITCgtjdXJyZW50X2xuZxgGIAEoASJKCg5BZGRab25lUmVxdWVzdBIMCgRuYW1lGAEgASgJEgsKA2xhdBgCIAEoARILCgNsbmcYAyABKAESEAoIcmFkaXVzX20YBCABKAUiWAoPQWRkWm9uZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSJQoEem9uZRgCIAEoCzIXLmJsYWRld2F0Y2gudjEuU2FmZVpvbmUSDQoFZXJyb3IYAyABKAkiWQoRVXBkYXRlWm9uZVJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRILCgNsYXQYAyABKAESCwoDbG5nGAQgASgBEhAKCHJhZGl1c19tGAUgASgFIjQKElVwZGF0ZVpvbmVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg0KBWVycm9yGAIgASgJIh8KEURlbGV0ZVpvbmVSZXF1ZXN0EgoKAmlkGAEgASgJIjQKEkRlbGV0ZVpvbmVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg0KBWVycm9yGAIgASgJIkIKGlRvZ2dsZVNhZmVMb2NhdGlvbnNSZXF1ZXN0Eg8KB2VuYWJsZWQYASABKAgSEwoLZW5hYmxlZF9zZXQYAiABKAgiPwobVG9nZ2xlU2FmZUxvY2F0aW9uc1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHZW5hYmxlZBgCIAEoCDK3AwoUU2FmZUxvY2F0aW9uc1NlcnZpY2USTgoJTGlzdFpvbmVzEh8uYmxhZGV3YXRjaC52MS5MaXN0Wm9uZXNSZXF1ZXN0GiAuYmxhZGV3YXRjaC52MS5MaXN0Wm9uZXNSZXNwb25zZRJICgdBZGRab25lEh0uYmxhZGV3YXRjaC52MS5BZGRab25lUmVxdWVzdBoeLmJsYWRld2F0Y2gudjEuQWRkWm9uZVJlc3BvbnNlElEKClVwZGF0ZVpvbmUSIC5ibGFkZXdhdGNoLnYxLlVwZGF0ZVpvbmVSZXF1ZXN0GiEuYmxhZGV3YXRjaC52MS5VcGRhdGVab25lUmVzcG9uc2USUQoKRGVsZXRlWm9uZRIgLmJsYWRld2F0Y2gudjEuRGVsZXRlWm9uZVJlcXVlc3QaIS5ibGFkZXdhdGNoLnYxLkRlbGV0ZVpvbmVSZXNwb25zZRJfCgZUb2dnbGUSKS5ibGFkZXdhdGNoLnYxLlRvZ2dsZVNhZmVMb2NhdGlvbnNSZXF1ZXN0GiouYmxhZGV3YXRjaC52MS5Ub2dnbGVTYWZlTG9jYXRpb25zUmVzcG9uc2VCHgoabmV0LmJsYWRld2F0Y2guYXBwLmdycGMudjFQAWIGcHJvdG8z");
+  fileDesc("CiJibGFkZXdhdGNoL3YxL3NhZmVfbG9jYXRpb25zLnByb3RvEg1ibGFkZXdhdGNoLnYxIosBCghTYWZlWm9uZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEgsKA2xhdBgDIAEoARILCgNsbmcYBCABKAESEAoIcmFkaXVzX20YBSABKAUSFwoGYWN0aXZlGAYgASgIUgdlbmFibGVkEiAKDWNyZWF0ZWRfYXRfbXMYByABKANSCWNyZWF0ZWRBdCISChBMaXN0Wm9uZXNSZXF1ZXN0IsUBChFMaXN0Wm9uZXNSZXNwb25zZRImCgV6b25lcxgBIAMoCzIXLmJsYWRld2F0Y2gudjEuU2FmZVpvbmUSFwoPZmVhdHVyZV9lbmFibGVkGAIgASgIEioKFmN1cnJlbnRseV9pbl9zYWZlX3pvbmUYAyABKAhSCmluU2FmZVpvbmUSDwoHaGFzX2dwcxgEIAEoCBIYCgtjdXJyZW50X2xhdBgFIAEoAVIDbGF0EhgKC2N1cnJlbnRfbG5nGAYgASgBUgNsbmciSgoOQWRkWm9uZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRILCgNsYXQYAiABKAESCwoDbG5nGAMgASgBEhAKCHJhZGl1c19tGAQgASgFIlgKD0FkZFpvbmVSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEiUKBHpvbmUYAiABKAsyFy5ibGFkZXdhdGNoLnYxLlNhZmVab25lEg0KBWVycm9yGAMgASgJIlkKEVVwZGF0ZVpvbmVSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSCwoDbGF0GAMgASgBEgsKA2xuZxgEIAEoARIQCghyYWRpdXNfbRgFIAEoBSI0ChJVcGRhdGVab25lUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBINCgVlcnJvchgCIAEoCSIfChFEZWxldGVab25lUmVxdWVzdBIKCgJpZBgBIAEoCSI0ChJEZWxldGVab25lUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBINCgVlcnJvchgCIAEoCSJCChpUb2dnbGVTYWZlTG9jYXRpb25zUmVxdWVzdBIPCgdlbmFibGVkGAEgASgIEhMKC2VuYWJsZWRfc2V0GAIgASgIIj8KG1RvZ2dsZVNhZmVMb2NhdGlvbnNSZXNwb25zZRIPCgdzdWNjZXNzGAEgASgIEg8KB2VuYWJsZWQYAiABKAgytwMKFFNhZmVMb2NhdGlvbnNTZXJ2aWNlEk4KCUxpc3Rab25lcxIfLmJsYWRld2F0Y2gudjEuTGlzdFpvbmVzUmVxdWVzdBogLmJsYWRld2F0Y2gudjEuTGlzdFpvbmVzUmVzcG9uc2USSAoHQWRkWm9uZRIdLmJsYWRld2F0Y2gudjEuQWRkWm9uZVJlcXVlc3QaHi5ibGFkZXdhdGNoLnYxLkFkZFpvbmVSZXNwb25zZRJRCgpVcGRhdGVab25lEiAuYmxhZGV3YXRjaC52MS5VcGRhdGVab25lUmVxdWVzdBohLmJsYWRld2F0Y2gudjEuVXBkYXRlWm9uZVJlc3BvbnNlElEKCkRlbGV0ZVpvbmUSIC5ibGFkZXdhdGNoLnYxLkRlbGV0ZVpvbmVSZXF1ZXN0GiEuYmxhZGV3YXRjaC52MS5EZWxldGVab25lUmVzcG9uc2USXwoGVG9nZ2xlEikuYmxhZGV3YXRjaC52MS5Ub2dnbGVTYWZlTG9jYXRpb25zUmVxdWVzdBoqLmJsYWRld2F0Y2gudjEuVG9nZ2xlU2FmZUxvY2F0aW9uc1Jlc3BvbnNlQh4KGm5ldC5ibGFkZXdhdGNoLmFwcC5ncnBjLnYxUAFiBnByb3RvMw");
 
 /**
  * SafeZone is a named geofence circle.
@@ -46,14 +46,14 @@ export type SafeZone = Message<"bladewatch.v1.SafeZone"> & {
   radiusM: number;
 
   /**
-   * @generated from field: bool active = 6;
+   * @generated from field: bool active = 6 [json_name = "enabled"];
    */
   active: boolean;
 
   /**
    * Epoch ms when the zone was created.
    *
-   * @generated from field: int64 created_at_ms = 7;
+   * @generated from field: int64 created_at_ms = 7 [json_name = "createdAt"];
    */
   createdAtMs: bigint;
 };
@@ -95,7 +95,7 @@ export type ListZonesResponse = Message<"bladewatch.v1.ListZonesResponse"> & {
   /**
    * Whether the vehicle is currently inside any zone.
    *
-   * @generated from field: bool currently_in_safe_zone = 3;
+   * @generated from field: bool currently_in_safe_zone = 3 [json_name = "inSafeZone"];
    */
   currentlyInSafeZone: boolean;
 
@@ -107,12 +107,12 @@ export type ListZonesResponse = Message<"bladewatch.v1.ListZonesResponse"> & {
   hasGps: boolean;
 
   /**
-   * @generated from field: double current_lat = 5;
+   * @generated from field: double current_lat = 5 [json_name = "lat"];
    */
   currentLat: number;
 
   /**
-   * @generated from field: double current_lng = 6;
+   * @generated from field: double current_lng = 6 [json_name = "lng"];
    */
   currentLng: number;
 };
@@ -333,8 +333,10 @@ export const ToggleSafeLocationsResponseSchema: GenMessage<ToggleSafeLocationsRe
  * HTTP mapping:
  *   ListZones    GET    /api/surveillance/safe-locations
  *   AddZone      POST   /api/surveillance/safe-locations
- *   UpdateZone   PUT    /api/surveillance/safe-locations?id=xxx
- *   DeleteZone   DELETE /api/surveillance/safe-locations?id=xxx
+ *   UpdateZone   PUT    /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+ *   DeleteZone   DELETE /api/surveillance/safe-locations  (id via ?id=xxx or request body)
+ *   Over Connect the id travels in the request body (UpdateZoneRequest.id / DeleteZoneRequest.id);
+ *   the REST handler accepts either the ?id= query param or the body id.
  *   Toggle       POST   /api/surveillance/safe-locations/toggle
  *
  * @generated from service bladewatch.v1.SafeLocationsService

@@ -32,7 +32,6 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private BatteryInfo() {
-    statusString_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -64,67 +63,6 @@ private static final long serialVersionUID = 0L;
     return level_;
   }
 
-  public static final int STATUS_FIELD_NUMBER = 2;
-  private int status_ = 0;
-  /**
-   * <code>int32 status = 2 [json_name = "status"];</code>
-   * @return The status.
-   */
-  @java.lang.Override
-  public int getStatus() {
-    return status_;
-  }
-
-  public static final int IS_CHARGING_FIELD_NUMBER = 3;
-  private boolean isCharging_ = false;
-  /**
-   * <code>bool is_charging = 3 [json_name = "isCharging"];</code>
-   * @return The isCharging.
-   */
-  @java.lang.Override
-  public boolean getIsCharging() {
-    return isCharging_;
-  }
-
-  public static final int STATUS_STRING_FIELD_NUMBER = 4;
-  @SuppressWarnings("serial")
-  private volatile java.lang.Object statusString_ = "";
-  /**
-   * <code>string status_string = 4 [json_name = "statusString"];</code>
-   * @return The statusString.
-   */
-  @java.lang.Override
-  public java.lang.String getStatusString() {
-    java.lang.Object ref = statusString_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      statusString_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string status_string = 4 [json_name = "statusString"];</code>
-   * @return The bytes for statusString.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getStatusStringBytes() {
-    java.lang.Object ref = statusString_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      statusString_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -142,15 +80,6 @@ private static final long serialVersionUID = 0L;
     if (level_ != 0) {
       output.writeInt32(1, level_);
     }
-    if (status_ != 0) {
-      output.writeInt32(2, status_);
-    }
-    if (isCharging_ != false) {
-      output.writeBool(3, isCharging_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(statusString_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 4, statusString_);
-    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -158,17 +87,6 @@ private static final long serialVersionUID = 0L;
     if (level_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(1, level_);
-    }
-    if (status_ != 0) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(2, status_);
-    }
-    if (isCharging_ != false) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(3, isCharging_);
-    }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(statusString_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, statusString_);
     }
     return size;
   }
@@ -196,12 +114,6 @@ private static final long serialVersionUID = 0L;
 
     if (getLevel()
         != other.getLevel()) return false;
-    if (getStatus()
-        != other.getStatus()) return false;
-    if (getIsCharging()
-        != other.getIsCharging()) return false;
-    if (!getStatusString()
-        .equals(other.getStatusString())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -215,13 +127,6 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + LEVEL_FIELD_NUMBER;
     hash = (53 * hash) + getLevel();
-    hash = (37 * hash) + STATUS_FIELD_NUMBER;
-    hash = (53 * hash) + getStatus();
-    hash = (37 * hash) + IS_CHARGING_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getIsCharging());
-    hash = (37 * hash) + STATUS_STRING_FIELD_NUMBER;
-    hash = (53 * hash) + getStatusString().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -358,9 +263,6 @@ private static final long serialVersionUID = 0L;
       super.clear();
       bitField0_ = 0;
       level_ = 0;
-      status_ = 0;
-      isCharging_ = false;
-      statusString_ = "";
       return this;
     }
 
@@ -397,15 +299,6 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.level_ = level_;
       }
-      if (((from_bitField0_ & 0x00000002) != 0)) {
-        result.status_ = status_;
-      }
-      if (((from_bitField0_ & 0x00000004) != 0)) {
-        result.isCharging_ = isCharging_;
-      }
-      if (((from_bitField0_ & 0x00000008) != 0)) {
-        result.statusString_ = statusString_;
-      }
     }
 
     @java.lang.Override
@@ -422,17 +315,6 @@ private static final long serialVersionUID = 0L;
       if (other == net.bladewatch.app.grpc.v1.BatteryInfo.getDefaultInstance()) return this;
       if (other.getLevel() != 0) {
         setLevel(other.getLevel());
-      }
-      if (other.getStatus() != 0) {
-        setStatus(other.getStatus());
-      }
-      if (other.getIsCharging() != false) {
-        setIsCharging(other.getIsCharging());
-      }
-      if (!other.getStatusString().isEmpty()) {
-        statusString_ = other.statusString_;
-        bitField0_ |= 0x00000008;
-        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -465,21 +347,6 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 8
-            case 16: {
-              status_ = input.readInt32();
-              bitField0_ |= 0x00000002;
-              break;
-            } // case 16
-            case 24: {
-              isCharging_ = input.readBool();
-              bitField0_ |= 0x00000004;
-              break;
-            } // case 24
-            case 34: {
-              statusString_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000008;
-              break;
-            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -525,142 +392,6 @@ private static final long serialVersionUID = 0L;
     public Builder clearLevel() {
       bitField0_ = (bitField0_ & ~0x00000001);
       level_ = 0;
-      onChanged();
-      return this;
-    }
-
-    private int status_ ;
-    /**
-     * <code>int32 status = 2 [json_name = "status"];</code>
-     * @return The status.
-     */
-    @java.lang.Override
-    public int getStatus() {
-      return status_;
-    }
-    /**
-     * <code>int32 status = 2 [json_name = "status"];</code>
-     * @param value The status to set.
-     * @return This builder for chaining.
-     */
-    public Builder setStatus(int value) {
-
-      status_ = value;
-      bitField0_ |= 0x00000002;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>int32 status = 2 [json_name = "status"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearStatus() {
-      bitField0_ = (bitField0_ & ~0x00000002);
-      status_ = 0;
-      onChanged();
-      return this;
-    }
-
-    private boolean isCharging_ ;
-    /**
-     * <code>bool is_charging = 3 [json_name = "isCharging"];</code>
-     * @return The isCharging.
-     */
-    @java.lang.Override
-    public boolean getIsCharging() {
-      return isCharging_;
-    }
-    /**
-     * <code>bool is_charging = 3 [json_name = "isCharging"];</code>
-     * @param value The isCharging to set.
-     * @return This builder for chaining.
-     */
-    public Builder setIsCharging(boolean value) {
-
-      isCharging_ = value;
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>bool is_charging = 3 [json_name = "isCharging"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearIsCharging() {
-      bitField0_ = (bitField0_ & ~0x00000004);
-      isCharging_ = false;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object statusString_ = "";
-    /**
-     * <code>string status_string = 4 [json_name = "statusString"];</code>
-     * @return The statusString.
-     */
-    public java.lang.String getStatusString() {
-      java.lang.Object ref = statusString_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        statusString_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string status_string = 4 [json_name = "statusString"];</code>
-     * @return The bytes for statusString.
-     */
-    public com.google.protobuf.ByteString
-        getStatusStringBytes() {
-      java.lang.Object ref = statusString_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        statusString_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string status_string = 4 [json_name = "statusString"];</code>
-     * @param value The statusString to set.
-     * @return This builder for chaining.
-     */
-    public Builder setStatusString(
-        java.lang.String value) {
-      if (value == null) { throw new NullPointerException(); }
-      statusString_ = value;
-      bitField0_ |= 0x00000008;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string status_string = 4 [json_name = "statusString"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearStatusString() {
-      statusString_ = getDefaultInstance().getStatusString();
-      bitField0_ = (bitField0_ & ~0x00000008);
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string status_string = 4 [json_name = "statusString"];</code>
-     * @param value The bytes for statusString to set.
-     * @return This builder for chaining.
-     */
-    public Builder setStatusStringBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) { throw new NullPointerException(); }
-      checkByteStringIsUtf8(value);
-      statusString_ = value;
-      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

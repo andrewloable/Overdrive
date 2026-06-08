@@ -11,12 +11,44 @@ public interface GetHeatmapResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <pre>
-   * JPEG-encoded heatmap image bytes.
-   * </pre>
-   *
-   * <code>bytes image_jpeg = 1 [json_name = "imageJpeg"];</code>
-   * @return The imageJpeg.
+   * <code>int32 grid_cols = 2 [json_name = "gridCols"];</code>
+   * @return The gridCols.
    */
-  com.google.protobuf.ByteString getImageJpeg();
+  int getGridCols();
+
+  /**
+   * <code>int32 grid_rows = 3 [json_name = "gridRows"];</code>
+   * @return The gridRows.
+   */
+  int getGridRows();
+
+  /**
+   * <code>int32 view_mode = 4 [json_name = "viewMode"];</code>
+   * @return The viewMode.
+   */
+  int getViewMode();
+
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  java.util.List<net.bladewatch.app.grpc.v1.HeatmapQuadrant> 
+      getQuadrantsList();
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  net.bladewatch.app.grpc.v1.HeatmapQuadrant getQuadrants(int index);
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  int getQuadrantsCount();
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  java.util.List<? extends net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder> 
+      getQuadrantsOrBuilderList();
+  /**
+   * <code>repeated .bladewatch.v1.HeatmapQuadrant quadrants = 5 [json_name = "quadrants"];</code>
+   */
+  net.bladewatch.app.grpc.v1.HeatmapQuadrantOrBuilder getQuadrantsOrBuilder(
+      int index);
 }

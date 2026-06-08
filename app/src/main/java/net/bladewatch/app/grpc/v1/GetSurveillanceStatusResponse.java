@@ -28,7 +28,6 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private GetSurveillanceStatusResponse() {
-    activeCameras_ = emptyIntList();
     error_ = "";
   }
 
@@ -71,48 +70,6 @@ private static final long serialVersionUID = 0L;
   public boolean getSurveillanceActive() {
     return surveillanceActive_;
   }
-
-  public static final int ACTIVE_CAMERAS_FIELD_NUMBER = 3;
-  @SuppressWarnings("serial")
-  private com.google.protobuf.Internal.IntList activeCameras_ =
-      emptyIntList();
-  /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @return A list containing the activeCameras.
-   */
-  @java.lang.Override
-  public java.util.List<java.lang.Integer>
-      getActiveCamerasList() {
-    return activeCameras_;
-  }
-  /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @return The count of activeCameras.
-   */
-  public int getActiveCamerasCount() {
-    return activeCameras_.size();
-  }
-  /**
-   * <pre>
-   * Camera IDs currently feeding the pipeline.
-   * </pre>
-   *
-   * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-   * @param index The index of the element to return.
-   * @return The activeCameras at the given index.
-   */
-  public int getActiveCameras(int index) {
-    return activeCameras_.getInt(index);
-  }
-  private int activeCamerasMemoizedSerializedSize = -1;
 
   public static final int ERROR_FIELD_NUMBER = 4;
   @SuppressWarnings("serial")
@@ -167,19 +124,11 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    getSerializedSize();
     if (pipelineRunning_ != false) {
       output.writeBool(1, pipelineRunning_);
     }
     if (surveillanceActive_ != false) {
       output.writeBool(2, surveillanceActive_);
-    }
-    if (getActiveCamerasList().size() > 0) {
-      output.writeUInt32NoTag(26);
-      output.writeUInt32NoTag(activeCamerasMemoizedSerializedSize);
-    }
-    for (int i = 0; i < activeCameras_.size(); i++) {
-      output.writeInt32NoTag(activeCameras_.getInt(i));
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, error_);
@@ -195,20 +144,6 @@ private static final long serialVersionUID = 0L;
     if (surveillanceActive_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(2, surveillanceActive_);
-    }
-    {
-      int dataSize = 0;
-      for (int i = 0; i < activeCameras_.size(); i++) {
-        dataSize += com.google.protobuf.CodedOutputStream
-          .computeInt32SizeNoTag(activeCameras_.getInt(i));
-      }
-      size += dataSize;
-      if (!getActiveCamerasList().isEmpty()) {
-        size += 1;
-        size += com.google.protobuf.CodedOutputStream
-            .computeInt32SizeNoTag(dataSize);
-      }
-      activeCamerasMemoizedSerializedSize = dataSize;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, error_);
@@ -241,8 +176,6 @@ private static final long serialVersionUID = 0L;
         != other.getPipelineRunning()) return false;
     if (getSurveillanceActive()
         != other.getSurveillanceActive()) return false;
-    if (!getActiveCamerasList()
-        .equals(other.getActiveCamerasList())) return false;
     if (!getError()
         .equals(other.getError())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -262,10 +195,6 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SURVEILLANCE_ACTIVE_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getSurveillanceActive());
-    if (getActiveCamerasCount() > 0) {
-      hash = (37 * hash) + ACTIVE_CAMERAS_FIELD_NUMBER;
-      hash = (53 * hash) + getActiveCamerasList().hashCode();
-    }
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
@@ -401,7 +330,6 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       pipelineRunning_ = false;
       surveillanceActive_ = false;
-      activeCameras_ = emptyIntList();
       error_ = "";
       return this;
     }
@@ -443,10 +371,6 @@ private static final long serialVersionUID = 0L;
         result.surveillanceActive_ = surveillanceActive_;
       }
       if (((from_bitField0_ & 0x00000004) != 0)) {
-        activeCameras_.makeImmutable();
-        result.activeCameras_ = activeCameras_;
-      }
-      if (((from_bitField0_ & 0x00000008) != 0)) {
         result.error_ = error_;
       }
     }
@@ -469,20 +393,9 @@ private static final long serialVersionUID = 0L;
       if (other.getSurveillanceActive() != false) {
         setSurveillanceActive(other.getSurveillanceActive());
       }
-      if (!other.activeCameras_.isEmpty()) {
-        if (activeCameras_.isEmpty()) {
-          activeCameras_ = other.activeCameras_;
-          activeCameras_.makeImmutable();
-          bitField0_ |= 0x00000004;
-        } else {
-          ensureActiveCamerasIsMutable();
-          activeCameras_.addAll(other.activeCameras_);
-        }
-        onChanged();
-      }
       if (!other.getError().isEmpty()) {
         error_ = other.error_;
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000004;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -521,25 +434,9 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 16
-            case 24: {
-              int v = input.readInt32();
-              ensureActiveCamerasIsMutable();
-              activeCameras_.addInt(v);
-              break;
-            } // case 24
-            case 26: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              ensureActiveCamerasIsMutable();
-              while (input.getBytesUntilLimit() > 0) {
-                activeCameras_.addInt(input.readInt32());
-              }
-              input.popLimit(limit);
-              break;
-            } // case 26
             case 34: {
               error_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000008;
+              bitField0_ |= 0x00000004;
               break;
             } // case 34
             default: {
@@ -623,118 +520,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private com.google.protobuf.Internal.IntList activeCameras_ = emptyIntList();
-    private void ensureActiveCamerasIsMutable() {
-      if (!activeCameras_.isModifiable()) {
-        activeCameras_ = makeMutableCopy(activeCameras_);
-      }
-      bitField0_ |= 0x00000004;
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @return A list containing the activeCameras.
-     */
-    public java.util.List<java.lang.Integer>
-        getActiveCamerasList() {
-      activeCameras_.makeImmutable();
-      return activeCameras_;
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @return The count of activeCameras.
-     */
-    public int getActiveCamerasCount() {
-      return activeCameras_.size();
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @param index The index of the element to return.
-     * @return The activeCameras at the given index.
-     */
-    public int getActiveCameras(int index) {
-      return activeCameras_.getInt(index);
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @param index The index to set the value at.
-     * @param value The activeCameras to set.
-     * @return This builder for chaining.
-     */
-    public Builder setActiveCameras(
-        int index, int value) {
-
-      ensureActiveCamerasIsMutable();
-      activeCameras_.setInt(index, value);
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @param value The activeCameras to add.
-     * @return This builder for chaining.
-     */
-    public Builder addActiveCameras(int value) {
-
-      ensureActiveCamerasIsMutable();
-      activeCameras_.addInt(value);
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @param values The activeCameras to add.
-     * @return This builder for chaining.
-     */
-    public Builder addAllActiveCameras(
-        java.lang.Iterable<? extends java.lang.Integer> values) {
-      ensureActiveCamerasIsMutable();
-      com.google.protobuf.AbstractMessageLite.Builder.addAll(
-          values, activeCameras_);
-      bitField0_ |= 0x00000004;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * Camera IDs currently feeding the pipeline.
-     * </pre>
-     *
-     * <code>repeated int32 active_cameras = 3 [json_name = "activeCameras"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearActiveCameras() {
-      activeCameras_ = emptyIntList();
-      bitField0_ = (bitField0_ & ~0x00000004);
-      onChanged();
-      return this;
-    }
-
     private java.lang.Object error_ = "";
     /**
      * <code>string error = 4 [json_name = "error"];</code>
@@ -778,7 +563,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       error_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
@@ -788,7 +573,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearError() {
       error_ = getDefaultInstance().getError();
-      bitField0_ = (bitField0_ & ~0x00000008);
+      bitField0_ = (bitField0_ & ~0x00000004);
       onChanged();
       return this;
     }
@@ -802,7 +587,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       error_ = value;
-      bitField0_ |= 0x00000008;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }
