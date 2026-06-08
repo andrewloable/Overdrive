@@ -1,0 +1,6 @@
+version: v2
+plugins:
+  - plugin: java
+    out: ../app/src/main/java
+  - plugin: kotlin
+    out: ../app/src/main/java

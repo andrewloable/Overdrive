@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// GpsLocation represents a geographic position with optional metadata.
+message GpsLocation {
+  double lat = 1;
+  double lng = 2;
+  double altitude_m = 3;
+  double speed_kmh = 4;
+  double accuracy_m = 5;
+  double bearing_deg = 6;
+  // Epoch ms when the fix was obtained.
+  int64 timestamp_ms = 7;
+  bool has_location = 8;
+  string google_maps_url = 9;
+}
+
+// StorageInfo carries free/total bytes for one storage volume.
+message StorageInfo {
+  int64 free_bytes = 1;
+  int64 total_bytes = 2;
+  string free_formatted = 3;
+  string total_formatted = 4;
+  int32 used_percent = 5;
+}
+
+// QuietHours defines a quiet window for push notifications (minutes since midnight).
+message QuietHours {
+  int32 start_min = 1;
+  int32 end_min = 2;
+  bool allow_critical = 3;
+}

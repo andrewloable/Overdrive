@@ -8,6 +8,8 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.Surface;
 
+import net.bladewatch.app.config.UnifiedConfigManager;
+import net.bladewatch.app.logging.DaemonLogConfig;
 import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.surveillance.GpuDownscaler;
 import net.bladewatch.app.surveillance.FoveatedCropper;
@@ -224,19 +226,19 @@ public class PanoramicCameraGpu {
     private int lastStatsFrameCount = 0;
     private static final long STATS_INTERVAL_MS = 120000;  // Every 2 minutes
 
-    // Per-stage timing diagnostic. Tracks the WORST frame in a 30 s window
-    // and logs a single line per window so the contribution of each stage
-    // (acquire / mosaicDraw / aiReadback / aiSubmit / swap) is visible
-    // without log spam. Used to verify that readback-skip + drainer keep
-    // each stage under budget.
-    private static final long STAGE_TIMING_LOG_INTERVAL_MS = 30000;
-    private long stageTimingWindowStartMs = 0;
-    private long stageWorstTotalNs = 0;
-    private long stageWorstAcquireNs = 0;
-    private long stageWorstMosaicNs = 0;
-    private long stageWorstAiReadbackNs = 0;
-    private long stageWorstAiSubmitNs = 0;
-    private int stageWindowFrames = 0;
+    // Per-stage timing: rolling p50/p95 window across STAGE_TIMING_WINDOW frames.
+    // All collection and log emission are gated on DaemonLogConfig.GPU_PIPELINE_TIMING
+    // (compile-time) + UnifiedConfigManager.isTimingLogsEnabled() (runtime).
+    // When the compile-time flag is false, R8 eliminates every branch that touches
+    // these arrays so the hot path pays zero overhead in production builds.
+    private static final int STAGE_TIMING_WINDOW = 150; // ~10 s at 15 fps
+    private final long[] timingTotalNs    = new long[STAGE_TIMING_WINDOW];
+    private final long[] timingAcquireNs  = new long[STAGE_TIMING_WINDOW];
+    private final long[] timingEncodeNs   = new long[STAGE_TIMING_WINDOW];
+    private final long[] timingReadbackNs = new long[STAGE_TIMING_WINDOW];
+    private final long[] timingSubmitNs   = new long[STAGE_TIMING_WINDOW];
+    private int timingPos = 0;
+    private int timingFilled = 0;
     private int stageWindowAiReadbackSkips = 0;
 
     // AI readback throttle — frame-counter modulo, NOT wall-clock.
@@ -1035,14 +1037,15 @@ public class PanoramicCameraGpu {
             if (cameraImageReader == null) {
                 return;
             }
-            // Per-stage timing — measure each phase of the GL frame so we can
-            // attribute backpressure (logged at most once per 2 s, worst-case
-            // frame only). nanoTime() is a monotonic call, ~50ns each.
-            long stageT0 = System.nanoTime();
+            // Per-stage timing — compile-time flag gates all nanoTime calls and
+            // accumulation so the hot path has zero overhead in release builds.
+            final boolean collectTiming = DaemonLogConfig.GPU_PIPELINE_TIMING
+                    || DaemonLogConfig.ENABLE_ALL;
+            long stageT0 = collectTiming ? System.nanoTime() : 0L;
             if (!consumeLatestImageAndBind()) {
                 return;
             }
-            long stageAfterAcquireNs = System.nanoTime();
+            long stageAfterAcquireNs = collectTiming ? System.nanoTime() : 0L;
             frameCounter++;
             lastFrameTime = System.currentTimeMillis();
             firstFrameReceived = true;
@@ -1233,7 +1236,8 @@ public class PanoramicCameraGpu {
             // SOTA: Always render to encoder (for pre-record circular buffer)
             GpuMosaicRecorder localRecorder = recorder;
             HardwareEventRecorderGpu localEncoder = encoder;
-            long stageBeforeMosaicNs = System.nanoTime();
+            long stageBeforeMosaicNs = collectTiming ? System.nanoTime() : 0L;
+            long stageAfterEncodeNs = stageBeforeMosaicNs;
             if (localRecorder != null) {
                 localRecorder.drawFrame(cameraTextureId);
 
@@ -1242,6 +1246,7 @@ public class PanoramicCameraGpu {
                 if (localEncoder != null) {
                     localEncoder.drainEncoder();
                 }
+                stageAfterEncodeNs = collectTiming ? System.nanoTime() : 0L;
 
                 // RECOVERY: If encoder surface died (EGL_BAD_SURFACE after prolonged use),
                 // reinitialize the encoder and reconnect the recorder.
@@ -1316,7 +1321,7 @@ public class PanoramicCameraGpu {
             // Foveated cropper still runs on GL thread (inside processFrame's
             // call chain via setFoveatedCropper), but only when sentry
             // schedules it after motion detection — not every frame.
-            long stageBeforeAiReadbackNs = System.nanoTime();
+            long stageBeforeAiReadbackNs = collectTiming ? System.nanoTime() : 0L;
             long stageAfterAiReadbackNs = stageBeforeAiReadbackNs;
             long stageAfterAiSubmitNs = stageBeforeAiReadbackNs;
             if (sentry != null && sentry.isActive() && downscaler != null && aiLaneWorker != null) {
@@ -1325,11 +1330,11 @@ public class PanoramicCameraGpu {
                     // Not this frame's turn, or the worker is still processing
                     // the previous frame. Skip readback — let GL thread fly
                     // through mosaic+swap to drain the ImageReader pool.
-                    stageWindowAiReadbackSkips++;
+                    if (collectTiming) stageWindowAiReadbackSkips++;
                 } else {
                     try {
                         byte[] smallFrame = downscaler.readPixelsDirect(cameraTextureId);
-                        stageAfterAiReadbackNs = System.nanoTime();
+                        stageAfterAiReadbackNs = collectTiming ? System.nanoTime() : 0L;
                         if (smallFrame != null) {
                             // Lazy-wire foveated cropper once. GL thread safe.
                             if (foveatedCropper != null && foveatedCropper.isInitialized()
@@ -1341,52 +1346,54 @@ public class PanoramicCameraGpu {
                             // continues to next camera frame immediately.
                             aiLaneWorker.submitFrame(smallFrame);
                         }
-                        stageAfterAiSubmitNs = System.nanoTime();
+                        stageAfterAiSubmitNs = collectTiming ? System.nanoTime() : 0L;
                     } catch (Exception e) {
                         logger.warn("AI lane error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
                     }
                 }
             }
 
-            // Per-stage timing roll-up. We track only the worst frame per
-            // 2 s window to keep the log line bounded and the reasoning
-            // simple — the worst frame is what crosses the encoder
-            // backpressure threshold and triggers HAL throttling.
-            long stageEndNs = System.nanoTime();
-            long stageTotalNs    = stageEndNs - stageT0;
-            long stageAcquireNs  = stageAfterAcquireNs - stageT0;
-            long stageMosaicNs   = stageBeforeAiReadbackNs - stageBeforeMosaicNs;
-            long stageReadbackNs = stageAfterAiReadbackNs  - stageBeforeAiReadbackNs;
-            long stageSubmitNs   = stageAfterAiSubmitNs    - stageAfterAiReadbackNs;
-            stageWindowFrames++;
-            if (stageTotalNs > stageWorstTotalNs) {
-                stageWorstTotalNs       = stageTotalNs;
-                stageWorstAcquireNs     = stageAcquireNs;
-                stageWorstMosaicNs      = stageMosaicNs;
-                stageWorstAiReadbackNs  = stageReadbackNs;
-                stageWorstAiSubmitNs    = stageSubmitNs;
-            }
-            long nowMs = System.currentTimeMillis();
-            if (stageTimingWindowStartMs == 0) {
-                stageTimingWindowStartMs = nowMs;
-            } else if (nowMs - stageTimingWindowStartMs >= STAGE_TIMING_LOG_INTERVAL_MS) {
-                logger.info(String.format(
-                        "Stage(worst/2s): total=%dms acq=%dms mosaic+swap=%dms aiReadback=%dms aiSubmit=%dms (frames=%d, aiSkips=%d)",
-                        stageWorstTotalNs / 1_000_000,
-                        stageWorstAcquireNs / 1_000_000,
-                        stageWorstMosaicNs / 1_000_000,
-                        stageWorstAiReadbackNs / 1_000_000,
-                        stageWorstAiSubmitNs / 1_000_000,
-                        stageWindowFrames,
-                        stageWindowAiReadbackSkips));
-                stageWorstTotalNs = 0;
-                stageWorstAcquireNs = 0;
-                stageWorstMosaicNs = 0;
-                stageWorstAiReadbackNs = 0;
-                stageWorstAiSubmitNs = 0;
-                stageWindowFrames = 0;
-                stageWindowAiReadbackSkips = 0;
-                stageTimingWindowStartMs = nowMs;
+            // Per-stage timing roll-up: accumulate into rolling window, emit
+            // p50/p95/max every STAGE_TIMING_WINDOW frames when the runtime
+            // toggle is on. The collectTiming gate makes all of this dead code
+            // in production (R8 eliminates it when GPU_PIPELINE_TIMING=false).
+            if (collectTiming) {
+                long stageEndNs = System.nanoTime();
+                timingTotalNs[timingPos]    = stageEndNs - stageT0;
+                timingAcquireNs[timingPos]  = stageAfterAcquireNs - stageT0;
+                timingEncodeNs[timingPos]   = stageAfterEncodeNs - stageBeforeMosaicNs;
+                timingReadbackNs[timingPos] = stageAfterAiReadbackNs - stageBeforeAiReadbackNs;
+                timingSubmitNs[timingPos]   = stageAfterAiSubmitNs - stageAfterAiReadbackNs;
+                timingPos = (timingPos + 1) % STAGE_TIMING_WINDOW;
+                if (timingFilled < STAGE_TIMING_WINDOW) timingFilled++;
+
+                if (timingFilled >= STAGE_TIMING_WINDOW && timingPos == 0
+                        && UnifiedConfigManager.isTimingLogsEnabled()) {
+                    DaemonLogger timing = DaemonLogger.getInstance("GpuPipelineTiming");
+                    timing.info(String.format(
+                            "[PipelineTiming p50/p95/max ms] total:%d/%d/%d"
+                            + " acquire:%d/%d/%d encode:%d/%d/%d"
+                            + " gpuReadback:%d/%d/%d aiSubmit:%d/%d/%d"
+                            + " (frames=%d aiSkips=%d)",
+                            p50ms(timingTotalNs, timingFilled),
+                            p95ms(timingTotalNs, timingFilled),
+                            maxMs(timingTotalNs, timingFilled),
+                            p50ms(timingAcquireNs, timingFilled),
+                            p95ms(timingAcquireNs, timingFilled),
+                            maxMs(timingAcquireNs, timingFilled),
+                            p50ms(timingEncodeNs, timingFilled),
+                            p95ms(timingEncodeNs, timingFilled),
+                            maxMs(timingEncodeNs, timingFilled),
+                            p50ms(timingReadbackNs, timingFilled),
+                            p95ms(timingReadbackNs, timingFilled),
+                            maxMs(timingReadbackNs, timingFilled),
+                            p50ms(timingSubmitNs, timingFilled),
+                            p95ms(timingSubmitNs, timingFilled),
+                            maxMs(timingSubmitNs, timingFilled),
+                            STAGE_TIMING_WINDOW, stageWindowAiReadbackSkips));
+                    stageWindowAiReadbackSkips = 0;
+                    timingFilled = 0;
+                }
             }
 
             // Log stats periodically (every 2 minutes, time-based).
@@ -2834,5 +2841,25 @@ public class PanoramicCameraGpu {
         } catch (Exception e) {
             // Silent fail - CPU monitoring is optional
         }
+    }
+
+    // ── Timing helpers (only called at emission, never per-frame) ──────────
+
+    private static long p50ms(long[] ns, int filled) {
+        long[] copy = Arrays.copyOf(ns, filled);
+        Arrays.sort(copy);
+        return copy[copy.length / 2] / 1_000_000L;
+    }
+
+    private static long p95ms(long[] ns, int filled) {
+        long[] copy = Arrays.copyOf(ns, filled);
+        Arrays.sort(copy);
+        return copy[(int) (copy.length * 0.95)] / 1_000_000L;
+    }
+
+    private static long maxMs(long[] ns, int filled) {
+        long max = 0;
+        for (int i = 0; i < filled; i++) if (ns[i] > max) max = ns[i];
+        return max / 1_000_000L;
     }
 }

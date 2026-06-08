@@ -127,3 +127,13 @@ else()
     target_compile_options(surveillance PRIVATE -O3 -ffast-math)
     message(STATUS "NEON not available for ${ANDROID_ABI}")
 endif()
+
+# ==================== Native Profiling (disabled by default) ====================
+# Set -DBLADEWATCH_PROFILE=ON via cmake to enable per-stage timing in the
+# native motion pipeline and HardwareBuffer texture binder.  Default OFF so
+# production builds pay zero overhead.
+option(BLADEWATCH_PROFILE "Enable native C++ per-stage timing instrumentation" OFF)
+if(BLADEWATCH_PROFILE)
+    target_compile_definitions(surveillance PRIVATE BLADEWATCH_PROFILE=1)
+    message(STATUS "BLADEWATCH_PROFILE: native stage timing enabled")
+endif()

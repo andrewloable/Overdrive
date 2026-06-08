@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// RecordingsService manages dashcam recordings, events, and storage statistics.
+//
+// HTTP mapping:
+//   ListRecordings      GET    /api/recordings
+//   GetDates            GET    /api/recordings/dates
+//   GetStats            GET    /api/recordings/stats
+//   DeleteRecording     DELETE /api/recordings/{filename}
+//   BatchDelete         POST   /api/recordings/batch-delete
+//   SyncCatalog         POST   /api/recordings/sync
+//   GetInflightStatus   GET    /api/recordings/inflight/{filename}
+//   GetEventTimeline    GET    /api/events/{filename}
+service RecordingsService {
+  rpc ListRecordings(ListRecordingsRequest) returns (ListRecordingsResponse);
+  rpc GetDates(GetDatesRequest) returns (GetDatesResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  rpc DeleteRecording(DeleteRecordingRequest) returns (DeleteRecordingResponse);
+  rpc BatchDelete(BatchDeleteRequest) returns (BatchDeleteResponse);
+  rpc SyncCatalog(SyncCatalogRequest) returns (SyncCatalogResponse);
+  rpc GetInflightStatus(GetInflightStatusRequest) returns (GetInflightStatusResponse);
+  rpc GetEventTimeline(GetEventTimelineRequest) returns (GetEventTimelineResponse);
+}
+
+// RecordingType filters which recording category to list.
+enum RecordingType {
+  RECORDING_TYPE_UNSPECIFIED = 0;
+  RECORDING_TYPE_NORMAL = 1;
+  RECORDING_TYPE_SENTRY = 2;
+  RECORDING_TYPE_PROXIMITY = 3;
+}
+
+// ClassFilter restricts results to specific AI detection classes.
+enum ClassFilter {
+  CLASS_FILTER_UNSPECIFIED = 0;
+  CLASS_FILTER_PERSON = 1;
+  CLASS_FILTER_VEHICLE = 2;
+  CLASS_FILTER_BIKE = 3;
+}
+
+// SeverityFilter restricts sentry events by severity level.
+enum SeverityFilter {
+  SEVERITY_FILTER_UNSPECIFIED = 0;
+  SEVERITY_FILTER_INFO = 1;
+  SEVERITY_FILTER_ALERT = 2;
+  SEVERITY_FILTER_CRITICAL = 3;
+}
+
+// ProximityFilter restricts proximity recordings by closeness band.
+enum ProximityFilter {
+  PROXIMITY_FILTER_UNSPECIFIED = 0;
+  PROXIMITY_FILTER_VERY_CLOSE = 1;
+  PROXIMITY_FILTER_CLOSE = 2;
+  PROXIMITY_FILTER_MEDIUM = 3;
+}
+
+// RecordingEntry represents one video clip in the catalog.
+message RecordingEntry {
+  string filename = 1;
+  string path = 2;
+  RecordingType type = 3;
+  // Epoch ms extracted from the filename timestamp.
+  int64 timestamp_ms = 4;
+  int64 size_bytes = 5;
+  int64 duration_seconds = 6;
+  // Human-readable date string, e.g. "Jun 8, 2026".
+  string date_label = 7;
+  // Human-readable time string, e.g. "03:42 PM".
+  string time_label = 8;
+  // Whether a JSON sidecar with event timeline exists for this clip.
+  bool has_events = 9;
+  // AI detection classes present in sidecar (e.g. "person", "vehicle").
+  repeated string detected_classes = 10;
+  string severity = 11;
+  string proximity = 12;
+}
+
+message ListRecordingsRequest {
+  // One of: "normal", "sentry", "proximity". Empty = all.
+  string type = 1;
+  // Filter by date string, e.g. "20260608". Empty = all dates.
+  string date = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  // Comma-separated class groups: "person", "vehicle", "bike".
+  string class_filter = 5;
+  // Comma-separated severity levels: "ALERT", "CRITICAL".
+  string severity_filter = 6;
+  // Comma-separated proximity bands: "VERY_CLOSE", "CLOSE".
+  string proximity_filter = 7;
+}
+
+message ListRecordingsResponse {
+  repeated RecordingEntry recordings = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetDatesRequest {}
+
+message GetDatesResponse {
+  // Dates that have at least one recording, formatted as "yyyyMMdd".
+  repeated string dates = 1;
+}
+
+message RecordingStats {
+  int64 recordings_size_bytes = 1;
+  int64 surveillance_size_bytes = 2;
+  int64 proximity_size_bytes = 3;
+  int32 recordings_count = 4;
+  int32 surveillance_count = 5;
+  int32 proximity_count = 6;
+  int64 total_size_bytes = 7;
+  int32 total_count = 8;
+}
+
+message GetStatsRequest {}
+
+message GetStatsResponse {
+  RecordingStats stats = 1;
+}
+
+message DeleteRecordingRequest {
+  string filename = 1;
+}
+
+message DeleteRecordingResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message BatchDeleteRequest {
+  repeated string filenames = 1;
+}
+
+message BatchDeleteResponse {
+  bool success = 1;
+  int32 deleted = 2;
+  int32 failed = 3;
+  repeated string errors = 4;
+}
+
+message SyncCatalogRequest {}
+
+message SyncCatalogResponse {
+  bool success = 1;
+  int32 added = 2;
+  int32 removed = 3;
+  string error = 4;
+}
+
+message GetInflightStatusRequest {
+  string filename = 1;
+}
+
+message GetInflightStatusResponse {
+  // "recording", "finalizing", or "not_found".
+  string status = 1;
+}
+
+message GetEventTimelineRequest {
+  string filename = 1;
+}
+
+// EventEntry is one entry in the JSON sidecar event timeline.
+message EventEntry {
+  int64 offset_ms = 1;
+  string type = 2;
+  string label = 3;
+  double confidence = 4;
+}
+
+message GetEventTimelineResponse {
+  repeated EventEntry events = 1;
+}

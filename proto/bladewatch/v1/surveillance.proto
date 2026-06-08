@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// SurveillanceService manages the GPU-accelerated sentry/motion-detection pipeline.
+//
+// HTTP mapping:
+//   GetConfig    GET  /api/surveillance/config
+//   SetConfig    POST /api/surveillance/config
+//   GetStatus    GET  /api/surveillance/status  (any method)
+//   Enable       POST /api/surveillance/enable
+//   Disable      POST /api/surveillance/disable
+//   GetHeatmap   GET  /api/surveillance/heatmap
+//   GetSnapshot  GET  /api/surveillance/snapshot/{quadrant}
+//   GetFilterLog GET  /api/surveillance/filterlog
+//   SyncCatalog  POST /api/surveillance/sync
+service SurveillanceService {
+  rpc GetConfig(GetSurveillanceConfigRequest) returns (GetSurveillanceConfigResponse);
+  rpc SetConfig(SetSurveillanceConfigRequest) returns (SetSurveillanceConfigResponse);
+  rpc GetStatus(GetSurveillanceStatusRequest) returns (GetSurveillanceStatusResponse);
+  rpc Enable(EnableSurveillanceRequest) returns (EnableSurveillanceResponse);
+  rpc Disable(DisableSurveillanceRequest) returns (DisableSurveillanceResponse);
+  rpc GetHeatmap(GetHeatmapRequest) returns (GetHeatmapResponse);
+  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+  rpc GetFilterLog(GetFilterLogRequest) returns (GetFilterLogResponse);
+  rpc SyncCatalog(SyncSurveillanceCatalogRequest) returns (SyncSurveillanceCatalogResponse);
+}
+
+// DistancePreset maps to the distance slider (1=near, 5=far).
+enum DistancePreset {
+  DISTANCE_PRESET_UNSPECIFIED = 0;
+  DISTANCE_PRESET_NEAR = 1;
+  DISTANCE_PRESET_SHORT = 2;
+  DISTANCE_PRESET_MEDIUM = 3;
+  DISTANCE_PRESET_LONG = 4;
+  DISTANCE_PRESET_FAR = 5;
+}
+
+// SurveillanceConfig is the full configuration sent to/from the pipeline.
+message SurveillanceConfig {
+  // Whether surveillance is enabled (persisted user preference).
+  bool enabled = 1;
+  // Motion detection sensitivity level 1-5 (1=strict, 5=aggressive).
+  int32 sensitivity = 2;
+  // Detection distance level 1-5 (1=near/3m, 5=far/15m).
+  int32 distance = 3;
+  double sad_threshold = 4;
+  int32 pre_record_seconds = 5;
+  int32 post_record_seconds = 6;
+  int32 total_blocks = 7;
+  int32 flash_immunity = 8;
+  bool ai_enabled = 9;
+  double ai_confidence = 10;
+  double min_object_size = 11;
+  bool detect_person = 12;
+  bool detect_car = 13;
+  bool detect_bike = 14;
+  string distance_preset = 15;
+  int32 block_size = 16;
+  double max_distance_m = 17;
+  bool night_mode = 18;
+  double shadow_threshold = 19;
+  double density_threshold = 20;
+  int32 alarm_block_threshold = 21;
+  // Recording quality tier: ECONOMY/STANDARD/HIGH/PREMIUM/MAX.
+  string recording_quality = 22;
+  // Codec: H264 or H265.
+  string recording_codec = 23;
+}
+
+message GetSurveillanceConfigRequest {}
+
+message GetSurveillanceConfigResponse {
+  bool success = 1;
+  SurveillanceConfig config = 2;
+}
+
+message SetSurveillanceConfigRequest {
+  SurveillanceConfig config = 1;
+}
+
+message SetSurveillanceConfigResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GetSurveillanceStatusRequest {}
+
+message GetSurveillanceStatusResponse {
+  bool pipeline_running = 1;
+  bool surveillance_active = 2;
+  // Camera IDs currently feeding the pipeline.
+  repeated int32 active_cameras = 3;
+  string error = 4;
+}
+
+message EnableSurveillanceRequest {}
+
+message EnableSurveillanceResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}
+
+message DisableSurveillanceRequest {}
+
+message DisableSurveillanceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetHeatmapRequest {}
+
+message GetHeatmapResponse {
+  // JPEG-encoded heatmap image bytes.
+  bytes image_jpeg = 1;
+}
+
+message GetSnapshotRequest {
+  // Quadrant index 0-3.
+  int32 quadrant = 1;
+}
+
+message GetSnapshotResponse {
+  // JPEG-encoded snapshot bytes.
+  bytes image_jpeg = 1;
+  string error = 2;
+}
+
+message GetFilterLogRequest {}
+
+message FilterLogEntry {
+  int64 timestamp_ms = 1;
+  string reason = 2;
+  string details = 3;
+}
+
+message GetFilterLogResponse {
+  repeated FilterLogEntry entries = 1;
+}
+
+message SyncSurveillanceCatalogRequest {}
+
+message SyncSurveillanceCatalogResponse {
+  bool success = 1;
+  string error = 2;
+  int32 added = 3;
+  int32 removed = 4;
+}

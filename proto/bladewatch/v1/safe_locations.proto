@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// SafeLocationsService manages geofence zones that suppress surveillance alerts.
+//
+// HTTP mapping:
+//   ListZones    GET    /api/surveillance/safe-locations
+//   AddZone      POST   /api/surveillance/safe-locations
+//   UpdateZone   PUT    /api/surveillance/safe-locations?id=xxx
+//   DeleteZone   DELETE /api/surveillance/safe-locations?id=xxx
+//   Toggle       POST   /api/surveillance/safe-locations/toggle
+service SafeLocationsService {
+  rpc ListZones(ListZonesRequest) returns (ListZonesResponse);
+  rpc AddZone(AddZoneRequest) returns (AddZoneResponse);
+  rpc UpdateZone(UpdateZoneRequest) returns (UpdateZoneResponse);
+  rpc DeleteZone(DeleteZoneRequest) returns (DeleteZoneResponse);
+  rpc Toggle(ToggleSafeLocationsRequest) returns (ToggleSafeLocationsResponse);
+}
+
+// SafeZone is a named geofence circle.
+message SafeZone {
+  string id = 1;
+  string name = 2;
+  double lat = 3;
+  double lng = 4;
+  // Radius in metres.
+  int32 radius_m = 5;
+  bool active = 6;
+  // Epoch ms when the zone was created.
+  int64 created_at_ms = 7;
+}
+
+message ListZonesRequest {}
+
+message ListZonesResponse {
+  repeated SafeZone zones = 1;
+  bool feature_enabled = 2;
+  // Whether the vehicle is currently inside any zone.
+  bool currently_in_safe_zone = 3;
+}
+
+message AddZoneRequest {
+  string name = 1;
+  double lat = 2;
+  double lng = 3;
+  int32 radius_m = 4;
+}
+
+message AddZoneResponse {
+  bool success = 1;
+  SafeZone zone = 2;
+  string error = 3;
+}
+
+message UpdateZoneRequest {
+  string id = 1;
+  string name = 2;
+  double lat = 3;
+  double lng = 4;
+  int32 radius_m = 5;
+}
+
+message UpdateZoneResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message DeleteZoneRequest {
+  string id = 1;
+}
+
+message DeleteZoneResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message ToggleSafeLocationsRequest {
+  // If not set the server will invert the current state.
+  bool enabled = 1;
+  bool enabled_set = 2;
+}
+
+message ToggleSafeLocationsResponse {
+  bool success = 1;
+  bool enabled = 2;
+}

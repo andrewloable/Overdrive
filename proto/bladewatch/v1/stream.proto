@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// StreamService controls the WebSocket live-view stream on port 8887.
+//
+// HTTP mapping:
+//   Enable           POST /api/stream/enable
+//   Disable          POST /api/stream/disable
+//   GetStatus        GET  /api/stream/status
+//   GetQuality       GET  /api/stream/quality
+//   SetQuality       POST /api/stream/quality/{preset}
+//   SetViewMode      POST /api/stream/view/{mode}
+//   GetViewMode      GET  /api/stream/view
+service StreamService {
+  rpc Enable(EnableStreamRequest) returns (EnableStreamResponse);
+  rpc Disable(DisableStreamRequest) returns (DisableStreamResponse);
+  rpc GetStatus(GetStreamStatusRequest) returns (GetStreamStatusResponse);
+  rpc GetQuality(GetStreamQualityRequest) returns (GetStreamQualityResponse);
+  rpc SetQuality(SetStreamQualityRequest) returns (SetStreamQualityResponse);
+  rpc SetViewMode(SetViewModeRequest) returns (SetViewModeResponse);
+  rpc GetViewMode(GetViewModeRequest) returns (GetViewModeResponse);
+}
+
+// StreamingQuality identifies a named quality preset.
+enum StreamingQuality {
+  STREAMING_QUALITY_UNSPECIFIED = 0;
+  STREAMING_QUALITY_ULTRA_LOW = 1;
+  STREAMING_QUALITY_LOW = 2;
+  STREAMING_QUALITY_MEDIUM = 3;
+  STREAMING_QUALITY_HIGH = 4;
+  STREAMING_QUALITY_ULTRA_HIGH = 5;
+  STREAMING_QUALITY_SMOOTH = 6;
+  STREAMING_QUALITY_MAX = 7;
+}
+
+// ViewMode selects which camera feed to show (0=Mosaic, 1=Front, 2=Right, 3=Rear, 4=Left, 5=Raw).
+enum ViewMode {
+  VIEW_MODE_MOSAIC = 0;
+  VIEW_MODE_FRONT = 1;
+  VIEW_MODE_RIGHT = 2;
+  VIEW_MODE_REAR = 3;
+  VIEW_MODE_LEFT = 4;
+  VIEW_MODE_RAW = 5;
+}
+
+// QualityOption describes one quality preset.
+message QualityOption {
+  string id = 1;
+  string name = 2;
+  int32 width = 3;
+  int32 height = 4;
+  int32 fps = 5;
+  int32 bitrate = 6;
+  int32 bitrate_kbps = 7;
+}
+
+message EnableStreamRequest {}
+
+message EnableStreamResponse {
+  bool success = 1;
+  string message = 2;
+  int32 ws_port = 3;
+  string quality = 4;
+  string resolution = 5;
+  int32 fps = 6;
+  int32 bitrate = 7;
+  string error = 8;
+}
+
+message DisableStreamRequest {}
+
+message DisableStreamResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetStreamStatusRequest {}
+
+message GetStreamStatusResponse {
+  bool pipeline_running = 1;
+  bool streaming_enabled = 2;
+  int32 ws_port = 3;
+  int32 view_mode = 4;
+  string view_name = 5;
+}
+
+message GetStreamQualityRequest {}
+
+message GetStreamQualityResponse {
+  bool success = 1;
+  string current = 2;
+  repeated QualityOption options = 3;
+}
+
+message SetStreamQualityRequest {
+  string quality = 1;
+}
+
+message SetStreamQualityResponse {
+  bool success = 1;
+  string quality = 2;
+  string display_name = 3;
+  int32 width = 4;
+  int32 height = 5;
+  int32 fps = 6;
+  int32 bitrate = 7;
+}
+
+message SetViewModeRequest {
+  int32 view_mode = 1;
+}
+
+message SetViewModeResponse {
+  bool success = 1;
+  int32 view_mode = 2;
+  string view_name = 3;
+  string error = 4;
+}
+
+message GetViewModeRequest {}
+
+message GetViewModeResponse {
+  bool success = 1;
+  int32 view_mode = 2;
+  string view_name = 3;
+}

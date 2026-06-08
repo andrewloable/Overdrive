@@ -21,6 +21,42 @@
 #define LOGW_V2(...) __android_log_print(ANDROID_LOG_WARN,  TAG_V2, __VA_ARGS__)
 #define LOGE_V2(...) __android_log_print(ANDROID_LOG_ERROR, TAG_V2, __VA_ARGS__)
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Native per-stage timing — compiled out entirely when BLADEWATCH_PROFILE is
+// not defined.  Aggregates avg over MOTION_TIMING_WINDOW frames; no per-frame
+// log spam. clock_gettime(CLOCK_MONOTONIC) is ~20-50 ns, negligible.
+// ──────────────────────────────────────────────────────────────────────────────
+#ifdef BLADEWATCH_PROFILE
+#include <time.h>
+
+#define MOTION_TIMING_WINDOW 150
+
+static long long g_mot_total_ns  = 0;
+static long long g_mot_pass1_ns  = 0;
+static long long g_mot_pass2_ns  = 0;
+static int       g_mot_frames    = 0;
+
+static inline long long mot_mono_ns() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+
+static void mot_maybe_emit() {
+    if (g_mot_frames >= MOTION_TIMING_WINDOW) {
+        LOGI_V2("[MotionTiming] avg/%d frames: total=%lldus illuminationSync=%lldus quadrantProc=%lldus",
+                g_mot_frames,
+                g_mot_total_ns / g_mot_frames / 1000LL,
+                g_mot_pass1_ns / g_mot_frames / 1000LL,
+                g_mot_pass2_ns / g_mot_frames / 1000LL);
+        g_mot_total_ns = 0;
+        g_mot_pass1_ns = 0;
+        g_mot_pass2_ns = 0;
+        g_mot_frames   = 0;
+    }
+}
+#endif  // BLADEWATCH_PROFILE
+
 // Persistent pipeline state (single instance, lives for the sentry session)
 static PipelineStateV2 g_pipeline;
 
@@ -929,12 +965,16 @@ void v2_processFrame(
     if (!state->initialized) {
         v2_initPipeline(state);
     }
-    
+
     state->frameCount++;
-    
+
+#ifdef BLADEWATCH_PROFILE
+    long long mot_t0 = mot_mono_ns();
+#endif
+
     // Temporary buffer for extracted quadrant
     uint8_t quadrantBuf[V2_QUADRANT_SIZE];
-    
+
     // ========================================================================
     // PASS 1: Global Illumination Sync (Spillover Hallucination Prevention)
     //
@@ -993,19 +1033,32 @@ void v2_processFrame(
     // ========================================================================
     // PASS 2: Process each quadrant through the full 6-stage pipeline
     // ========================================================================
+#ifdef BLADEWATCH_PROFILE
+    long long mot_t1 = mot_mono_ns();
+#endif
     for (int q = 0; q < V2_NUM_QUADRANTS; q++) {
         if (!config->quadrantEnabled[q]) {
             memset(&results[q], 0, sizeof(QuadrantResultV2));
             continue;
         }
-        
+
         // Extract quadrant from mosaic
         extractQuadrant(frame, width, height, q, quadrantBuf);
-        
+
         // Process through all stages
         processQuadrant(&state->quadrants[q], quadrantBuf, config, &results[q], q, state->frameCount);
     }
-    
+#ifdef BLADEWATCH_PROFILE
+    {
+        long long mot_t2 = mot_mono_ns();
+        g_mot_total_ns += (mot_t2 - mot_t0);
+        g_mot_pass1_ns += (mot_t1 - mot_t0);
+        g_mot_pass2_ns += (mot_t2 - mot_t1);
+        g_mot_frames++;
+        mot_maybe_emit();
+    }
+#endif
+
     // Periodic stats log
     if (state->frameCount % 50 == 0) {
         LOGD_V2("Frame %d: Q0=%s Q1=%s Q2=%s Q3=%s%s",

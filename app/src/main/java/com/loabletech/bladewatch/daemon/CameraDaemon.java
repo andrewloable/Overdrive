@@ -83,7 +83,8 @@ public class CameraDaemon {
     private static long _startTime;
     private static void logT(String step) {
         if (!net.bladewatch.app.config.UnifiedConfigManager.isTimingLogsEnabled()) return;
-        log("[STARTUP +" + (System.currentTimeMillis() - _startTime) + "ms] " + step);
+        long now = System.currentTimeMillis();
+        log("[STARTUP +" + (now - _startTime) + "ms @" + now + "] " + step);
     }
     
     // ==================== SERVERS ====================

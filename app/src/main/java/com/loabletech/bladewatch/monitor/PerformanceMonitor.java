@@ -11,9 +11,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -65,7 +70,20 @@ public class PerformanceMonitor {
     // Scheduler
     private ScheduledExecutorService scheduler;
     private volatile boolean isRunning = false;
-    
+
+    // Persistence sink — CSV file written when isTimingLogsEnabled() is on.
+    // Rotation mirrors DebugAppLogger: ~5 MB per file, 3 backups (.1/.2/.3).
+    private static final String PERF_CSV_PATH =
+            "/storage/emulated/0/BladeWatch/data/performance.csv";
+    private static final long PERF_CSV_MAX_BYTES = 5L * 1024 * 1024;
+    private static final int PERF_CSV_MAX_ROTATIONS = 3;
+    private static final String CSV_HEADER =
+            "timestamp_ms,cpu_pct,app_cpu_pct,cpu_freq_mhz,cpu_temp_c,"
+            + "mem_total_mb,mem_used_mb,mem_pct,app_mem_mb,app_native_mb,app_java_mb,"
+            + "gpu_pct,gpu_freq_mhz,gpu_temp_c,threads,gc_count,open_fds";
+    private final Object csvLock = new Object();
+    private volatile boolean csvEnabled = false;
+
     // SOTA: Client connection tracking for on-demand polling
     private final java.util.concurrent.ConcurrentHashMap<String, Long> activeClients = new java.util.concurrent.ConcurrentHashMap<>();
     private ScheduledExecutorService clientCleanupScheduler;
@@ -98,23 +116,29 @@ public class PerformanceMonitor {
     public void start() {
         if (isRunning) return;
         isRunning = true;
-        
+
+        csvEnabled = net.bladewatch.app.config.UnifiedConfigManager.isTimingLogsEnabled();
+        if (csvEnabled) {
+            initCsvFile();
+        }
+
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "PerfMonitor");
             t.setPriority(Thread.MIN_PRIORITY);
             return t;
         });
-        
+
         scheduler.scheduleAtFixedRate(this::collectMetrics, 0, SAMPLE_INTERVAL_MS, TimeUnit.MILLISECONDS);
-        logger.info("Performance monitoring started");
+        logger.info("Performance monitoring started (csvPersistence=" + csvEnabled + ")");
     }
-    
+
     public void stop() {
         isRunning = false;
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
+        csvEnabled = false;
         logger.info("Performance monitoring stopped");
     }
     
@@ -261,7 +285,11 @@ public class PerformanceMonitor {
                 }
             }
             latestSnapshot.set(snapshot);
-            
+
+            if (csvEnabled) {
+                appendSnapshotToCsv(snapshot);
+            }
+
         } catch (Exception e) {
             logger.error("Failed to collect metrics", e);
         }
@@ -859,6 +887,87 @@ public class PerformanceMonitor {
         return isRunning;
     }
     
+    // ==================== CSV PERSISTENCE SINK ====================
+
+    private void initCsvFile() {
+        synchronized (csvLock) {
+            try {
+                File file = new File(PERF_CSV_PATH);
+                File parent = file.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                // Write header only if file does not already exist or is empty.
+                if (!file.exists() || file.length() == 0) {
+                    try (FileOutputStream fos = new FileOutputStream(file, true);
+                         OutputStreamWriter w = new OutputStreamWriter(fos, "UTF-8")) {
+                        w.write(CSV_HEADER);
+                        w.write("\n");
+                        w.flush();
+                    }
+                }
+                logger.info("Performance CSV sink opened: " + PERF_CSV_PATH);
+            } catch (Exception e) {
+                logger.warn("Failed to init performance CSV: " + e.getMessage());
+                csvEnabled = false;
+            }
+        }
+    }
+
+    private void appendSnapshotToCsv(PerformanceSnapshot s) {
+        synchronized (csvLock) {
+            try {
+                File file = new File(PERF_CSV_PATH);
+                File parent = file.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                if (file.exists() && file.length() >= PERF_CSV_MAX_BYTES) {
+                    rotateCsvFile(file);
+                }
+                // If header is missing after rotation, write it first.
+                boolean needsHeader = !file.exists() || file.length() == 0;
+                try (FileOutputStream fos = new FileOutputStream(file, true);
+                     OutputStreamWriter w = new OutputStreamWriter(fos, "UTF-8")) {
+                    if (needsHeader) {
+                        w.write(CSV_HEADER);
+                        w.write("\n");
+                    }
+                    w.write(String.format(Locale.US,
+                            "%d,%.1f,%.1f,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%d\n",
+                            s.timestamp,
+                            s.cpuUsagePercent, s.appCpuUsagePercent,
+                            s.cpuFreqMhz, s.cpuTempCelsius,
+                            s.memTotalMb, s.memUsedMb, s.memUsagePercent,
+                            s.appMemoryMb, s.appNativeHeapMb, s.appJavaHeapMb,
+                            s.gpuUsagePercent, s.gpuFreqMhz, s.gpuTempCelsius,
+                            s.threadCount, s.gcCount, s.openFileDescriptors));
+                    w.flush();
+                }
+            } catch (Exception e) {
+                // Never crash the monitor thread for a persistence failure.
+                logger.warn("Failed to append perf snapshot to CSV: " + e.getMessage());
+            }
+        }
+    }
+
+    private void rotateCsvFile(File file) {
+        try {
+            // Mirrors DebugAppLogger rotation: delete oldest, shift others up.
+            for (int i = PERF_CSV_MAX_ROTATIONS; i >= 1; i--) {
+                File f = new File(PERF_CSV_PATH + "." + i);
+                if (i == PERF_CSV_MAX_ROTATIONS) {
+                    f.delete();
+                } else if (f.exists()) {
+                    f.renameTo(new File(PERF_CSV_PATH + "." + (i + 1)));
+                }
+            }
+            file.renameTo(new File(PERF_CSV_PATH + ".1"));
+        } catch (Exception e) {
+            logger.warn("Failed to rotate performance CSV: " + e.getMessage());
+        }
+    }
+
     // ==================== SNAPSHOT DATA CLASS ====================
     
     public static class PerformanceSnapshot {

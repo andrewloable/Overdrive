@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// AuthService exposes login, logout, and status endpoints.
+//
+// HTTP mapping:
+//   Login            POST /auth/token
+//   Logout           POST /auth/logout
+//   GetAuthStatus    GET  /auth/status
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc GetAuthStatus(GetAuthStatusRequest) returns (GetAuthStatusResponse);
+}
+
+// LoginRequest carries the device token used to obtain a JWT session cookie.
+message LoginRequest {
+  string token = 1;
+}
+
+message LoginResponse {
+  bool success = 1;
+  // Populated on success.
+  string device_id = 2;
+  // JWT lifetime in seconds.
+  int64 expires_in = 3;
+  // Human-readable error on failure.
+  string error = 4;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetAuthStatusRequest {}
+
+message GetAuthStatusResponse {
+  // "ok" when authenticated.
+  string status = 1;
+  string device_id = 2;
+}

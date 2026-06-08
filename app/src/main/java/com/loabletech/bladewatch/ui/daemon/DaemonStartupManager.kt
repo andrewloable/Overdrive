@@ -24,7 +24,8 @@ class DaemonStartupManager(
     private fun elapsed() = System.currentTimeMillis() - initStartTime
     private fun logT(step: String) {
         if (!UnifiedConfigManager.isTimingLogsEnabled()) return
-        log.info(TAG, "[STARTUP +${elapsed()}ms] $step")
+        val nowMs = System.currentTimeMillis()
+        log.info(TAG, "[STARTUP +${elapsed()}ms @${nowMs}] $step")
     }
 
     companion object {

@@ -83,6 +83,9 @@ public final class DaemonLogConfig {
     /** GpuPipelineFactory - pipeline factory */
     public static final boolean GPU_PIPELINE_FACTORY = false;
 
+    /** GpuPipelineTiming - per-stage frame timing with p50/p95, see PanoramicCameraGpu */
+    public static final boolean GPU_PIPELINE_TIMING = false;
+
     // ==================== SURVEILLANCE & MOTION ====================
     
     /** SurveillanceEngineGpu - motion detection, event recording triggers */
@@ -190,7 +193,7 @@ public final class DaemonLogConfig {
         || GPU_PIPELINE || PANORAMIC_CAMERA || EGL_CORE || GL_UTIL
         || GPU_MOSAIC_RECORDER || GPU_DOWNSCALER || GPU_STREAM_SCALER
         || HW_ENCODER || ADAPTIVE_BITRATE || H264_CIRCULAR_BUFFER
-        || GPU_PIPELINE_FACTORY || SURVEILLANCE_ENGINE || EVENT_TIMELINE
+        || GPU_PIPELINE_FACTORY || GPU_PIPELINE_TIMING || SURVEILLANCE_ENGINE || EVENT_TIMELINE
         || MODE_TRANSITION || SAFE_LOCATION || SURVEILLANCE_CONFIG
         || RECORDING_MODE_MANAGER || PROXIMITY_GUARD_CONTROLLER
         || PROXIMITY_RADAR_MONITOR || PROXIMITY_RECORDING_HANDLER
@@ -219,6 +222,7 @@ public final class DaemonLogConfig {
             if (ADAPTIVE_BITRATE)           ENABLED_TAGS.add("AdaptiveBitrate");
             if (H264_CIRCULAR_BUFFER)       ENABLED_TAGS.add("H264CircularBuffer");
             if (GPU_PIPELINE_FACTORY)       ENABLED_TAGS.add("GpuPipelineFactory");
+            if (GPU_PIPELINE_TIMING)        ENABLED_TAGS.add("GpuPipelineTiming");
             if (SURVEILLANCE_ENGINE)        ENABLED_TAGS.add("SurveillanceEngineGpu");
             if (EVENT_TIMELINE)             ENABLED_TAGS.add("EventTimeline");
             if (MODE_TRANSITION)            ENABLED_TAGS.add("ModeTransition");

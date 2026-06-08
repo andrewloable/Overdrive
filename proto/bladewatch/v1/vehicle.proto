@@ -1,0 +1,295 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// VehicleService exposes BYD vehicle state reads and control commands.
+//
+// HTTP mapping:
+//   GetState             GET  /api/vehicle/state
+//   GetAcDiagnostics     GET  /api/vehicle/ac-diagnostics
+//   GetSeatDiagnostics   GET  /api/vehicle/seat-diagnostics
+//   Lock                 POST /api/vehicle/lock
+//   Unlock               POST /api/vehicle/unlock
+//   Trunk                POST /api/vehicle/trunk
+//   MoveWindow           POST /api/vehicle/window
+//   Flash                POST /api/vehicle/flash
+//   FindCar              POST /api/vehicle/find-car
+//   SetClimate           POST /api/vehicle/climate
+//   SetSeat              POST /api/vehicle/seat
+//   SetLights            POST /api/vehicle/lights
+//   SetAdas              POST /api/vehicle/adas
+//   SetBatteryHeat       POST /api/vehicle/battery-heat
+//   GetChargingSchedule  GET  /api/vehicle/charging-schedule
+//   SetChargingSchedule  POST /api/vehicle/charging-schedule
+//   GetChargeCap         GET  /api/vehicle/charge-cap
+//   SetChargeCap         POST /api/vehicle/charge-cap
+//   GetGpsLocation       GET  /api/gps
+//   StartGps             POST /api/gps/start
+//   StopGps              POST /api/gps/stop
+service VehicleService {
+  rpc GetState(GetVehicleStateRequest) returns (GetVehicleStateResponse);
+  rpc GetAcDiagnostics(GetAcDiagnosticsRequest) returns (GetAcDiagnosticsResponse);
+  rpc GetSeatDiagnostics(GetSeatDiagnosticsRequest) returns (GetSeatDiagnosticsResponse);
+  rpc Lock(LockRequest) returns (VehicleCommandResponse);
+  rpc Unlock(UnlockRequest) returns (VehicleCommandResponse);
+  rpc Trunk(TrunkRequest) returns (VehicleCommandResponse);
+  rpc MoveWindow(MoveWindowRequest) returns (VehicleCommandResponse);
+  rpc Flash(FlashRequest) returns (VehicleCommandResponse);
+  rpc FindCar(FindCarRequest) returns (VehicleCommandResponse);
+  rpc SetClimate(SetClimateRequest) returns (VehicleCommandResponse);
+  rpc SetSeat(SetSeatRequest) returns (VehicleCommandResponse);
+  rpc SetLights(SetLightsRequest) returns (VehicleCommandResponse);
+  rpc SetAdas(SetAdasRequest) returns (VehicleCommandResponse);
+  rpc SetBatteryHeat(SetBatteryHeatRequest) returns (VehicleCommandResponse);
+  rpc GetChargingSchedule(GetChargingScheduleRequest) returns (GetChargingScheduleResponse);
+  rpc SetChargingSchedule(SetChargingScheduleRequest) returns (VehicleCommandResponse);
+  rpc GetChargeCap(GetChargeCapRequest) returns (GetChargeCapResponse);
+  rpc SetChargeCap(SetChargeCapRequest) returns (VehicleCommandResponse);
+  rpc GetGpsLocation(GetGpsLocationRequest) returns (GetGpsLocationResponse);
+  rpc StartGps(StartGpsRequest) returns (StartGpsResponse);
+  rpc StopGps(StopGpsRequest) returns (StopGpsResponse);
+}
+
+// DoorStatus holds per-door lock state: 1=locked, 2=unlocked, -1=unknown.
+message DoorStatus {
+  int32 lf = 1;
+  int32 rf = 2;
+  int32 lr = 3;
+  int32 rr = 4;
+  int32 trunk = 5;
+  int32 hood = 6;
+  int32 overall = 7;
+}
+
+// WindowStatus holds per-window open percentage: 0=closed, 100=open, -1=unknown.
+message WindowStatus {
+  int32 lf = 1;
+  int32 rf = 2;
+  int32 lr = 3;
+  int32 rr = 4;
+  int32 sunroof = 5;
+  int32 sunshade = 6;
+}
+
+message WindowCapabilities {
+  bool sunroof = 1;
+  bool sunshade = 2;
+}
+
+message SeatCapabilities {
+  bool driver_heat = 1;
+  bool passenger_heat = 2;
+  bool driver_cool = 3;
+  bool passenger_cool = 4;
+  bool driver_memory_recall = 5;
+}
+
+message VehicleCapabilities {
+  WindowCapabilities windows = 1;
+  SeatCapabilities seats = 2;
+}
+
+message TrunkStatus {
+  int32 lock_status = 1;
+}
+
+message SunroofStatus {
+  int32 state = 1;
+  int32 position = 2;
+}
+
+message BatteryStatus {
+  double soc = 1;
+  int32 range_km = 2;
+  int32 bodywork_range_km = 3;
+}
+
+message LightStatus {
+  bool low_beam = 1;
+  bool high_beam = 2;
+  bool hazard = 3;
+  bool day_time_light = 4;
+}
+
+message AdasStatus {
+  bool speed_limit_warning = 1;
+}
+
+message SeatStatus {
+  // Heating levels per seat index [0-2], 0=off.
+  repeated int32 heat = 1;
+  // Cooling levels per seat index [0-2], 0=off.
+  repeated int32 cool = 2;
+  bool ventilated_supported = 3;
+}
+
+message ClimateStatus {
+  bool ac_on = 1;
+  double setpoint_c = 2;
+  double inside_temp_c = 3;
+  int32 wind_mode = 4;
+  int32 fan_level = 5;
+  bool max_cooling = 6;
+}
+
+message TyrePressure {
+  int32 k_pa = 1;
+  double psi = 2;
+  int32 temp_c = 3;
+  int32 pressure_state = 4;
+  int32 leak_state = 5;
+  int32 signal_state = 6;
+}
+
+message TyreStatus {
+  TyrePressure fl = 1;
+  TyrePressure fr = 2;
+  TyrePressure rl = 3;
+  TyrePressure rr = 4;
+}
+
+message GetVehicleStateRequest {}
+
+message GetVehicleStateResponse {
+  bool success = 1;
+  DoorStatus doors = 2;
+  WindowStatus windows = 3;
+  VehicleCapabilities capabilities = 4;
+  TrunkStatus trunk = 5;
+  SunroofStatus sunroof = 6;
+  BatteryStatus battery = 7;
+  LightStatus lights = 8;
+  AdasStatus adas = 9;
+  SeatStatus seats = 10;
+  ClimateStatus climate = 11;
+  TyreStatus tyres = 12;
+  string error = 13;
+}
+
+message GetAcDiagnosticsRequest {}
+message GetAcDiagnosticsResponse {
+  bool success = 1;
+  string raw_json = 2;
+}
+
+message GetSeatDiagnosticsRequest {}
+message GetSeatDiagnosticsResponse {
+  bool success = 1;
+  string raw_json = 2;
+}
+
+// VehicleCommandResponse is a generic response for write commands.
+message VehicleCommandResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}
+
+message LockRequest {}
+message UnlockRequest {}
+message FlashRequest {}
+message FindCarRequest {}
+
+message TrunkRequest {
+  // "open", "close", or "stop".
+  string action = 1;
+}
+
+message MoveWindowRequest {
+  // Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+  int32 window_index = 1;
+  // Direction: "open" or "close".
+  string direction = 2;
+  // Optional percent target 0-100.
+  int32 target_percent = 3;
+}
+
+message SetClimateRequest {
+  string action = 1;
+  bool on = 2;
+  double setpoint_c = 3;
+  int32 fan_level = 4;
+  int32 wind_mode = 5;
+  bool max_cooling = 6;
+}
+
+message SetSeatRequest {
+  // Seat index: 1=driver, 2=passenger.
+  int32 seat_index = 1;
+  string action = 2;
+  int32 level = 3;
+}
+
+message SetLightsRequest {
+  string action = 1;
+  bool on = 2;
+}
+
+message SetAdasRequest {
+  string action = 1;
+  bool on = 2;
+}
+
+message SetBatteryHeatRequest {
+  bool on = 1;
+}
+
+message GetChargingScheduleRequest {}
+
+message GetChargingScheduleResponse {
+  bool success = 1;
+  bool enabled = 2;
+  string start_charge_time = 3;
+  string end_charge_time = 4;
+  int32 charge_way = 5;
+  string error = 6;
+}
+
+message SetChargingScheduleRequest {
+  string start_charge_time = 1;
+  string end_charge_time = 2;
+  int32 charge_way = 3;
+  bool enabled = 4;
+}
+
+message GetChargeCapRequest {}
+
+message GetChargeCapResponse {
+  bool success = 1;
+  int32 percent = 2;
+  bool enabled = 3;
+  bool supported = 4;
+  string error = 5;
+}
+
+message SetChargeCapRequest {
+  int32 percent = 1;
+  bool enabled = 2;
+}
+
+message GetGpsLocationRequest {}
+
+message GetGpsLocationResponse {
+  bool success = 1;
+  // Nested location object from GpsMonitor.getLocationJson().
+  string location_json = 2;
+  string google_maps_url = 3;
+}
+
+message StartGpsRequest {}
+
+message StartGpsResponse {
+  bool success = 1;
+  string message = 2;
+  string location_json = 3;
+}
+
+message StopGpsRequest {}
+
+message StopGpsResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -41,6 +41,25 @@
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Per-bind timing — compiled out when BLADEWATCH_PROFILE is not defined.
+// Aggregates avg over BIND_TIMING_WINDOW calls; no per-frame log spam.
+// ──────────────────────────────────────────────────────────────────────────────
+#ifdef BLADEWATCH_PROFILE
+#include <time.h>
+
+#define BIND_TIMING_WINDOW 150
+
+static long long g_bind_ns_total = 0;
+static int       g_bind_count    = 0;
+
+static inline long long bind_mono_ns() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000000000LL + ts.tv_nsec;
+}
+#endif  // BLADEWATCH_PROFILE
+
 namespace {
 
 // Function pointer types for runtime extension resolution.
@@ -166,6 +185,10 @@ Java_net_bladewatch_app_camera_HardwareBufferTextureBinder_bindHardwareBufferToT
         return JNI_FALSE;
     }
 
+#ifdef BLADEWATCH_PROFILE
+    long long bind_t0 = bind_mono_ns();
+#endif
+
     AHardwareBuffer* ahb = g_fns.ahbFromHardwareBuffer(env, jHwBuffer);
     if (ahb == nullptr) {
         LOGE("AHardwareBuffer_fromHardwareBuffer returned null");
@@ -207,5 +230,20 @@ Java_net_bladewatch_app_camera_HardwareBufferTextureBinder_bindHardwareBufferToT
         LOGE("glEGLImageTargetTexture2DOES failed glErr=0x%x", glErr);
         return JNI_FALSE;
     }
+
+#ifdef BLADEWATCH_PROFILE
+    {
+        long long bind_t1 = bind_mono_ns();
+        g_bind_ns_total += (bind_t1 - bind_t0);
+        g_bind_count++;
+        if (g_bind_count >= BIND_TIMING_WINDOW) {
+            LOGI("[BindTiming] avg/%d frames: hwbufferBind=%lldus",
+                 g_bind_count, g_bind_ns_total / g_bind_count / 1000LL);
+            g_bind_ns_total = 0;
+            g_bind_count    = 0;
+        }
+    }
+#endif
+
     return JNI_TRUE;
 }

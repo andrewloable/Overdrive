@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package bladewatch.v1;
+
+option java_package = "net.bladewatch.app.grpc.v1";
+option java_multiple_files = true;
+
+// StorageService manages recording storage limits and external drive cleanup.
+//
+// HTTP mapping (QualitySettingsApiHandler + ExternalStorageApiHandler + FormatStorageApiHandler):
+//   GetStorageSettings      GET  /api/settings/storage
+//   SetStorageSettings      POST /api/settings/storage
+//   GetExternalStorage      GET  /api/storage/external
+//   SetExternalConfig       POST /api/storage/external/config
+//   TriggerCleanup          POST /api/storage/external/cleanup
+//   PreviewCleanup          GET  /api/storage/external/preview
+//   RefreshExternalStorage  POST /api/storage/external/refresh
+//   ListFormatVolumes       GET  /api/storage/format
+//   FormatVolume            POST /api/storage/format
+service StorageService {
+  rpc GetStorageSettings(GetStorageSettingsRequest) returns (GetStorageSettingsResponse);
+  rpc SetStorageSettings(SetStorageSettingsRequest) returns (SetStorageSettingsResponse);
+  rpc GetExternalStorage(GetExternalStorageRequest) returns (GetExternalStorageResponse);
+  rpc SetExternalConfig(SetExternalConfigRequest) returns (SetExternalConfigResponse);
+  rpc TriggerCleanup(TriggerCleanupRequest) returns (TriggerCleanupResponse);
+  rpc PreviewCleanup(PreviewCleanupRequest) returns (PreviewCleanupResponse);
+  rpc RefreshExternalStorage(RefreshExternalStorageRequest) returns (RefreshExternalStorageResponse);
+  rpc ListFormatVolumes(ListFormatVolumesRequest) returns (ListFormatVolumesResponse);
+  rpc FormatVolume(FormatVolumeRequest) returns (FormatVolumeResponse);
+}
+
+// StorageType selects the physical storage medium.
+enum StorageType {
+  STORAGE_TYPE_UNSPECIFIED = 0;
+  STORAGE_TYPE_INTERNAL = 1;
+  STORAGE_TYPE_SD_CARD = 2;
+}
+
+// VolumeInfo describes one removable public volume visible to StorageManager.
+message VolumeInfo {
+  string volume_id = 1;
+  string uuid = 2;
+  bool mounted = 3;
+  string mount_path = 4;
+}
+
+message GetStorageSettingsRequest {}
+
+message GetStorageSettingsResponse {
+  bool success = 1;
+  int64 recordings_limit_mb = 2;
+  int64 surveillance_limit_mb = 3;
+  int64 min_limit_mb = 4;
+  int64 max_limit_mb = 5;
+  int64 max_limit_mb_sd_card = 6;
+  string recordings_path = 7;
+  string surveillance_path = 8;
+  int64 recordings_size_bytes = 9;
+  int64 surveillance_size_bytes = 10;
+  int32 recordings_count = 11;
+  int32 surveillance_count = 12;
+  string recordings_storage_type = 13;
+  string surveillance_storage_type = 14;
+  bool sd_card_available = 15;
+  string sd_card_path = 16;
+  int64 sd_card_free_bytes = 17;
+  int64 sd_card_total_bytes = 18;
+  string sd_card_free_formatted = 19;
+  string sd_card_total_formatted = 20;
+  int64 internal_free_bytes = 21;
+  int64 internal_total_bytes = 22;
+  string internal_free_formatted = 23;
+  string internal_total_formatted = 24;
+}
+
+message SetStorageSettingsRequest {
+  int64 recordings_limit_mb = 1;
+  int64 surveillance_limit_mb = 2;
+  string recordings_storage_type = 3;
+  string surveillance_storage_type = 4;
+}
+
+message SetStorageSettingsResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message GetExternalStorageRequest {}
+
+message GetExternalStorageResponse {
+  bool success = 1;
+  bool sd_card_available = 2;
+  string sd_card_path = 3;
+  int64 sd_card_free_bytes = 4;
+  int64 sd_card_total_bytes = 5;
+  string sd_card_free_formatted = 6;
+  string sd_card_total_formatted = 7;
+  int32 sd_card_used_percent = 8;
+  string cdr_path = 9;
+  int64 cdr_usage_bytes = 10;
+  string cdr_usage_formatted = 11;
+  int32 cdr_file_count = 12;
+  int64 cdr_protected_bytes = 13;
+  string cdr_protected_formatted = 14;
+  int64 cdr_deletable_bytes = 15;
+  string cdr_deletable_formatted = 16;
+  bool cleanup_enabled = 17;
+  int64 reserved_space_mb = 18;
+  int32 protected_hours = 19;
+  int32 min_files_keep = 20;
+  bool monitoring_active = 21;
+  int64 total_bytes_freed = 22;
+  string total_bytes_freed_formatted = 23;
+  int32 total_files_deleted = 24;
+  int64 last_cleanup_time_ms = 25;
+  bool bladewatch_uses_sd_card = 26;
+  bool recommend_auto_cleanup = 27;
+}
+
+message SetExternalConfigRequest {
+  bool enabled = 1;
+  int64 reserved_space_mb = 2;
+  int32 protected_hours = 3;
+  int32 min_files_keep = 4;
+}
+
+message SetExternalConfigResponse {
+  bool success = 1;
+  bool cleanup_enabled = 2;
+  int64 reserved_space_mb = 3;
+  int32 protected_hours = 4;
+  int32 min_files_keep = 5;
+  string error = 6;
+}
+
+message TriggerCleanupRequest {
+  int64 bytes_to_free = 1;
+}
+
+message TriggerCleanupResponse {
+  bool success = 1;
+  int64 bytes_freed = 2;
+  int32 files_deleted = 3;
+  string message = 4;
+  string error = 5;
+}
+
+message PreviewCleanupRequest {}
+
+message PreviewCleanupFile {
+  string path = 1;
+  int64 size_bytes = 2;
+  int64 age_hours = 3;
+}
+
+message PreviewCleanupResponse {
+  bool success = 1;
+  repeated PreviewCleanupFile files = 2;
+  int64 total_deletable_bytes = 3;
+  int32 total_deletable_count = 4;
+}
+
+message RefreshExternalStorageRequest {}
+
+message RefreshExternalStorageResponse {
+  bool success = 1;
+}
+
+message ListFormatVolumesRequest {}
+
+message ListFormatVolumesResponse {
+  bool success = 1;
+  repeated VolumeInfo volumes = 2;
+}
+
+message FormatVolumeRequest {
+  string volume_id = 1;
+}
+
+message FormatVolumeResponse {
+  bool success = 1;
+  string message = 2;
+  string mount_path = 3;
+  string error = 4;
+}
