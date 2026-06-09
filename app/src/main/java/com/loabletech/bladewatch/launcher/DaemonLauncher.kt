@@ -4,6 +4,8 @@ import android.content.Context
 import android.provider.Settings
 import net.bladewatch.app.config.UnifiedConfigManager
 import net.bladewatch.app.logging.LogManager
+import java.net.InetSocketAddress
+import java.net.Socket
 
 /**
  * Launches daemon processes via ADB shell using app_process.
@@ -1165,19 +1167,26 @@ class DaemonLauncher(
     /**
      * Check if the CameraDaemon TCP command port (19876) is accepting connections.
      * A process can exist in ps but be stuck/crashed before the server started.
+     *
+     * Uses an in-process socket connect rather than shelling out to `nc -z`: the
+     * BYD head unit's toybox `nc` has no `-z` flag (it errors "Unknown option z"
+     * and the probe returned `fail` for EVERY daemon — including healthy ones —
+     * which made the ~30s HealthCheck-Camera kill and relaunch a working daemon
+     * on every cycle, crash-looping it and leaving HTTP:8080 intermittently down).
+     * A plain Socket connect is toybox-independent and mirrors CameraDaemonClient.
      */
     private fun isCameraDaemonResponsive(callback: (Boolean) -> Unit) {
-        adbShellExecutor.execute(
-            command = "nc -z -w 3 127.0.0.1 19876 && echo ok || echo fail",
-            callback = object : AdbShellExecutor.ShellCallback {
-                override fun onSuccess(output: String) {
-                    callback(output.trim() == "ok")
+        Thread({
+            val responsive = try {
+                Socket().use { s ->
+                    s.connect(InetSocketAddress("127.0.0.1", 19876), 3000)
+                    true
                 }
-                override fun onError(error: String) {
-                    callback(false)
-                }
+            } catch (e: Exception) {
+                false
             }
-        )
+            callback(responsive)
+        }, "CamDaemonProbe").apply { isDaemon = true }.start()
     }
 
     /**

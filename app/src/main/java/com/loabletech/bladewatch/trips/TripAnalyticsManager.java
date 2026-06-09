@@ -164,21 +164,22 @@ public class TripAnalyticsManager {
     public void onConfigChanged(boolean newEnabled) {
         logger.info("onConfigChanged: " + enabled + " → " + newEnabled);
 
+        // Trip analytics is always on — there is no off switch. Ignore any
+        // request to disable it; if components somehow aren't up yet, bring
+        // them up rather than tearing them down.
+        if (!newEnabled) {
+            logger.info("Ignoring disable request — trip analytics is always on");
+            if (!enabled) {
+                initComponents();
+            }
+            return;
+        }
+
         if (newEnabled == enabled) {
             return; // No change
         }
 
-        if (!newEnabled) {
-            // Disabling — finalize active trip first
-            if (detector != null && detector.isTripActive()) {
-                logger.info("Disabling while trip active — finalizing trip");
-                detector.finalizeActiveTrip();
-            }
-            enabled = false;
-            config.setEnabled(false);
-            config.save();
-            logger.info("Trip analytics disabled");
-        } else {
+        {
             // Enabling
             config.setEnabled(true);
             config.save();

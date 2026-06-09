@@ -135,27 +135,36 @@ class RecordingSettingsController(private val context: Context) {
     private fun loadData() {
         root.post { contentArea.removeAllViews(); contentArea.addView(centeredText("Loading…", 15f)) }
         Thread({
-            val status = client.fetchStatus()
-            val quality = client.fetchQuality()
-            val storage = client.fetchStorage()
-            val mode = status?.currentMode ?: "NONE"
-            selectedMode = RecordingMode.values().find { it.value == mode } ?: RecordingMode.NONE
-            if (quality != null) {
-                selectedQuality = quality.quality; selectedCodec = quality.codec
-                selectedLimit = RecordingLimit.fromMinutes(quality.segmentMinutes)
+            try {
+                val status = client.fetchStatus()
+                val quality = client.fetchQuality()
+                val storage = client.fetchStorage()
+                val mode = status?.currentMode ?: "NONE"
+                selectedMode = RecordingMode.values().find { it.value == mode } ?: RecordingMode.NONE
+                if (quality != null) {
+                    selectedQuality = quality.quality; selectedCodec = quality.codec
+                    selectedLimit = RecordingLimit.fromMinutes(quality.segmentMinutes)
+                }
+                if (storage != null) {
+                    selectedStorageType = storage.storageType; selectedLimitMb = storage.limitMb
+                    storageMinLimitMb = storage.minLimitMb
+                    storageMaxLimitMb = storage.maxLimitMb
+                    storageMaxLimitMbSdCard = storage.maxLimitMbSdCard
+                    storageInternalTotalMb = storage.internalTotalMb
+                    storageSdCardTotalMb = storage.sdCardTotalMb
+                }
+                loadedState = RecordingSettingsLoadState.Loaded(
+                    RecordingAllSettings(status, quality, storage, mode))
+                dirty = false
+                root.post { renderCurrentTab(); loadedOnce = true }
+            } catch (e: Exception) {
+                // Without this the spinner posted above stays forever: the
+                // Error render branch in renderCurrentTab() is otherwise
+                // unreachable. Surface the failure so the user isn't stuck.
+                loadedState = RecordingSettingsLoadState.Error(
+                    e.message ?: e.javaClass.simpleName)
+                root.post { renderCurrentTab(); loadedOnce = true }
             }
-            if (storage != null) {
-                selectedStorageType = storage.storageType; selectedLimitMb = storage.limitMb
-                storageMinLimitMb = storage.minLimitMb
-                storageMaxLimitMb = storage.maxLimitMb
-                storageMaxLimitMbSdCard = storage.maxLimitMbSdCard
-                storageInternalTotalMb = storage.internalTotalMb
-                storageSdCardTotalMb = storage.sdCardTotalMb
-            }
-            loadedState = RecordingSettingsLoadState.Loaded(
-                RecordingAllSettings(status, quality, storage, mode))
-            dirty = false
-            root.post { renderCurrentTab(); loadedOnce = true }
         }, "RecSettingsLoad").apply { isDaemon = true; start() }
     }
 

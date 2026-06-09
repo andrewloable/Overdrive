@@ -74,8 +74,12 @@ public class CameraDaemonClient {
 
                 connected = true;
 
-                // Send auth token as the first message; server rejects without it
-                String token = IpcTokenManager.getToken();
+                // Send auth token as the first message; server rejects without it.
+                // refreshToken() (not getToken()) re-reads from disk so we never send a
+                // token cached before the daemon (re)wrote it on its last startup, which
+                // the daemon would reject as Unauthorized. We are past waitUntilReady()
+                // here, so the daemon is up and its current token is on disk.
+                String token = IpcTokenManager.refreshToken();
                 if (token != null) {
                     JSONObject auth = new JSONObject();
                     auth.put("token", token);

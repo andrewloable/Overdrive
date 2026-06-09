@@ -63,16 +63,25 @@ adb -s 192.168.0.251:5555 shell '
   # Kill the renamed daemon processes by exact name (killall matches comm,
   # so it will NOT match the adb shell).
   killall -9 byd_cam_daemon sentry_daemon acc_sentry_daemon 2>/dev/null
+  # Kill the Zrok tunnel — the only remaining BladeWatch tunnel daemon.
+  # Match the BladeWatch-deployed binary path so this never touches an
+  # unrelated zrok process. (Cloudflared/Tailscale/sing-box/Telegram daemons
+  # were removed; do NOT add generic kills for them.)
+  pkill -9 -f /data/local/tmp/zrok 2>/dev/null
   am force-stop net.bladewatch.app
   # Remove launcher scripts + stale locks/sentinels so nothing relaunches.
   rm -f /data/local/tmp/start_*.sh /data/local/tmp/camera_daemon.lock /data/local/tmp/*sentry*.lock /data/local/tmp/*sentry*.pid 2>/dev/null
   sleep 1
-  ps -A -o PID,NAME 2>/dev/null | grep -E "byd_cam_daemon|sentry_daemon|acc_sentry" | grep -v grep || echo "all daemons stopped"
+  ps -A -o PID,ARGS 2>/dev/null | grep -E "byd_cam_daemon|sentry_daemon|acc_sentry|/data/local/tmp/zrok" | grep -v grep || echo "all daemons stopped"
 '
 # NOTE: killing daemons can briefly drop the ADB-over-TCP connection; if so,
 # reconnect: until [ "$(adb -s 192.168.0.251:5555 get-state)" = device ]; do adb connect 192.168.0.251:5555; sleep 3; done
 adb -s 192.168.0.251:5555 uninstall net.bladewatch.app
 adb -s 192.168.0.251:5555 install app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+
+# Clear all logs (logcat buffer + daemon log files + debug app log)
+adb -s 192.168.0.251:5555 logcat -c
+adb -s 192.168.0.251:5555 shell 'rm -f /data/local/tmp/*.log /data/local/tmp/*.log.*; rm -f /storage/emulated/0/BladeWatch/data/debug_app.log'
 
 # View live logcat (filter to BladeWatch tags)
 adb -s 192.168.0.251:5555 logcat -s BladeWatch:V CameraDaemon:V SentryDaemon:V AccSentryDaemon:V

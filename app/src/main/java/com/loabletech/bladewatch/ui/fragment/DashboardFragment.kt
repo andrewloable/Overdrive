@@ -515,23 +515,33 @@ class DashboardFragment : Fragment() {
     // ============== Auth (access code) ==============
 
     private fun loadAuthState() {
-        try {
-            // getState()/initialize() can return null on a fresh install
-            // before the daemon has populated the unified config — in that
-            // window the access code genuinely doesn't exist yet. Show
-            // the masked placeholder and schedule a short poll: the
-            // daemon writes the canonical secret within ~1-2s of boot,
-            // and we want the dashboard tile to fill in without the user
-            // having to navigate away.
-            val state = AuthManager.getState() ?: AuthManager.initialize()
-            if (state != null) {
-                updateTokenDisplay(state.secret)
-            } else {
-                tvDeviceToken.text = getString(R.string.dashboard_token_masked)
-                scheduleAuthRetry(attempt = 1)
+        // getState()/initialize() can return null on a fresh install before the
+        // daemon has populated the unified config — in that window the access
+        // code genuinely doesn't exist yet. Worse, on a fresh install
+        // initialize() persists the freshly-minted secret via a BLOCKING IPC to
+        // the daemon (SecretConfigBridge.putString → runIpcBlocking), which can
+        // park for seconds while the daemon is still booting. Doing that on the
+        // main thread freezes the UI and ANRs (input-dispatch timeout at 5s), so
+        // resolve auth off-thread and post the result back. Show the masked
+        // placeholder immediately; the daemon writes the canonical secret within
+        // ~1-2s of boot and the poll below fills the tile in.
+        tvDeviceToken.text = getString(R.string.dashboard_token_masked)
+        val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+            .also { metricsExecutor = it }
+        executor.execute {
+            val state = try {
+                AuthManager.getState() ?: AuthManager.initialize()
+            } catch (e: Exception) {
+                null
             }
-        } catch (e: Exception) {
-            tvDeviceToken.text = getString(R.string.dashboard_token_masked)
+            mainHandler.post {
+                if (!isAdded) return@post
+                if (state != null) {
+                    updateTokenDisplay(state.secret)
+                } else {
+                    scheduleAuthRetry(attempt = 1)
+                }
+            }
         }
     }
 
@@ -543,11 +553,20 @@ class DashboardFragment : Fragment() {
         if (attempt > 10) return
         mainHandler.postDelayed({
             if (!isAdded) return@postDelayed
-            val state = AuthManager.getState()
-            if (state != null) {
-                updateTokenDisplay(state.secret)
-            } else {
-                scheduleAuthRetry(attempt + 1)
+            // getState() can still trigger a blocking IPC (see loadAuthState),
+            // so keep it off the main thread here too.
+            val executor = metricsExecutor ?: Executors.newSingleThreadExecutor()
+                .also { metricsExecutor = it }
+            executor.execute {
+                val state = try { AuthManager.getState() } catch (e: Exception) { null }
+                mainHandler.post {
+                    if (!isAdded) return@post
+                    if (state != null) {
+                        updateTokenDisplay(state.secret)
+                    } else {
+                        scheduleAuthRetry(attempt + 1)
+                    }
+                }
             }
         }, 1000)
     }

@@ -251,7 +251,11 @@ object SecretConfigBridge {
 
         val future = ipcExecutor.submit<T> { block() }
         return try {
-            future.get(6, TimeUnit.SECONDS)
+            // Cap BELOW Android's 5s input-dispatch ANR threshold. A main-thread
+            // caller that hits a not-yet-ready daemon would otherwise park long
+            // enough to ANR (a 6s cap guaranteed it). Callers should avoid IPC on
+            // the main thread entirely; this is the defense-in-depth net.
+            future.get(4, TimeUnit.SECONDS)
         } catch (e: java.util.concurrent.TimeoutException) {
             // cancel(true) interrupts the worker thread. Thread.sleep() in waitUntilReady and
             // retry backoff respond to interruption. Socket ops throw on interrupt. We prefer
@@ -261,7 +265,7 @@ object SecretConfigBridge {
             // corruption risk. Without cancel, the single-thread executor stays occupied for
             // up to 30-180s, serializing all subsequent main-thread config reads behind it.
             future.cancel(true)
-            Log.w("SecretConfigBridge", "IPC secret operation timed out after 6s, executor freed")
+            Log.w("SecretConfigBridge", "IPC secret operation timed out after 4s, executor freed")
             defaultValue
         } catch (e: Exception) {
             future.cancel(true)

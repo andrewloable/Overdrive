@@ -247,11 +247,16 @@ object UnifiedConfigManager {
         if (!proximityGuard.has("preRecordSeconds")) proximityGuard.put("preRecordSeconds", 5)
         if (!proximityGuard.has("postRecordSeconds")) proximityGuard.put("postRecordSeconds", 10)
         
-        // Telemetry Overlay defaults
-        val telemetryOverlay = config.optJSONObject("telemetryOverlay") ?: JSONObject().also { 
-            config.put("telemetryOverlay", it) 
+        // Telemetry Overlay defaults — ON by default so dashcam recordings get
+        // the telemetry/GPS overlay burned in without a manual opt-in. The
+        // defaultOnMigrated marker is set here so existing configs (created
+        // under the old false-default) are migrated exactly once by
+        // migrateConfig() and never re-flipped after the user toggles it off.
+        val telemetryOverlay = config.optJSONObject("telemetryOverlay") ?: JSONObject().also {
+            config.put("telemetryOverlay", it)
         }
-        if (!telemetryOverlay.has("enabled")) telemetryOverlay.put("enabled", false)
+        if (!telemetryOverlay.has("enabled")) telemetryOverlay.put("enabled", true)
+        if (!telemetryOverlay.has("defaultOnMigrated")) telemetryOverlay.put("defaultOnMigrated", true)
         
         // Trip Analytics defaults
         val tripAnalytics = config.optJSONObject("tripAnalytics") ?: JSONObject().also {
@@ -286,7 +291,34 @@ object UnifiedConfigManager {
         if (!developerOptions.has("timingLogsEnabled")) developerOptions.put("timingLogsEnabled", true)
         if (!developerOptions.has("debugLogsEnabled")) developerOptions.put("debugLogsEnabled", false)
     }
-    
+
+    /**
+     * Applies idempotent, one-time migrations to an already-loaded config and
+     * returns true if it was mutated (so the caller persists it). Unlike
+     * [applyDefaults], this runs on EXISTING configs every load — each
+     * migration must therefore be guarded by its own marker so it fires once
+     * and never overrides a deliberate later user choice.
+     */
+    private fun migrateConfig(config: JSONObject): Boolean {
+        var changed = false
+
+        // Telemetry overlay default flipped false -> true (2026-06). Configs
+        // created under the old false-default are enabled exactly once; the
+        // defaultOnMigrated marker prevents re-enabling after the user turns
+        // the overlay off in Settings.
+        val telemetryOverlay = config.optJSONObject("telemetryOverlay") ?: JSONObject().also {
+            config.put("telemetryOverlay", it)
+            changed = true
+        }
+        if (!telemetryOverlay.optBoolean("defaultOnMigrated", false)) {
+            telemetryOverlay.put("enabled", true)
+            telemetryOverlay.put("defaultOnMigrated", true)
+            changed = true
+        }
+
+        return changed
+    }
+
     /**
      * Load config from file (with caching).
      */
@@ -319,11 +351,19 @@ object UnifiedConfigManager {
                 if (sourceFile != null) {
                     val content = sourceFile.readText()
                     val config = JSONObject(content)
+                    val migrated = migrateConfig(config)
                     cachedConfig = config
-                    lastModified.set(sourceFile.lastModified())
-                    if (sourceFile.absolutePath != configFile.absolutePath) {
+                    // Re-save when promoting a legacy/mirror source to the
+                    // canonical path, OR when a one-time migration mutated the
+                    // loaded config so the change is persisted.
+                    if (sourceFile.absolutePath != configFile.absolutePath || migrated) {
                         saveConfigInternal(config)
                     }
+                    // Track the canonical file's fresh mtime so the cache
+                    // freshness check doesn't immediately invalidate next load.
+                    lastModified.set(
+                        configFile.lastModified().takeIf { it > 0 } ?: sourceFile.lastModified()
+                    )
                     Log.d(TAG, "Config loaded from ${sourceFile.absolutePath}")
                     config
                 } else {

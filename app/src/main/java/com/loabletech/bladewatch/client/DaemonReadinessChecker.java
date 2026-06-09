@@ -1,29 +1,53 @@
 package net.bladewatch.app.client;
 
 import android.util.Log;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
 public final class DaemonReadinessChecker {
 
     private static final String SENTINEL_PATH = "/data/local/tmp/camera_daemon.ready";
     private static final String TAG = "DaemonReadiness";
 
+    // The daemon's TCP command server. A successful connect is a UID-independent liveness
+    // signal: it proves the daemon process is alive AND accepting commands.
+    private static final String DAEMON_HOST = "127.0.0.1";
+    private static final int DAEMON_PORT = 19876;
+    private static final int PROBE_TIMEOUT_MS = 1000;
+
     private DaemonReadinessChecker() {}
 
     /**
-     * Returns true if the daemon has finished startup: sentinel exists, is non-empty, and the
-     * PID it contains belongs to a live process (/proc/<pid> exists). This prevents a
-     * false-ready signal when the sentinel was left behind by a kill -9 (no shutdown hook ran
-     * to delete it), which would otherwise cause callers to get ECONNREFUSED.
+     * Returns true if the daemon has finished startup: the ready sentinel exists and is non-empty,
+     * AND the daemon's TCP command port accepts a connection.
+     *
+     * <p>The TCP probe is the authoritative liveness check. We deliberately do NOT stat
+     * {@code /proc/<pid>}: on the head unit {@code /proc} is mounted {@code hidepid=2,gid=3009},
+     * so the app UID cannot see the daemon's {@code /proc} entry (the daemon runs as the shell UID
+     * and the app is not in gid 3009). A {@code /proc} check therefore always fails from the app
+     * process, leaving the camera permanently "connecting". A TCP connect works regardless of UID
+     * and also covers the stale-sentinel case: a daemon killed with {@code kill -9} leaves the
+     * sentinel behind but is no longer listening, so the connect is refused.
      */
     public static boolean isReady() {
         File f = new File(SENTINEL_PATH);
         if (!f.exists() || f.length() == 0) return false;
-        int pid = readDaemonPid();
-        if (pid <= 0) return false;
-        return new File("/proc/" + pid).exists();
+        return daemonPortAccepting();
+    }
+
+    /**
+     * Attempts a short-lived TCP connect to the daemon command port.
+     *
+     * @return true if the connection is accepted, false on refusal/timeout/any error
+     */
+    private static boolean daemonPortAccepting() {
+        try (Socket s = new Socket()) {
+            s.connect(new InetSocketAddress(DAEMON_HOST, DAEMON_PORT), PROBE_TIMEOUT_MS);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -55,20 +79,5 @@ public final class DaemonReadinessChecker {
         }
         Log.i(TAG, "Timed out waiting for daemon ready sentinel");
         return false;
-    }
-
-    /**
-     * Reads the daemon PID from the sentinel file.
-     *
-     * @return the PID integer, or -1 on any error
-     */
-    public static int readDaemonPid() {
-        try (BufferedReader br = new BufferedReader(new FileReader(SENTINEL_PATH))) {
-            String line = br.readLine();
-            if (line == null || line.trim().isEmpty()) return -1;
-            return Integer.parseInt(line.trim());
-        } catch (Exception e) {
-            return -1;
-        }
     }
 }

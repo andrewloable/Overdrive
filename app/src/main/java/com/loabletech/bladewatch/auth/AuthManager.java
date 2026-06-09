@@ -306,15 +306,25 @@ public class AuthManager {
      * app returns to the foreground (and before opening the live stream) so a
      * fresh install / daemon restart re-syncs the secret automatically.
      */
-    public static synchronized void refresh() {
+    public static void refresh() {
+        // Intentionally NOT synchronized. refresh() only writes the volatile
+        // cache fields below, so it needs no monitor — and acquiring one would
+        // be actively harmful: getState()/initialize() hold the AuthManager
+        // class monitor across a blocking daemon IPC (up to ~30s while the
+        // daemon is still booting on a fresh install). refresh() is called from
+        // MainActivity.onResume() on the MAIN thread; if it had to wait for that
+        // monitor it would block the UI thread past the 5s input-dispatch
+        // threshold and ANR. Lock-free keeps onResume() instant. The
+        // volatile cachedState=null write is the real cache invalidation
+        // (getState() re-checks it); the stateVersion bump is an advisory
+        // "changed" hint for JWT-caching consumers (DaemonHttpClient's /status
+        // poller, WebView cookie) so they re-mint instead of reusing a JWT
+        // signed with the now-discarded secret. A rare lost increment from
+        // racing a monitored writer is harmless because cachedState=null already
+        // forces a reload.
         if (testStateOverride != null) return;
         cachedState = null;
         cachedConfigMtime = 0;
-        // Bump the version so JWT-caching consumers (DaemonHttpClient's /status
-        // poller, WebView cookie) re-mint instead of reusing a JWT signed with
-        // the now-discarded secret. Without this, the camera/live view recovers
-        // (it mints fresh JWTs) but /status keeps failing "Invalid signature"
-        // until the cache's own TTL expires.
         stateVersion++;
     }
 

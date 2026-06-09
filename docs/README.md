@@ -17,6 +17,7 @@ BladeWatch is an Android application for BYD DiLink vehicles. The app coordinate
 - [Surveillance Implementation](surveillance-implementation.md) documents sentry-mode activation, the GPU/native motion pipeline, AI confirmation, recording lifecycle, safe locations, schedules, APIs, and guardrails.
 - [360 Camera Recording](360-camera-recording.md) explains how the shared 360 camera GPU/encoder stack records surveillance events and ACC-on driving clips.
 - [Build and Operations](build-and-operations.md) covers build inputs, native dependencies, assets, tests, updates, issue tracking, and release/session procedures.
+- [Log Files](log-files.md) documents where each daemon and the app process write logs on the device, the UID split, rotation/retention, and quick tail/clear commands.
 
 ## Source Areas
 

@@ -298,7 +298,7 @@ public class SurveillanceIpcServer implements Runnable {
                 case "GET_TELEMETRY_OVERLAY": {
                     JSONObject overlayConfig = net.bladewatch.app.config.UnifiedConfigManager.getTelemetryOverlay();
                     response.put("success", true);
-                    response.put("enabled", overlayConfig.optBoolean("enabled", false));
+                    response.put("enabled", overlayConfig.optBoolean("enabled", true));
                     break;
                 }
 

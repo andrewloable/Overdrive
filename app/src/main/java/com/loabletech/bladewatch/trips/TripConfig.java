@@ -40,11 +40,23 @@ public class TripConfig {
         try {
             JSONObject section = UnifiedConfigManager.loadConfig().optJSONObject(SECTION);
             if (section != null) {
-                enabled = section.optBoolean("enabled", true);
+                // Trip analytics is always on — there is no user-facing off switch.
+                // A stored enabled=false (from a legacy build or a stale SetConfig)
+                // would otherwise make TripAnalyticsManager.init() skip
+                // initComponents(), leaving the TripDatabase unopened so every read
+                // endpoint returns "Trip database not available" and the dashboard /
+                // Trips screen show nothing. Force it true and self-heal the
+                // persisted config so the file stops contradicting runtime state.
+                boolean stored = section.optBoolean("enabled", true);
+                enabled = true;
                 electricityRate = section.optDouble("electricityRate", 0);
                 currency = section.optString("currency", "");
                 distanceUnit = section.optString("distanceUnit", "km");
                 logger.info("Config loaded: enabled=" + enabled + " rate=" + electricityRate + " " + currency + " unit=" + distanceUnit);
+                if (!stored) {
+                    logger.info("Stored enabled=false ignored — trip analytics is always on; self-healing config");
+                    save();
+                }
                 return true;
             } else {
                 logger.info("No tripAnalytics section in UnifiedConfigManager, using defaults");
@@ -52,7 +64,7 @@ public class TripConfig {
             }
         } catch (Exception e) {
             logger.error("Config load error: " + e.getMessage());
-            enabled = false;
+            enabled = true;
             return false;
         }
     }
@@ -101,7 +113,8 @@ public class TripConfig {
     // ==================== SETTERS ====================
 
     public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+        // Trip analytics is always on; ignore attempts to disable it.
+        this.enabled = true;
     }
 
     public void setElectricityRate(double rate) {

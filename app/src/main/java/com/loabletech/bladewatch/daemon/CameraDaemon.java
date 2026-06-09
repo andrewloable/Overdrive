@@ -1432,7 +1432,7 @@ public class CameraDaemon {
                     
                     // Apply persisted overlay enabled state
                     boolean overlayEnabled = net.bladewatch.app.config.UnifiedConfigManager
-                        .getTelemetryOverlay().optBoolean("enabled", false);
+                        .getTelemetryOverlay().optBoolean("enabled", true);
                     gpuPipeline.setOverlayEnabled(overlayEnabled);
                     log("TelemetryDataCollector initialized, overlay=" + overlayEnabled);
                     
