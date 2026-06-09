@@ -101,9 +101,18 @@ class DaemonLauncher(
     }
     
     /**
+     * Kill processes matching a pattern using PID-based enumeration.
+     * Uses ps + grep + awk to find PIDs and xargs to kill them.
+     * More reliable than pkill/killall on BYD toybox.
+     */
+    private fun killPidsByPattern(pattern: String): String {
+        return "ps -A -o PID,ARGS | grep -E '$pattern' | grep -v grep | awk '{print \$1}' | xargs -r kill -9 2>/dev/null"
+    }
+
+    /**
      * Launch the CameraDaemon via ADB shell.
      * The daemon will run independently of this app as shell user (UID 2000).
-    */
+     */
     fun launchCameraDaemon(outputDir: String, nativeLibDir: String, callback: LaunchCallback) {
         // Prevent concurrent launch attempts
         if (cameraLaunchInProgress) {
@@ -183,18 +192,17 @@ class DaemonLauncher(
         
         // Step 1: Kill old processes and clean up.
         // CRITICAL: Kill the watchdog script FIRST so it can't respawn the daemon
-        // between the two pkill calls. Reversing the order here causes the old
+        // between the two kill commands. Reversing the order here causes the old
         // watchdog to relaunch the daemon, and the fresh watchdog we're about
         // to start loses the singleton lock race ("Another CameraDaemon instance
         // is already running. Exiting.").
         // Also clear the disable sentinel — user is explicitly starting the daemon.
         val cleanupCmd = buildString {
             append("rm -f /data/local/tmp/camera_daemon.disabled 2>/dev/null; ")
-            append("pkill -9 -f 'start_cam_daemon' 2>/dev/null; ")
+            append(killPidsByPattern("start_cam_daemon") + "; ")
             append("rm -f $scriptPath /data/local/tmp/cam_watchdog.pid 2>/dev/null; ")
             append("sleep 1; ")
-            append("pkill -9 -f '$CAMERA_DAEMON_PROCESS' 2>/dev/null; ")
-            append("killall -9 $CAMERA_DAEMON_PROCESS 2>/dev/null; ")
+            append(killPidsByPattern(CAMERA_DAEMON_PROCESS) + "; ")
             append("rm -f /data/local/tmp/camera_daemon.lock 2>/dev/null; ")
             append("sleep 1; echo done")
         }
@@ -701,14 +709,10 @@ class DaemonLauncher(
         callback.onLog("Deploying watchdog script via ADB (UID 2000)...")
         
         // Step 1: Kill EVERYTHING - daemon process, watchdog script, and any shell running the script
-        // Use multiple kill strategies to ensure complete cleanup:
-        // 1. pkill -f 'acc_sentry' - kills daemon by nice-name
-        // 2. pkill -f 'start_acc_sentry.sh' - kills watchdog script by script name
-        // 3. Kill any 'sh' process with the script in cmdline
         val cleanupCmd = buildString {
-            append("pkill -9 -f 'acc_sentry_daemon' 2>/dev/null; ")
-            append("pkill -9 -f 'start_acc_sentry.sh' 2>/dev/null; ")
-            append("pkill -9 -f 'AccSentryDaemon' 2>/dev/null; ")
+            append(killPidsByPattern("acc_sentry_daemon") + "; ")
+            append(killPidsByPattern("start_acc_sentry\\.sh") + "; ")
+            append(killPidsByPattern("AccSentryDaemon") + "; ")
             append("rm -f $lockFilePath 2>/dev/null; ")
             append("rm -f $watchdogScriptPath 2>/dev/null; ")
             append("sleep 1; echo done")
@@ -958,7 +962,7 @@ class DaemonLauncher(
     
     /**
      * Stop the AccSentryDaemon and its watchdog script.
-     * Uses pkill -9 -f 'acc_sentry' to kill both daemon and watchdog in one command.
+     * Uses PID-based enumeration to kill both daemon and watchdog.
      */
     fun stopAccSentryDaemon(callback: LaunchCallback) {
         logManager.info(TAG, "Stopping AccSentryDaemon and watchdog...")
@@ -966,7 +970,7 @@ class DaemonLauncher(
         
         // Kill everything matching 'acc_sentry' pattern - daemon AND watchdog script
         adbShellExecutor.execute(
-            command = "pkill -9 -f 'acc_sentry'; " +
+            command = killPidsByPattern("acc_sentry") + "; " +
                 "rm -f /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null; " +
                 "rm -f /data/local/tmp/start_acc_sentry.sh 2>/dev/null; " +
                 "echo done",
@@ -1044,9 +1048,9 @@ class DaemonLauncher(
     private fun killDaemonViaPrivilegedShell(processName: String, callback: LaunchCallback) {
         val killCmd = if (processName == CAMERA_DAEMON_PROCESS) {
             // Write disable sentinel FIRST, then kill watchdog, then daemon
-            "echo 'disabled by ui at \$(date)' > /data/local/tmp/camera_daemon.disabled; pkill -9 -f 'start_cam_daemon'; rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid; sleep 1; pkill -9 -f '$processName'; rm -f /data/local/tmp/camera_daemon.lock"
+            "echo 'disabled by ui at \$(date)' > /data/local/tmp/camera_daemon.disabled; " + killPidsByPattern("start_cam_daemon") + "; rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid; sleep 1; " + killPidsByPattern(processName) + "; rm -f /data/local/tmp/camera_daemon.lock"
         } else {
-            "pkill -9 -f '$processName'"
+            killPidsByPattern(processName)
         }
         val escapedCmd = killCmd.replace("'", "'\\''")
         val ncCmd = "echo '$escapedCmd' | nc localhost 1234"
@@ -1075,22 +1079,21 @@ class DaemonLauncher(
     private fun killDaemonViaAdb(processName: String, callback: LaunchCallback) {
         // For AccSentryDaemon, use broader pattern 'acc_sentry' to kill both daemon AND watchdog
         val killCmd = if (processName == ACC_SENTRY_DAEMON_PROCESS) {
-            "pkill -9 -f 'acc_sentry' 2>/dev/null; " +
+            killPidsByPattern("acc_sentry") + " 2>/dev/null; " +
             "rm -f /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null; " +
             "rm -f /data/local/tmp/start_acc_sentry.sh 2>/dev/null; " +
             "echo done"
         } else if (processName == CAMERA_DAEMON_PROCESS) {
             // CRITICAL: Kill watchdog FIRST, wait, then kill daemon, then clean up
             // If we kill daemon first, watchdog respawns it before we can kill the watchdog
-            "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+            killPidsByPattern("start_cam_daemon") + " 2>/dev/null; " +
             "rm -f /data/local/tmp/start_cam_daemon.sh 2>/dev/null; " +
             "sleep 1; " +
-            "pkill -9 -f '$processName' 2>/dev/null; " +
-            "killall -9 $processName 2>/dev/null; " +
+            killPidsByPattern(processName) + " 2>/dev/null; " +
             "rm -f /data/local/tmp/camera_daemon.lock 2>/dev/null; " +
             "echo done"
         } else {
-            "pkill -9 -f '$processName' 2>/dev/null; killall -9 $processName 2>/dev/null; echo done"
+            killPidsByPattern(processName) + " 2>/dev/null; echo done"
         }
         
         adbShellExecutor.execute(
@@ -1119,27 +1122,26 @@ class DaemonLauncher(
         // First try privileged shell
         val privKillCmd = if (processName == CAMERA_DAEMON_PROCESS) {
             // Write disable sentinel FIRST, then kill watchdog, then daemon
-            "echo 'disabled by ui at \$(date)' > /data/local/tmp/camera_daemon.disabled; pkill -9 -f 'start_cam_daemon'; rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid; sleep 1; pkill -9 -f '$processName'; rm -f /data/local/tmp/camera_daemon.lock"
+            "echo 'disabled by ui at \$(date)' > /data/local/tmp/camera_daemon.disabled; " + killPidsByPattern("start_cam_daemon") + "; rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid; sleep 1; " + killPidsByPattern(processName) + "; rm -f /data/local/tmp/camera_daemon.lock"
         } else {
-            "pkill -9 -f '$processName'"
+            killPidsByPattern(processName)
         }
         val escapedCmd = privKillCmd.replace("'", "'\\''")
         val ncCmd = "echo '$escapedCmd' | nc localhost 1234 2>/dev/null"
         
         // For AccSentryDaemon, use broader pattern 'acc_sentry' to kill both daemon AND watchdog
         val adbKillCmd = if (processName == ACC_SENTRY_DAEMON_PROCESS) {
-            "pkill -9 -f 'acc_sentry' 2>/dev/null; " +
+            killPidsByPattern("acc_sentry") + " 2>/dev/null; " +
             "rm -f /data/local/tmp/acc_sentry_daemon.lock 2>/dev/null; " +
             "rm -f /data/local/tmp/start_acc_sentry.sh 2>/dev/null"
         } else if (processName == CAMERA_DAEMON_PROCESS) {
-            "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+            killPidsByPattern("start_cam_daemon") + " 2>/dev/null; " +
             "rm -f /data/local/tmp/start_cam_daemon.sh 2>/dev/null; " +
             "sleep 1; " +
-            "pkill -9 -f '$processName' 2>/dev/null; " +
-            "killall -9 $processName 2>/dev/null; " +
+            killPidsByPattern(processName) + " 2>/dev/null; " +
             "rm -f /data/local/tmp/camera_daemon.lock 2>/dev/null"
         } else {
-            "pkill -9 -f '$processName' 2>/dev/null; killall -9 $processName 2>/dev/null"
+            killPidsByPattern(processName) + " 2>/dev/null"
         }
         
         adbShellExecutor.execute(
@@ -1182,11 +1184,10 @@ class DaemonLauncher(
      * Kill a stale CameraDaemon process and clean up its lock/sentinel files.
      */
     private fun killStaleCameraDaemon(onDone: () -> Unit) {
-        val cmd = "pkill -9 -f 'start_cam_daemon' 2>/dev/null; " +
+        val cmd = killPidsByPattern("start_cam_daemon") + " 2>/dev/null; " +
             "rm -f /data/local/tmp/start_cam_daemon.sh /data/local/tmp/cam_watchdog.pid 2>/dev/null; " +
             "sleep 1; " +
-            "pkill -9 -f '$CAMERA_DAEMON_PROCESS' 2>/dev/null; " +
-            "killall -9 $CAMERA_DAEMON_PROCESS 2>/dev/null; " +
+            killPidsByPattern(CAMERA_DAEMON_PROCESS) + " 2>/dev/null; " +
             "rm -f /data/local/tmp/camera_daemon.lock /data/local/tmp/camera_daemon.disabled 2>/dev/null; " +
             "sleep 1; echo done"
         adbShellExecutor.execute(

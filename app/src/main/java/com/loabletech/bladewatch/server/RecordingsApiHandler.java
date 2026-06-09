@@ -1667,7 +1667,6 @@ public class RecordingsApiHandler {
                 HttpResponse.sendJson(out, sb.toString());
             } catch (Exception e) {
                 // File exists but can't be read — return empty
-                logger.warn("Failed to read event timeline sidecar " + jsonFilename + ": " + e.getMessage());
                 sendEmptyTimeline(out);
             }
         } else {

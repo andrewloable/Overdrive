@@ -315,6 +315,7 @@ public class CameraDaemon {
 
         log("=== CAMERA DAEMON STARTING ===");
         log("PID: " + android.os.Process.myPid() + ", UID: " + android.os.Process.myUid());
+        log("ClassPath: " + System.getProperty("java.class.path", "unknown"));
 
         // Grant all manifest permissions via shell (supplements PermissionBypassContext)
         PermissionGranter.grantAllPermissions(APP_PACKAGE_NAME());

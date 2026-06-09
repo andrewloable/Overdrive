@@ -735,25 +735,25 @@ public class SentryDaemon {
     }
     
     /**
-     * Restart the Location Sidecar service by launching the silent starter activity.
+     * Restart the Location Sidecar service by starting the foreground service directly.
      */
     private static void restartLocationService() {
-        log("Location Monitor: Restarting Location service via silent activity...");
+        log("Location Monitor: Restarting Location service via foreground service...");
         
-        // Method 1: Launch silent Location starter activity (preferred - no UI shown)
-        String result = execShell("am start -n " + APP_PKG() + "/.ui.LocationStarterActivity " +
-            "-a " + APP_PKG() + ".START_LOCATION_SILENT " +
-            "-f 0x10000000 " +  // FLAG_ACTIVITY_NEW_TASK
-            "-f 0x00080000 " +  // FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS  
-            "2>&1");
-        log("Location restart (silent activity): " + result);
+        // Method 1: Start foreground service directly (primary - works from shell UID 2000)
+        String result1 = execShell("am start-foreground-service -n " + APP_PKG() + "/.services.LocationSidecarService 2>&1");
+        log("Location restart (Method 1 - foreground service): " + result1);
+        if (result1.contains("Error") || result1.isEmpty()) {
+            log("Location Monitor: WARN - Method 1 may have failed");
+        }
         
-        // Method 2: Start foreground service directly (backup)
-        execShell("am start-foreground-service -n " + APP_PKG() + "/.services.LocationSidecarService 2>&1");
-        
-        // Method 3: Send broadcast to boot receiver (backup)
-        execShell("am broadcast -a android.intent.action.BOOT_COMPLETED " +
+        // Method 2: Send broadcast to boot receiver (backup)
+        String result2 = execShell("am broadcast -a android.intent.action.BOOT_COMPLETED " +
             "-n " + APP_PKG() + "/.receiver.LocationBootReceiver 2>&1");
+        log("Location restart (Method 2 - boot broadcast): " + result2);
+        if (result2.contains("Error") || result2.isEmpty()) {
+            log("Location Monitor: WARN - Method 2 may have failed");
+        }
         
         // Wait and verify
         try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -762,7 +762,7 @@ public class SentryDaemon {
         if (verify.contains("ServiceRecord") && !verify.contains("app=null")) {
             log("Location Monitor: Location service restarted successfully!");
         } else {
-            log("Location Monitor: Location service restart pending");
+            log("Location Monitor: Location service restart pending (verify: " + verify.substring(0, Math.min(verify.length(), 120)) + ")");
         }
     }
     

@@ -27,7 +27,13 @@ class LocationStarterActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        Log.i(TAG, "Location starter activity launched")
+        val callingUid = getLaunchedFromUid()
+        val callingPid = getLaunchedFromPid()
+        val callingPkg = callingPackage
+        Log.i(TAG, "Location starter activity launched (caller: UID=$callingUid PID=$callingPid pkg=$callingPkg)")
+        if (callingUid != android.os.Process.myUid() && callingUid != -1) {
+            Log.w(TAG, "Cross-UID launch detected — shell-UID daemon may have permission issues")
+        }
         
         // Start location sidecar service
         try {
@@ -38,6 +44,10 @@ class LocationStarterActivity : Activity() {
                 startService(serviceIntent)
             }
             Log.i(TAG, "LocationSidecarService started")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission denied starting LocationSidecarService: ${e.message}")
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "App not in foreground — cannot start foreground service: ${e.message}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start LocationSidecarService: ${e.message}")
         }

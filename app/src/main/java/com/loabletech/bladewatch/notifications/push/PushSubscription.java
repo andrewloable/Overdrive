@@ -96,7 +96,7 @@ public final class PushSubscription {
                 j.put("quietHours", qh);
             }
         } catch (Exception ignored) {
-            logger.warn("Failed to serialize push subscription: " + ignored.getMessage(), ignored);
+            logger.warn("Failed to serialize push subscription: " + ignored.getMessage() + " (" + ignored + ")");
         }
         return j;
     }
