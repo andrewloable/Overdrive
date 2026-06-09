@@ -199,7 +199,7 @@ public class SocHistoryDatabase {
             try {
                 stmt.execute("ALTER TABLE " + TABLE_SOC + " ADD COLUMN IF NOT EXISTS remaining_kwh REAL DEFAULT 0;");
             } catch (Exception ignored) {
-                // Column may already exist
+                logger.warn("Migration: remaining_kwh column add failed (likely already exists): " + ignored.getMessage());
             }
             
             // Migration: add battery health columns
@@ -214,7 +214,9 @@ public class SocHistoryDatabase {
             for (String col : newColumns) {
                 try {
                     stmt.execute("ALTER TABLE " + TABLE_SOC + " ADD COLUMN IF NOT EXISTS " + col + ";");
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Migration: column add failed for " + col + " (likely already exists): " + ignored.getMessage());
+                }
             }
             
             // Index for fast time-based queries
@@ -336,7 +338,9 @@ public class SocHistoryDatabase {
         if (connection != null) {
             try {
                 connection.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("Connection close failed (non-fatal): " + ignored.getMessage());
+            }
             connection = null;
         }
         isInitialized = false;
@@ -570,7 +574,9 @@ public class SocHistoryDatabase {
                     if (thermal != null && thermal.hasData() && !Double.isNaN(thermal.averageTempC)) {
                         packTemp = thermal.averageTempC;
                     }
-                } catch (Exception e) { /* use default */ }
+                } catch (Exception e) {
+                    logger.warn("Failed to get battery thermal data for charging session: " + e.getMessage());
+                }
                 
                 // Detect DC fast charging from peak power
                 // AC charging is typically < 11 kW (single phase) or < 22 kW (three phase)
@@ -1139,8 +1145,7 @@ public class SocHistoryDatabase {
             try {
                 n3 = stmt.executeUpdate("DELETE FROM " + TABLE_ACC_EVENTS);
             } catch (Exception ignored) {
-                // Table may not exist on very old installs that haven't yet
-                // run the migration — ignore so SOC/charging still wipe.
+                logger.warn("resetAll: acc_events table may not exist (safe to ignore): " + ignored.getMessage());
             }
             total = n1 + n2 + n3;
             logger.info("resetAll: cleared " + n1 + " from " + TABLE_SOC
@@ -1187,6 +1192,7 @@ public class SocHistoryDatabase {
             java.io.File dbFile = new java.io.File(DB_PATH + ".mv.db");
             return dbFile.exists() ? dbFile.length() : 0;
         } catch (Exception e) {
+            logger.debug("getDatabaseSize failed: " + e.getMessage());
             return 0;
         }
     }
@@ -1489,6 +1495,7 @@ public class SocHistoryDatabase {
             double deltaHours = deltaMs / 3_600_000.0;
             return deltaSoc / deltaHours;
         } catch (Exception e) {
+            logger.debug("getSocChangeRatePerHour failed: " + e.getMessage());
             return 0;
         }
     }

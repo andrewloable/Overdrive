@@ -233,7 +233,9 @@ public class StatusOverlayService extends Service {
                         .putInt(PREF_POS_Y, layoutParams.y)
                         .apply();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to persist overlay position before rebuild: " + e.getMessage());
+        }
         removeOverlay();
         handler.removeCallbacksAndMessages(null);
         pollStatus();
@@ -335,7 +337,9 @@ public class StatusOverlayService extends Service {
         if (overlayView != null && windowManager != null) {
             try {
                 windowManager.removeView(overlayView);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to remove overlay view: " + e.getMessage());
+            }
             overlayView = null;
         }
     }
@@ -385,7 +389,9 @@ public class StatusOverlayService extends Service {
                         layoutParams.y = initialY + (int) dy;
                         try {
                             windowManager.updateViewLayout(overlayView, layoutParams);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to update overlay layout during drag: " + e.getMessage());
+                        }
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
@@ -401,7 +407,9 @@ public class StatusOverlayService extends Service {
                                 .putInt(PREF_POS_X, layoutParams.x)
                                 .putInt(PREF_POS_Y, layoutParams.y)
                                 .apply();
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        Log.w(TAG, "Failed to persist overlay drag position: " + e.getMessage());
+                    }
                     return true;
             }
             return false;
@@ -715,7 +723,9 @@ public class StatusOverlayService extends Service {
                 Log.e(TAG, "Restart recording failed: " + e.getMessage());
             } finally {
                 if (socket != null) {
-                    try { socket.close(); } catch (Exception ignored) {}
+                    try { socket.close(); } catch (Exception ignored) {
+                            Log.w(TAG, "Failed to close socket during cleanup: " + ignored.getMessage());
+                        }
                 }
             }
         });
@@ -742,7 +752,8 @@ public class StatusOverlayService extends Service {
     private void postTripConfig(boolean enabled) {
         try {
             ConnectClientProvider.postTripsConfigSync(enabled);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to post trip config (enabled=" + enabled + "): " + e.getMessage());
         }
     }
 

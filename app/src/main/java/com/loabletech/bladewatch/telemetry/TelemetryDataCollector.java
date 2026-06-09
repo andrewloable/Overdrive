@@ -139,7 +139,7 @@ public class TelemetryDataCollector {
             getSafetyBeltStatusMethod = cls.getMethod("getSafetyBeltStatus", int.class);
             logger.info("Using InstrumentDevice for seatbelt status");
         } catch (Exception e) {
-
+            logger.warn("BYDAutoInstrumentDevice seatbelt unavailable, trying fallback: " + e.getMessage());
             try {
                 Class<?> cls2 = Class.forName("android.hardware.bydauto.safetybelt.BYDAutoSafetyBeltDevice");
                 Method getInstance2 = cls2.getMethod("getInstance", Context.class);
@@ -393,7 +393,7 @@ public class TelemetryDataCollector {
                 seatbelts = belts;
                 lastSeatbelts = seatbelts;
             } catch (Exception e) {
-                // Use defaults
+                logger.warn("Failed to read seatbelt status: " + e.getMessage());
             }
         }
 
@@ -427,7 +427,7 @@ public class TelemetryDataCollector {
                 gpsLon = gps.getLongitude();
             }
         } catch (Exception e) {
-            // Non-fatal: overlay just omits the coordinate line.
+            logger.warn("Failed to read GPS location: " + e.getMessage());
         }
 
         latestSnapshot = new TelemetrySnapshot(
@@ -507,15 +507,15 @@ public class TelemetryDataCollector {
                         logger.info("Using Bodywork." + name + "() for seatbelt alarm");
                     }
                 } catch (NoSuchMethodException e) {
-                    // Method doesn't exist, try next
+                    logger.debug("Bodywork method not found, trying next: " + name);
                 } catch (Exception e) {
-
+                    logger.warn("Bodywork seatbelt probe failed for device: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-
+            logger.warn("BYDAutoBodyworkDevice unavailable for seatbelt probe: " + e.getMessage());
         }
-        
+
         // 2. Try BYDAutoInstrumentDevice — getMalfunctionState() or seatbelt-specific
         try {
             Class<?> cls = Class.forName("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice");
@@ -552,13 +552,13 @@ public class TelemetryDataCollector {
                         }
                         logger.info(sb.toString());
                     } catch (NoSuchMethodException e2) {
-                        // Neither version exists
+                        logger.debug("Instrument method neither no-arg nor int-arg version exists: " + name);
                     }
                 } catch (Exception e) {
-
+                    logger.warn("Instrument seatbelt probe failed for method: " + e.getMessage());
                 }
             }
-            
+
             // Also try MALFUNCTION_ELECTRIC_PARKING_BRAKE constant area
             // getMalfunctionState(int) with various malfunction IDs
             try {
@@ -571,15 +571,19 @@ public class TelemetryDataCollector {
                         if (val != 0 && val != -2147482645) {
                             sb.append(" [").append(i).append("]=").append(val);
                         }
-                    } catch (Exception ex) { /* skip */ }
+                        } catch (Exception ex) {
+                            logger.debug("Instrument.getMalfunctionState(int) [i=" + i + "] failed: " + ex.getMessage());
+                        }
                 }
                 logger.info(sb.toString());
-            } catch (Exception e) { /* no getMalfunctionState(int) */ }
+            } catch (Exception e) {
+                logger.debug("Instrument.getMalfunctionState(int) method not available: " + e.getMessage());
+            }
             
         } catch (Exception e) {
-
+            logger.warn("BYDAutoInstrumentDevice unavailable for seatbelt probe: " + e.getMessage());
         }
-        
+
         if (seatbeltAlarmDevice == null) {
             logger.warn("No working seatbelt API found — seatbelt status will show as buckled");
         }

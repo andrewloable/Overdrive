@@ -519,10 +519,11 @@ public class ExternalStorageCleaner {
             StatFs stat = new StatFs(sdCardPath);
             return stat.getTotalBytes();
         } catch (Exception e) {
+            logWarn("Could not get SD card total space: " + e.getMessage());
             return 0;
         }
     }
-    
+
     /**
      * Get total size of CDR recordings in bytes.
      */
@@ -653,6 +654,7 @@ public class ExternalStorageCleaner {
             p.waitFor();
             return files.toArray(new File[0]);
         } catch (Exception e) {
+            logWarn("listFilesViaShell failed for " + dir.getAbsolutePath() + ": " + e.getMessage());
             return new File[0];
         }
     }

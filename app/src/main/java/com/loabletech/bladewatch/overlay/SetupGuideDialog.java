@@ -196,8 +196,11 @@ public class SetupGuideDialog {
         try {
             context.startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS));
         } catch (Exception e) {
+            Log.w(TAG, "ACTION_APPLICATION_SETTINGS failed, trying ACTION_SETTINGS: " + e.getMessage());
             try { context.startActivity(new Intent(Settings.ACTION_SETTINGS)); }
-            catch (Exception ignored) {}
+            catch (Exception e2) {
+                Log.w(TAG, "All autostart settings navigation fallbacks failed: " + e2.getMessage());
+            }
         }
     }
 
@@ -207,6 +210,7 @@ public class SetupGuideDialog {
                     .getPackageInfo(context.getPackageName(), 0);
             return pi.lastUpdateTime;
         } catch (Exception e) {
+            Log.w(TAG, "Failed to get package install time: " + e.getMessage());
             return 0L;
         }
     }

@@ -286,6 +286,7 @@ public class RecordingsDatabase {
                     try {
                         out.add(new JSONObject(json));
                     } catch (Exception ignored) {
+                        logger.warn("Skipping corrupt JSON row in recordings query: " + ignored.getMessage());
                         // skip a corrupt row; reconcile/sync will rebuild it
                     }
                 }

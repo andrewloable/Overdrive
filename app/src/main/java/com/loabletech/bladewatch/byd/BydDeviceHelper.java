@@ -974,13 +974,17 @@ public final class BydDeviceHelper {
                 m.setAccessible(true);
                 getMethodCache.put(cls, m);
                 return m;
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException e) {
+                logger.debug("findGetMethod: no get(int[], Class) on " + walk.getSimpleName());
+            }
             try {
                 Method m = walk.getDeclaredMethod("get", int.class, int.class);
                 m.setAccessible(true);
                 getMethodCache.put(cls, m);
                 return m;
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException e) {
+                logger.debug("findGetMethod: no get(int, int) on " + walk.getSimpleName());
+            }
             walk = walk.getSuperclass();
         }
         getMethodCache.put(cls, null);
@@ -1004,7 +1008,9 @@ public final class BydDeviceHelper {
                 deviceTypeCache.put(cls, type);
                 return type;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("resolveDeviceType: getDevicetype() failed on " + cls.getSimpleName() + ": " + e.getMessage());
+        }
 
         // Fallback to getType()
         try {
@@ -1015,7 +1021,9 @@ public final class BydDeviceHelper {
                 deviceTypeCache.put(cls, type);
                 return type;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("resolveDeviceType: getType() failed on " + cls.getSimpleName() + ": " + e.getMessage());
+        }
 
         logger.debug("Could not resolve deviceType for " + cls.getSimpleName());
         deviceTypeCache.put(cls, Integer.MIN_VALUE);
@@ -1038,7 +1046,9 @@ public final class BydDeviceHelper {
                 m.setAccessible(true);
                 cache.put(cls, m);
                 return m;
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException e) {
+                logger.debug("findMethodCached(" + methodName + ") not on " + walk.getSimpleName());
+            }
             walk = walk.getSuperclass();
         }
         cache.put(cls, null);
@@ -1052,7 +1062,9 @@ public final class BydDeviceHelper {
                 Method m = walk.getDeclaredMethod("registerListener", listenerInterface);
                 m.setAccessible(true);
                 return m;
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException e) {
+                logger.debug("findRegisterMethod not on " + walk.getSimpleName());
+            }
             walk = walk.getSuperclass();
         }
         return null;
@@ -1065,7 +1077,9 @@ public final class BydDeviceHelper {
                 Method m = walk.getDeclaredMethod("registerListener", listenerInterface, int[].class);
                 m.setAccessible(true);
                 return m;
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException e) {
+                logger.debug("findRegisterMethodWithIds not on " + walk.getSimpleName());
+            }
             walk = walk.getSuperclass();
         }
         return null;

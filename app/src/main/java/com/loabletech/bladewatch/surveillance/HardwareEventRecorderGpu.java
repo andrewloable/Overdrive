@@ -353,7 +353,7 @@ public class HardwareEventRecorderGpu {
             format.setInteger(MediaFormat.KEY_LATENCY, 0);
             format.setInteger(MediaFormat.KEY_PRIORITY, 0);
         } catch (Exception e) {
-            // Ignore if not supported
+            logger.warn("Low-latency hints not supported on this device: " + e.getMessage());
         }
         
         // H.265 specific optimizations for Snapdragon 665
@@ -447,7 +447,9 @@ public class HardwareEventRecorderGpu {
             if (configThread.isAlive()) {
                 logger.error("encoder.configure TIMEOUT - hardware encoder stuck");
                 configThread.interrupt();
-                try { encoder.release(); } catch (Exception e) {}
+                try { encoder.release(); } catch (Exception e) {
+                    logger.warn("Encoder release failed during configure timeout cleanup: " + e.getMessage());
+                }
                 encoder = null;
                 throw new RuntimeException("Encoder configure timeout");
             }
@@ -478,7 +480,9 @@ public class HardwareEventRecorderGpu {
             if (surfaceThread.isAlive()) {
                 logger.error("createInputSurface TIMEOUT - hardware encoder stuck");
                 surfaceThread.interrupt();
-                try { encoder.release(); } catch (Exception e) {}
+                try { encoder.release(); } catch (Exception e) {
+                    logger.warn("Encoder release failed during surface timeout cleanup: " + e.getMessage());
+                }
                 encoder = null;
                 throw new RuntimeException("Surface create timeout");
             }
@@ -518,7 +522,7 @@ public class HardwareEventRecorderGpu {
                 try {
                     encoder.release();
                 } catch (Exception e) {
-                    // Ignore
+                    logger.warn("Encoder release failed during start timeout cleanup: " + e.getMessage());
                 }
                 encoder = null;
                 inputSurface = null;
@@ -783,7 +787,9 @@ public class HardwareEventRecorderGpu {
                 boolean created = parentDir.mkdirs();
                 if (!created && !parentDir.exists()) {
                     // Retry once after short delay (SD card may need time to be accessible)
-                    try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(100); } catch (InterruptedException ignored) {
+                        logger.warn("Sleep interrupted during directory retry");
+                    }
                     created = parentDir.mkdirs();
                 }
                 if (created) {
@@ -826,7 +832,9 @@ public class HardwareEventRecorderGpu {
                 } catch (Exception e) {
                     logger.error("MediaMuxer setup failed", e);
                     if (muxer != null) {
-                        try { muxer.release(); } catch (Exception ignored) {}
+                        try { muxer.release(); } catch (Exception ignored) {
+                            logger.warn("Muxer release failed during setup error cleanup: " + ignored.getMessage());
+                        }
                         muxer = null;
                     }
                     muxerStarted = false;
@@ -882,7 +890,9 @@ public class HardwareEventRecorderGpu {
             // referencing a now-orphaned tmp file.
             synchronized (muxerLock) {
                 if (muxer != null) {
-                    try { muxer.release(); } catch (Exception ignored) {}
+                    try { muxer.release(); } catch (Exception ignored) {
+                        logger.warn("Muxer release failed during event recording error cleanup: " + ignored.getMessage());
+                    }
                     muxer = null;
                 }
                 muxerStarted = false;
@@ -973,7 +983,9 @@ public class HardwareEventRecorderGpu {
                 }
                 if (framesWritten > 0 && drainPass < 4) {
                     // More frames were available — give encoder a moment to finish any in-flight
-                    try { Thread.sleep(20); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(20); } catch (InterruptedException ignored) {
+                        logger.warn("Sleep interrupted during final frame drain");
+                    }
                 }
             }
         } catch (Exception e) {
@@ -1311,7 +1323,7 @@ public class HardwareEventRecorderGpu {
                 // packets to the queue, racing the muxer.stop() call.
                 drainerThread.join(2000);
             } catch (InterruptedException e) {
-                // Ignore
+                logger.warn("Interrupted while waiting for drainer thread to stop");
             }
             drainerThread = null;
         }
@@ -1344,7 +1356,7 @@ public class HardwareEventRecorderGpu {
                     logger.warn("Drainer thread still alive after 1s — proceeding anyway");
                 }
             } catch (InterruptedException e) {
-                // Ignore
+                logger.warn("Interrupted while waiting for drainer thread during camera close");
             }
             drainerThread = null;
         }
@@ -1461,7 +1473,7 @@ public class HardwareEventRecorderGpu {
                 diskWriterThread.interrupt();
                 diskWriterThread.join(2000);  // Allow up to 2s for final flush
             } catch (InterruptedException e) {
-                // Ignore
+                logger.warn("Interrupted while waiting for disk writer thread to stop");
             }
             diskWriterThread = null;
         }
@@ -1849,7 +1861,9 @@ public class HardwareEventRecorderGpu {
             }
             synchronized (muxerLock) {
                 if (muxer != null) {
-                    try { muxer.release(); } catch (Exception ignored) {}
+                    try { muxer.release(); } catch (Exception ignored) {
+                        logger.warn("Muxer release failed during segment rotation error cleanup: " + ignored.getMessage());
+                    }
                     muxer = null;
                 }
                 muxerStarted = false;
@@ -1932,10 +1946,12 @@ public class HardwareEventRecorderGpu {
                     return candidate;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("nextSegmentPath name parsing failed — falling back to numeric suffix: " + ignored.getMessage());
+        }
         return basePath + "_" + segmentNumber + ".mp4";
     }
-    
+
     /**
      * Implements loop recording by deleting oldest segments when storage is low.
      * 
@@ -2081,7 +2097,9 @@ public class HardwareEventRecorderGpu {
         try {
             net.bladewatch.app.server.RecordingsApiHandler.invalidateRecordingCache(
                     mp4File.getAbsolutePath());
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            logger.warn("Failed to invalidate recording cache for " + mp4File.getName() + ": " + ignored.getMessage());
+        }
 
         File parent = mp4File.getParentFile();
         if (parent == null) return 0L;

@@ -1,5 +1,7 @@
 package net.bladewatch.app.notifications;
 
+import android.util.Log;
+
 import org.json.JSONObject;
 
 /**
@@ -15,6 +17,8 @@ import org.json.JSONObject;
  * in the registry, the source should compute it per-event from the data.
  */
 public final class NotificationEvent {
+
+    private static final String TAG = "NotificationEvent";
 
     public enum Severity { INFO, WARN, CRITICAL }
 
@@ -58,7 +62,9 @@ public final class NotificationEvent {
             if (tag != null) j.put("tag", tag);
             if (clickUrl != null) j.put("url", clickUrl);
             j.put("data", data);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            Log.w(TAG, "toPayloadJson failed: " + ignored.getMessage());
+        }
         return j;
     }
 }

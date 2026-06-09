@@ -2,6 +2,7 @@ package net.bladewatch.app.notifications;
 
 import net.bladewatch.app.byd.BydDataCollector;
 import net.bladewatch.app.byd.BydVehicleData;
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.monitor.ChargingStateData;
 import net.bladewatch.app.server.Messages;
 
@@ -36,6 +37,8 @@ import java.util.concurrent.TimeUnit;
  * this code path.
  */
 public final class ChargingEventNotifier {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("ChargingEventNotifier");
 
     /**
      * Threshold for "full" notification. BYD's BMS reports SOC as a whole
@@ -212,8 +215,10 @@ public final class ChargingEventNotifier {
             data.put("stateCode", stateCode);
             if (isFinite(powerKw)) data.put("powerKw", powerKw);
             if (isFinite(socPercent)) data.put("socPercent", socPercent);
-        } catch (Exception ignored) {}
-
+        } catch (Exception ignored) {
+            logger.warn("Failed to build charging started event data: " + ignored.getMessage());
+        }
+        
         publish(new NotificationEvent(
                 "vehicle.charging.started",
                 NotificationEvent.Severity.INFO,
@@ -239,8 +244,10 @@ public final class ChargingEventNotifier {
             data.put("stateCode", stateCode);
             data.put("stateName", reason);
             if (isFinite(socPercent)) data.put("socPercent", socPercent);
-        } catch (Exception ignored) {}
-
+        } catch (Exception ignored) {
+            logger.warn("Failed to build charging stopped event data: " + ignored.getMessage());
+        }
+        
         publish(new NotificationEvent(
                 "vehicle.charging.stopped",
                 NotificationEvent.Severity.INFO,
@@ -256,8 +263,10 @@ public final class ChargingEventNotifier {
         try {
             data.put("socPercent", socPercent);
             data.put("threshold", FULL_SOC_THRESHOLD);
-        } catch (Exception ignored) {}
-
+        } catch (Exception ignored) {
+            logger.warn("Failed to build charging full event data: " + ignored.getMessage());
+        }
+        
         publish(new NotificationEvent(
                 "vehicle.charging.full",
                 NotificationEvent.Severity.WARN,
@@ -276,8 +285,10 @@ public final class ChargingEventNotifier {
         try {
             data.put("stateCode", stateCode);
             data.put("stateName", label);
-        } catch (Exception ignored) {}
-
+        } catch (Exception ignored) {
+            logger.warn("Failed to build charging fault event data: " + ignored.getMessage());
+        }
+        
         publish(new NotificationEvent(
                 "vehicle.charging.fault",
                 NotificationEvent.Severity.CRITICAL,
@@ -289,7 +300,9 @@ public final class ChargingEventNotifier {
     }
 
     private static void publish(NotificationEvent event) {
-        try { NotificationBus.get().publish(event); } catch (Throwable ignored) {}
+        try { NotificationBus.get().publish(event); } catch (Throwable t) {
+            logger.warn("Failed to publish notification event: " + t.getMessage());
+        }
     }
 
     private static ChargingStateData.ChargingStatus statusOf(int stateCode) {

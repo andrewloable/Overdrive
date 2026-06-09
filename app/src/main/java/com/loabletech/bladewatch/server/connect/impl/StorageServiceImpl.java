@@ -1,5 +1,6 @@
 package net.bladewatch.app.server.connect.impl;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.server.ExternalStorageApiHandler;
 import net.bladewatch.app.server.FormatStorageApiHandler;
 import net.bladewatch.app.server.QualitySettingsApiHandler;
@@ -26,6 +27,9 @@ import net.bladewatch.app.server.connect.ConnectResponse;
  * order: handle(path, method, body, out).
  */
 public class StorageServiceImpl {
+
+    private static final String TAG = "StorageServiceImpl";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public void register(ConnectDispatcher dispatcher) {
         dispatcher.register("bladewatch.v1.StorageService", "GetStorageSettings",
@@ -79,7 +83,9 @@ public class StorageServiceImpl {
         if (req != null && !req.isEmpty()) {
             try {
                 bytesToFree = new org.json.JSONObject(req).optLong("bytesToFree", 0L);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("Failed to parse bytesToFree from request body: " + ignored.getMessage());
+            }
         }
         final String path = bytesToFree > 0
                 ? "/api/storage/external/preview?bytesToFree=" + bytesToFree

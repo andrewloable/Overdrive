@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -11,6 +13,9 @@ import java.util.List;
  * Includes launch profiles, coast-before-brake events, and pedal smoothness windows.
  */
 public class MicroMoments {
+
+    private static final String TAG = "MicroMoments";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     // ==================== Inner Classes ====================
 
@@ -38,7 +43,7 @@ public class MicroMoments {
                 }
                 json.put("accelCurve", curve);
             } catch (Exception e) {
-                // ignore
+                logger.warn("MicroMoments.LaunchProfile.toJson: failed to serialize: " + e.getMessage());
             }
             return json;
         }
@@ -72,7 +77,7 @@ public class MicroMoments {
                 json.put("coastGapMs", coastGapMs);
                 json.put("speedAtBrake", speedAtBrake);
             } catch (Exception e) {
-                // ignore
+                logger.warn("MicroMoments.CoastBrakeEvent.toJson: failed to serialize: " + e.getMessage());
             }
             return json;
         }
@@ -99,7 +104,7 @@ public class MicroMoments {
                 json.put("startTime", startTime);
                 json.put("stdDev", stdDev);
             } catch (Exception e) {
-                // ignore
+                logger.warn("MicroMoments.PedalSmoothnessWindow.toJson: failed to serialize: " + e.getMessage());
             }
             return json;
         }
@@ -188,7 +193,7 @@ public class MicroMoments {
             }
             json.put("smoothnessWindows", smoothArr);
         } catch (Exception e) {
-            // ignore
+            logger.warn("MicroMoments.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }
@@ -223,7 +228,7 @@ public class MicroMoments {
                 }
             }
         } catch (Exception e) {
-            // Return empty MicroMoments on parse failure
+            logger.warn("MicroMoments.fromJson: failed to parse: " + e.getMessage());
         }
         return mm;
     }

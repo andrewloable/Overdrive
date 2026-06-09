@@ -136,6 +136,7 @@ public class ProximityRecordingHandler {
             int slash = path.lastIndexOf('/');
             return slash >= 0 ? path.substring(slash + 1) : path;
         } catch (Throwable t) {
+            logger.warn("Failed to get active recording filename: " + t.getMessage());
             return null;
         }
     }

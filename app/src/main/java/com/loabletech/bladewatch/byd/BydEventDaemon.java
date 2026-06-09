@@ -96,7 +96,9 @@ public class BydEventDaemon {
         while (running) {
             try {
                 if (serverSocket != null && !serverSocket.isClosed()) {
-                    try { serverSocket.close(); } catch (Exception e) {}
+                    try { serverSocket.close(); } catch (Exception e) {
+                        logger.warn("BydEventDaemon runTcpServer: failed to close serverSocket: " + e.getMessage());
+                    }
                 }
                 
                 serverSocket = new ServerSocket(TCP_PORT, 10, java.net.InetAddress.getByName("127.0.0.1"));
@@ -123,7 +125,7 @@ public class BydEventDaemon {
                 
             } catch (java.net.BindException e) {
                 logger.error("Port " + TCP_PORT + " already in use, retrying in 5s...");
-                try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+                    try { Thread.sleep(5000); } catch (InterruptedException ie) { logger.warn("Port bind retry sleep interrupted: " + ie.getMessage()); }
             } catch (Exception e) {
                 logger.error("TCP server error: " + e.getMessage());
                 if (running) {
@@ -168,7 +170,9 @@ public class BydEventDaemon {
             } finally {
                 connected = false;
                 clients.remove(this);
-                try { socket.close(); } catch (Exception e) {}
+                try { socket.close(); } catch (Exception e) {
+                    logger.warn("BydEventDaemon ClientHandler: failed to close client socket: " + e.getMessage());
+                }
             }
         }
         

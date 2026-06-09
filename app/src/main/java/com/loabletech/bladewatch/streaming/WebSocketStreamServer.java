@@ -238,6 +238,7 @@ public class WebSocketStreamServer extends WebSocketServer
                 }
                 else clients.remove(conn);
             } catch (Exception e) {
+                logger.warn("Failed to send frame to client " + conn.getRemoteSocketAddress() + ": " + e.getMessage());
                 clients.remove(conn);
             }
         }
@@ -250,7 +251,7 @@ public class WebSocketStreamServer extends WebSocketServer
         try {
             cancelIdleTimer();
             for (WebSocket conn : clients) {
-                try { conn.close(); } catch (Exception ignored) {}
+                try { conn.close(); } catch (Exception e) { logger.warn("Failed to close WebSocket: " + e.getMessage()); }
             }
             clients.clear();
             cachedSpsPps = null;

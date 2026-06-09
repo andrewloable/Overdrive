@@ -1,5 +1,7 @@
 package net.bladewatch.app.camera;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -9,6 +11,8 @@ import org.json.JSONObject;
  * tell which BMM tag and layout actually selected the tuple.
  */
 public final class PanoCameraDiscovery {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("PanoCameraDiscovery");
 
     public final int cameraId;
     public final int surfaceMode;
@@ -45,6 +49,7 @@ public final class PanoCameraDiscovery {
             json.put("discoveryMethod", method);
             json.put("vehicleCamSort", vehicleCamSort);
         } catch (Exception ignored) {
+            logger.warn("Failed to build discovery JSON: " + ignored.getMessage());
         }
         return json;
     }

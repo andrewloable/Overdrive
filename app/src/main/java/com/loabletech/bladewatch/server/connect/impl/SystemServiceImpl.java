@@ -1,5 +1,6 @@
 package net.bladewatch.app.server.connect.impl;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.server.AudioTestApiHandler;
 import net.bladewatch.app.server.HttpServer;
 import net.bladewatch.app.server.ModelsApiHandler;
@@ -23,6 +24,8 @@ import net.bladewatch.app.server.connect.ConnectResponse;
  *   DownloadModel → POST /api/models/download (ModelsApiHandler)
  */
 public class SystemServiceImpl {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("SystemServiceImpl");
 
     private final HttpServer httpServer;
 
@@ -128,7 +131,9 @@ public class SystemServiceImpl {
                     restBody.put("nominalKwh", org.json.JSONObject.NULL);
                 }
                 tmp = restBody.toString();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                logger.warn("Failed to reformat SetSohNominal request body, forwarding raw: " + e.getMessage());
+            }
         }
         body = tmp;
         return ConnectHandlerUtil.captureString(out ->
@@ -182,7 +187,9 @@ public class SystemServiceImpl {
             org.json.JSONObject reqJson = new org.json.JSONObject(req == null ? "{}" : req);
             int maxAgeHours = reqJson.optInt("maxAgeHours", 72);
             if (maxAgeHours > 0) path = path + "?maxAgeHours=" + maxAgeHours;
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.warn("Failed to parse GetParkingDelta request: " + e.getMessage());
+        }
         final String finalPath = path;
         ConnectResponse raw = ConnectHandlerUtil.captureString(out ->
                 PerformanceApiHandler.handle("GET", finalPath, null, out));
@@ -204,7 +211,9 @@ public class SystemServiceImpl {
             org.json.JSONObject reqJson = new org.json.JSONObject(req == null ? "{}" : req);
             int hoursBack = reqJson.optInt("hoursBack", 24);
             if (hoursBack > 0) path = path + "?hoursBack=" + hoursBack;
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.warn("Failed to parse GetLastCharge request: " + e.getMessage());
+        }
         final String finalPath = path;
         ConnectResponse raw = ConnectHandlerUtil.captureString(out ->
                 PerformanceApiHandler.handle("GET", finalPath, null, out));

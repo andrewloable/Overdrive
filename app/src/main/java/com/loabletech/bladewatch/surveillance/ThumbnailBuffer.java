@@ -346,12 +346,16 @@ public final class ThumbnailBuffer {
             File tmpFile = new File(outFile.getAbsolutePath() + ".tmp");
             try (FileOutputStream fos = new FileOutputStream(tmpFile)) {
                 out.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, fos);
-                try { fos.getFD().sync(); } catch (Throwable ignored) {}
+                try { fos.getFD().sync(); } catch (Throwable ignored) {
+                    logger.warn("JPEG fsync failed for " + outFile.getName() + ": " + ignored.getMessage());
+                }
             }
             // World-readable so the PWA push sender (separate process, shell UID)
             // can read the JPEG. Set on tmp BEFORE rename so the readable bit
             // lands atomically with the file move.
-            try { tmpFile.setReadable(true, /*ownerOnly=*/false); } catch (Throwable ignored) {}
+            try { tmpFile.setReadable(true, /*ownerOnly=*/false); } catch (Throwable ignored) {
+                logger.warn("setReadable failed for thumbnail " + outFile.getName() + ": " + ignored.getMessage());
+            }
             if (!tmpFile.renameTo(outFile)) {
                 // Rename failed (e.g. cross-volume on weird mounts). Best-effort
                 // direct copy as a fallback so we don't lose the hero entirely.

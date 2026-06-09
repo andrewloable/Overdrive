@@ -339,7 +339,10 @@ public class GpuDownscaler {
             if (!done[0]) {
                 try {
                     lock.wait(50);
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException e) {
+                    logger.warn("readPixels wait interrupted: " + e.getMessage());
+                    Thread.currentThread().interrupt();
+                }
             }
         }
         

@@ -2,6 +2,8 @@ package net.bladewatch.app.daemon.proxy;
 
 import android.util.Base64;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -23,6 +25,9 @@ import javax.crypto.spec.SecretKeySpec;
  * Usage: Safe.s("base64_encrypted_string") -> decrypted plaintext
  */
 public class Safe {
+    
+    private static final String TAG = "Safe";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
     
     private Safe() {} // No instantiation
     
@@ -73,6 +78,7 @@ public class Safe {
             return new String(decrypted, "UTF-8");
             
         } catch (Exception e) {
+            logger.error("Safe.s() decryption failed: " + e.getMessage());
             // Return error marker - helps debugging without exposing details
             return "ERR";
         }

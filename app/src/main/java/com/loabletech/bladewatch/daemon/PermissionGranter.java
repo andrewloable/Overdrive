@@ -309,6 +309,7 @@ public final class PermissionGranter {
             
             return -1;
         } catch (Exception e) {
+            log("execGrant failed for " + permission + ": " + e.getMessage());
             return -1;
         }
     }

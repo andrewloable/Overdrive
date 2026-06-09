@@ -5,6 +5,8 @@ import android.content.Context;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 /**
  * Bootstrap utility for standalone daemons running via app_process.
  * 
@@ -22,7 +24,8 @@ import java.lang.reflect.Method;
 public final class DaemonBootstrap {
     
     private static final String TAG = "DaemonBootstrap";
-    
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
+
     // Hardcoded - this is the ONLY place we need to hardcode the package name
     // It's required to break the chicken-egg problem (can't decrypt package name without context)
     private static final String BOOTSTRAP_PACKAGE = "net.bladewatch.app";
@@ -110,7 +113,9 @@ public final class DaemonBootstrap {
             try {
                 Method currentActivityThread = activityThreadClass.getMethod("currentActivityThread");
                 activityThread = currentActivityThread.invoke(null);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("DaemonBootstrap createAppContext: strategy 1 (currentActivityThread) failed: " + ignored.getMessage());
+            }
             
             // Strategy 2: systemMain with timeout
             if (activityThread == null) {
@@ -119,7 +124,9 @@ public final class DaemonBootstrap {
                     try {
                         Method systemMain = activityThreadClass.getMethod("systemMain");
                         result[0] = systemMain.invoke(null);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                        logger.warn("DaemonBootstrap createAppContext: strategy 2 (systemMain) failed: " + ignored.getMessage());
+                    }
                 }, "SystemMainInit");
                 t.setDaemon(true);
                 t.start();
@@ -130,7 +137,9 @@ public final class DaemonBootstrap {
                     try {
                         Method cur = activityThreadClass.getMethod("currentActivityThread");
                         activityThread = cur.invoke(null);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                        logger.warn("DaemonBootstrap createAppContext: strategy 2 post-timeout currentActivityThread failed: " + ignored.getMessage());
+                    }
                 } else {
                     activityThread = result[0];
                 }
@@ -147,7 +156,9 @@ public final class DaemonBootstrap {
                         java.lang.reflect.Field f = activityThreadClass.getDeclaredField("sCurrentActivityThread");
                         f.setAccessible(true);
                         f.set(null, activityThread);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                        logger.warn("DaemonBootstrap createAppContext: strategy 3 failed to set sCurrentActivityThread: " + ignored.getMessage());
+                    }
                     log("createAppContext: manual ActivityThread creation succeeded");
                 } catch (Exception e) {
                     log("createAppContext: manual creation failed: " + e.getMessage());
@@ -209,7 +220,9 @@ public final class DaemonBootstrap {
     private static void prepareMainLooperForShellDaemon() {
         // This bootstrap runs outside a normal app ActivityThread, so BYD SDK
         // listener registration needs a process main looper created manually.
-        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {}
+        try { android.os.Looper.prepareMainLooper(); } catch (Exception ignored) {
+            logger.warn("prepareMainLooperForShellDaemon: Looper.prepareMainLooper() failed: " + ignored.getMessage());
+        }
     }
 
     public static class PermissionBypassContext extends android.content.ContextWrapper {
@@ -243,25 +256,46 @@ public final class DaemonBootstrap {
         
         // Null-safe overrides for fallback mode
         @Override public Context getApplicationContext() {
-            try { return super.getApplicationContext(); } catch (NullPointerException e) { return this; }
+            try { return super.getApplicationContext(); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getApplicationContext() NPE: " + e.getMessage());
+                return this;
+            }
         }
         @Override public String getPackageName() {
-            try { return super.getPackageName(); } catch (NullPointerException e) { return BOOTSTRAP_PACKAGE; }
+            try { return super.getPackageName(); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getPackageName() NPE: " + e.getMessage());
+                return BOOTSTRAP_PACKAGE;
+            }
         }
         @Override public Object getSystemService(String name) {
-            try { return super.getSystemService(name); } catch (NullPointerException e) { return null; }
+            try { return super.getSystemService(name); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getSystemService(\"" + name + "\") NPE: " + e.getMessage());
+                return null;
+            }
         }
         @Override public android.content.pm.ApplicationInfo getApplicationInfo() {
-            try { return super.getApplicationInfo(); } catch (NullPointerException e) { return new android.content.pm.ApplicationInfo(); }
+            try { return super.getApplicationInfo(); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getApplicationInfo() NPE: " + e.getMessage());
+                return new android.content.pm.ApplicationInfo();
+            }
         }
         @Override public android.content.ContentResolver getContentResolver() {
-            try { return super.getContentResolver(); } catch (NullPointerException e) { return null; }
+            try { return super.getContentResolver(); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getContentResolver() NPE: " + e.getMessage());
+                return null;
+            }
         }
         @Override public android.content.res.Resources getResources() {
-            try { return super.getResources(); } catch (NullPointerException e) { return null; }
+            try { return super.getResources(); } catch (NullPointerException e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.getResources() NPE: " + e.getMessage());
+                return null;
+            }
         }
         @Override public Context createPackageContext(String packageName, int flags) {
-            try { return super.createPackageContext(packageName, flags); } catch (Exception e) { return this; }
+            try { return super.createPackageContext(packageName, flags); } catch (Exception e) {
+                DaemonBootstrap.logger.warn("PermissionBypassContext.createPackageContext(\"" + packageName + "\") failed: " + e.getMessage());
+                return this;
+            }
         }
     }
 }

@@ -439,13 +439,17 @@ public class VehicleControlApiHandler {
     private static void handleBatteryHeat(OutputStream out, String body) throws Exception {
         boolean enabled = false;
         if (body != null && !body.isEmpty()) {
-            try { enabled = new JSONObject(body).optBoolean("enabled", false); } catch (Exception ignored) {}
+            try { enabled = new JSONObject(body).optBoolean("enabled", false); } catch (Exception ignored) {
+                logger.warn("Failed to parse batteryHeat body: " + ignored.getMessage());
+            }
         }
         CommandResult r = VehicleCommandRouter.getInstance()
                 .execute(new VehicleCommandRouter.BatteryHeatCommand(enabled));
         logger.info("BatteryHeat: routed result=" + r.outcome + " enabled=" + enabled);
         JSONObject resp = routedResponse(r, "battery-heat");
-        try { resp.put("enabled", enabled); } catch (Exception ignored) {}
+        try { resp.put("enabled", enabled); } catch (Exception ignored) {
+            logger.warn("Failed to set enabled in batteryHeat response: " + ignored.getMessage());
+        }
         HttpResponse.sendJson(out, resp.toString());
     }
 
@@ -459,7 +463,9 @@ public class VehicleControlApiHandler {
         String action = "open";
         if (body != null && !body.isEmpty()) {
             try { action = new JSONObject(body).optString("action", "open"); }
-            catch (Exception ignored) {}
+            catch (Exception ignored) {
+                logger.warn("Failed to parse trunk body: " + ignored.getMessage());
+            }
         }
         VehicleCommand cmd;
         if ("close".equals(action)) cmd = new VehicleCommandRouter.TrunkCloseCommand();
@@ -1008,7 +1014,9 @@ public class VehicleControlApiHandler {
             } else if (!success) {
                 resp.put("error", r.displayMessage);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to build routed response JSON: " + ignored.getMessage());
+        }
         return resp;
     }
 }

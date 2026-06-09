@@ -172,8 +172,8 @@ public class RecordingModeManager {
                 hwGear = gm.getCurrentGear();
             }
         } catch (Exception ignored) {
-            // GearMonitor unavailable — keep our current value
-        }
+                logger.warn("GearMonitor unavailable during resync: " + ignored.getMessage());
+            }
 
         boolean accChanged = hwAcc != accIsOn;
         boolean gearChanged = hwGear != currentGear;

@@ -178,6 +178,7 @@ public class FormatStorageApiHandler {
             int exit = p.waitFor();
             return new String[]{String.valueOf(exit), sb.toString()};
         } catch (Exception e) {
+            CameraDaemon.log("FormatStorage: shell command failed: " + e.getMessage());
             return new String[]{"-1", e.getMessage() != null ? e.getMessage() : "exec error"};
         }
     }

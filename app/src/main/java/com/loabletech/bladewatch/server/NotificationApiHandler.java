@@ -1,5 +1,6 @@
 package net.bladewatch.app.server;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.notifications.CategoryRegistry;
 import net.bladewatch.app.notifications.NotificationBus;
 import net.bladewatch.app.notifications.NotificationEvent;
@@ -28,6 +29,9 @@ import java.io.OutputStream;
  * <p>All routes require auth (handled by the caller before dispatch).
  */
 public final class NotificationApiHandler {
+
+    private static final String TAG = "NotificationApiHandler";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     private static volatile CategoryRegistry registry;
     private static volatile SubscriptionStore subStore;
@@ -193,7 +197,9 @@ public final class NotificationApiHandler {
             try {
                 sub.minSeverity = NotificationEvent.Severity.valueOf(
                         j.getString("minSeverity").toUpperCase(java.util.Locale.US));
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("Failed to parse minSeverity value: " + ignored.getMessage());
+            }
         }
         if (j.has("quietHours")) {
             Object qhRaw = j.get("quietHours");
@@ -222,12 +228,15 @@ public final class NotificationApiHandler {
                 JSONObject j = new JSONObject(body);
                 category = j.optString("category", category);
                 severityStr = j.optString("severity", severityStr);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("Failed to parse sendTest body: " + ignored.getMessage());
+            }
         }
         NotificationEvent.Severity severity;
         try {
             severity = NotificationEvent.Severity.valueOf(severityStr.toUpperCase(java.util.Locale.US));
         } catch (Exception e) {
+            logger.warn("Failed to parse severity '" + severityStr + "': " + e.getMessage());
             severity = NotificationEvent.Severity.INFO;
         }
         NotificationEvent event = new NotificationEvent(

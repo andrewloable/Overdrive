@@ -1100,10 +1100,10 @@ public class TripDatabase {
         trip.currency = rs.getString("currency");
         trip.tripCost = rs.getDouble("trip_cost");
         trip.kinematicState = rs.getString("kinematic_state");
-        try { trip.gradientProfile = rs.getString("gradient_profile"); } catch (Exception e) { trip.gradientProfile = ""; }
-        try { trip.elevationGainM = rs.getDouble("elevation_gain_m"); } catch (Exception e) { trip.elevationGainM = 0; }
-        try { trip.elevationLossM = rs.getDouble("elevation_loss_m"); } catch (Exception e) { trip.elevationLossM = 0; }
-        try { trip.avgGradientPercent = rs.getDouble("avg_gradient_pct"); } catch (Exception e) { trip.avgGradientPercent = 0; }
+        try { trip.gradientProfile = rs.getString("gradient_profile"); } catch (Exception e) { logger.debug("readTripFromResultSet gradient_profile: " + e.getMessage()); trip.gradientProfile = ""; }
+        try { trip.elevationGainM = rs.getDouble("elevation_gain_m"); } catch (Exception e) { logger.debug("readTripFromResultSet elevation_gain_m: " + e.getMessage()); trip.elevationGainM = 0; }
+        try { trip.elevationLossM = rs.getDouble("elevation_loss_m"); } catch (Exception e) { logger.debug("readTripFromResultSet elevation_loss_m: " + e.getMessage()); trip.elevationLossM = 0; }
+        try { trip.avgGradientPercent = rs.getDouble("avg_gradient_pct"); } catch (Exception e) { logger.debug("readTripFromResultSet avg_gradient_pct: " + e.getMessage()); trip.avgGradientPercent = 0; }
         trip.efficiencySocPerKm = rs.getDouble("efficiency_soc_per_km");
         trip.startLat = rs.getDouble("start_lat");
         trip.startLon = rs.getDouble("start_lon");
@@ -1117,7 +1117,7 @@ public class TripDatabase {
         trip.consistencyScore = rs.getInt("consistency_score");
         trip.microMomentsJson = rs.getString("micro_moments_json");
         trip.telemetryFilePath = rs.getString("telemetry_file_path");
-        try { trip.routeId = rs.getLong("route_id"); } catch (Exception e) { trip.routeId = -1; }
+        try { trip.routeId = rs.getLong("route_id"); } catch (Exception e) { logger.debug("readTripFromResultSet route_id: " + e.getMessage()); trip.routeId = -1; }
         return trip;
     }
 

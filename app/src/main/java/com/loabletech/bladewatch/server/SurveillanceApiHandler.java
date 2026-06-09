@@ -278,6 +278,7 @@ public class SurveillanceApiHandler {
                         config.put("roiEnabled_" + qKeys[q], sentryConfig.isRoiEnabled(q));
                     }
                 } catch (Exception ignored) {
+                    CameraDaemon.log("Failed to read ROI config for " + qKeys[q] + ": " + ignored.getMessage());
                     config.put("roiEnabled_" + qKeys[q], sentryConfig.isRoiEnabled(q));
                 }
             }
@@ -320,7 +321,9 @@ public class SurveillanceApiHandler {
                     config.put("cameraValidationSignal", camCfg.optString("validationSignal", ""));
                     config.put("cameraLayoutConfidence", camCfg.optString("layoutConfidence", ""));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                CameraDaemon.log("Failed to read camera config section: " + ignored.getMessage());
+            }
         } else {
             config.put("environmentPreset", "outdoor");
             config.put("sensitivityLevel", 3);
@@ -1308,13 +1311,15 @@ public class SurveillanceApiHandler {
                     }
                     if (frame != null) return frame;
                 } catch (Exception e) {
-                    // Try next file
+                    CameraDaemon.log("Failed to extract frame from " + events[i].getName() + ": " + e.getMessage());
                 } finally {
-                    try { retriever.release(); } catch (Exception ignored) {}
+                    try { retriever.release(); } catch (Exception ignored) {
+                        CameraDaemon.log("Failed to release retriever in getFrameFromLatestEvent: " + ignored.getMessage());
+                    }
                 }
             }
         } catch (Exception e) {
-            // Storage not available
+            CameraDaemon.log("getFrameFromLatestEvent storage error: " + e.getMessage());
         }
         return null;
     }

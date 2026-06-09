@@ -1,5 +1,7 @@
 package net.bladewatch.app.byd;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -8,6 +10,8 @@ import org.json.JSONObject;
  * Thread-safe — created via Builder, read from any thread.
  */
 public class BydVehicleData {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("BydVehicleData");
 
     // Sentinel for unavailable numeric values
     public static final double NaN = Double.NaN;
@@ -608,7 +612,9 @@ public class BydVehicleData {
             if (pm25Inside != UNAVAILABLE) extAir.put("pm25Inside", pm25Inside);
             if (pm25Outside != UNAVAILABLE) extAir.put("pm25Outside", pm25Outside);
             if (extAir.length() > 0) j.put("extendedAir", extAir);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("toJson error: " + e.getMessage());
+        }
         return j;
     }
 

@@ -104,7 +104,7 @@ public class GpsMonitor {
             net.bladewatch.app.surveillance.SafeLocationManager.getInstance()
                 .onLocationUpdate(lat, lng);
         } catch (Exception e) {
-            // Don't let geofence errors break GPS flow
+            CameraDaemon.log(TAG + ": SafeLocationManager update failed: " + e.getMessage());
         }
 
         // Log periodically — once every LOG_INTERVAL_MS at most.
@@ -167,7 +167,7 @@ public class GpsMonitor {
                 tmp.delete();
             }
         } catch (Exception e) {
-            // Silently ignore individual file failures
+            CameraDaemon.log(TAG + ": Cache file write failed: " + e.getMessage());
         }
     }
 
@@ -223,6 +223,7 @@ public class GpsMonitor {
             }
             return false;
         } catch (Exception e) {
+            CameraDaemon.log(TAG + ": Failed to load GPS cache: " + e.getMessage());
             return false;
         }
     }
@@ -270,7 +271,7 @@ public class GpsMonitor {
             json.put("isCached", ageMs > 60000 || loadedFromCache); // Cached = no update in 60s OR loaded from cache file
             json.put("loadedFromCache", loadedFromCache); // Explicitly indicate if loaded from persistent cache
         } catch (Exception e) {
-            // Ignore
+            CameraDaemon.log(TAG + ": Failed to create location JSON: " + e.getMessage());
         }
         return json;
     }

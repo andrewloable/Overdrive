@@ -1,5 +1,6 @@
 package net.bladewatch.app.server.connect.impl;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.server.LocaleManager;
 import net.bladewatch.app.server.QualitySettingsApiHandler;
 import net.bladewatch.app.server.connect.ConnectDispatcher;
@@ -22,6 +23,9 @@ import org.json.JSONObject;
  *   SetRecordingMode → POST /api/recording/mode  (via CameraDaemon directly)
  */
 public class SettingsServiceImpl {
+
+    private static final String TAG = "SettingsServiceImpl";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public void register(ConnectDispatcher dispatcher) {
         dispatcher.register("bladewatch.v1.SettingsService", "GetQuality", this::handleGetQuality);
@@ -87,7 +91,9 @@ public class SettingsServiceImpl {
             String want = "";
             try {
                 want = new JSONObject(req).optString("lang", "");
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                logger.warn("Failed to parse locale request body: " + ignored.getMessage());
+            }
             String resolved = LocaleManager.set(want);
             return ConnectResponse.of("{\"lang\":\"" + resolved + "\"}");
         } catch (Exception e) {
@@ -102,7 +108,9 @@ public class SettingsServiceImpl {
         String mode = "";
         try {
             mode = new JSONObject(req).optString("mode", "");
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to parse recording mode request body: " + ignored.getMessage());
+        }
         if (mode.isEmpty()) {
             throw new ConnectException("invalid_argument", "Missing or invalid field: mode");
         }

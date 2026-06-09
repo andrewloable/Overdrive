@@ -176,6 +176,7 @@ public final class PeerCredentials {
         try {
             return Integer.parseInt(addrPort.substring(colon + 1), 16);
         } catch (NumberFormatException e) {
+            logger.warn("Failed to parse hex port from '" + addrPort + "': " + e.getMessage());
             return -1;
         }
     }

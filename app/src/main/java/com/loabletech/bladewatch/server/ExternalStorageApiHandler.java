@@ -1,5 +1,6 @@
 package net.bladewatch.app.server;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.storage.ExternalStorageCleaner;
 import net.bladewatch.app.storage.StorageManager;
 import org.json.JSONArray;
@@ -25,7 +26,10 @@ import java.util.Map;
  * - POST /api/storage/external/refresh  - Refresh SD card detection
  */
 public class ExternalStorageApiHandler {
-    
+
+    private static final String TAG = "ExternalStorageApiHandler";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
+
     /**
      * Handle external storage API requests.
      * 
@@ -225,6 +229,7 @@ public class ExternalStorageApiHandler {
                     result = cleaner.ensureReservedSpace();
                 }
             } catch (Exception e) {
+                logger.warn("Failed to parse cleanup request body, using reserved-space defaults: " + e.getMessage());
                 result = cleaner.ensureReservedSpace();
             }
         } else {
@@ -271,7 +276,9 @@ public class ExternalStorageApiHandler {
         if (params.containsKey("bytesToFree")) {
             try {
                 bytesToFree = Long.parseLong(params.get("bytesToFree"));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+                logger.warn("Invalid bytesToFree in preview query params: " + ignored.getMessage());
+            }
         }
         
         List<ExternalStorageCleaner.FileInfo> preview = cleaner.previewCleanup(bytesToFree);

@@ -1,5 +1,7 @@
 package net.bladewatch.app.logging;
 
+import android.util.Log;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.regex.Matcher;
@@ -9,6 +11,8 @@ import java.util.regex.Pattern;
  * Redacts secrets before they are logged.
  */
 public final class SecretRedactor {
+
+    private static final String TAG = "SecretRedactor";
 
     private static final Pattern BEARER_PATTERN = Pattern.compile("(?i)\\bBearer\\s+([A-Za-z0-9._\\-+/=]+)");
     private static final Pattern TOKEN_LABEL_PATTERN = Pattern.compile("(?i)\\b(token|reserved token|enable token|bot token)\\s*[:=]\\s*([^\\s,;]+)");
@@ -77,6 +81,7 @@ public final class SecretRedactor {
             }
             return sb.toString();
         } catch (Exception e) {
+            Log.w(TAG, "sha256Prefix failed: " + e.getMessage());
             return "0000";
         }
     }

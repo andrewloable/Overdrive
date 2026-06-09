@@ -176,7 +176,7 @@ public class BinderCameraBackend {
                 if (result) {
                     reply.readException();
                     int returnCode = -1;
-                    try { returnCode = reply.readInt(); } catch (Exception ignored) {}
+                    try { returnCode = reply.readInt(); } catch (Exception ignored) { logger.warn("Failed to read camera open return code: " + ignored.getMessage()); }
                     logger.info("Camera " + cameraId + " opened (returnCode=" + returnCode + ")");
                     cameraOpen = true;
                     currentCameraId = cameraId;

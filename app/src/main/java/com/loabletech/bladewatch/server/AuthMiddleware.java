@@ -243,6 +243,7 @@ public class AuthMiddleware {
         try {
             return java.net.URLEncoder.encode(s, "UTF-8");
         } catch (Exception e) {
+            log("urlEncode failed: " + e.getMessage());
             return s;
         }
     }
@@ -251,6 +252,7 @@ public class AuthMiddleware {
         try {
             return java.net.URLDecoder.decode(s, "UTF-8");
         } catch (Exception e) {
+            log("urlDecode failed: " + e.getMessage());
             return s;
         }
     }

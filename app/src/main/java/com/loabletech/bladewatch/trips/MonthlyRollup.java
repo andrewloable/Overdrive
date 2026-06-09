@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -7,6 +9,9 @@ import org.json.JSONObject;
  * Keyed by year and month (1-12).
  */
 public class MonthlyRollup {
+
+    private static final String TAG = "MonthlyRollup";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public int year;
     public int month;                  // 1-12
@@ -44,7 +49,7 @@ public class MonthlyRollup {
             json.put("avgEfficiencyScore", avgEfficiencyScore);
             json.put("avgConsistency", avgConsistency);
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("MonthlyRollup.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

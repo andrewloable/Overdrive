@@ -92,7 +92,9 @@ public class RadarManager {
             for (int i = 0; i < RadarConstants.SENSOR_COUNT; i++) {
                 radar.put(RadarConstants.AREA_NAMES[i], RadarConstants.stateToString(lastStates[i]));
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            log("Error building radar state JSON: " + e.getMessage());
+        }
         return radar;
     }
     

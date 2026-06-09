@@ -164,7 +164,9 @@ public class OverlayBitmapRenderer {
                 net.bladewatch.app.byd.BydDataCollector collector =
                         net.bladewatch.app.byd.BydDataCollector.getInstance();
                 milesMode = collector != null && collector.isMilesMode();
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+                logger.debug("BydDataCollector.isMilesMode unavailable, using km/h");
+            }
             String spd = milesMode
                 ? String.valueOf((int) Math.round(snap.speedKmh * KM_TO_MI))
                 : String.valueOf(snap.speedKmh);

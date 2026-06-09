@@ -90,12 +90,12 @@ public final class UpdateLifecycle {
                 long ms = System.currentTimeMillis() - start;
                 Log.i(TAG, "hard reset complete in " + ms + "ms");
                 // Brief settle so the OS reclaims PIDs before new daemons launch
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(1000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); Log.w(TAG, "Interrupted during sleep: " + ie.getMessage()); }
                 if (onComplete != null) onComplete.run();
             }
             @Override public void onError(String e) {
                 Log.w(TAG, "hard reset error (continuing): " + e);
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(1000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); Log.w(TAG, "Interrupted during sleep: " + ie.getMessage()); }
                 if (onComplete != null) onComplete.run();
             }
         });

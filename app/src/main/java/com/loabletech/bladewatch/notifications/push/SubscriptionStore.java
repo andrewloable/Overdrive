@@ -1,5 +1,7 @@
 package net.bladewatch.app.notifications.push;
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -22,6 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class SubscriptionStore {
 
+    private static final String TAG = "SubscriptionStore";
+
     private final File file;
     private final Map<String, PushSubscription> byId = new LinkedHashMap<>();
     private final AtomicBoolean loaded = new AtomicBoolean(false);
@@ -43,10 +47,12 @@ public final class SubscriptionStore {
                     PushSubscription sub = PushSubscription.fromJson(arr.getJSONObject(i));
                     byId.put(sub.id, sub);
                 } catch (Exception e) {
-                    // skip corrupt entry, continue loading the rest
+                    Log.w(TAG, "Skipping corrupt subscription entry at index " + i + ": " + e.getMessage());
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to load subscription store: " + e.getMessage());
+        }
     }
 
     public synchronized List<PushSubscription> all() {
@@ -91,9 +97,9 @@ public final class SubscriptionStore {
             fos.write(arr.toString().getBytes("UTF-8"));
             fos.getFD().sync();
         } catch (Exception e) {
-            // Couldn't even write the tmp; leave the existing file intact.
-            return;
-        }
+                Log.e(TAG, "Failed to persist subscriptions: " + e.getMessage());
+                return;
+            }
         // Atomic-rename happy path. On filesystems where rename-overwrite
         // isn't supported, fall through to the swap dance below.
         if (tmp.renameTo(file)) return;
@@ -138,7 +144,8 @@ public final class SubscriptionStore {
                     java.util.Arrays.copyOf(digest, 12),
                     android.util.Base64.URL_SAFE | android.util.Base64.NO_PADDING | android.util.Base64.NO_WRAP);
         } catch (Exception e) {
-            return Integer.toHexString(endpoint.hashCode());
-        }
+                Log.w(TAG, "Failed to hash endpoint for subscription ID, falling back to hashCode: " + e.getMessage());
+                return Integer.toHexString(endpoint.hashCode());
+            }
     }
 }

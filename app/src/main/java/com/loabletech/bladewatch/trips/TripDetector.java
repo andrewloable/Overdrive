@@ -233,7 +233,7 @@ public class TripDetector {
                 }
             }
         } catch (Exception e) {
-            // Temperature unavailable — leave as 0
+            logger.warn("TripDetector.startTrip: failed to read external temperature: " + e.getMessage());
         }
 
         state = State.ACTIVE;

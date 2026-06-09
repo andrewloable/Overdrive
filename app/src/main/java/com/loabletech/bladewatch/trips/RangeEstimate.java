@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -8,6 +10,9 @@ import org.json.JSONObject;
  * the matched consumption bucket info, and the car's built-in range for comparison.
  */
 public class RangeEstimate {
+
+    private static final String TAG = "RangeEstimate";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public double predictedRangeKm;
     public double lowerBoundKm;
@@ -29,7 +34,7 @@ public class RangeEstimate {
             json.put("sampleCount", sampleCount);
             json.put("builtInRangeKm", builtInRangeKm);
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("RangeEstimate.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

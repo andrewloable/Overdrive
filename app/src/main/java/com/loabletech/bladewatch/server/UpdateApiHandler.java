@@ -3,6 +3,7 @@ package net.bladewatch.app.server;
 import android.content.Context;
 
 import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.updater.AppUpdater;
 
 import org.json.JSONArray;
@@ -43,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class UpdateApiHandler {
 
     private static final String TAG = "UpdateApi";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
     private static final String PROGRESS_FILE = "/data/local/tmp/bladewatch_update_progress.json";
 
     // One install at a time. AtomicReference so we don't hold an updater past
@@ -107,7 +109,9 @@ public class UpdateApiHandler {
                     r.put("currentVersion", currentVersion);
                     r.put("remoteVersion", newVersion);
                     r.put("releaseNotes", releaseNotes != null ? releaseNotes : "");
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to build update-available response JSON: " + ignored.getMessage());
+                }
                 resultRef[0] = r;
                 signal(lock, done);
             }
@@ -118,7 +122,9 @@ public class UpdateApiHandler {
                     r.put("currentVersion", currentVersion);
                     r.put("remoteVersion", currentVersion);
                     r.put("releaseNotes", "");
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to build no-update response JSON: " + ignored.getMessage());
+                }
                 resultRef[0] = r;
                 signal(lock, done);
             }
@@ -128,7 +134,9 @@ public class UpdateApiHandler {
                     r.put("available", false);
                     r.put("error", error != null ? error : "unknown");
                     r.put("currentVersion", AppUpdater.getDisplayVersionFromFile());
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to build update-error response JSON: " + ignored.getMessage());
+                }
                 resultRef[0] = r;
                 signal(lock, done);
             }
@@ -152,7 +160,9 @@ public class UpdateApiHandler {
             try {
                 HttpResponse.sendJsonError(out,
                         "Update check failed: " + (t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName()));
-            } catch (Exception ignored) { /* socket already gone */ }
+            } catch (Exception ignored) {
+                logger.warn("Could not send update-check error response (socket gone): " + ignored.getMessage());
+            }
         }
     }
 
@@ -211,7 +221,9 @@ public class UpdateApiHandler {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to enumerate network interfaces: " + ignored.getMessage());
+        }
         r.put("localIpAddresses", ips);
 
         // Realistic downtime: hard-reset (~5s) + APK install (~10s) + new
@@ -386,7 +398,9 @@ public class UpdateApiHandler {
             r.put("message", message != null ? message : "");
             if (error != null) r.put("error", error);
             r.put("ts", System.currentTimeMillis());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to build update progress JSON: " + ignored.getMessage());
+        }
         try (FileWriter fw = new FileWriter(PROGRESS_FILE)) {
             fw.write(r.toString());
         } catch (Exception e) {

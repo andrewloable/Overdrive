@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -7,6 +9,9 @@ import org.json.JSONObject;
  * Keyed by ISO year and week number.
  */
 public class WeeklyRollup {
+
+    private static final String TAG = "WeeklyRollup";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public int year;
     public int weekNumber;             // ISO week
@@ -44,7 +49,7 @@ public class WeeklyRollup {
             json.put("avgEfficiencyScore", avgEfficiencyScore);
             json.put("avgConsistency", avgConsistency);
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("WeeklyRollup.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

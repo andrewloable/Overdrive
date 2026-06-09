@@ -277,7 +277,7 @@ public class BydCameraCoordinator {
                     activeCameraId + ") — event-driven yield active");
                 return;
             } catch (NoSuchMethodException e) {
-                // Expected if this overload doesn't exist
+                logger.warn("registerUser IBinder overload not found: " + e.getMessage());
             } catch (Throwable e) {
                 logger.warn("registerUser IBinder overload failed: " + e.getMessage());
             }
@@ -361,7 +361,7 @@ public class BydCameraCoordinator {
                     lastCameraOwnerPackage = pkg != null ? pkg : "";
                     if (pkg != null && !"net.bladewatch.app".equals(pkg)) return pkg;
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.warn("Failed to query current camera user: " + e.getMessage()); }
         }
         lastCameraOwnerPackage = "";
         return null;
@@ -390,7 +390,7 @@ public class BydCameraCoordinator {
                 try {
                     Method getPkg = currentUser.getClass().getMethod("getPackageName");
                     pkg = (String) getPkg.invoke(currentUser);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { logger.warn("Failed to get package name from camera user: " + ignored.getMessage()); }
 
                 boolean isUs = "net.bladewatch.app".equals(pkg);
                 boolean wasActive = nativeAppActive;
@@ -415,6 +415,7 @@ public class BydCameraCoordinator {
                 return false;
             }
         } catch (Exception e) {
+            logger.warn("Failed to check native app active: " + e.getMessage());
             return nativeAppActive;
         }
     }
@@ -432,7 +433,7 @@ public class BydCameraCoordinator {
                 new Thread(() -> {
                     try {
                         Thread.sleep(REACQUIRE_DELAY_MS);
-                    } catch (InterruptedException ignored) {}
+                    } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); logger.warn("Reacquire delay interrupted"); }
 
                     if (!yielded && !nativeAppActive) {
                         yieldCallback.onReacquireCamera();
@@ -591,8 +592,8 @@ public class BydCameraCoordinator {
                 Method m = avmClass.getDeclaredMethod("disablePreviewCallback", int.class);
                 m.setAccessible(true);
                 m.invoke(cameraObj, channelId);
-            } catch (NoSuchMethodException ignored) {
-            } catch (Exception e) {
+            } catch (NoSuchMethodException ignored) { logger.warn("disablePreviewCallback method not found"); }
+            catch (Exception e) {
                 logger.warn("disablePreviewCallback failed: " + e.getMessage());
             }
 

@@ -152,7 +152,7 @@ public abstract class BaseDeviceMonitor<T> {
                     }
                 }
             } catch (InterruptedException e) {
-                // Interrupted, stop retrying
+                logger.warn("Retry cancelled (interrupted)");
             } catch (Exception e) {
                 logError("Retry failed", e);
             }

@@ -141,7 +141,7 @@ public class BatteryPowerMonitor extends BaseDeviceMonitor<BatteryPowerData> {
             try {
                 pollThread.join(1000);
             } catch (InterruptedException e) {
-                // Ignore
+                log("pollThread.join interrupted during stop");
             }
             pollThread = null;
         }

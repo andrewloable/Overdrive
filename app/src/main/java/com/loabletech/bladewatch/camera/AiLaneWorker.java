@@ -108,7 +108,7 @@ public final class AiLaneWorker {
                 // threw before reaching the recycle, we recycle here as
                 // a safety net (double-recycle is bounded by the pool's
                 // ArrayBlockingQueue offer policy).
-                try { recycler.recycle(rgbFrame); } catch (Throwable ignored) {}
+                try { recycler.recycle(rgbFrame); } catch (Throwable ignored) { logger.warn("Failed to recycle frame after AI lane processing error: " + ignored.getMessage()); }
             } finally {
                 busy.set(false);
             }
@@ -185,7 +185,7 @@ public final class AiLaneWorker {
         for (Runnable r : notRun) {
             byte[] f = inFlightFrames.remove(r);
             if (f != null) {
-                try { recycler.recycle(f); } catch (Throwable ignored) {}
+                try { recycler.recycle(f); } catch (Throwable ignored) { logger.warn("Failed to recycle frame on shutdown: " + ignored.getMessage()); }
             }
         }
         // Anything else in the map represents Runnables that started but

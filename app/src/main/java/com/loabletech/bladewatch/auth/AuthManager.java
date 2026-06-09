@@ -122,6 +122,7 @@ public class AuthManager {
                 json.put(KEY_TOKEN_EPOCH, tokenEpoch);
                 return json;
             } catch (Exception e) {
+                AuthManager.log("toJson failed: " + e.getMessage());
                 return new JSONObject();
             }
         }
@@ -517,6 +518,7 @@ public class AuthManager {
             long exp = extractJsonLong(payloadJson, "exp", 0);
             return System.currentTimeMillis() / 1000 <= exp;
         } catch (Exception e) {
+            log("validateThumbToken failed: " + e.getMessage());
             return false;
         }
     }
@@ -670,7 +672,9 @@ public class AuthManager {
             return false;
         } catch (Exception e) {
             log("Failed to write auth to unified config: " + e.getMessage());
-            try { UnifiedConfigManager.forceReload(); } catch (Exception ignored) {}
+            try { UnifiedConfigManager.forceReload(); } catch (Exception ignored) {
+                log("forceReload after write failure also failed: " + ignored.getMessage());
+            }
             return false;
         }
     }

@@ -63,6 +63,7 @@ public class BydCameraUser extends IBYDCameraUser.Stub {
             String requesterPkg = requester.getPackageName();
             return requesterPkg != null && !packageName.equals(requesterPkg);
         } catch (Exception e) {
+            logger.warn("Failed to check if other app on camera: " + e.getMessage());
             return true;
         }
     }
@@ -80,7 +81,7 @@ public class BydCameraUser extends IBYDCameraUser.Stub {
     public boolean onPreOpenCamera(IBYDCameraUser requester, int camId) {
         if (isOtherAppOnMyCamera(requester, camId)) {
             String requesterPkg = "unknown";
-            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) {}
+            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) { logger.warn("Failed to get requester package name: " + ignored.getMessage()); }
             logger.info("onPreOpenCamera: allowing " + requesterPkg +
                 " to open camera " + camId + " (NOT yielding — sharing via addPreviewSurface)");
             nativeAppHoldsCamera = true;
@@ -99,7 +100,7 @@ public class BydCameraUser extends IBYDCameraUser.Stub {
     public boolean onOpenCamera(IBYDCameraUser requester, int camId) {
         if (isOtherAppOnMyCamera(requester, camId)) {
             String requesterPkg = "unknown";
-            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) {}
+            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) { logger.warn("Failed to get requester package name on open: " + ignored.getMessage()); }
             logger.info("onOpenCamera: " + requesterPkg + " opened camera " + camId +
                 " — monitoring for frame stalls (NOT yielding proactively)");
             nativeAppHoldsCamera = true;
@@ -120,7 +121,7 @@ public class BydCameraUser extends IBYDCameraUser.Stub {
     public boolean onCloseCamera(IBYDCameraUser requester, int camId) {
         if (isOtherAppOnMyCamera(requester, camId)) {
             String requesterPkg = "unknown";
-            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) {}
+            try { requesterPkg = requester.getPackageName(); } catch (Exception ignored) { logger.warn("Failed to get requester package name on close: " + ignored.getMessage()); }
             logger.info("onCloseCamera: " + requesterPkg + " released camera " + camId);
             nativeAppHoldsCamera = false;
 

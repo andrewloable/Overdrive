@@ -152,9 +152,9 @@ public class LocationSidecarService extends Service implements LocationListener 
                             }
                         }
                     } catch (SecurityException e) {
-                        // Permission lost
+                        Log.w(TAG, "Location permission lost in periodic sender: " + e.getMessage());
                     } catch (Exception e) {
-                        // Ignore
+                        Log.w(TAG, "Periodic sender error: " + e.getMessage());
                     }
                 }
                 
@@ -428,7 +428,7 @@ public class LocationSidecarService extends Service implements LocationListener 
                 Log.e(TAG, "IPC error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             } finally {
                 if (socket != null) {
-                    try { socket.close(); } catch (Exception ignored) {}
+                    try { socket.close(); } catch (Exception e) { Log.w(TAG, "Socket close error: " + e.getMessage()); }
                 }
             }
         }, "GPS-IPC").start();

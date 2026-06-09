@@ -36,6 +36,7 @@ public final class Messages {
         try {
             return MessageFormat.format(raw, args);
         } catch (Exception e) {
+            CameraDaemon.log("Messages.get: format failed for key '" + key + "': " + e.getMessage());
             return raw;
         }
     }

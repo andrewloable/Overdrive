@@ -382,7 +382,9 @@ public class RecordingsApiHandler {
         } finally {
             try {
                 retriever.release();
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                CameraDaemon.log("retriever.release() failed: " + e.getMessage());
+            }
         }
     }
     
@@ -417,7 +419,9 @@ public class RecordingsApiHandler {
             if (tmp != null) {
                 json.put("sizeBytes", tmp.length());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            CameraDaemon.log("Failed to build inflight status JSON: " + ignored.getMessage());
+        }
         HttpResponse.sendJson(out, json.toString());
     }
 
@@ -883,6 +887,7 @@ public class RecordingsApiHandler {
             try {
                 return new JSONObject(cached.json);
             } catch (Exception ignored) {
+                CameraDaemon.log("Failed to deserialize cached recording: " + ignored.getMessage());
                 // fall through to re-parse
             }
         }
@@ -892,7 +897,9 @@ public class RecordingsApiHandler {
             try {
                 RECORDING_CACHE.put(cacheKey,
                         new CachedRecording(mp4Length, mp4Mtime, sidecarMtime, parsed.toString()));
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                CameraDaemon.log("Failed to cache recording parse result: " + ignored.getMessage());
+            }
         }
         return parsed;
     }
@@ -1021,6 +1028,7 @@ public class RecordingsApiHandler {
                     }
                 }
             } catch (Exception se) {
+                CameraDaemon.log("Sidecar parse failed (recording still shown): " + se.getMessage());
                 // Sidecar parse failure is non-fatal; recording still appears in list.
             }
 
@@ -1052,10 +1060,13 @@ public class RecordingsApiHandler {
                 return Long.parseLong(d.trim()) / 1000L;
             }
         } catch (Exception ignored) {
+            CameraDaemon.log("Duration probe failed: " + ignored.getMessage());
             // Unreadable/partial mp4 (e.g. in-flight) — duration just stays 0.
         } finally {
             if (retriever != null) {
-                try { retriever.release(); } catch (Exception ignored) {}
+                try { retriever.release(); } catch (Exception e) {
+                    CameraDaemon.log("retriever.release() failed in probeDurationSeconds: " + e.getMessage());
+                }
             }
         }
         return 0L;
@@ -1656,6 +1667,7 @@ public class RecordingsApiHandler {
                 HttpResponse.sendJson(out, sb.toString());
             } catch (Exception e) {
                 // File exists but can't be read — return empty
+                logger.warn("Failed to read event timeline sidecar " + jsonFilename + ": " + e.getMessage());
                 sendEmptyTimeline(out);
             }
         } else {

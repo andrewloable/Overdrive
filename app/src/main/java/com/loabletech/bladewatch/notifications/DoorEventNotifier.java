@@ -3,6 +3,7 @@ package net.bladewatch.app.notifications;
 import net.bladewatch.app.byd.BydDataCollector;
 import net.bladewatch.app.byd.BydVehicleData;
 import net.bladewatch.app.byd.bodywork.BodyworkConstants;
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.server.Messages;
 
 import org.json.JSONObject;
@@ -14,6 +15,8 @@ import org.json.JSONObject;
  * driver enters or exits.
  */
 public final class DoorEventNotifier {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("DoorEventNotifier");
 
     // BYD bodywork area constants. The SDK publishes
     // BODYWORK_CMD_DOOR_LEFT_FRONT=1 / RIGHT_FRONT=2 / LEFT_REAR=3 / RIGHT_REAR=4
@@ -82,14 +85,18 @@ public final class DoorEventNotifier {
             if (zone != null && !zone.isEmpty()) {
                 body = Messages.get("notifications.while_parked_at", zone);
             }
-        } catch (Throwable ignored) { /* fall back to plain body */ }
+        } catch (Throwable t) {
+            logger.warn("Failed to get current zone name for door event: " + t.getMessage());
+        }
 
         JSONObject data = new JSONObject();
         try {
             data.put("area", area);
             data.put("areaLabel", areaLabel);
             data.put("state", state);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.warn("Failed to build door event data JSON: " + e.getMessage());
+        }
 
         try {
             NotificationBus.get().publish(new NotificationEvent(
@@ -102,7 +109,9 @@ public final class DoorEventNotifier {
                     "door-" + area + "-" + (opened ? "open" : "close"),
                     null,
                     data));
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            logger.warn("Failed to publish door event notification: " + t.getMessage());
+        }
     }
 
     private static String areaLabel(int area) {

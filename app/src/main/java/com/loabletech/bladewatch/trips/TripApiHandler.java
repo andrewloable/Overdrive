@@ -442,7 +442,7 @@ public class TripApiHandler {
                 response.put("range", JSONObject.NULL);
                 response.put("message", "Not enough data");
             } catch (Exception ex) {
-                // ignore
+                logger.warn("TripApiHandler.handleGetRange: failed to build fallback response: " + ex.getMessage());
             }
             return response;
         }
@@ -505,7 +505,9 @@ public class TripApiHandler {
                         if (collector != null) {
                             collector.setDistanceUnitOverride("mi".equals(unit) ? "mi" : "km");
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e2) {
+                        logger.warn("TripApiHandler.handlePostConfig: failed to set distanceUnit override: " + e2.getMessage());
+                    }
                 }
                 config.save();
             }
@@ -736,7 +738,9 @@ public class TripApiHandler {
                     point.put(s.lat);
                     point.put(s.lon);
                     gps.put(point);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    logger.warn("TripApiHandler.handleGetGpsTrace: failed to build GPS point: " + e.getMessage());
+                }
             }
         }
 
@@ -806,7 +810,7 @@ public class TripApiHandler {
                 }
             }
         } catch (Exception e) {
-            // Nominal capacity not available — leave as-is
+            logger.warn("TripApiHandler.enrichTripEnergy: failed to read nominal capacity: " + e.getMessage());
         }
     }
 

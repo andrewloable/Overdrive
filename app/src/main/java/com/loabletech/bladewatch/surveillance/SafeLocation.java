@@ -1,5 +1,6 @@
 package net.bladewatch.app.surveillance;
 
+import net.bladewatch.app.logging.DaemonLogger;
 import org.json.JSONObject;
 import java.util.UUID;
 
@@ -9,6 +10,9 @@ import java.util.UUID;
  * never starts, saving 100% of camera/GPU/encoder resources.
  */
 public class SafeLocation {
+
+    private static final String TAG = "SafeLocation";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     private String id;
     private String name;
@@ -50,7 +54,9 @@ public class SafeLocation {
             json.put("radiusM", radiusMeters);
             json.put("enabled", enabled);
             json.put("createdAt", createdAt);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("SafeLocation.toJson failed: " + ignored.getMessage());
+        }
         return json;
     }
 

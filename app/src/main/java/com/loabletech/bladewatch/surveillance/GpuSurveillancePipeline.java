@@ -612,7 +612,9 @@ public class GpuSurveillancePipeline {
             if (cameraConfig != null) {
                 return cameraConfig.optInt("targetFps", 15);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to read targetFps from config — defaulting to 15fps: " + ignored.getMessage());
+        }
         return 15;
     }
 
@@ -904,7 +906,10 @@ public class GpuSurveillancePipeline {
                 logger.warn("Failed to save camera config: " + ex.getMessage());
             }
             new Thread(() -> {
-                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(2000); } catch (InterruptedException e) {
+                    logger.warn("Pending recording check sleep interrupted: " + e.getMessage());
+                    Thread.currentThread().interrupt();
+                }
                 checkPendingRecording();
             }, "PendingRecCheck").start();
         });
@@ -1677,6 +1682,7 @@ public class GpuSurveillancePipeline {
                 .getMethod("get", String.class, String.class)
                 .invoke(null, "ro.product.model", "unknown");
         } catch (Exception e) {
+            logger.warn("Failed to read vehicle model via SystemProperties: " + e.getMessage());
             return "unknown";
         }
     }

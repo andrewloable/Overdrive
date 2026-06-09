@@ -119,7 +119,7 @@ public class BatteryMonitor {
             battery.put("soc", lastBatterySoc);
             battery.put("lastUpdate", lastBatteryUpdate);
         } catch (Exception e) {
-            // Ignore
+            CameraDaemon.log("Battery: Failed to create battery info JSON: " + e.getMessage());
         }
         return battery;
     }

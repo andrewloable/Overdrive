@@ -1,6 +1,7 @@
 package net.bladewatch.app.surveillance;
 
 import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.monitor.GpsMonitor;
 
 import org.json.JSONArray;
@@ -34,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SafeLocationManager {
 
     private static final String TAG = "SafeLocation";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
     private static final String CONFIG_FILE = "/data/local/tmp/safe_locations.json";
     private static final int MAX_ZONES = 10;
     private static final double EARTH_RADIUS_M = 6_371_000.0;
@@ -335,7 +337,9 @@ public class SafeLocationManager {
             JSONArray arr = new JSONArray();
             for (SafeLocation z : zones) arr.put(z.toJson());
             json.put("zones", arr);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("SafeLocationManager.getStatusJson failed: " + ignored.getMessage());
+        }
         return json;
     }
 }

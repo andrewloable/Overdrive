@@ -230,7 +230,9 @@ public final class ConnectHandlerUtil {
             String msg = obj.optString("error", null);
             if (msg == null) msg = obj.optString("message", null);
             if (msg != null && !msg.isEmpty()) return msg;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            CameraDaemon.log("extractErrorMessage: failed to parse body: " + ignored.getMessage());
+        }
         return "Request failed";
     }
 }

@@ -210,7 +210,7 @@ public class BydDataCollector {
                     sohValue = ((Number) result).intValue();
                 }
             } catch (NoSuchMethodError nsme) {
-                // Method missing — try feature ID below.
+                logger.debug("SOH getStatisticBatteryHealthyIndex not found on this firmware");
             } catch (Exception e) {
                 if (!(e.getCause() instanceof NoSuchMethodError)) {
                     logger.debug("SOH getter failed: " + e.getMessage());
@@ -500,7 +500,9 @@ public class BydDataCollector {
         if (context == null || plugEdgeReceiver == null) return;
         try {
             context.unregisterReceiver(plugEdgeReceiver);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("unregisterPlugEdgeReceiver failed: " + e.getMessage());
+        }
         plugEdgeReceiver = null;
     }
 
@@ -1197,7 +1199,9 @@ public class BydDataCollector {
                             }
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    logger.debug("collectStatistic coolant fallback error: " + e.getMessage());
+                }
             }
 
             // ==================== TOTAL ELEC CONSUMPTION ====================
@@ -1801,7 +1805,9 @@ public class BydDataCollector {
                     // fallback in the meantime.
                     else if (v > 0 && v <= 100) fuelPctReal = true;
                 }
-            } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    logger.debug("computeIsPhev fuelPct probe error: " + e.getMessage());
+                }
             try {
                 Object fr = BydDeviceHelper.callGetter(statisticDevice, "getFuelDrivingRangeValue");
                 if (fr instanceof Number) {
@@ -1809,7 +1815,9 @@ public class BydDataCollector {
                     if (isBevFuelSentinel(v)) fuelRangeSentinel = true;
                     else if (v > 0 && v < 1500) fuelRangeReal = true;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                logger.debug("computeIsPhev fuelRange probe error: " + e.getMessage());
+            }
         }
         // PHEV: at least one fuel signal returns a real, non-zero, non-sentinel
         // value AND the other is either real or at a sentinel (i.e. NOT a real
@@ -2245,7 +2253,9 @@ public class BydDataCollector {
                 logger.info("Tyre temp poll: using " + cand.methodName + "(int) on "
                         + device.getClass().getSimpleName() + " (candidate idx=" + i + ")");
                 return m;
-            } catch (NoSuchMethodException ignored) { /* try next */ }
+            } catch (NoSuchMethodException e) {
+                logger.debug("Tyre temp poll: " + cand.methodName + " not found on " + device.getClass().getSimpleName());
+            }
         }
         StringBuilder tried = new StringBuilder();
         for (int i = 0; i < TYRE_TEMP_CANDIDATES.length; i++) {
@@ -2965,7 +2975,9 @@ public class BydDataCollector {
                 Object oil = BydDeviceHelper.callGetter(settingDevice, "getEngineOilLevel");
                 if (oil instanceof Number) settingOilRaw = ((Number) oil).intValue();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("collectEngineExtended settingOilLevel error: " + e.getMessage());
+        }
 
         // "Low oil indicator" lamp from Setting device — when this is set, the
         // dashboard is already showing the warning. Useful as a sanity check.
@@ -2975,7 +2987,9 @@ public class BydDataCollector {
                 Object ind = BydDeviceHelper.callGetter(settingDevice, "getLowOilInd");
                 if (ind instanceof Number) lowOilIndRaw = ((Number) ind).intValue();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("collectEngineExtended lowOilInd error: " + e.getMessage());
+        }
 
         logEngineFluidsIfChanged(coolantRaw, engineOilRaw, settingOilRaw, lowOilIndRaw);
 
@@ -3241,7 +3255,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().socPercent(soc).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onElecPercentageChanged error: " + e.getMessage()); }
             return;
         }
         if ("onFuelPercentageChanged".equals(method) && args != null && args.length > 0) {
@@ -3253,7 +3267,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().fuelPercent(fuel).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onFuelPercentageChanged error: " + e.getMessage()); }
             return;
         }
         if ("onSpeedChanged".equals(method) && args != null && args.length > 0) {
@@ -3265,7 +3279,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().speedKmh(speed * distanceToKmFactor).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onSpeedChanged error: " + e.getMessage()); }
             return;
         }
         if ("onEngineSpeedChanged".equals(method) && args != null && args.length > 0) {
@@ -3277,7 +3291,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().engineSpeedRpm(rpm).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onEngineSpeedChanged error: " + e.getMessage()); }
             return;
         }
         if ("onBatteryPowerVoltageChanged".equals(method) && args != null && args.length > 0) {
@@ -3289,7 +3303,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().voltage12v(voltage).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onBatteryPowerVoltageChanged error: " + e.getMessage()); }
             return;
         }
         if ("onChargingGunStateChanged".equals(method) && args != null && args.length > 0) {
@@ -3299,7 +3313,7 @@ public class BydDataCollector {
                 if (current != null) {
                     snapshot.set(current.toBuilder().chargingGunState(gunState).build());
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onGenericCallback onChargingGunStateChanged error: " + e.getMessage()); }
             return;
         }
 
@@ -3330,7 +3344,7 @@ public class BydDataCollector {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("onGenericCallback onDataEventChanged error: " + e.getMessage()); }
         }
     }
 
@@ -3357,7 +3371,7 @@ public class BydDataCollector {
                 if (current != null) {
                     snapshot.set(current.toBuilder().chargingGunState(gunState).build());
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onChargingCallback onChargingGunStateChanged error: " + e.getMessage()); }
             return;
         }
         // Real-time BMS state change — critical for detecting AC charging start/stop promptly
@@ -3378,7 +3392,7 @@ public class BydDataCollector {
                     // snapshot value moved (it may already match from a poll).
                     net.bladewatch.app.monitor.ChargingDetector.getInstance().updateBmsState(state);
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onChargingCallback onBatteryManagementDeviceStateChanged error: " + e.getMessage()); }
             return;
         }
         // Capacity event — purely diagnostic for charging session size, but the
@@ -3392,7 +3406,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().chargingCapacityKwh(cap).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onChargingCallback onChargingCapacityChanged error: " + e.getMessage()); }
             return;
         }
         // Handle the new-style BYDAutoEvent callbacks from ChargingDevice.
@@ -3424,7 +3438,7 @@ public class BydDataCollector {
                         }
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onChargingCallback onChargingPowerChanged error: " + e.getMessage()); }
         }
         // Listener-driven: the specific event value was already captured above.
         // Skip full device re-collection — the 5s polling timer handles periodic refresh.
@@ -3440,7 +3454,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().voltage12v(voltage).build());
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onOtaCallback onBatteryPowerVoltageChanged error: " + e.getMessage()); }
         }
     }
 
@@ -3469,7 +3483,7 @@ public class BydDataCollector {
                         }
                     }
                 }
-            } catch (Exception e) { /* ignore */ }
+            } catch (Exception e) { logger.debug("onInstrumentCallback onExternalChargingPowerChanged error: " + e.getMessage()); }
         }
         // Listener-driven: the specific event value was already captured above.
         // Skip full device re-collection — the 5s polling timer handles periodic refresh.
@@ -3488,7 +3502,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().dayTimeLight(iVal == 1).build());
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("onLightsCallback onDataEventChanged error: " + e.getMessage()); }
         }
     }
 
@@ -3505,7 +3519,7 @@ public class BydDataCollector {
                         snapshot.set(current.toBuilder().speedLimitWarning(iVal == 2).build());
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("onAdasCallback onDataEventChanged error: " + e.getMessage()); }
         }
     }
 
@@ -3531,7 +3545,7 @@ public class BydDataCollector {
             else return;
 
             snapshot.set(b.seatHeat(heat).seatCool(cool).build());
-        } catch (Exception ignored) {}
+        } catch (Exception e) { logger.debug("onSettingsCallback onDataEventChanged error: " + e.getMessage()); }
     }
 
     // ==================== EXTENDED LISTENER HANDLERS ====================
@@ -4029,7 +4043,7 @@ public class BydDataCollector {
             getters.put("getTemprature", temperatures);
             out.put("getters", getters);
         } catch (Exception e) {
-            try { out.put("error", e.getMessage()); } catch (Exception ignored) {}
+                try { out.put("error", e.getMessage()); } catch (Exception ex) { logger.debug("diagnoseAc put error failed: " + ex.getMessage()); }
         }
         return out;
     }
@@ -4141,7 +4155,7 @@ public class BydDataCollector {
                 int value = ((Number) wp).intValue();
                 if (value >= 0 && value <= 100) return value;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { logger.debug("readWindowPercent error: " + e.getMessage()); }
         return -1;
     }
 
@@ -4255,7 +4269,7 @@ public class BydDataCollector {
                 if (!stopped) setWindowCommand(area, 3);
             } catch (Exception e) {
                 logger.warn("Window " + area + " motion task error: " + e.getMessage());
-                try { setWindowCommand(area, 3); } catch (Exception ignored) {}
+                try { setWindowCommand(area, 3); } catch (Exception ex) { logger.debug("Window " + area + " final stop failed: " + ex.getMessage()); }
             }
         };
 
@@ -4383,7 +4397,7 @@ public class BydDataCollector {
             } catch (Exception e) {
                 logger.warn("Side windows motion task error: " + e.getMessage());
             } finally {
-                try { setSideWindowsCommand(3, 3, 3, 3); } catch (Exception ignored) {}
+                try { setSideWindowsCommand(3, 3, 3, 3); } catch (Exception ex) { logger.debug("Side windows final stop failed: " + ex.getMessage()); }
             }
         };
 

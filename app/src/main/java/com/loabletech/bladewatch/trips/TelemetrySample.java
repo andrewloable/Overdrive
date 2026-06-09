@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -9,6 +11,9 @@ import org.json.JSONObject;
  * Serialized to compact JSON keys for storage efficiency in .jsonl.gz files.
  */
 public class TelemetrySample {
+
+    private static final String TAG = "TelemetrySample";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public final long timestampMs;
     public final int speedKmh;
@@ -51,7 +56,7 @@ public class TelemetrySample {
             json.put("lo", lon);
             json.put("al", altitude);
         } catch (Exception e) {
-            // JSONObject.put only throws on null key, which won't happen here
+            logger.warn("TelemetrySample.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

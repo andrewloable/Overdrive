@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -7,6 +9,9 @@ import org.json.JSONObject;
  * Each score is an integer in the range [0, 100] where 100 is optimal.
  */
 public class DnaScores {
+
+    private static final String TAG = "DnaScores";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public int anticipation;
     public int smoothness;
@@ -35,7 +40,7 @@ public class DnaScores {
             json.put("consistency", consistency);
             json.put("overall", getOverall());
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("DnaScores.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

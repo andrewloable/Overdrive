@@ -114,6 +114,7 @@ public class ModelsApiHandler {
         try {
             incoming = (JSONObject) new JSONTokener(body).nextValue();
         } catch (Exception e) {
+            logger.warn("Failed to parse incoming JSON body: " + e.getMessage());
             HttpResponse.sendJsonError(out, Messages.get("errors.models_invalid_json"));
             return;
         }
@@ -168,6 +169,7 @@ public class ModelsApiHandler {
             if (m == null) return 0;
             return m.optDouble("nominalKwh", 0);
         } catch (Throwable t) {
+            logger.warn("nominalKwhForSelectedModel failed: " + t.getMessage());
             return 0;
         }
     }
@@ -249,6 +251,7 @@ public class ModelsApiHandler {
                 try {
                     return java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
                 } catch (Exception e) {
+                    logger.warn("Failed to URL-decode query parameter: " + e.getMessage());
                     return null;
                 }
             }

@@ -117,12 +117,16 @@ public class ConnectDispatcher {
         } catch (ConnectException e) {
             try {
                 sendConnectError(out, respCt, connectCodeToHttpStatus(e.getCode()), e.getCode(), e.getMessage());
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                CameraDaemon.log("ConnectDispatcher: failed to send ConnectException error: " + ex.getMessage());
+            }
         } catch (Exception e) {
             CameraDaemon.log("ConnectDispatcher: unexpected error: " + e);
             try {
                 sendConnectError(out, respCt, 500, "internal", "An internal error occurred");
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                CameraDaemon.log("ConnectDispatcher: also failed to send internal error response: " + ex.getMessage());
+            }
         }
     }
 

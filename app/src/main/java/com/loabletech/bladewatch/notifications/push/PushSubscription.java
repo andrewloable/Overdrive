@@ -5,6 +5,8 @@ import net.bladewatch.app.notifications.NotificationEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,6 +18,8 @@ import java.util.Set;
  * this subscription so each device can have its own notification settings.
  */
 public final class PushSubscription {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("PushSubscription");
 
     /** Stable identifier — derived from the endpoint URL hash to keep PII out of file names. */
     public final String id;
@@ -91,7 +95,9 @@ public final class PushSubscription {
                 qh.put("allowCritical", quietHours.allowCritical);
                 j.put("quietHours", qh);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to serialize push subscription: " + ignored.getMessage(), ignored);
+        }
         return j;
     }
 
@@ -120,8 +126,9 @@ public final class PushSubscription {
         try {
             s.minSeverity = NotificationEvent.Severity.valueOf(sev.toUpperCase(java.util.Locale.US));
         } catch (Exception ignored) {
-            s.minSeverity = NotificationEvent.Severity.INFO;
-        }
+                logger.warn("Invalid minSeverity value in push subscription, defaulting to INFO: " + ignored.getMessage());
+                s.minSeverity = NotificationEvent.Severity.INFO;
+            }
 
         JSONObject qh = j.optJSONObject("quietHours");
         if (qh != null) {

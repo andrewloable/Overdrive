@@ -1,5 +1,7 @@
 package net.bladewatch.app.byd;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 /**
  * All BYD feature IDs decoded from the DiLink APK.
  * Used with AbsBYDAutoDevice.get(int[], Class) for generic property reads.
@@ -7,6 +9,8 @@ package net.bladewatch.app.byd;
  * Naming: DEVICE_PROPERTY with fallback numeric value in comment.
  */
 public final class BydFeatureIds {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("BydFeatureIds");
 
     // ==================== BODYWORK ====================
     /** Battery metric from bodywork (doubleValue, no transform) */
@@ -286,7 +290,9 @@ public final class BydFeatureIds {
             } else {
                 return cls.getField(fieldName).getInt(null);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            logger.debug("resolveOrFallback(" + fieldName + ") failed: " + e.getMessage());
+        }
         return fallback;
     }
 

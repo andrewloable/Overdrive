@@ -1534,10 +1534,11 @@ public class StorageManager {
             StatFs stat = new StatFs(sdCardPath);
             return stat.getTotalBytes();
         } catch (Exception e) {
+            logWarn("Could not get SD card total space: " + e.getMessage());
             return 0;
         }
     }
-    
+
     /**
      * Get available space on internal storage in bytes.
      */
@@ -1559,6 +1560,7 @@ public class StorageManager {
             StatFs stat = new StatFs(INTERNAL_BASE_DIR);
             return stat.getTotalBytes();
         } catch (Exception e) {
+            logWarn("Could not get internal total space: " + e.getMessage());
             return 0;
         }
     }
@@ -1894,8 +1896,8 @@ public class StorageManager {
                 try {
                     net.bladewatch.app.server.RecordingsApiHandler
                         .invalidateRecordingCache(file.getAbsolutePath());
-                } catch (Throwable ignored) {
-                    // RecordingsApiHandler may not be loaded in every process.
+                } catch (Throwable e) {
+                    logWarn("Failed to invalidate recording cache: " + e.getMessage());
                 }
             } else {
                 logWarn("Failed to delete: " + file.getAbsolutePath());
@@ -2546,7 +2548,9 @@ public class StorageManager {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                logWarn("Thumbnail cleanup failed during wipeMediaCategory: " + e.getMessage());
+            }
         }
 
         logInfo("wipeMediaCategory(" + category + ") deleted " + deleted + " files");

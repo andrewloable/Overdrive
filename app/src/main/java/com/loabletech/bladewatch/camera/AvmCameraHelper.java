@@ -59,7 +59,7 @@ public final class AvmCameraHelper {
                 try {
                     int id = (Integer) getCameraId.invoke(null, tag);
                     if (id >= 0) sb.append(" ").append(tag).append("=").append(id);
-                } catch (Exception ignored) {}
+                    } catch (Exception ignored) { logger.warn("Failed to get camera ID for tag " + tag + ": " + ignored.getMessage()); }
             }
             logger.info(sb.toString());
 

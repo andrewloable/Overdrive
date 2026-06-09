@@ -1,6 +1,7 @@
 package net.bladewatch.app.server;
 
 import net.bladewatch.app.daemon.CameraDaemon;
+import net.bladewatch.app.logging.DaemonLogger;
 import net.bladewatch.app.storage.StorageManager;
 
 import org.json.JSONObject;
@@ -23,7 +24,10 @@ import java.io.OutputStream;
  * - POST /api/settings/storage - Update storage limit settings
  */
 public class QualitySettingsApiHandler {
-    
+
+    private static final String TAG = "QualitySettingsApiHandler";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
+
     // Stored quality settings
     // Single user-facing recording quality tier (ECONOMY/STANDARD/HIGH/PREMIUM/MAX).
     // Persisted in UnifiedConfigManager under recording.recordingQuality.
@@ -570,7 +574,9 @@ public class QualitySettingsApiHandler {
             if (cameraConfig != null) {
                 currentFps = cameraConfig.optInt("targetFps", 15);
             }
-        } catch (Exception e) { /* use default */ }
+        } catch (Exception e) {
+            logger.warn("Failed to read camera targetFps, using default: " + e.getMessage());
+        }
         response.put("cameraFps", currentFps);
 
         // Per-file recording limit (minutes). Drives segment rotation in
@@ -580,7 +586,7 @@ public class QualitySettingsApiHandler {
         try {
             segMinutes = net.bladewatch.app.config.UnifiedConfigManager
                 .getRecording().optInt("segmentMinutes", 5);
-        } catch (Exception e) { /* use default */ }
+        } catch (Exception e) { logger.warn("Failed to read recordingSegmentMinutes: " + e.getMessage()); }
         response.put("recordingSegmentMinutes", segMinutes);
 
         // Surface measured FPS so the UI can show actualFps when HAL clamps
@@ -600,7 +606,9 @@ public class QualitySettingsApiHandler {
                             + " fps (requested " + currentFps + ")");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to query measured FPS: " + ignored.getMessage());
+        }
 
         // Recording quality tiers — single user-facing knob.
         // Includes per-tier bitrate (resolved against current codec) and

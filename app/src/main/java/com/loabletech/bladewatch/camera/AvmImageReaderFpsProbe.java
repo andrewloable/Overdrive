@@ -238,10 +238,10 @@ public final class AvmImageReaderFpsProbe {
                     new Class<?>[0], new Object[0]);
             }
             if (reader != null) {
-                try { reader.close(); } catch (Throwable ignored) {}
+                try { reader.close(); } catch (Throwable ignored) { logger.warn("Failed to close ImageReader: " + ignored.getMessage()); }
             }
             if (readerSurface != null) {
-                try { readerSurface.release(); } catch (Throwable ignored) {}
+                try { readerSurface.release(); } catch (Throwable ignored) { logger.warn("Failed to release reader surface: " + ignored.getMessage()); }
             }
             if (cameraObj != null) {
                 tryInvoke(avmClass, cameraObj, "close",
@@ -258,7 +258,7 @@ public final class AvmImageReaderFpsProbe {
             Method m = cls.getDeclaredMethod(name, paramTypes);
             m.setAccessible(true);
             m.invoke(instance, args);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) { logger.warn("tryInvoke " + name + " failed: " + ignored.getMessage()); }
     }
 
     /** Simple frame counter — drains the ImageReader queue ASAP so we
@@ -304,7 +304,7 @@ public final class AvmImageReaderFpsProbe {
                             + t.getMessage());
                     } finally {
                         if (hwb != null) {
-                            try { hwb.close(); } catch (Throwable ignored) {}
+                            try { hwb.close(); } catch (Throwable ignored) { logger.warn("Failed to close HardwareBuffer: " + ignored.getMessage()); }
                         }
                     }
                 }
@@ -312,7 +312,7 @@ public final class AvmImageReaderFpsProbe {
                 logger.warn("onImageAvailable error: " + t.getMessage());
             } finally {
                 if (image != null) {
-                    try { image.close(); } catch (Throwable ignored) {}
+                    try { image.close(); } catch (Throwable ignored) { logger.warn("Failed to close Image: " + ignored.getMessage()); }
                 }
             }
         }

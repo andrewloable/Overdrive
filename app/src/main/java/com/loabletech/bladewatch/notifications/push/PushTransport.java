@@ -1,5 +1,7 @@
 package net.bladewatch.app.notifications.push;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -33,6 +35,8 @@ public final class PushTransport {
             return status >= 500 || status == 408 || status == 429;
         }
     }
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("PushTransport");
 
     private PushTransport() {}
 
@@ -70,13 +74,17 @@ public final class PushTransport {
                     }
                     responseBody = new String(out.toByteArray(), "UTF-8");
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                    logger.warn("Failed to read push response body: " + ignored.getMessage());
+                }
 
             int retryAfter = -1;
             String hdr = conn.getHeaderField("Retry-After");
             if (hdr != null) {
                 try { retryAfter = Math.max(0, Integer.parseInt(hdr.trim())); }
-                catch (NumberFormatException ignored) {}
+                catch (NumberFormatException ignored) {
+                        logger.warn("Failed to parse Retry-After header: " + ignored.getMessage());
+                    }
             }
             return new Result(status, responseBody, retryAfter);
         } finally {

@@ -241,7 +241,9 @@ public class AppUpdater {
                 @Override public void onLaunched() { Log.i(TAG, "Cleaned up leftover APK"); }
                 @Override public void onError(String e) {}
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "cleanupLeftoverApk failed: " + e.getMessage());
+        }
     }
 
     /**
@@ -376,11 +378,11 @@ public class AppUpdater {
                         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
                         sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
                         long remoteAssetTime = 0;
-                        try { remoteAssetTime = sdf.parse(updatedAt).getTime(); } catch (Exception ignored) {}
+                        try { remoteAssetTime = sdf.parse(updatedAt).getTime(); } catch (Exception e) { Log.w(TAG, "Failed to parse remote asset timestamp: " + e.getMessage()); }
                         
                         // Parse the stored timestamp to detect if app was reinstalled since last check
                         long storedTime = 0;
-                        try { storedTime = sdf.parse(lastInstalledTimestamp).getTime(); } catch (Exception ignored) {}
+                        try { storedTime = sdf.parse(lastInstalledTimestamp).getTime(); } catch (Exception e) { Log.w(TAG, "Failed to parse stored timestamp: " + e.getMessage()); }
                         
                         // Fresh deploy: app was installed AFTER the remote APK was uploaded AND
                         // app was also installed after the last update check (i.e. a sideload happened)
@@ -509,7 +511,7 @@ public class AppUpdater {
                 }
 
                 long fileSize = 0;
-                try { fileSize = Long.parseLong(szResult[0].trim()); } catch (Exception ignored) {}
+                try { fileSize = Long.parseLong(szResult[0].trim()); } catch (Exception e) { Log.w(TAG, "Failed to parse file size: " + e.getMessage()); }
                 if (fileSize <= 0) {
                     runShell("rm -f " + APK_PATH, new net.bladewatch.app.launcher.AdbDaemonLauncher.LaunchCallback() {
                         @Override public void onLog(String m) {}
@@ -973,7 +975,9 @@ public class AppUpdater {
                 @Override public void onLaunched() {}
                 @Override public void onError(String e) {}
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "cleanup failed: " + e.getMessage());
+        }
     }
 
     private void stopAllDaemons() {
@@ -1002,11 +1006,14 @@ public class AppUpdater {
                 synchronized (markerDone) { markerDone.notify(); }
             }
         });
-        try {
-            synchronized (markerDone) {
-                if (!markerDone[0]) markerDone.wait(3000);
+            try {
+                synchronized (markerDone) {
+                    if (!markerDone[0]) markerDone.wait(3000);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Interrupted waiting for markerDone: " + e.getMessage());
             }
-        } catch (InterruptedException ignored) {}
 
         // Step 1: Kill ALL watchdog scripts and write sentinels FIRST.
         // This prevents watchdogs from respawning daemons between kills.
@@ -1037,14 +1044,17 @@ public class AppUpdater {
                 synchronized (wdDone) { wdDone.notify(); }
             }
         });
-        try {
-            synchronized (wdDone) {
-                if (!wdDone[0]) wdDone.wait(5000);
+            try {
+                synchronized (wdDone) {
+                    if (!wdDone[0]) wdDone.wait(5000);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Interrupted waiting for wdDone: " + e.getMessage());
             }
-        } catch (InterruptedException ignored) {}
         
         // Brief pause to let watchdog processes fully exit before killing daemons
-        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); Log.w(TAG, "Interrupted during sleep: " + e.getMessage()); }
         
         // Step 2: Kill all daemon processes.
         // Watchdogs are already dead so nothing will respawn these.
@@ -1070,7 +1080,10 @@ public class AppUpdater {
                 synchronized (done) {
                     if (!done[0]) done.wait(5000);
                 }
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Interrupted waiting for daemon kill: " + e.getMessage());
+            }
         }
         
         // Step 3: Final sweep — catch any stragglers that slipped through.
@@ -1108,11 +1121,14 @@ public class AppUpdater {
                 synchronized (sweepDone) { sweepDone.notify(); }
             }
         });
-        try {
-            synchronized (sweepDone) {
-                if (!sweepDone[0]) sweepDone.wait(5000);
+            try {
+                synchronized (sweepDone) {
+                    if (!sweepDone[0]) sweepDone.wait(5000);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                Log.w(TAG, "Interrupted waiting for sweepDone: " + e.getMessage());
             }
-        } catch (InterruptedException ignored) {}
         
         Log.i(TAG, "All daemons and watchdogs stopped");
     }
@@ -1157,7 +1173,9 @@ public class AppUpdater {
                     return ts;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read update timestamp from file: " + e.getMessage());
+        }
         return "";
     }
 
@@ -1176,7 +1194,9 @@ public class AppUpdater {
                     Log.w(TAG, "Failed to save timestamp to file: " + error);
                 }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "saveLastUpdateTimestamp runShell failed: " + e.getMessage());
+        }
     }
 
     /**
@@ -1194,7 +1214,9 @@ public class AppUpdater {
                     Log.w(TAG, "Failed to save version to file: " + error);
                 }
             });
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "persistVersionToFile runShell failed: " + e.getMessage());
+        }
     }
 
     private void postError(UpdateCallback cb, String msg) {
@@ -1264,7 +1286,9 @@ public class AppUpdater {
             JSONObject j = new JSONObject(sb.toString());
             err = j.optString("error", null);
             if (err == null || err.isEmpty()) err = j.optString("message", "Install failed");
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to parse update progress JSON: " + e.getMessage());
+        }
         // One-shot: clear the just-updated flag AND delete the progress file
         // and post-update sentinel so the next launch is clean. The retry
         // will write a fresh record.
@@ -1274,9 +1298,11 @@ public class AppUpdater {
                     .putBoolean(PREF_JUST_UPDATED, false)
                     .remove(PREF_UPDATED_VERSION)
                     .apply();
-        } catch (Exception ignored) {}
-        try { new java.io.File("/data/local/tmp/bladewatch_update_progress.json").delete(); } catch (Exception ignored) {}
-        try { new java.io.File(POST_UPDATE_FILE).delete(); } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to clear just-updated flag: " + e.getMessage());
+        }
+        try { new java.io.File("/data/local/tmp/bladewatch_update_progress.json").delete(); } catch (Exception e) { Log.w(TAG, "Failed to delete progress file: " + e.getMessage()); }
+        try { new java.io.File(POST_UPDATE_FILE).delete(); } catch (Exception e) { Log.w(TAG, "Failed to delete post-update sentinel: " + e.getMessage()); }
         return err;
     }
 
@@ -1429,14 +1455,17 @@ public class AppUpdater {
                     return version.trim();
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read version from file: " + e.getMessage());
+        }
         return DISPLAY_VERSION_FALLBACK;
     }
 
     private static boolean isAutoUpdateEnabled() {
         try {
             return PreferencesManager.isAutoUpdateEnabled();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "isAutoUpdateEnabled check failed, assuming enabled: " + e.getMessage());
             return true;
         }
     }

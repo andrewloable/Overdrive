@@ -2,6 +2,8 @@ package net.bladewatch.app.camera;
 
 import android.os.Build;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 import java.lang.reflect.Method;
@@ -11,6 +13,8 @@ import java.lang.reflect.Method;
  * previously validated BYD camera tuple is still trustworthy.
  */
 public final class CameraFirmwareInfo {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("CameraFirmwareInfo");
 
     public final String fingerprint;
     public final String buildDisplay;
@@ -56,6 +60,7 @@ public final class CameraFirmwareInfo {
             Object value = get.invoke(null, key);
             return value != null ? value.toString() : "";
         } catch (Throwable ignored) {
+            logger.warn("Failed to read system property " + key + ": " + ignored.getMessage());
             return "";
         }
     }
@@ -70,6 +75,7 @@ public final class CameraFirmwareInfo {
             json.put("productDevice", device);
             json.put("vehicleCamSort", vehicleCamSort);
         } catch (Exception ignored) {
+            logger.warn("Failed to build firmware info JSON: " + ignored.getMessage());
         }
         return json;
     }

@@ -1,5 +1,7 @@
 package net.bladewatch.app.trips;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import org.json.JSONObject;
 
 /**
@@ -8,6 +10,9 @@ import org.json.JSONObject;
  * to micro-moments JSON and telemetry file.
  */
 public class TripRecord {
+
+    private static final String TAG = "TripRecord";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     public long id;                    // Auto-increment PK
     public long startTime;             // Epoch ms
@@ -106,7 +111,7 @@ public class TripRecord {
             json.put("microMomentsJson", microMomentsJson != null ? microMomentsJson : "");
             json.put("telemetryFilePath", telemetryFilePath != null ? telemetryFilePath : "");
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("TripRecord.toJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }
@@ -151,7 +156,7 @@ public class TripRecord {
             json.put("consistencyScore", consistencyScore);
             json.put("overallScore", getOverallScore());
         } catch (Exception e) {
-            // JSONObject.put only throws on null key
+            logger.warn("TripRecord.toSummaryJson: failed to serialize: " + e.getMessage());
         }
         return json;
     }

@@ -207,6 +207,7 @@ public class DaemonLogger {
                         break;
                 }
             } catch (RuntimeException ignored) {
+                Log.w(META_TAG, "Console log call failed: " + ignored.getMessage());
                 // Local JVM unit tests do not provide a real android.util.Log
                 // implementation. Keep file/stdout logging working and move on.
             }
@@ -299,6 +300,7 @@ public class DaemonLogger {
             writerInitialized = true;
                 
         } catch (Exception e) {
+            Log.w(META_TAG, "Failed to initialize log file writer: " + e.getMessage());
             // Silently skip file logging if directory is not writable (e.g. app process can't write to /data/local/tmp/)
             // Falls back to logcat only — this is expected when AuthManager is called from app UI
         }

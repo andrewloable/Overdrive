@@ -183,6 +183,7 @@ public final class SrtWriter {
                 srtFile.setReadable(true, false);
             } catch (Exception ignored) {
                 // Best-effort; not all filesystems honour this.
+                logger.warn("SRT setReadable failed on " + srtFile.getName() + ": " + ignored.getMessage());
             }
 
             logger.info("SRT sidecar written: " + srtFile.getName()
@@ -229,6 +230,7 @@ public final class SrtWriter {
         } catch (Exception e) {
             // Bad placeholder in the template — emit the raw template so the
             // operator at least sees what fired.
+            logger.warn("MessageFormat failed for SRT key '" + key + "': " + e.getMessage());
             return template;
         }
     }
@@ -242,7 +244,9 @@ public final class SrtWriter {
                 Method m = cls.getMethod("get", String.class, String.class);
                 Object out = m.invoke(null, locale, key);
                 if (out instanceof String) return (String) out;
-            } catch (NoSuchMethodException ignored) { /* try other signature */ }
+            } catch (NoSuchMethodException ignored) {
+                logger.debug("Messages.get(String,String) not found, trying single-arg");
+            }
 
             // Fallback to a single-arg signature that resolves the locale
             // internally (some catalogs use a thread-local locale set by
@@ -251,10 +255,11 @@ public final class SrtWriter {
                 Method m = cls.getMethod("get", String.class);
                 Object out = m.invoke(null, key);
                 if (out instanceof String) return (String) out;
-            } catch (NoSuchMethodException ignored) { /* fall through */ }
+            } catch (NoSuchMethodException ignored) {
+                logger.debug("Messages.get(String) not found either, falling through");
+            }
         } catch (ClassNotFoundException e) {
-            // Messages class not on classpath — happens during early dev or
-            // tests. Caller falls back to the key itself.
+            logger.debug("Messages class not on classpath, using key as fallback: " + e.getMessage());
         } catch (Exception e) {
             // Reflection failure — log once and stop trying.
             logger.warn("Messages reflection failed: " + e.getMessage());
@@ -270,6 +275,7 @@ public final class SrtWriter {
             if (out instanceof String) return (String) out;
         } catch (Exception ignored) {
             // LocaleManager unavailable — default to English.
+            logger.warn("LocaleManager resolution failed — defaulting to 'en': " + ignored.getMessage());
         }
         return "en";
     }

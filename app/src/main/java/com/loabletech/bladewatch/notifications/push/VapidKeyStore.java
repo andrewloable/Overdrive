@@ -2,6 +2,8 @@ package net.bladewatch.app.notifications.push;
 
 import android.util.Base64;
 
+import net.bladewatch.app.logging.DaemonLogger;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -27,6 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * subscription on every phone.
  */
 public final class VapidKeyStore {
+
+    private static final DaemonLogger logger = DaemonLogger.getInstance("VapidKeyStore");
 
     private final File keyFile;
     private final AtomicReference<KeyPair> cached = new AtomicReference<>();
@@ -85,6 +89,7 @@ public final class VapidKeyStore {
             PublicKey pub = kf.generatePublic(new X509EncodedKeySpec(pubDer));
             return new KeyPair(pub, priv);
         } catch (Exception e) {
+            logger.warn("Failed to read VAPID key file, will generate new key: " + e.getMessage());
             return null;
         }
     }

@@ -3,6 +3,7 @@ package net.bladewatch.app;
 import android.app.Activity;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -105,12 +106,14 @@ public class BlockerActivity extends Activity {
             getWindow().setAttributes(params);
             
         } catch (Exception e) {
-            // Fallback: just set window brightness
+            Log.w(TAG, "Failed to set system brightness settings, falling back to window brightness: " + e.getMessage());
             try {
                 WindowManager.LayoutParams params = getWindow().getAttributes();
                 params.screenBrightness = 0.0f;
                 getWindow().setAttributes(params);
-            } catch (Exception ignored) {}
+            } catch (Exception e2) {
+                Log.w(TAG, "Failed to set window brightness as fallback: " + e2.getMessage());
+            }
         }
     }
     
@@ -129,9 +132,11 @@ public class BlockerActivity extends Activity {
                 Settings.System.SCREEN_BRIGHTNESS, 
                 originalBrightness
             );
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to restore brightness settings: " + e.getMessage());
+        }
     }
-    
+
     @Override
     protected void onResume() {
         super.onResume();

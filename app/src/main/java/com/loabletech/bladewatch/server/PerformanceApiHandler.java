@@ -204,9 +204,11 @@ public class PerformanceApiHandler {
                 try {
                     JSONObject json = new JSONObject(body);
                     clientId = json.optString("clientId", null);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to parse clientId from connect body: " + ignored.getMessage());
+                }
             }
-            
+
             // Generate client ID if not provided
             if (clientId == null || clientId.isEmpty()) {
                 clientId = "client-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 10000);
@@ -236,15 +238,17 @@ public class PerformanceApiHandler {
     private static boolean handleDisconnect(String body, OutputStream out) throws Exception {
         try {
             PerformanceMonitor monitor = PerformanceMonitor.getInstance();
-            
+
             String clientId = null;
             if (body != null && !body.isEmpty()) {
                 try {
                     JSONObject json = new JSONObject(body);
                     clientId = json.optString("clientId", null);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to parse clientId from disconnect body: " + ignored.getMessage());
+                }
             }
-            
+
             if (clientId != null) {
                 monitor.clientDisconnected(clientId);
             }
@@ -269,15 +273,17 @@ public class PerformanceApiHandler {
     private static boolean handleHeartbeat(String body, OutputStream out) throws Exception {
         try {
             PerformanceMonitor monitor = PerformanceMonitor.getInstance();
-            
+
             String clientId = null;
             if (body != null && !body.isEmpty()) {
                 try {
                     JSONObject json = new JSONObject(body);
                     clientId = json.optString("clientId", null);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    logger.warn("Failed to parse clientId from heartbeat body: " + ignored.getMessage());
+                }
             }
-            
+
             if (clientId != null) {
                 monitor.clientHeartbeat(clientId);
             }
@@ -429,7 +435,9 @@ public class PerformanceApiHandler {
                     return Integer.parseInt(kv[1]);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.warn("Failed to parse integer query param '" + name + "': " + ignored.getMessage());
+        }
         return defaultValue;
     }
 

@@ -280,6 +280,8 @@ public class ProximityGuardController implements ProximityRadarMonitor.TriggerCa
                 scheduler.shutdownNow();
             }
         } catch (InterruptedException e) {
+            logger.warn("Interrupted while shutting down scheduler: " + e.getMessage());
+            Thread.currentThread().interrupt();
             scheduler.shutdownNow();
         }
         logger.info("ProximityGuardController shutdown complete");
