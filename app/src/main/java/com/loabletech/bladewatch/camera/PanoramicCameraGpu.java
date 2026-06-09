@@ -287,7 +287,9 @@ public class PanoramicCameraGpu {
                 if (ds != null && frame != null) {
                     try {
                         ds.recycleBuffer(frame);
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) {
+                        logger.debug("downscaler.recycleBuffer failed: " + t.getMessage());
+                    }
                 }
             });
         }
@@ -710,11 +712,11 @@ public class PanoramicCameraGpu {
         // go back to the ImageReader pool before we close the reader.
         releasePreviousBoundImage();
         if (cameraSurface != null) {
-            try { cameraSurface.release(); } catch (Throwable ignored) {}
+            try { cameraSurface.release(); } catch (Throwable t) { logger.debug("cameraSurface.release() failed: " + t.getMessage()); }
             cameraSurface = null;
         }
         if (cameraImageReader != null) {
-            try { cameraImageReader.close(); } catch (Throwable ignored) {}
+            try { cameraImageReader.close(); } catch (Throwable t) { logger.debug("cameraImageReader.close() failed: " + t.getMessage()); }
             cameraImageReader = null;
         }
     }
@@ -947,10 +949,10 @@ public class PanoramicCameraGpu {
             // on failure paths we close immediately to release the slot.
             if (!transferredOwnership) {
                 if (hwBuffer != null) {
-                    try { hwBuffer.close(); } catch (Throwable ignored) {}
+                    try { hwBuffer.close(); } catch (Throwable t) { logger.debug("hwBuffer.close() failed: " + t.getMessage()); }
                 }
                 if (image != null) {
-                    try { image.close(); } catch (Throwable ignored) {}
+                    try { image.close(); } catch (Throwable t) { logger.debug("image.close() failed: " + t.getMessage()); }
                 }
             }
         }
@@ -958,11 +960,11 @@ public class PanoramicCameraGpu {
 
     private void releasePreviousBoundImage() {
         if (currentBoundHwBuffer != null) {
-            try { currentBoundHwBuffer.close(); } catch (Throwable ignored) {}
+            try { currentBoundHwBuffer.close(); } catch (Throwable t) { logger.debug("currentBoundHwBuffer.close() failed: " + t.getMessage()); }
             currentBoundHwBuffer = null;
         }
         if (currentBoundImage != null) {
-            try { currentBoundImage.close(); } catch (Throwable ignored) {}
+            try { currentBoundImage.close(); } catch (Throwable t) { logger.debug("currentBoundImage.close() failed: " + t.getMessage()); }
             currentBoundImage = null;
         }
     }
@@ -996,7 +998,7 @@ public class PanoramicCameraGpu {
                     try {
                         frameSync.wait(100);  // Timeout to check running flag
                     } catch (InterruptedException e) {
-                        // Continue
+                        Thread.currentThread().interrupt();
                     }
                 }
                 imagePending = false;
@@ -1281,7 +1283,7 @@ public class PanoramicCameraGpu {
                         logger.error("Encoder reinit failed: " + reinitEx.getMessage());
                         // If reinit fails, force process restart — EGL context is likely corrupt
                         logger.error("CRITICAL: Encoder reinit failed, forcing process restart");
-                        try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                        try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                         System.exit(0);
                     } finally {
                         restartInProgress.set(false);
@@ -1621,7 +1623,7 @@ public class PanoramicCameraGpu {
                 lastGlThreadHeartbeat = System.currentTimeMillis();
 
                 try {
-                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                     startCamera();
                     if (cameraCoordinator != null && cameraObj != null) {
                         cameraCoordinator.setupEventCallback(cameraObj);
@@ -1632,7 +1634,7 @@ public class PanoramicCameraGpu {
                         " surfaceMode=" + probeNextSurfaceMode +
                         " failed to open: " + e.getMessage());
                     cameraObj = null;
-                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
             }
 
@@ -1690,7 +1692,7 @@ public class PanoramicCameraGpu {
 
                 try {
                     // Brief pause before opening next camera — HAL needs time to release resources
-                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
 
                     startCamera();
                     // Setup event callback (only for AVMCamera path — binder service handles its own events)
@@ -1704,7 +1706,7 @@ public class PanoramicCameraGpu {
                     logger.info("Auto-probe: camera ID " + tryId + " failed to open: " + e.getMessage());
                     cameraObj = null;
                     // Delay before trying next combo to avoid HAL overload
-                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                     continue;
                 }
             }

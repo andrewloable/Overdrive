@@ -18,7 +18,7 @@ public class TripConfig {
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
     private static final String SECTION = "tripAnalytics";
 
-    private boolean enabled = false;
+    private boolean enabled = true;
     private double electricityRate = 0;  // Cost per kWh
     private String currency = "";        // Currency symbol (₹, $, €, £)
     // Distance unit preference: "km" (default) or "mi".
@@ -28,7 +28,7 @@ public class TripConfig {
     private String distanceUnit = "km";
 
     public TripConfig() {
-        this.enabled = false;
+        this.enabled = true;
     }
 
     /**
@@ -40,7 +40,7 @@ public class TripConfig {
         try {
             JSONObject section = UnifiedConfigManager.loadConfig().optJSONObject(SECTION);
             if (section != null) {
-                enabled = section.optBoolean("enabled", false);
+                enabled = section.optBoolean("enabled", true);
                 electricityRate = section.optDouble("electricityRate", 0);
                 currency = section.optString("currency", "");
                 distanceUnit = section.optString("distanceUnit", "km");

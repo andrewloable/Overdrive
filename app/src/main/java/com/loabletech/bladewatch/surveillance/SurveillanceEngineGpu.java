@@ -172,7 +172,7 @@ public class SurveillanceEngineGpu {
             try {
                 android.os.Process.setThreadPriority(
                         android.os.Process.THREAD_PRIORITY_BACKGROUND);
-            } catch (Throwable ignored) {}
+            } catch (Throwable thr) { logger.debug("setThreadPriority failed: " + thr.getMessage()); }
             r.run();
         }, "SentryAiExecutor");
         t.setDaemon(true);
@@ -897,11 +897,11 @@ public class SurveillanceEngineGpu {
                                 break;
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) { logger.debug("trackerHasActiveTrack/trackerGetTrackBox Q" + q + " error: " + e.getMessage()); }
                 }
             }
         }
-        
+
         // --- Diagnostic: Log per-quadrant pipeline results every time motion is detected ---
         // This shows exactly what the pipeline saw and why it did/didn't trigger.
         if (anyMotion || filterDebugEnabled) {
@@ -1168,7 +1168,7 @@ public class SurveillanceEngineGpu {
                                         bestQ = tq;
                                         break;
                                     }
-                                } catch (Exception ignored) {}
+                                } catch (Exception e) { logger.debug("trackerHasActiveTrack tq=" + tq + " error: " + e.getMessage()); }
                             }
                         }
                         String qName = bestQ >= 0 ? MotionPipelineV2.QUADRANT_NAMES[bestQ] : "?";
@@ -1295,7 +1295,7 @@ public class SurveillanceEngineGpu {
                                 trackerActive = true;
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) { logger.debug("trackerHasActiveTrack/GetTrackBox Q" + q + " error: " + e.getMessage()); }
                     if (results[q].activeBlocks > 0) anyLowActivity = true;
                 }
                 long gapTolerance = (trackerActive || anyLowActivity || aiPending || aiConfirmedDuringSequence) ? 4000 : 2000;
@@ -1323,7 +1323,7 @@ public class SurveillanceEngineGpu {
                             for (int tq = 0; tq < MotionPipelineV2.NUM_QUADRANTS; tq++) {
                                 try {
                                     if (NativeMotion.trackerHasActiveTrack(tq)) { bestQ = tq; break; }
-                                } catch (Exception ignored) {}
+                                } catch (Exception e) { logger.debug("trackerHasActiveTrack tq=" + tq + " error: " + e.getMessage()); }
                             }
                         }
                         recordingStopTime = now + postRecordMs;
@@ -1387,7 +1387,7 @@ public class SurveillanceEngineGpu {
                             break;
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("trackerHasActiveTrack/GetTrackBox Q" + q + " error: " + e.getMessage()); }
             }
             
             if (anyActivity || trackerHolding) {
@@ -1666,8 +1666,8 @@ public class SurveillanceEngineGpu {
                 trackerCentroidY = (trackBox[1] + trackBox[3] / 2.0f) / 32.0f;
                 heartbeatHasTrackerPos = true;
             }
-        } catch (Exception ignored) {}
-        
+        } catch (Exception e) { logger.debug("trackerGetTrackBox Q" + quadrant + " error: " + e.getMessage()); }
+
         if (foveatedCropper != null && foveatedCropper.isInitialized() && cameraTextureId >= 0
                 && ((motionResult != null && motionResult.componentSize > 0) || heartbeatHasTrackerPos)) {
             // Foveated path: 640×640 from raw strip. crop() touches GL state
@@ -2187,7 +2187,7 @@ public class SurveillanceEngineGpu {
                             logger.info("Tracker teardown: YOLO heartbeat found nothing, killed track Q" + qIdx +
                                     " [" + MotionPipelineV2.QUADRANT_NAMES[qIdx] + "]");
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) { logger.debug("trackerDropTrack/ConfirmHeartbeat Q" + qIdx + " error: " + e.getMessage()); }
                 }
             } catch (Exception e) {
                 logger.error("V2 AI detection error (Q" + qIdx + ")", e);

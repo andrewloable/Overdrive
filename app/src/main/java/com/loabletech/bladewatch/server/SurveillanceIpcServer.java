@@ -108,7 +108,9 @@ public class SurveillanceIpcServer implements Runnable {
             try {
                 response.put("success", false);
                 response.put("error", "Unauthorized");
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                logger.warn("Failed to build Unauthorized response: " + e.getMessage());
+            }
             return response;
         }
 
@@ -320,12 +322,14 @@ public class SurveillanceIpcServer implements Runnable {
             try {
                 response.put("success", false);
                 response.put("error", e.getMessage());
-            } catch (Exception ignored) {}
+            } catch (Exception ex) {
+                logger.warn("Failed to build error response: " + ex.getMessage());
+            }
         }
-        
+
         return response;
     }
-    
+
     /**
      * Apply configuration changes to surveillance system.
      * Updates both the running engine (if available) AND persists to config file.
@@ -1170,7 +1174,7 @@ public class SurveillanceIpcServer implements Runnable {
                     r.put("currentVersion", currentVersion);
                     r.put("remoteVersion", newVersion);
                     r.put("releaseNotes", releaseNotes != null ? releaseNotes : "");
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("onUpdateAvailable response build error: " + e.getMessage()); }
                 resultRef[0] = r;
                 synchronized (lock) { done[0] = true; lock.notify(); }
             }
@@ -1180,7 +1184,7 @@ public class SurveillanceIpcServer implements Runnable {
                     r.put("available", false);
                     r.put("currentVersion", currentVersion);
                     r.put("remoteVersion", currentVersion);
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("onNoUpdate response build error: " + e.getMessage()); }
                 resultRef[0] = r;
                 synchronized (lock) { done[0] = true; lock.notify(); }
             }
@@ -1190,7 +1194,7 @@ public class SurveillanceIpcServer implements Runnable {
                     r.put("available", false);
                     r.put("error", error != null ? error : "unknown");
                     r.put("currentVersion", net.bladewatch.app.updater.AppUpdater.getDisplayVersionFromFile());
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("onError response build error: " + e.getMessage()); }
                 resultRef[0] = r;
                 synchronized (lock) { done[0] = true; lock.notify(); }
             }
@@ -1333,11 +1337,11 @@ public class SurveillanceIpcServer implements Runnable {
             r.put("message", message != null ? message : "");
             if (error != null) r.put("error", error);
             r.put("ts", System.currentTimeMillis());
-        } catch (Exception ignored) {}
+        } catch (Exception e) { logger.warn("writeInstallProgress JSON build failed: " + e.getMessage()); }
         try (java.io.FileWriter fw = new java.io.FileWriter(
                 "/data/local/tmp/bladewatch_update_progress.json")) {
             fw.write(r.toString());
-        } catch (Exception ignored) {}
+        } catch (Exception e) { logger.warn("writeInstallProgress file write failed: " + e.getMessage()); }
     }
 
     public void stop() {

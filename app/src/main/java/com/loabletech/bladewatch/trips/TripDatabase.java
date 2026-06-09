@@ -99,6 +99,7 @@ public class TripDatabase {
                     }
                 } else {
                     logger.error("Failed to initialize trip database: " + e.getClass().getName() + " - " + msg, e);
+                    logger.error("CRITICAL: Trip database failed to initialize after " + maxRetries + " attempts — no trips will be saved");
                     break;
                 }
             }

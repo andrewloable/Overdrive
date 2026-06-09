@@ -218,7 +218,7 @@ public final class AvmByteCallbackProbe {
                 try {
                     int id = (Integer) getCameraId.invoke(null, tag);
                     if (id >= 0) { sb.append(" ").append(tag).append("=").append(id); any = true; }
-                } catch (Throwable ignored) {}
+                } catch (Throwable t) { logger.debug("getCameraId failed for tag=" + tag + ": " + t.getMessage()); }
             }
             logger.info(any ? sb.toString() : "BmmCameraInfo: no tags resolve to a camera ID");
         } catch (Throwable t) {
@@ -230,11 +230,11 @@ public final class AvmByteCallbackProbe {
     private static Class<?> loadAvmCameraClass() {
         try {
             return Class.forName("android.hardware.AVMCamera");
-        } catch (ClassNotFoundException ignored) {}
+        } catch (ClassNotFoundException e) { logger.debug("AVMCamera Class.forName failed: " + e.getMessage()); }
         try {
             ClassLoader sys = ClassLoader.getSystemClassLoader();
             return sys.loadClass("android.hardware.AVMCamera");
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) { logger.debug("AVMCamera sys.loadClass failed: " + t.getMessage()); }
         try {
             ClassLoader cl = AvmByteCallbackProbe.class.getClassLoader();
             try {
@@ -253,7 +253,7 @@ public final class AvmByteCallbackProbe {
     private static Class<?> findInnerInterface(Class<?> outer, String simpleName) {
         try {
             return Class.forName(outer.getName() + "$" + simpleName);
-        } catch (ClassNotFoundException ignored) {}
+        } catch (ClassNotFoundException e) { logger.debug("findInnerInterface " + simpleName + " not found: " + e.getMessage()); }
         for (Class<?> c : outer.getDeclaredClasses()) {
             if (simpleName.equals(c.getSimpleName())) return c;
         }
@@ -401,7 +401,7 @@ public final class AvmByteCallbackProbe {
             Method m = cls.getDeclaredMethod(name, paramTypes);
             m.setAccessible(true);
             m.invoke(instance, args);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) { logger.debug("tryInvoke " + name + " failed: " + t.getMessage()); }
     }
 
     private static final class ComboResult {
@@ -539,7 +539,8 @@ public final class AvmByteCallbackProbe {
                         writeRaw(nv21);
                     }
                 }
-            } catch (InterruptedException ignored) {
+            } catch (InterruptedException ie) {
+                logger.debug("Worker cam=" + cameraId + " interrupted");
                 Thread.currentThread().interrupt();
             } catch (Throwable t) {
                 logger.warn("Worker error cam=" + cameraId + " view="
@@ -646,7 +647,7 @@ public final class AvmByteCallbackProbe {
                 mp4Tmp = new File(probeDir, mp4Final.getName() + ".tmp");
                 // Stale .tmp from a previous run will trip MediaMuxer constructor — wipe it.
                 if (mp4Tmp.exists()) {
-                    try { mp4Tmp.delete(); } catch (Throwable ignored) {}
+                    try { mp4Tmp.delete(); } catch (Throwable t2) { logger.debug("mp4Tmp pre-clean delete() failed: " + t2.getMessage()); }
                 }
                 muxer = new MediaMuxer(mp4Tmp.getAbsolutePath(),
                     MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
@@ -697,17 +698,17 @@ public final class AvmByteCallbackProbe {
 
         private void closeEncoderFailFast() {
             if (encoder != null) {
-                try { encoder.stop(); } catch (Throwable ignored) {}
-                try { encoder.release(); } catch (Throwable ignored) {}
+                try { encoder.stop(); } catch (Throwable t) { logger.debug("encoder.stop() failed: " + t.getMessage()); }
+                try { encoder.release(); } catch (Throwable t) { logger.debug("encoder.release() failed: " + t.getMessage()); }
                 encoder = null;
             }
             if (muxer != null) {
-                try { muxer.release(); } catch (Throwable ignored) {}
+                try { muxer.release(); } catch (Throwable t) { logger.debug("muxer.release() failed: " + t.getMessage()); }
                 muxer = null;
             }
             muxerStarted = false;
             if (mp4Tmp != null && mp4Tmp.exists()) {
-                try { mp4Tmp.delete(); } catch (Throwable ignored) {}
+                try { mp4Tmp.delete(); } catch (Throwable t) { logger.debug("mp4Tmp.delete() failed: " + t.getMessage()); }
             }
             mp4Tmp = null;
             mp4Final = null;
@@ -720,7 +721,7 @@ public final class AvmByteCallbackProbe {
                     cameraId, viewIndex, width, height));
                 rawTmp = new File(probeDir, rawFinal.getName() + ".tmp");
                 if (rawTmp.exists()) {
-                    try { rawTmp.delete(); } catch (Throwable ignored) {}
+                    try { rawTmp.delete(); } catch (Throwable t) { logger.debug("rawTmp pre-clean delete() failed: " + t.getMessage()); }
                 }
                 rawOut = new FileOutputStream(rawTmp);
                 outputPath = rawFinal.getAbsolutePath();

@@ -253,8 +253,10 @@ public class SentryDaemon {
                 log("  byd_datacached: OK");
                 return;
             }
-        } catch (Exception e) { }
-        
+        } catch (Exception e) {
+            log("whitelistUidForNetwork byd_datacached failed: " + e.getMessage());
+        }
+
         // Try bg_datacache
         try {
             @SuppressLint("WrongConstant")
@@ -265,8 +267,10 @@ public class SentryDaemon {
                 log("  bg_datacache: OK");
                 return;
             }
-        } catch (Exception e) { }
-        
+        } catch (Exception e) {
+            log("whitelistUidForNetwork bg_datacache failed: " + e.getMessage());
+        }
+
         // Shell fallback
         for (int code = 1; code <= 3; code++) {
             execShell("service call " + SERVICE_BYD_DATACACHE() + " " + code + " s16 '" + uidStr + "' i32 0 2>/dev/null");
@@ -295,8 +299,10 @@ public class SentryDaemon {
                     return;
                 }
             }
-        } catch (Exception e) { }
-        
+        } catch (Exception e) {
+            log("whitelistAppPackage accmodemanager failed: " + e.getMessage());
+        }
+
         // Shell fallback
         for (int code = 1; code <= 5; code++) {
             execShell("service call " + SERVICE_ACCMODE() + " " + code + " s16 '" + pkg + "' 2>/dev/null");
@@ -591,7 +597,7 @@ public class SentryDaemon {
         try {
             new java.io.File(PID_FILE()).delete();
         } catch (Exception e) {
-            // Ignore
+            log("WARN: deletePidFile failed: " + e.getMessage());
         }
     }
     
@@ -611,16 +617,16 @@ public class SentryDaemon {
                 wakeLock.release();
                 log("WakeLock released");
             } catch (Exception e) {
-                // Ignore
+                log("WARN: wakeLock.release() failed: " + e.getMessage());
             }
         }
-        
+
         // Close control socket
         if (controlSocket != null) {
             try {
                 controlSocket.close();
             } catch (Exception e) {
-                // Ignore
+                log("controlSocket.close() failed: " + e.getMessage());
             }
         }
         
@@ -680,6 +686,7 @@ public class SentryDaemon {
                     
                 } catch (InterruptedException e) {
                     log("Location Monitor interrupted");
+                    Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
                     log("Location Monitor error: " + e.getMessage());
@@ -749,7 +756,7 @@ public class SentryDaemon {
             "-n " + APP_PKG() + "/.receiver.LocationBootReceiver 2>&1");
         
         // Wait and verify
-        try { Thread.sleep(3000); } catch (Exception e) {}
+        try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         
         String verify = execShell("dumpsys activity services " + LOCATION_SERVICE_NAME + " 2>/dev/null");
         if (verify.contains("ServiceRecord") && !verify.contains("app=null")) {
@@ -815,13 +822,13 @@ public class SentryDaemon {
                 new java.io.FileReader(PID_FILE()));
             String pidStr = br.readLine();
             br.close();
-            
+
             if (pidStr != null && !pidStr.isEmpty()) {
                 int pid = Integer.parseInt(pidStr.trim());
                 Runtime.getRuntime().exec(new String[]{"kill", "-9", String.valueOf(pid)});
             }
         } catch (Exception e) {
-            // Ignore
+            log("WARN: killByPidFile failed: " + e.getMessage());
         }
     }
 }

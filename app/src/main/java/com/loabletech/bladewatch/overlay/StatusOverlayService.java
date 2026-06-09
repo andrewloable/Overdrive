@@ -23,12 +23,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import net.bladewatch.app.R;
+import net.bladewatch.app.client.ConnectClientProvider;
+import net.bladewatch.app.grpc.v1.GetStatusResponse;
 
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -419,7 +420,7 @@ public class StatusOverlayService extends Service {
 
         executor.execute(() -> {
             try {
-                JSONObject status = fetchStatus();
+                GetStatusResponse status = fetchStatus();
                 if (status != null) {
                     daemonReachable = true;
                     consecutivePollFailures = 0;
@@ -453,96 +454,28 @@ public class StatusOverlayService extends Service {
         });
     }
 
-    private JSONObject fetchStatus() {
-        HttpURLConnection conn = null;
+    private GetStatusResponse fetchStatus() {
         try {
-            conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                "/status", "GET", 2000, 2000);
-            if (conn.getResponseCode() == 200) {
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
-                reader.close();
-                return new JSONObject(sb.toString());
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (conn != null) conn.disconnect();
+            return ConnectClientProvider.fetchStatusSync();
+        } catch (Exception e) {
+            Log.w(TAG, "fetchStatus failed: " + e.getMessage());
+            return null;
         }
-        return null;
     }
 
-    private void parseStatus(JSONObject status) {
+    private void parseStatus(GetStatusResponse status) {
         try {
-            // New fields (from updated daemon)
-            JSONObject recStatus = status.optJSONObject("recordingStatus");
-            if (recStatus != null) {
-                configuredMode = recStatus.optString("configuredMode", "NONE");
-                isRecording = recStatus.optBoolean("isRecording", false);
-                currentGear = recStatus.optString("gear", "P");
-                accOn = recStatus.optBoolean("accOn", false);
-            } else {
-                // Fallback: old daemon without recordingStatus field
-                // Use existing "recording" array (non-empty = recording) and "acc" field
-                // We can't know the configured mode, so read it from the config file directly
-                org.json.JSONArray recArray = status.optJSONArray("recording");
-                isRecording = recArray != null && recArray.length() > 0;
-                accOn = status.optBoolean("acc", false);
-                
-                // Read configured mode from UnifiedConfigManager config file
-                // (both app and daemon can read this file)
-                try {
-                    java.io.File configFile = new java.io.File("/data/local/tmp/bladewatch_config.json");
-                    if (configFile.exists()) {
-                        java.io.BufferedReader cfgReader = new java.io.BufferedReader(
-                                new java.io.FileReader(configFile));
-                        StringBuilder cfgSb = new StringBuilder();
-                        String cfgLine;
-                        while ((cfgLine = cfgReader.readLine()) != null) cfgSb.append(cfgLine);
-                        cfgReader.close();
-                        JSONObject config = new JSONObject(cfgSb.toString());
-                        JSONObject recording = config.optJSONObject("recording");
-                        if (recording != null) {
-                            configuredMode = recording.optString("mode", "NONE");
-                        }
-                    }
-                } catch (Exception configErr) {
-                    Log.w(TAG, "Config read fallback failed: " + configErr.getMessage());
-                }
-                
-                // Gear: not available from old daemon status, default to non-P 
-                // if ACC is on (assume driving since we can't know)
-                currentGear = accOn ? "D" : "P";
+            if (status.hasRecordingStatus()) {
+                net.bladewatch.app.grpc.v1.RecordingStatus rec = status.getRecordingStatus();
+                configuredMode = rec.getConfiguredMode().isEmpty() ? "NONE" : rec.getConfiguredMode();
+                isRecording = rec.getIsRecording();
+                currentGear = rec.getGear().isEmpty() ? "P" : rec.getGear();
+                accOn = rec.getAccOn();
             }
-
-            JSONObject tripStatus = status.optJSONObject("tripStatus");
-            if (tripStatus != null) {
-                tripEnabled = tripStatus.optBoolean("enabled", false);
-                tripActive = tripStatus.optBoolean("tripActive", false);
-            } else {
-                // Fallback: read trip config from file
-                try {
-                    java.io.File configFile = new java.io.File("/data/local/tmp/bladewatch_config.json");
-                    if (configFile.exists()) {
-                        java.io.BufferedReader cfgReader = new java.io.BufferedReader(
-                                new java.io.FileReader(configFile));
-                        StringBuilder cfgSb = new StringBuilder();
-                        String cfgLine;
-                        while ((cfgLine = cfgReader.readLine()) != null) cfgSb.append(cfgLine);
-                        cfgReader.close();
-                        JSONObject config = new JSONObject(cfgSb.toString());
-                        JSONObject tripCfg = config.optJSONObject("tripAnalytics");
-                        if (tripCfg != null) {
-                            tripEnabled = tripCfg.optBoolean("enabled", false);
-                        }
-                    }
-                } catch (Exception configErr) {
-                    Log.w(TAG, "Trip config read fallback failed: " + configErr.getMessage());
-                }
-                // Can't determine tripActive without daemon support — assume false
-                tripActive = false;
+            if (status.hasTripStatus()) {
+                net.bladewatch.app.grpc.v1.TripStatus trip = status.getTripStatus();
+                tripEnabled = trip.getEnabled();
+                tripActive = trip.getTripActive();
             }
         } catch (Exception e) {
             Log.w(TAG, "Parse error: " + e.getMessage());
@@ -807,20 +740,9 @@ public class StatusOverlayService extends Service {
     }
 
     private void postTripConfig(boolean enabled) {
-        HttpURLConnection conn = null;
         try {
-            conn = net.bladewatch.app.util.DaemonHttpClient.open(
-                "/api/trips/config", "POST", 2000, 2000);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-            JSONObject body = new JSONObject();
-            body.put("enabled", enabled);
-            conn.getOutputStream().write(body.toString().getBytes());
-            conn.getOutputStream().flush();
-            conn.getResponseCode();
+            ConnectClientProvider.postTripsConfigSync(enabled);
         } catch (Exception ignored) {
-        } finally {
-            if (conn != null) conn.disconnect();
         }
     }
 

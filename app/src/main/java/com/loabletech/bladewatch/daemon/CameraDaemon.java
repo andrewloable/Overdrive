@@ -383,7 +383,9 @@ public class CameraDaemon {
         if (sharedAppContext == null) {
             try {
                 sharedAppContext = createAppContext();
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                log("WARN: createAppContext threw: " + t.getMessage());
+            }
         }
         logT("createAppContext done");
 
@@ -906,21 +908,21 @@ public class CameraDaemon {
         }
         
         // Stop all monitors
-        try { net.bladewatch.app.monitor.VehicleDataMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { net.bladewatch.app.monitor.GpsMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { net.bladewatch.app.monitor.GearMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { net.bladewatch.app.monitor.PerformanceMonitor.getInstance().stop(); } catch (Exception ignored) {}
-        try { net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop(); } catch (Exception ignored) {}
-        
+        try { net.bladewatch.app.monitor.VehicleDataMonitor.getInstance().stop(); } catch (Exception e) { log("WARN: VehicleDataMonitor stop failed: " + e.getMessage()); }
+        try { net.bladewatch.app.monitor.GpsMonitor.getInstance().stop(); } catch (Exception e) { log("WARN: GpsMonitor stop failed: " + e.getMessage()); }
+        try { net.bladewatch.app.monitor.GearMonitor.getInstance().stop(); } catch (Exception e) { log("WARN: GearMonitor stop failed: " + e.getMessage()); }
+        try { net.bladewatch.app.monitor.PerformanceMonitor.getInstance().stop(); } catch (Exception e) { log("WARN: PerformanceMonitor stop failed: " + e.getMessage()); }
+        try { net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop(); } catch (Exception e) { log("WARN: SocHistoryDatabase stop failed: " + e.getMessage()); }
+
         // Stop services
         if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
         if (mediaCatalogManager != null) mediaCatalogManager.shutdown();
         if (tcpServer != null) tcpServer.stop();
         if (httpServer != null) httpServer.stop();
         if (ipcServer != null) ipcServer.stop();
-        
+
         // Shutdown StorageManager (schedulers, executors)
-        try { net.bladewatch.app.storage.StorageManager.getInstance().shutdown(); } catch (Exception ignored) {}
+        try { net.bladewatch.app.storage.StorageManager.getInstance().shutdown(); } catch (Exception e) { log("WARN: StorageManager shutdown failed: " + e.getMessage()); }
         
         // Release singleton lock
         releaseSingletonLock();
@@ -1040,7 +1042,7 @@ public class CameraDaemon {
                     lockFileObj.delete();
                     
                     // Small delay so the kernel releases the inode lock before retry
-                    try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
                     
                     // Retry lock acquisition on the new inode
                     lockFile = new java.io.RandomAccessFile(lockFileObj, "rw");
@@ -1097,45 +1099,45 @@ public class CameraDaemon {
                 //    PerformanceMonitor) — these hold BYD device listeners and schedulers
                 try {
                     net.bladewatch.app.monitor.VehicleDataMonitor.getInstance().stop();
-                } catch (Exception e) { /* may not be initialized */ }
+                } catch (Exception e) { log("Shutdown hook: VehicleDataMonitor stop: " + e.getMessage()); }
                 try {
                     net.bladewatch.app.monitor.GpsMonitor.getInstance().stop();
-                } catch (Exception e) { /* may not be initialized */ }
+                } catch (Exception e) { log("Shutdown hook: GpsMonitor stop: " + e.getMessage()); }
                 try {
                     net.bladewatch.app.monitor.GearMonitor.getInstance().stop();
-                } catch (Exception e) { /* may not be initialized */ }
+                } catch (Exception e) { log("Shutdown hook: GearMonitor stop: " + e.getMessage()); }
                 try {
                     net.bladewatch.app.monitor.PerformanceMonitor.getInstance().stop();
-                } catch (Exception e) { /* may not be initialized */ }
-                
+                } catch (Exception e) { log("Shutdown hook: PerformanceMonitor stop: " + e.getMessage()); }
+
                 // 4. Close SOC History Database (H2 JDBC connection + scheduler)
                 try {
                     net.bladewatch.app.monitor.SocHistoryDatabase.getInstance().stop();
-                } catch (Exception e) { /* may not be initialized */ }
-                
+                } catch (Exception e) { log("Shutdown hook: SocHistoryDatabase stop: " + e.getMessage()); }
+
                 // 5. Stop services (Trip Analytics + Media catalog)
                 try {
                     if (tripAnalyticsManager != null) tripAnalyticsManager.shutdown();
-                } catch (Exception e) { /* ignore */ }
+                } catch (Exception e) { log("Shutdown hook: tripAnalyticsManager shutdown: " + e.getMessage()); }
                 try {
                     if (mediaCatalogManager != null) mediaCatalogManager.shutdown();
-                } catch (Exception e) { /* ignore */ }
-                
+                } catch (Exception e) { log("Shutdown hook: mediaCatalogManager shutdown: " + e.getMessage()); }
+
                 // 6. Stop servers (TCP, HTTP, IPC)
                 try {
                     if (tcpServer != null) tcpServer.stop();
-                } catch (Exception e) { /* ignore */ }
+                } catch (Exception e) { log("Shutdown hook: tcpServer stop: " + e.getMessage()); }
                 try {
                     if (httpServer != null) httpServer.stop();
-                } catch (Exception e) { /* ignore */ }
+                } catch (Exception e) { log("Shutdown hook: httpServer stop: " + e.getMessage()); }
                 try {
                     if (ipcServer != null) ipcServer.stop();
-                } catch (Exception e) { /* ignore */ }
-                
+                } catch (Exception e) { log("Shutdown hook: ipcServer stop: " + e.getMessage()); }
+
                 // 7. Shutdown StorageManager (schedulers, executors, SD card watchdog)
                 try {
                     net.bladewatch.app.storage.StorageManager.getInstance().shutdown();
-                } catch (Exception e) { /* ignore */ }
+                } catch (Exception e) { log("Shutdown hook: StorageManager shutdown: " + e.getMessage()); }
                 
                 // 8. Release singleton lock (must be last)
                 releaseSingletonLock();
@@ -1569,7 +1571,9 @@ public class CameraDaemon {
             int s = readDoorLockStatus(doorLockDevice);
             if (s == DOOR_STATE_LOCK) return true;
             if (s == DOOR_STATE_UNLOCK) return false;
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log("currentDeviceLockState error: " + e.getMessage());
+        }
         return null;
     }
 
@@ -1607,7 +1611,9 @@ public class CameraDaemon {
                         doorLockListenerArmed = false;
                         return;
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log("ACC-ON disarm watchdog probe error: " + e.getMessage());
+                }
             }
         }, "AccOnDisarmWatchdog");
         accOnDisarmWatchdog.setDaemon(true);
@@ -1704,7 +1710,9 @@ public class CameraDaemon {
         try {
             net.bladewatch.app.byd.BydDataCollector.getInstance()
                 .removeDoorLockListener(deviceLockSubscriber);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log("WARN: removeDoorLockListener failed: " + e.getMessage());
+        }
         deviceLockSubscriber = null;
     }
     
@@ -2516,7 +2524,9 @@ public class CameraDaemon {
             if (camCfg != null) {
                 status.put("cameraReprobeOnNextRestart", camCfg.optBoolean("reprobeOnNextRestart", false));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log("WARN: Failed to read cameraReprobeOnNextRestart: " + e.getMessage());
+        }
 
         status.put("avcWarmupAvailable", isAvcWarmupAvailable());
         status.put("avcWarmupLastStartedAtMs", getAvcWarmupLastStartedAtMs());
@@ -2768,7 +2778,9 @@ public class CameraDaemon {
                 try {
                     idFile.setReadable(true, false);
                     idFile.setWritable(true, false);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log("WARN: Could not set device ID file permissions: " + e.getMessage());
+                }
                 java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(idFile));
                 String fileId = reader.readLine();
                 reader.close();

@@ -531,10 +531,14 @@ public class TripAnalyticsManager {
         trip.telemetryFilePath = telemetryPath;
 
         // 4. Insert into database
-        if (database != null) {
+        if (database == null || !database.isAvailable()) {
+            logger.error("CRITICAL: Trip database unavailable — trip NOT saved! distance=" + trip.distanceKm + "km");
+        } else {
             long dbId = database.insertTrip(trip);
 
-            if (dbId > 0) {
+            if (dbId <= 0) {
+                logger.error("CRITICAL: database.insertTrip returned " + dbId + " — trip NOT saved!");
+            } else if (dbId > 0) {
                 // After DB insert, rename telemetry file to use the DB ID
                 // and update the record's telemetry file path
                 String newPath = recorder != null

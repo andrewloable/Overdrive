@@ -484,10 +484,10 @@ public class PerformanceMonitor {
                                 }
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) { logger.debug("GPU usage parsing error: " + e.getMessage()); }
                 }
             }
-            
+
             // If still no usage, estimate from frequency ratio
             if (snapshot.gpuUsagePercent == 0 && snapshot.gpuFreqMhz > 0) {
                 double maxFreq = readGpuMaxFrequency();
@@ -545,8 +545,8 @@ public class PerformanceMonitor {
                 java.io.File fdDir = new java.io.File("/proc/" + pid + "/fd");
                 String[] fds = fdDir.list();
                 snapshot.openFileDescriptors = fds != null ? fds.length : 0;
-            } catch (Exception ignored) {}
-            
+            } catch (Exception e) { logger.debug("fdDir count failed: " + e.getMessage()); }
+
         } catch (Exception e) {
             logger.debug("App metrics error: " + e.getMessage());
         }
@@ -568,11 +568,11 @@ public class PerformanceMonitor {
                 if (line != null) {
                     return Integer.parseInt(line.trim()) / 1000;  // KHz to MHz
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("CPU freq read failed: " + e.getMessage()); }
         }
         return 0;
     }
-    
+
     private double readCpuTemperature() {
         // Try CPU-specific thermal zones first
         String[] cpuThermalKeywords = {
@@ -608,9 +608,9 @@ public class PerformanceMonitor {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("thermal zone read failed: " + e.getMessage()); }
         }
-        
+
         // Fallback to direct paths
         String[] paths = {
             "/sys/class/thermal/thermal_zone0/temp",
@@ -629,11 +629,11 @@ public class PerformanceMonitor {
                     // Usually in millidegrees
                     return temp > 1000 ? temp / 1000.0 : temp;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("CPU temp read failed: " + e.getMessage()); }
         }
         return 0;
     }
-    
+
     /**
      * Read GPU max frequency for load estimation.
      */
@@ -663,7 +663,7 @@ public class PerformanceMonitor {
                             try {
                                 long freq = Long.parseLong(f.trim());
                                 if (freq > maxFreq) maxFreq = freq;
-                            } catch (Exception ignored) {}
+                            } catch (Exception e) { logger.debug("GPU max freq token parse failed: " + e.getMessage()); }
                         }
                         if (maxFreq > 0) {
                             if (maxFreq > 1000000) return maxFreq / 1000000.0;
@@ -682,9 +682,9 @@ public class PerformanceMonitor {
                         return freq;  // Already MHz
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("GPU max freq file read failed: " + e.getMessage()); }
         }
-        
+
         // Fallback: estimate max based on typical Adreno GPU max frequencies
         // If we're reading from kgsl (Qualcomm), assume typical max of 600-700 MHz
         return 650.0;  // Conservative estimate for Adreno GPUs
@@ -720,7 +720,7 @@ public class PerformanceMonitor {
                         zone.put("temp", temp > 1000 ? temp / 1000.0 : temp);
                         thermalZones.put(zone);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("thermal zone " + i + " read failed: " + e.getMessage()); }
             }
             discovery.put("thermalZones", thermalZones);
             
@@ -747,7 +747,7 @@ public class PerformanceMonitor {
                         pathInfo.put("value", line.trim());
                         gpuPaths.put(pathInfo);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { logger.debug("GPU path probe failed for " + path + ": " + e.getMessage()); }
             }
             discovery.put("gpuPaths", gpuPaths);
             
@@ -768,7 +768,7 @@ public class PerformanceMonitor {
                             devInfo.put("device", device);
                             devInfo.put("cur_freq", freq != null ? freq.trim() : "N/A");
                             devfreqDevices.put(devInfo);
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) { logger.debug("devfreq " + device + " read failed: " + e.getMessage()); }
                     }
                 }
             }
@@ -816,9 +816,9 @@ public class PerformanceMonitor {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("GPU thermal zone " + i + " read failed: " + e.getMessage()); }
         }
-        
+
         // Fallback: try direct GPU thermal paths
         String[] directGpuTempPaths = {
             "/sys/class/kgsl/kgsl-3d0/temp",
@@ -836,13 +836,13 @@ public class PerformanceMonitor {
                     double temp = Double.parseDouble(line.trim());
                     return temp > 1000 ? temp / 1000.0 : temp;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { logger.debug("direct GPU temp read failed for " + path + ": " + e.getMessage()); }
         }
-        
+
         return 0;
     }
 
-    
+
     // ==================== DATA ACCESS ====================
     
     public PerformanceSnapshot getLatestSnapshot() {

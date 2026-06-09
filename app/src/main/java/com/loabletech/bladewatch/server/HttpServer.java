@@ -165,7 +165,7 @@ public class HttpServer {
         while (running && CameraDaemon.isRunning()) {
             try {
                 if (serverSocket != null && !serverSocket.isClosed()) {
-                    try { serverSocket.close(); } catch (Exception e) {}
+                    try { serverSocket.close(); } catch (Exception e) { CameraDaemon.log("WARN: HTTP serverSocket.close() failed: " + e.getMessage()); }
                 }
                 
                 String bindHost = UnifiedConfigManager.isLanHttpEnabled() ? "0.0.0.0" : "127.0.0.1";
@@ -193,11 +193,11 @@ public class HttpServer {
                 
             } catch (java.net.BindException e) {
                 CameraDaemon.log("ERROR: HTTP port " + port + " in use, retrying...");
-                try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+                try { Thread.sleep(5000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             } catch (Exception e) {
                 CameraDaemon.log("ERROR: HTTP server error: " + e.getMessage());
                 if (running) {
-                    try { Thread.sleep(3000); } catch (InterruptedException ie) {}
+                    try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 }
             }
         }
@@ -209,7 +209,7 @@ public class HttpServer {
         running = false;
         try {
             if (serverSocket != null) serverSocket.close();
-        } catch (Exception e) {}
+        } catch (Exception e) { CameraDaemon.log("WARN: HTTP stop() serverSocket.close() failed: " + e.getMessage()); }
         threadPool.shutdownNow();
     }
 
@@ -277,7 +277,7 @@ public class HttpServer {
                     // explicitly chosen via the picker (LocaleManager file empty).
                     String al = line.substring(16).trim();
                     if (!al.isEmpty()) {
-                        try { LocaleManager.fromAcceptLanguage(al); } catch (Exception ignored) {}
+                        try { LocaleManager.fromAcceptLanguage(al); } catch (Exception e) { CameraDaemon.log("DEBUG: Accept-Language probe failed: " + e.getMessage()); }
                         // Note: we don't auto-persist Accept-Language; the picker
                         // is the only thing that writes the state file. JS-side
                         // navigator.language detection feeds the picker.
@@ -465,7 +465,7 @@ public class HttpServer {
                     String want;
                     try {
                         want = new JSONObject(body).optString("lang", "");
-                    } catch (Exception e) { want = ""; }
+                    } catch (Exception e) { CameraDaemon.log("DEBUG: locale POST body parse failed: " + e.getMessage()); want = ""; }
                     String resolved = LocaleManager.set(want);
                     HttpResponse.sendJson(out, "{\"lang\":\"" + resolved + "\"}");
                 } else {
@@ -551,7 +551,7 @@ public class HttpServer {
         } catch (Exception e) {
             CameraDaemon.log("HTTP error: " + e.getMessage());
         } finally {
-            try { client.close(); } catch (Exception e) {}
+            try { client.close(); } catch (Exception e) { CameraDaemon.log("WARN: HTTP client.close() failed: " + e.getMessage()); }
         }
     }
 
@@ -794,7 +794,8 @@ public class HttpServer {
                 net.bladewatch.app.byd.BydDataCollector collector =
                         net.bladewatch.app.byd.BydDataCollector.getInstance();
                 status.put("distanceUnit", (collector != null && collector.isMilesMode()) ? "mi" : "km");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                CameraDaemon.log("DEBUG: distanceUnit probe failed: " + e.getMessage());
                 status.put("distanceUnit", "km");
             }
 
@@ -803,7 +804,8 @@ public class HttpServer {
             // another logged-in client). Always one of LocaleManager.SUPPORTED.
             try {
                 status.put("locale", LocaleManager.get());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                CameraDaemon.log("DEBUG: locale probe failed: " + e.getMessage());
                 status.put("locale", "en");
             }
         } catch (Exception e) {
@@ -837,7 +839,7 @@ public class HttpServer {
 
             if (hasSoh) status.put("soh", soh);
         } catch (Exception e) {
-            // SOH not available
+            CameraDaemon.log("DEBUG: SOH read failed: " + e.getMessage());
         }
         
         // GPU surveillance status — only true when actually in sentry/surveillance mode,

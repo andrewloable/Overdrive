@@ -1058,7 +1058,7 @@ public class GpuSurveillancePipeline {
                     
                     // Enable overlay for auto-started recording
                     recorder.setOverlayRecordingModeAllowed(true);
-                    if (telemetryCollector != null && recorder.isOverlayEnabled()) {
+                    if (telemetryCollector != null) {
                         telemetryCollector.setOverlayRecordingActive(true);
                         telemetryCollector.startPolling();
                     }

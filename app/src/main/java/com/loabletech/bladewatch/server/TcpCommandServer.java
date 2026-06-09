@@ -36,7 +36,7 @@ public class TcpCommandServer {
         while (running && CameraDaemon.isRunning()) {
             try {
                 if (serverSocket != null && !serverSocket.isClosed()) {
-                    try { serverSocket.close(); } catch (Exception e) {}
+                    try { serverSocket.close(); } catch (Exception e) { CameraDaemon.log("WARN: TCP serverSocket.close() failed: " + e.getMessage()); }
                 }
                 
                 serverSocket = new ServerSocket(port, 5, InetAddress.getByName("127.0.0.1"));
@@ -63,11 +63,11 @@ public class TcpCommandServer {
                 
             } catch (java.net.BindException e) {
                 CameraDaemon.log("ERROR: TCP port " + port + " in use, retrying...");
-                try { Thread.sleep(5000); } catch (InterruptedException ie) {}
+                try { Thread.sleep(5000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             } catch (Exception e) {
                 CameraDaemon.log("ERROR: TCP server error: " + e.getMessage());
                 if (running) {
-                    try { Thread.sleep(3000); } catch (InterruptedException ie) {}
+                    try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
                 }
             }
         }
@@ -79,7 +79,9 @@ public class TcpCommandServer {
         running = false;
         try {
             if (serverSocket != null) serverSocket.close();
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            CameraDaemon.log("WARN: TCP serverSocket.close() in stop() failed: " + e.getMessage());
+        }
     }
 
     private void handleClient(Socket client) {
@@ -92,7 +94,7 @@ public class TcpCommandServer {
             if (!PeerCredentials.isTrusted(peerUid)) {
                 CameraDaemon.log("WARN: TCP IPC rejected untrusted peer uid=" + peerUid
                         + " from " + client.getRemoteSocketAddress());
-                try { client.close(); } catch (Exception e) {}
+                try { client.close(); } catch (Exception e) { CameraDaemon.log("WARN: TCP client.close() failed: " + e.getMessage()); }
                 return;
             }
 
@@ -128,7 +130,7 @@ public class TcpCommandServer {
         } catch (Exception e) {
             CameraDaemon.log("TCP client disconnected: " + e.getMessage());
         } finally {
-            try { client.close(); } catch (Exception e) {}
+            try { client.close(); } catch (Exception e) { CameraDaemon.log("WARN: TCP client.close() in finally failed: " + e.getMessage()); }
         }
     }
 
@@ -210,7 +212,7 @@ public class TcpCommandServer {
             case "shutdown":
                 response.put("status", "ok");
                 new Thread(() -> {
-                    try { Thread.sleep(300); } catch (InterruptedException e) {}
+                    try { Thread.sleep(300); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                     CameraDaemon.shutdown();
                 }, "ShutdownThread").start();
                 break;

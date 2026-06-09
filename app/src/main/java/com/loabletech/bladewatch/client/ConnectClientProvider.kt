@@ -1,17 +1,22 @@
 package net.bladewatch.app.client
 
+import com.connectrpc.ResponseMessage
 import com.connectrpc.extensions.GoogleJavaJSONStrategy
 import com.connectrpc.impl.ProtocolClient
 import com.connectrpc.ProtocolClientConfig
 import com.connectrpc.ProtocolClientInterface
 import com.connectrpc.okhttp.ConnectOkHttpClient
 import com.connectrpc.protocols.NetworkProtocol
+import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.auth.AuthManager
 import net.bladewatch.app.daemon.CameraDaemon
 import net.bladewatch.app.grpc.v1.AuthServiceClient
+import net.bladewatch.app.grpc.v1.GetStatusRequest
+import net.bladewatch.app.grpc.v1.GetStatusResponse
 import net.bladewatch.app.grpc.v1.NotificationsServiceClient
 import net.bladewatch.app.grpc.v1.RecordingsServiceClient
 import net.bladewatch.app.grpc.v1.SafeLocationsServiceClient
+import net.bladewatch.app.grpc.v1.SetConfigRequest
 import net.bladewatch.app.grpc.v1.SettingsServiceClient
 import net.bladewatch.app.grpc.v1.StorageServiceClient
 import net.bladewatch.app.grpc.v1.StreamServiceClient
@@ -137,4 +142,24 @@ object ConnectClientProvider {
     @JvmStatic fun longTripsService(): TripsServiceClient = longTripsSvc
     @JvmStatic fun updatesService(): UpdateServiceClient = updatesSvc
     @JvmStatic fun vehicleService(): VehicleServiceClient = vehicleSvc
+
+    /** Blocking helper for Java callers on background threads. */
+    @JvmStatic fun fetchStatusSync(): GetStatusResponse? = runBlocking {
+        val resp = systemSvc.getStatus(GetStatusRequest.getDefaultInstance(), emptyMap())
+        if (resp is ResponseMessage.Success) {
+            resp.message
+        } else {
+            // Auth may be stale after daemon restart — invalidate and retry once
+            AuthManager.refresh()
+            invalidate()
+            val retry = systemSvc.getStatus(GetStatusRequest.getDefaultInstance(), emptyMap())
+            if (retry is ResponseMessage.Success) retry.message else null
+        }
+    }
+
+    /** Blocking helper for Java callers on background threads. */
+    @JvmStatic fun postTripsConfigSync(enabled: Boolean) = runBlocking {
+        val req = SetConfigRequest.newBuilder().setEnabled(enabled).setHasEnabled(true).build()
+        tripsSvc.setConfig(req, emptyMap())
+    }
 }

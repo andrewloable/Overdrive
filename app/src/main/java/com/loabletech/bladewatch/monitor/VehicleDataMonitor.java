@@ -91,14 +91,14 @@ public class VehicleDataMonitor {
     
     public synchronized void stop() {
         if (!isRunning) return;
-        try { batteryPowerMonitor.stop(); } catch (Exception ignored) {}
+        try { batteryPowerMonitor.stop(); } catch (Exception e) { logger.warn("batteryPowerMonitor.stop() failed: " + e.getMessage()); }
         isRunning = false;
         logger.info("VehicleDataMonitor stopped");
     }
     
     public synchronized void stopBatteryPowerOnly() {
         if (!isRunning) return;
-        try { batteryPowerMonitor.stop(); } catch (Exception ignored) {}
+        try { batteryPowerMonitor.stop(); } catch (Exception e) { logger.warn("batteryPowerMonitor.stop() (power-only) failed: " + e.getMessage()); }
         isRunning = false;
     }
     
@@ -212,7 +212,7 @@ public class VehicleDataMonitor {
                         data.updateChargingPower(nominal < 30 ? 3.3 : 7.0);
                         data.isEstimated = true;
                     }
-                } catch (Exception ignored) { /* leave power at 0 */ }
+                } catch (Exception e) { logger.debug("charging power estimate failed: " + e.getMessage()); }
             }
         }
         return data;
@@ -317,8 +317,8 @@ public class VehicleDataMonitor {
             if (collector.isInitialized()) {
                 return collector.isPhevVehicle();
             }
-        } catch (Throwable ignored) {
-            // Fall through to pack-size heuristic below.
+        } catch (Throwable t) {
+            logger.debug("isPhevVehicle BydDataCollector check failed: " + t.getMessage());
         }
         // Fallback for early daemon startup before fuel HAL probes complete.
         return nominalCapacityKwh > 0 && nominalCapacityKwh < 30.0;
@@ -429,22 +429,22 @@ public class VehicleDataMonitor {
     }
     
     public void notifyBatteryVoltageChanged(BatteryVoltageData data) {
-        for (VehicleDataListener l : listeners) { try { l.onBatteryVoltageChanged(data); } catch (Exception ignored) {} }
+        for (VehicleDataListener l : listeners) { try { l.onBatteryVoltageChanged(data); } catch (Exception e) { logger.warn("listener onBatteryVoltageChanged threw: " + e.getMessage()); } }
     }
-    
+
     public void notifyBatteryPowerChanged(BatteryPowerData data) {
-        for (VehicleDataListener l : listeners) { try { l.onBatteryPowerChanged(data); } catch (Exception ignored) {} }
+        for (VehicleDataListener l : listeners) { try { l.onBatteryPowerChanged(data); } catch (Exception e) { logger.warn("listener onBatteryPowerChanged threw: " + e.getMessage()); } }
     }
-    
+
     public void notifyChargingStateChanged(ChargingStateData data) {
-        for (VehicleDataListener l : listeners) { try { l.onChargingStateChanged(data); } catch (Exception ignored) {} }
+        for (VehicleDataListener l : listeners) { try { l.onChargingStateChanged(data); } catch (Exception e) { logger.warn("listener onChargingStateChanged threw: " + e.getMessage()); } }
     }
-    
+
     public void notifyChargingPowerChanged(double powerKW) {
-        for (VehicleDataListener l : listeners) { try { l.onChargingPowerChanged(powerKW); } catch (Exception ignored) {} }
+        for (VehicleDataListener l : listeners) { try { l.onChargingPowerChanged(powerKW); } catch (Exception e) { logger.warn("listener onChargingPowerChanged threw: " + e.getMessage()); } }
     }
-    
+
     public void notifyDataUnavailable(String monitorName, String reason) {
-        for (VehicleDataListener l : listeners) { try { l.onDataUnavailable(monitorName, reason); } catch (Exception ignored) {} }
+        for (VehicleDataListener l : listeners) { try { l.onDataUnavailable(monitorName, reason); } catch (Exception e) { logger.warn("listener onDataUnavailable threw: " + e.getMessage()); } }
     }
 }

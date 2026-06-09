@@ -286,7 +286,7 @@ public class AccSentryDaemon {
                 wakeUpMcu();
                 // Retry after 1 second to allow MCU to stabilize
                 new Thread(() -> {
-                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                    try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                     int retryStatus = getMcuStatus();
                     log("MCU status after wake: " + retryStatus);
                     if (retryStatus == 1 || retryStatus == 10) {
@@ -295,7 +295,7 @@ public class AccSentryDaemon {
                     } else {
                         // One more attempt
                         wakeUpMcu();
-                        try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                        try { Thread.sleep(1000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                         setSpecialConfig(SPECIAL_CONFIG_REMOTE_POWER_MODE, 1);
                         setSpecialConfig(SPECIAL_CONFIG_DATA_MODULE_POWER, 1);
                         log("Forced peripheral power enable after second wake attempt");
@@ -483,8 +483,10 @@ public class AccSentryDaemon {
                     // Safety pause to prevent CPU spiking if crash is repetitive
                     try {
                         Thread.sleep(5000);
-                    } catch (InterruptedException ignored) {}
-                    
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+
                     log("Restarting message queue...");
                     if (Looper.myLooper() == null) {
                         Looper.prepare();
@@ -589,7 +591,7 @@ public class AccSentryDaemon {
                 wakeLock.release();
                 log("WakeLock Released");
             } catch (Exception e) {
-                // Ignore
+                log("WARN: wakeLock.release() failed: " + e.getMessage());
             }
         }
     }
@@ -932,16 +934,16 @@ public class AccSentryDaemon {
                 configurePeripheralPower(true);
                 
                 // 4. Small delay to let MCU stabilize power rails
-                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
-                
+                try { Thread.sleep(300); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+
                 // 4. THEN wake the system (screen/CPU)
                 performSystemWakeUp();
-                
+
                 // 5. Start the keep-alive loop (maintains the wake state)
                 startSystemKeepAlive();
-                
+
                 // 6. Another small delay to let power stabilize before surveillance
-                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 
                 // 7. Register door lock listener and wait for lock before arming surveillance.
                 // When ACC goes OFF and you exit the car, motion detection would pick you up
@@ -1727,7 +1729,9 @@ public class AccSentryDaemon {
         try {
             Thread.sleep(500);
             wakeUpMcu();
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // ==================== ACTIVE VOLTAGE RECOVERY ====================

@@ -276,7 +276,7 @@ public class NetworkMonitor {
                 int rssi = Integer.parseInt(wpa.substring(5).trim());
                 signalPercent = Math.max(0, Math.min(100, (rssi + 90) * 100 / 60));
                 return;
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) { CameraDaemon.log("DEBUG: RSSI parse failed: " + e.getMessage()); }
         }
         signalPercent = -1;
     }
@@ -297,7 +297,7 @@ public class NetworkMonitor {
             net.put("ssid", wifiSsid);
             net.put("ip", ipAddress);
             net.put("signal", signalPercent);
-        } catch (Exception ignored) {}
+        } catch (Exception e) { CameraDaemon.log("DEBUG: getNetworkInfo JSON build failed: " + e.getMessage()); }
         return net;
     }
 
