@@ -25,14 +25,14 @@ public class H264CircularBuffer {
     private static final String TAG = "H264CircularBuffer";
     private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
     
-    // MAX BUFFER SIZE: 256KB per packet (enough for 1080p @ 6Mbps I-frames)
-    // At 6Mbps, 15fps: avg frame = 50KB, I-frame peak ~150KB
-    // 256KB provides generous headroom for variable bitrate spikes
-    private static final int MAX_PACKET_SIZE = 256 * 1024;
+    // MAX BUFFER SIZE: 768KB per packet. Handles I-frames at HIGH H.264 (6 Mbps,
+    // 2-sec GOP → I-frame spike ~900KB), covers STANDARD-H.264 comfortably (observed
+    // 527KB I-frame) through PREMIUM typical. At 200-pool ceiling = 150 MB peak.
+    private static final int MAX_PACKET_SIZE = 768 * 1024;
     
     // POOL CEILING: hard cap to bound peak memory regardless of fps. With
-    // 30 fps × 5 s × 256KB = 38 MB worst-case, we allow up to 200 packets
-    // (~50 MB peak). Pool sizing inside the ctor uses configured fps and
+    // 30 fps × 10 s × 768KB = 225 MB worst-case, we allow up to 200 packets
+    // (~150 MB peak). Pool sizing inside the ctor uses configured fps and
     // adds 25% headroom; this constant only kicks in if duration × fps
     // somehow exceeds the cap.
     private static final int POOL_CAPACITY = 200;

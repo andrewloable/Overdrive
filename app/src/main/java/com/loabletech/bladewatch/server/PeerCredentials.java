@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.net.Socket;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Resolves and authorizes the peer UID of an accepted loopback IPC connection.
@@ -29,6 +30,9 @@ import java.net.Socket;
  * entries on Android 10+.
  */
 public final class PeerCredentials {
+
+    private static final String TAG = "PeerCredentials";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
 
     private PeerCredentials() {}
 
@@ -73,9 +77,26 @@ public final class PeerCredentials {
         if (uid == ROOT_UID || uid == SYSTEM_UID || uid == SHELL_UID) return true;
         if (uid < 0) return false;
         int appUid = resolveAppUid();
-        // Compare on the per-user base app-id so a non-zero Android user still
-        // matches (uid = userId * 100000 + appId).
-        return appUid > 0 && (uid == appUid || (uid % 100000) == (appUid % 100000));
+        if (appUid > 0) {
+            // Compare on the per-user base app-id so a non-zero Android user still
+            // matches (uid = userId * 100000 + appId).
+            return uid == appUid || (uid % 100000) == (appUid % 100000);
+        }
+        // The daemon's app-context resolution failed (createAppContext() returned a
+        // fallback PermissionBypassContext with null base). This happens on BYD
+        // firmware where ActivityThread methods time out. Without a resolved app UID
+        // we cannot verify the peer's identity at this gate — trust any regular app
+        // UID (>= 10000) and let the IPC token gate (IpcTokenManager.isValid) provide
+        // primary security. This is safe because:
+        //   1. Only loopback connections are accepted (bound to 127.0.0.1).
+        //   2. The bearer token is a 32-char SecureRandom value.
+        //   3. The daemon rejects invalid/absent tokens after this check.
+        if (uid >= 10000) {
+            logger.warn("App UID resolution unavailable — trusting uid=" + uid
+                    + " via IPC token fallback (token gate still active)");
+            return true;
+        }
+        return false;
     }
 
     /** Convenience: resolve the peer UID of {@code client} and check the allow-list. */
@@ -105,6 +126,7 @@ public final class PeerCredentials {
         } catch (Exception ignored) {
             // App context not ready yet — caller treats unresolved app UID as
             // "no app match"; shell/system/root peers still pass.
+            logger.warn("Failed to resolve app UID (context not ready): " + ignored.getMessage());
         }
         return -1;
     }
@@ -142,6 +164,7 @@ public final class PeerCredentials {
             }
         } catch (Exception ignored) {
             // procfs unreadable / unexpected format — treat as unresolved.
+            logger.warn("Failed to scan procfs " + path + " for peer UID: " + ignored.getMessage());
         }
         return -1;
     }

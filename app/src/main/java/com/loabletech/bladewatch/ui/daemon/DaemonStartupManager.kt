@@ -447,6 +447,20 @@ class DaemonStartupManager(
     }
 
     private fun checkAndRelaunchDaemon(type: DaemonType) {
+        // Camera daemon: use the full launch flow which checks BOTH process
+        // existence (ps) AND port responsiveness (nc -z). The launch method
+        // handles three cases:
+        //   1. Running + responsive → no-op (reports "already running")
+        //   2. Running but stale (port dead) → kills stale and relaunches
+        //   3. Not running → launches fresh
+        // This prevents false-positive relaunches from transient ADB blips
+        // (isDaemonRunning returns false momentarily) and catches stale
+        // processes that ps shows but won't accept connections.
+        if (type == DaemonType.CAMERA_DAEMON) {
+            relaunchDaemon(type)
+            return
+        }
+
         adbLauncher.isDaemonRunning(type.processName) { isRunning ->
             if (!isRunning) {
                 log.warn(TAG, "Health check: ${type.displayName} is DEAD — relaunching...")

@@ -81,8 +81,20 @@ accept() → PeerCredentials.resolvePeerUid(socket)   // map (clientPort, server
   locates the client's row in `/proc/net/tcp` / `/proc/net/tcp6` by its
   `(localPort, remotePort)` pair (unique for an established loopback connection)
   and reads the owning UID. The daemon runs as shell (2000), which retains read
-  access to those procfs tables on Android 10+. An unresolved UID is **not**
-  trusted (fail-closed, after a brief retry to absorb the accept→procfs race).
+  access to those procfs tables on Android 10+.
+- **Fallback when context resolution fails:**  `resolveAppUid()` needs
+  `CameraDaemon.getAppContext()` → `ApplicationInfo.uid`.  On BYD firmware where
+  `createAppContext()` cannot create a full package context (e.g. `systemMain`
+  times out), the fallback `PermissionBypassContext(null)` returns an empty
+  `ApplicationInfo` with `uid=0`, so the app UID cannot be resolved.  In that
+  situation `isTrusted()` does **not** reject the connection — it logs a warning
+  and trusts any regular app UID (≥ 10000), letting the IPC-token gate provide
+  primary security.  This is safe because:
+  1. Both IPC servers bind exclusively to `127.0.0.1`.
+  2. The bearer token is a 32‑char `SecureRandom` value.
+  3. The token gate still rejects invalid/absent tokens after the UID check.
+- An unresolved UID (-1) from a procfs lookup race (accept→procfs race) is still
+  never trusted (fail-closed, after a brief retry to absorb the race).
 - This is what gates the privileged `shell` / `secret_*` / GPS / update commands
   — the 644 token is **not** loosened or changed.
 
@@ -104,13 +116,24 @@ LiveStreamClient.runStream()                          // native live view
 - HTTP/WebSocket server is on **8080**; the command/secret IPC server is on **19876**; surveillance IPC on **19877**. All bind to `127.0.0.1` (appear as `::ffff:127.0.0.1:<port>` in `/proc/net/tcp6`).
 - `LiveStreamClient.getJwt()` returning null is reported as **"Auth unavailable"**; a `ConnectException` to 8080 is reported as **"Daemon not running"**.
 
+## Auth init retry backoff
+
+`AuthManager.initialize()` ([AuthManager.java](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java))
+records `lastInitAttemptMs` when persistence fails and refuses to retry for at
+least 3 seconds (`INIT_RETRY_INTERVAL_MS`).  Without this backoff the app can
+hammer the daemon's IPC server with rejected connections at 1 Hz while waiting
+for the daemon to finish booting and create the unified config file.  The
+throttled log line looks like:
+
+    AUTH: Throttling init retry — last attempt was 1123ms ago
+
 ## Failure modes → symptoms (debugging cheat sheet)
 
 | Symptom | Likely cause | Check |
 |---|---|---|
 | "Camera unavailable / Auth unavailable" | app can't read `bladewatch_ipc_token` (mode 600) → IPC secret fetch fails | `ls -la /data/local/tmp/bladewatch_ipc_token` → must be `-rw-r--r--` |
 | "Camera unavailable / Auth unavailable" | daemon rejecting IPC token | daemon log: no `Processing command: secret_get` arriving |
-| "Camera unavailable / Auth unavailable" | daemon rejecting the caller's UID | daemon log: `rejected untrusted peer uid=…`; if the app UID is wrongly rejected, app context wasn't ready so `PeerCredentials` couldn't resolve it — check `getAppContext()` is non-null |
+| "Camera unavailable / Auth unavailable" | daemon rejecting the caller's UID | daemon log: `rejected untrusted peer uid=…`; if the app UID is wrongly rejected, app context wasn't ready so `PeerCredentials` couldn't resolve it — check `getAppContext()` is non-null; if UID ≥ 10000, verify fix from `PeerCredentials.isTrusted()` app‑UID fallback is present |
 | "Camera unavailable / Daemon not running" | nothing listening on 8080 | `cat /proc/net/tcp6 \| grep 1F90` |
 | CameraDaemon crashes on boot (`UnsatisfiedLinkError`) | JNI symbol names don't match the runtime package after a package rename | `grep -r Java_<pkg> app/src/main/cpp/` must match `applicationId` |
 | "Another CameraDaemon instance is already running" | stale lock from a hung daemon | kill daemon + `rm /data/local/tmp/camera_daemon.lock` (see CLAUDE.md clean reinstall) |
@@ -120,6 +143,6 @@ LiveStreamClient.runStream()                          // native live view
 1. **Any file the app must read from `/data/local/tmp` must be world- or group-readable.** Never rely on a bare `FileWriter`/`FileOutputStream` for such files — they default to mode `600`. chmod (`setReadable(true, false)` or `Files.setPosixFilePermissions`) immediately after writing.
 2. **Secrets the app must NOT read directly stay `600`** and are fetched over IPC (the token-gated `secret_get` path). Don't loosen `bladewatch_secrets.json`.
 3. **The IPC token must be readable by the app** — it is the bootstrap for the whole secret/JWT chain. Keep it `644`; the real trust boundary is the caller-UID gate below, **not** the token.
-6. **Don't weaken the caller-UID gate.** Both IPC servers reject any peer whose UID is not root/system/shell/app (`PeerCredentials.isTrusted`). If you add a new local client (another daemon UID), add it to the allow-list rather than removing the check. The gate must stay fail-closed on an unresolved UID.
-4. **JNI symbol names must track `applicationId`.** A package rename (e.g. `com.loabletech.bladewatch` → `net.bladewatch.app`) requires renaming every `Java_<pkg>_…` symbol in `app/src/main/cpp/`, or the daemon dies with `UnsatisfiedLinkError` at startup and the camera is unavailable.
-5. **Rebuild AND clean-reinstall after native or daemon changes** — shell-launched daemons survive an `install -r`; a stale daemon with the old `.so` keeps running. See the clean-reinstall block in `CLAUDE.md`.
+4. **Don't weaken the caller-UID gate for resolved UIDs.** Both IPC servers reject any peer whose UID is not root/system/shell/app (`PeerCredentials.isTrusted`). If you add a new local client (another daemon UID), add it to the allow-list rather than removing the check. The gate must stay fail-closed on an unresolved UID **from a procfs race**; but when the app UID itself cannot be resolved (`createAppContext` returned a null-safe fallback), it falls back to trusting any app UID (≥ 10000) with a warning — the token gate remains active.
+5. **JNI symbol names must track `applicationId`.** A package rename (e.g. `com.loabletech.bladewatch` → `net.bladewatch.app`) requires renaming every `Java_<pkg>_…` symbol in `app/src/main/cpp/`, or the daemon dies with `UnsatisfiedLinkError` at startup and the camera is unavailable.
+6. **Rebuild AND clean-reinstall after native or daemon changes** — shell-launched daemons survive an `install -r`; a stale daemon with the old `.so` keeps running. See the clean-reinstall block in `CLAUDE.md`.

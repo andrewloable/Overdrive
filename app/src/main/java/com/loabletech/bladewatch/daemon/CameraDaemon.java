@@ -238,6 +238,7 @@ public class CameraDaemon {
     
     // Lock file for singleton enforcement
     private static final String LOCK_FILE = "/data/local/tmp/camera_daemon.lock";
+    private static final int SURVEILLANCE_PORT = 19877;
     private static java.io.RandomAccessFile lockFile;
     private static java.nio.channels.FileLock fileLock;
 
@@ -246,7 +247,21 @@ public class CameraDaemon {
         initFileLogging();
         logT("initFileLogging done");
 
-        // CRITICAL: Acquire singleton lock FIRST - exit if another instance is running
+        // Secondary singleton check: verify our server ports are free before
+        // trusting the lock file. FileChannel.tryLock() on tmpfs can spuriously
+        // succeed on some firmware, allowing a duplicate instance to start even
+        // though the original daemon is running and holding all ports.
+        // A port that accepts a TCP connection guarantees a live daemon is bound
+        // to it — ConnectionRefused means the port is unbound/available.
+        // This is safe even after a crash because TIME_WAIT sockets do NOT
+        // accept new connections (connect() returns ConnectionRefused).
+        if (anyPortInUse()) {
+            log("ERROR: Server ports already in use — another CameraDaemon instance is running. Exiting.");
+            System.exit(1);
+            return;
+        }
+
+        // CRITICAL: Acquire singleton lock FIRST (secondary check above already passed)
         if (!acquireSingletonLock()) {
             log("ERROR: Another CameraDaemon instance is already running. Exiting.");
             System.exit(1);
@@ -1179,6 +1194,30 @@ public class CameraDaemon {
         } catch (Exception e) {
             log("Error releasing singleton lock: " + e.getMessage());
         }
+    }
+
+    /**
+     * Check if any of the daemon's server ports is already bound and accepting
+     * connections. Used as a secondary singleton guard alongside the lock file
+     * because FileChannel.tryLock() can be unreliable on some tmpfs mounts.
+     *
+     * Uses TCP connect() (not ServerSocket bind) so TIME_WAIT sockets from a
+     * crash are correctly reported as free — they don't accept new connections.
+     */
+    private static boolean anyPortInUse() {
+        int[] ports = {TCP_PORT, HTTP_PORT, SURVEILLANCE_PORT};
+        for (int port : ports) {
+            try (java.net.Socket s = new java.net.Socket()) {
+                s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 500);
+                log("Port verification: " + port + " is in use (another daemon is listening)");
+                return true;
+            } catch (java.net.ConnectException e) {
+                // Port is not listening — expected for free ports
+            } catch (Exception e) {
+                log("Port verification: could not check port " + port + ": " + e.getMessage());
+            }
+        }
+        return false;
     }
     
     /**

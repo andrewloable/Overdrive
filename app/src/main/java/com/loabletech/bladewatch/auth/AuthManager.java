@@ -86,6 +86,13 @@ public class AuthManager {
     // having to compare opaque secret material.
     private static volatile long stateVersion = 0;
 
+    // Backoff for init retries. When initialize() fails to persist (daemon not
+    // ready yet), we record the timestamp and refuse to retry within this window.
+    // Without this, callers that poll getState()/generateJwt() at 1 Hz will
+    // hammer the daemon's IPC server with rejected connections.
+    private static volatile long lastInitAttemptMs = 0;
+    private static final long INIT_RETRY_INTERVAL_MS = 3000L;
+
     /**
      * Auth state persisted to the unified config.
      */
@@ -165,6 +172,16 @@ public class AuthManager {
             stateVersion++;
             return cachedState;
         }
+
+        // Backoff: if we recently failed to persist (daemon not ready), don't
+        // hammer the IPC server. Callers that poll getState()/generateJwt() will
+        // keep getting null until the daemon has created the config file.
+        long now = System.currentTimeMillis();
+        if (lastInitAttemptMs > 0 && (now - lastInitAttemptMs) < INIT_RETRY_INTERVAL_MS) {
+            log("Throttling init retry — last attempt was " + (now - lastInitAttemptMs) + "ms ago");
+            return null;
+        }
+
         AuthState state = loadFromConfig();
 
         // Migration: if unified config has no auth yet but the legacy
@@ -215,6 +232,7 @@ public class AuthManager {
                 // that won't agree with whatever the daemon writes.
                 cachedState = null;
                 cachedConfigMtime = 0;
+                lastInitAttemptMs = System.currentTimeMillis();
                 return null;
             }
             log("Generated new device secret");

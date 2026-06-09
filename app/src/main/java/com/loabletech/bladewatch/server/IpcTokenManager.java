@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.security.SecureRandom;
+import net.bladewatch.app.logging.DaemonLogger;
 
 /**
  * Manages the shared secret token used to authenticate local IPC connections
@@ -28,6 +29,9 @@ import java.security.SecureRandom;
  */
 public final class IpcTokenManager {
 
+    private static final String TAG = "IpcTokenManager";
+    private static final DaemonLogger logger = DaemonLogger.getInstance(TAG);
+
     public static final String TOKEN_FILE = "/data/local/tmp/bladewatch_ipc_token";
 
     private static volatile String cachedToken = null;
@@ -47,15 +51,20 @@ public final class IpcTokenManager {
             fw.write(token);
         } catch (Exception e) {
             // Non-fatal: servers will reject all connections until a valid token is written.
+            logger.error("Failed to write IPC token to disk: " + e.getMessage(), e);
         }
         // Make the token readable by the app UID (client). Without this the file
         // is mode 600 (shell-only) and the app cannot authenticate its IPC calls.
         // setReadable(true, false) grants read to group+other → rw-r--r-- (644).
         try {
             File f = new File(TOKEN_FILE);
-            f.setReadable(true, false);
-        } catch (Exception ignored) {
-            // Non-fatal: app-side IPC will fail until perms are corrected.
+            if (!f.setReadable(true, false)) {
+                logger.warn("Failed to set world-readable permissions on " + TOKEN_FILE
+                        + " — returning false. App UID will not be able to read the IPC token.");
+            }
+        } catch (Exception e) {
+            logger.warn("Exception setting world-readable permissions on " + TOKEN_FILE
+                    + ": " + e.getMessage() + " — app IPC auth will fail");
         }
         cachedToken = token;
         return token;
@@ -74,7 +83,9 @@ public final class IpcTokenManager {
                 cachedToken = line;
                 return line;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            logger.error("Failed to read IPC token from disk: " + ignored.getMessage(), ignored);
+        }
         return null;
     }
 
