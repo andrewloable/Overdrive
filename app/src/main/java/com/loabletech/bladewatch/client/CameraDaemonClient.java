@@ -44,34 +44,72 @@ public class CameraDaemonClient {
 
     /**
      * Connect to CameraDaemon via TCP socket on localhost.
+     * Waits up to 60s for the daemon ready sentinel (appropriate for cold-boot callers).
      */
     public boolean connect() {
-        try {
-            socket = new Socket();
-            socket.connect(new InetSocketAddress(HOST, PORT), CONNECT_TIMEOUT_MS);
-            socket.setSoTimeout(30000); // 30 second read timeout
-            
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-            
-            connected = true;
+        return connect(60_000);
+    }
 
-            // Send auth token as the first message; server rejects without it
-            String token = IpcTokenManager.getToken();
-            if (token != null) {
-                JSONObject auth = new JSONObject();
-                auth.put("token", token);
-                writer.println(auth.toString());
-                writer.flush();
-            }
-
-            Log.d(TAG, "Connected to CameraDaemon on " + HOST + ":" + PORT);
-            return true;
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to connect to " + HOST + ":" + PORT + ": " + e.getMessage());
-            connected = false;
+    /**
+     * Connect with a caller-specified readiness timeout.
+     * Use a short timeout (e.g. 2000ms) for mid-session reconnects where the daemon was already
+     * known up; use the default 60s for cold-boot callers (SecretConfigBridge, etc.).
+     *
+     * ConnectException and SocketTimeoutException are both retried up to 3x; other exceptions
+     * (auth/protocol errors) fail immediately without retry.
+     */
+    public boolean connect(long readinessTimeoutMs) {
+        if (!DaemonReadinessChecker.waitUntilReady(readinessTimeoutMs)) {
+            Log.w(TAG, "Daemon not ready after " + readinessTimeoutMs + "ms, aborting connect");
             return false;
         }
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                socket = new Socket();
+                socket.connect(new InetSocketAddress(HOST, PORT), CONNECT_TIMEOUT_MS);
+                socket.setSoTimeout(30000); // 30 second read timeout
+
+                reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+
+                connected = true;
+
+                // Send auth token as the first message; server rejects without it
+                String token = IpcTokenManager.getToken();
+                if (token != null) {
+                    JSONObject auth = new JSONObject();
+                    auth.put("token", token);
+                    writer.println(auth.toString());
+                    writer.flush();
+                }
+
+                Log.d(TAG, "Connected to CameraDaemon on " + HOST + ":" + PORT);
+                return true;
+            } catch (java.io.IOException e) {
+                // ConnectException (connection refused) and SocketTimeoutException (slow accept
+                // during startup) are both IOException subclasses — retry both.
+                Log.w(TAG, "connect attempt " + (attempt + 1) + "/3 failed: " + e.getMessage());
+                connected = false;
+                try { if (socket != null) socket.close(); } catch (Exception ignored) {}
+                socket = null;
+                reader = null;
+                writer = null;
+                if (attempt < 2) {
+                    try { Thread.sleep(2000); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }
+            } catch (Exception e) {
+                // Non-IO exceptions (auth/protocol/JSON errors) fail fast without retry.
+                Log.e(TAG, "Failed to connect to " + HOST + ":" + PORT + ": " + e.getMessage());
+                connected = false;
+                return false;
+            }
+        }
+        Log.e(TAG, "Failed to connect after 3 attempts");
+        connected = false;
+        return false;
     }
 
     /**
@@ -104,8 +142,10 @@ public class CameraDaemonClient {
      */
     public JSONObject sendCommand(JSONObject command) throws Exception {
         if (!isConnected()) {
-            // Try to reconnect
-            if (!connect()) {
+            // Mid-session reconnect: daemon was already known-up, so use a short readiness
+            // timeout (2s) rather than the 60s cold-boot wait. This prevents one dropped
+            // socket from stalling the executor for up to 60s.
+            if (!connect(2_000)) {
                 throw new Exception("Not connected to CameraDaemon");
             }
         }

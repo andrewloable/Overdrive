@@ -238,6 +238,8 @@ public class CameraDaemon {
     
     // Lock file for singleton enforcement
     private static final String LOCK_FILE = "/data/local/tmp/camera_daemon.lock";
+    // Sentinel written after TCP/HTTP servers are confirmed listening; read by app to skip ECONNREFUSED polling
+    private static final String READY_SENTINEL = "/data/local/tmp/camera_daemon.ready";
     private static final int SURVEILLANCE_PORT = 19877;
     private static java.io.RandomAccessFile lockFile;
     private static java.nio.channels.FileLock fileLock;
@@ -268,6 +270,9 @@ public class CameraDaemon {
             return;
         }
         logT("singletonLock acquired");
+
+        // Remove any stale ready sentinel left by a previous crash before we write a new one at startup completion
+        new File(READY_SENTINEL).delete();
 
         // Enable daemon logging for StorageManager (uses DaemonLogger instead of android.util.Log)
         net.bladewatch.app.storage.StorageManager.enableDaemonLogging();
@@ -601,7 +606,44 @@ public class CameraDaemon {
 
         log("Daemon ready on TCP:" + TCP_PORT + " HTTP:" + HTTP_PORT);
         logT("=== CAMERA DAEMON READY ===");
-        
+
+        // Confirm TCP_PORT is actually accepting connections before writing the sentinel.
+        // The TcpServer thread was started ~115 lines above but may not have completed bind() yet.
+        // Poll up to 5s; proceed anyway (with a warning) if the port never confirms, to avoid
+        // blocking daemon startup indefinitely.
+        {
+            long portCheckDeadline = System.currentTimeMillis() + 5000;
+            boolean portConfirmed = false;
+            while (System.currentTimeMillis() < portCheckDeadline) {
+                try (java.net.Socket probe = new java.net.Socket()) {
+                    probe.connect(new java.net.InetSocketAddress("127.0.0.1", TCP_PORT), 500);
+                    portConfirmed = true;
+                    break;
+                } catch (Exception ignored) {}
+                try { Thread.sleep(200); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            if (!portConfirmed) {
+                log("WARNING: TCP:" + TCP_PORT + " did not confirm within 5s before writing ready sentinel");
+            }
+        }
+
+        // Write ready sentinel so the Android app can detect startup completion without polling ports.
+        // setReadable(true, false) makes the file world-readable (644) so the app UID can read it;
+        // FileWriter creates files mode 600 by default which the app UID cannot access.
+        try {
+            java.io.FileWriter fw = new java.io.FileWriter(READY_SENTINEL, false);
+            fw.write(String.valueOf(android.os.Process.myPid()));
+            fw.close();
+            if (!new java.io.File(READY_SENTINEL).setReadable(true, false)) {
+                log("WARNING: Failed to set ready sentinel world-readable; app UID may not be able to read it");
+            }
+        } catch (Exception e) {
+            log("Failed to write ready sentinel: " + e.getMessage());
+        }
+
         // RESILIENT LOOPER: BYD framework listeners (gearbox, bodywork, etc.) can throw
         // uncaught exceptions from their internal processing (e.g., learningEPB → CarSettings
         // UID mismatch). These exceptions escape through Handler.dispatchMessage and kill
@@ -1189,8 +1231,9 @@ public class CameraDaemon {
                 lockFile.close();
                 lockFile = null;
             }
-            // Delete lock file
+            // Delete lock file and ready sentinel
             new File(LOCK_FILE).delete();
+            new File(READY_SENTINEL).delete();
             log("Released singleton lock");
         } catch (Exception e) {
             log("Error releasing singleton lock: " + e.getMessage());

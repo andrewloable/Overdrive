@@ -1,6 +1,7 @@
 package net.bladewatch.app.config
 
 import net.bladewatch.app.client.CameraDaemonClient
+import net.bladewatch.app.client.DaemonReadinessChecker
 import android.os.Looper
 import android.util.Log
 import org.json.JSONObject
@@ -19,99 +20,88 @@ object SecretConfigBridge {
         Thread(runnable, "secret-config-ipc").apply { isDaemon = true }
     }
 
+    // The synchronized(lock) block guards only the directStore fast-path decision.
+    // The IPC fallback runs OUTSIDE the lock: each IPC call creates its own CameraDaemonClient
+    // (no shared mutable state), so concurrent callers are safe. Holding lock across a 30-180s
+    // IPC call would serialize every config accessor process-wide.
+
     @JvmStatic
-    fun getString(section: String, key: String): String? = synchronized(lock) {
-        try {
-            if (directStore.canReadDirectly()) {
-                return directStore.getString(section, key)
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun getString(section: String, key: String): String? {
+        val direct = synchronized(lock) {
+            try { if (directStore.canReadDirectly()) directStore.getString(section, key) else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as String?
         return readViaIpc(section, key)
     }
 
     @JvmStatic
-    fun getLong(section: String, key: String, defaultValue: Long = 0L): Long = synchronized(lock) {
-        try {
-            if (directStore.canReadDirectly()) {
-                return directStore.getLong(section, key, defaultValue)
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun getLong(section: String, key: String, defaultValue: Long = 0L): Long {
+        val direct = synchronized(lock) {
+            try { if (directStore.canReadDirectly()) directStore.getLong(section, key, defaultValue) else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Long
         return readLongViaIpc(section, key, defaultValue)
     }
 
     @JvmStatic
-    fun getBoolean(section: String, key: String, defaultValue: Boolean = false): Boolean = synchronized(lock) {
-        try {
-            if (directStore.canReadDirectly()) {
-                return directStore.getBoolean(section, key, defaultValue)
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun getBoolean(section: String, key: String, defaultValue: Boolean = false): Boolean {
+        val direct = synchronized(lock) {
+            try { if (directStore.canReadDirectly()) directStore.getBoolean(section, key, defaultValue) else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Boolean
         return readBooleanViaIpc(section, key, defaultValue)
     }
 
     @JvmStatic
-    fun loadSection(section: String): JSONObject = synchronized(lock) {
-        try {
-            if (directStore.canReadDirectly()) {
-                return directStore.loadSection(section)
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun loadSection(section: String): JSONObject {
+        val direct = synchronized(lock) {
+            try { if (directStore.canReadDirectly()) directStore.loadSection(section) else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as JSONObject
         return readSectionViaIpc(section)
     }
 
     @JvmStatic
-    fun putString(section: String, key: String, value: String?): Boolean = synchronized(lock) {
-        try {
-            if (directStore.canWriteDirectly()) {
-                if (directStore.putString(section, key, value)) return true
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun putString(section: String, key: String, value: String?): Boolean {
+        val direct = synchronized(lock) {
+            try { if (directStore.canWriteDirectly() && directStore.putString(section, key, value)) true else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Boolean
         return writeViaIpc(section, key, value, "put")
     }
 
     @JvmStatic
-    fun putLong(section: String, key: String, value: Long): Boolean = synchronized(lock) {
-        try {
-            if (directStore.canWriteDirectly()) {
-                if (directStore.putLong(section, key, value)) return true
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun putLong(section: String, key: String, value: Long): Boolean {
+        val direct = synchronized(lock) {
+            try { if (directStore.canWriteDirectly() && directStore.putLong(section, key, value)) true else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Boolean
         return writeViaIpc(section, key, value, "put")
     }
 
     @JvmStatic
-    fun putBoolean(section: String, key: String, value: Boolean): Boolean = synchronized(lock) {
-        try {
-            if (directStore.canWriteDirectly()) {
-                if (directStore.putBoolean(section, key, value)) return true
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun putBoolean(section: String, key: String, value: Boolean): Boolean {
+        val direct = synchronized(lock) {
+            try { if (directStore.canWriteDirectly() && directStore.putBoolean(section, key, value)) true else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Boolean
         return writeViaIpc(section, key, value, "put")
     }
 
     @JvmStatic
-    fun delete(section: String, key: String): Boolean = synchronized(lock) {
-        try {
-            if (directStore.canWriteDirectly()) {
-                if (directStore.delete(section, key)) return true
-            }
-        } catch (_: Exception) {
-            // Fall through to IPC.
+    fun delete(section: String, key: String): Boolean {
+        val direct = synchronized(lock) {
+            try { if (directStore.canWriteDirectly() && directStore.delete(section, key)) true else Unit }
+            catch (_: Exception) { Unit }
         }
+        if (direct !== Unit) return direct as Boolean
         return writeViaIpc(section, key, null, "delete")
     }
 
@@ -122,22 +112,44 @@ object SecretConfigBridge {
     }
 
     private fun readViaIpcOnCurrentThread(section: String, key: String): String? {
-        val client = CameraDaemonClient()
-        return try {
-            if (!client.connect()) return null
-            val cmd = JSONObject()
-                .put("cmd", "secret_get")
-                .put("section", section)
-                .put("key", key)
-            val response = client.sendCommand(cmd)
-            if (!"ok".equals(response.optString("status"), ignoreCase = true)) return null
-            val value = response.optString("value", "")
-            if (value.isEmpty()) null else value
-        } catch (_: Exception) {
-            null
-        } finally {
-            client.disconnect()
+        if (!DaemonReadinessChecker.waitUntilReady(30_000)) {
+            Log.w("SecretConfigBridge", "Daemon not ready for IPC read after 30s")
+            return null
         }
+        val cmd = JSONObject()
+            .put("cmd", "secret_get")
+            .put("section", section)
+            .put("key", key)
+        var lastError: String? = null
+        for (attempt in 0 until 3) {
+            val client = CameraDaemonClient()
+            try {
+                if (!client.connect()) {
+                    lastError = "connect failed"
+                } else {
+                    val response = client.sendCommand(cmd)
+                    if ("ok".equals(response.optString("status"), ignoreCase = true)) {
+                        val value = response.optString("value", "")
+                        return if (value.isEmpty()) null else value
+                    }
+                    lastError = response.optString("message", "daemon returned error")
+                }
+            } catch (e: Exception) {
+                lastError = e.message ?: e.javaClass.simpleName
+            } finally {
+                client.disconnect()
+            }
+            if (attempt < 2) {
+                try {
+                    Thread.sleep(150L * (attempt + 1))
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
+        }
+        Log.w("SecretConfigBridge", "IPC read failed after 3 attempts for $section.$key: ${lastError ?: "unknown"}")
+        return null
     }
 
     private fun readLongViaIpc(section: String, key: String, defaultValue: Long): Long {
@@ -184,6 +196,12 @@ object SecretConfigBridge {
     }
 
     private fun writeViaIpcOnCurrentThread(section: String, key: String, value: Any?, action: String): Boolean {
+        // Mirror the read path: bail early if the daemon is not ready, rather than letting
+        // 3 connect() calls each stall 60s (worst case ~180s total on a background thread).
+        if (!DaemonReadinessChecker.waitUntilReady(30_000)) {
+            Log.w("SecretConfigBridge", "Daemon not ready for IPC write after 30s")
+            return false
+        }
         val command = JSONObject()
             .put("cmd", when (action) {
                 "delete" -> "secret_delete"
@@ -231,9 +249,22 @@ object SecretConfigBridge {
             return block()
         }
 
+        val future = ipcExecutor.submit<T> { block() }
         return try {
-            ipcExecutor.submit<T> { block() }.get(6, TimeUnit.SECONDS)
+            future.get(6, TimeUnit.SECONDS)
+        } catch (e: java.util.concurrent.TimeoutException) {
+            // cancel(true) interrupts the worker thread. Thread.sleep() in waitUntilReady and
+            // retry backoff respond to interruption. Socket ops throw on interrupt. We prefer
+            // cancel(true) over cancel(false) because the IPC calls here are atomic JSON
+            // request/response; a write in flight will be abandoned (the daemon never sees a
+            // partial message since we send whole JSON lines), so there is no partial-write
+            // corruption risk. Without cancel, the single-thread executor stays occupied for
+            // up to 30-180s, serializing all subsequent main-thread config reads behind it.
+            future.cancel(true)
+            Log.w("SecretConfigBridge", "IPC secret operation timed out after 6s, executor freed")
+            defaultValue
         } catch (e: Exception) {
+            future.cancel(true)
             Log.w("SecretConfigBridge", "IPC secret operation failed on worker: ${e.message ?: e.javaClass.simpleName}")
             defaultValue
         }

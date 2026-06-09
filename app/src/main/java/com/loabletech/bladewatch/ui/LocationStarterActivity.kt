@@ -28,9 +28,8 @@ class LocationStarterActivity : Activity() {
         super.onCreate(savedInstanceState)
         
         val callingUid = getLaunchedFromUid()
-        val callingPid = getLaunchedFromPid()
         val callingPkg = callingPackage
-        Log.i(TAG, "Location starter activity launched (caller: UID=$callingUid PID=$callingPid pkg=$callingPkg)")
+        Log.i(TAG, "Location starter activity launched (caller: UID=$callingUid pkg=$callingPkg)")
         if (callingUid != android.os.Process.myUid() && callingUid != -1) {
             Log.w(TAG, "Cross-UID launch detected — shell-UID daemon may have permission issues")
         }
