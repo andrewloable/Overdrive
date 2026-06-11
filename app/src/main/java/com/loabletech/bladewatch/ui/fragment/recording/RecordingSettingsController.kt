@@ -1,8 +1,8 @@
 package net.bladewatch.app.ui.fragment.recording
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
+import android.widget.Toast
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -12,13 +12,13 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
-import net.bladewatch.app.ui.util.PreferencesManager
+import net.bladewatch.app.ui.common.BladeTheme
 
 class RecordingSettingsController(private val context: Context) {
 
     private val root = FrameLayout(context)
     private val client = RecordingSettingsClient()
+    private val theme = BladeTheme(context)
 
     private var activeTab = RecordingSettingsTab.STATUS
     private lateinit var statusTabBtn: TextView
@@ -578,37 +578,35 @@ class RecordingSettingsController(private val context: Context) {
 
     private fun applyChanges() {
         Thread({
-            when (activeTab) {
+            val result = when (activeTab) {
                 RecordingSettingsTab.CAPTURE -> {
-                    client.saveMode(selectedMode.value)
-                    client.saveRecordingLimit(selectedLimit.minutes)
+                    val r1 = client.saveMode(selectedMode.value)
+                    val r2 = client.saveRecordingLimit(selectedLimit.minutes)
+                    if (!r1.ok) r1 else r2
                 }
                 RecordingSettingsTab.QUALITY -> client.saveQuality(selectedQuality.value, selectedCodec)
                 RecordingSettingsTab.STORAGE -> client.saveStorage(selectedStorageType, selectedLimitMb)
-                RecordingSettingsTab.STATUS -> { /* no-op */ }
+                RecordingSettingsTab.STATUS -> null
             }
             dirty = false
-            root.post { loadData() }
+            root.post {
+                if (result != null && !result.ok) {
+                    val msg = result.error?.takeIf { it.isNotEmpty() } ?: "Save failed"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+                loadData()
+            }
         }, "RecSettingsSave").apply { isDaemon = true; start() }
     }
 
     // ─────────────────────────── HELPERS ────────────────────────────────
 
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
-    }
-
-    private fun bgColor() = if (isDark()) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
-    private fun surfaceColor() = if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE
-    private fun accentColor() = Color.parseColor("#4CAF50")
-    private fun inactivePillColor() = if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")
-    private fun mutedTextColor() = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
+    private fun isDark()           = theme.isDark()
+    private fun bgColor()          = theme.bgColor()
+    private fun surfaceColor()     = theme.surfaceColor()
+    private fun accentColor()      = theme.accentColor()
+    private fun inactivePillColor() = theme.pillBgColor()
+    private fun mutedTextColor()   = theme.mutedColor()
 
     private fun pill(color: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat() }
 

@@ -520,4 +520,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">箱子</string>
+    <string name="vehicle_tab_climate">氣候變化</string>
+    <string name="vehicle_tab_seats">座位</string>
+    <string name="vehicle_tab_lights">燈具</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">充電</string>
+    <string name="vehicle_locked">鎖定</string>
+    <string name="vehicle_unlocked">沒有鎖定</string>
+    <string name="vehicle_close_trunk">封閉的箱子</string>
+    <string name="vehicle_ac_on">在 AC 上</string>
+    <string name="vehicle_ac_off">AC 已關閉</string>
+    <string name="vehicle_seat_pos_1">排名第 1</string>
+    <string name="vehicle_seat_pos_2">排名第 2</string>
+    <string name="vehicle_all_windows">所有的窗戶</string>
+    <string name="vehicle_sunroof">陽光屋頂</string>
+    <string name="vehicle_sunshade">遮陽罩</string>
+    <string name="vehicle_btn_drl_title">日子運行燈</string>
+    <string name="vehicle_btn_slw_title">預警速度限制</string>
+    <string name="vehicle_control_section_charge_cap">充電上限</string>
+    <string name="vehicle_tyre_no_signal">沒有訊號</string>
+    <string name="vehicle_tyre_slow_leak">緩慢的泄漏</string>
+    <string name="vehicle_tyre_fast_leak">快速泄漏</string>
+    <string name="vehicle_tyre_low">低價</string>
+    <string name="vehicle_tyre_high">很高</string>
+    <string name="vehicle_tyre_ok">確定</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Çanta</string>
+    <string name="vehicle_tab_climate">İklim</string>
+    <string name="vehicle_tab_seats">Koltuklar</string>
+    <string name="vehicle_tab_lights">Işıklar</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Şarj</string>
+    <string name="vehicle_locked">Kilitli .</string>
+    <string name="vehicle_unlocked">Kilitlenmemiş</string>
+    <string name="vehicle_close_trunk">Kapalı Çanta</string>
+    <string name="vehicle_ac_on">AC Açık</string>
+    <string name="vehicle_ac_off">AC Açık</string>
+    <string name="vehicle_seat_pos_1">1. pozisyon</string>
+    <string name="vehicle_seat_pos_2">2. pozisyon</string>
+    <string name="vehicle_all_windows">Tüm Pencereler</string>
+    <string name="vehicle_sunroof">Güneş çatısı</string>
+    <string name="vehicle_sunshade">Güneş gölgesi</string>
+    <string name="vehicle_btn_drl_title">Gündüz çalışan ışıklar</string>
+    <string name="vehicle_btn_slw_title">Hız sınırı uyarısı</string>
+    <string name="vehicle_control_section_charge_cap">Şarj limiti</string>
+    <string name="vehicle_tyre_no_signal">İNSANLAR yok .</string>
+    <string name="vehicle_tyre_slow_leak">SLOW LEAK</string>
+    <string name="vehicle_tyre_fast_leak">Hızlı sızıntı</string>
+    <string name="vehicle_tyre_low">Düşük</string>
+    <string name="vehicle_tyre_high">Yüksek</string>
+    <string name="vehicle_tyre_ok">Tamam</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

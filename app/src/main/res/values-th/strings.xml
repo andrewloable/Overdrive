@@ -522,4 +522,32 @@
         <item quantity="other">%1$d ชม.</item>
     </plurals>
 
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">ฝาท้าย</string>
+    <string name="vehicle_tab_climate">แอร์</string>
+    <string name="vehicle_tab_seats">เบาะนั่ง</string>
+    <string name="vehicle_tab_lights">ไฟรถ</string>
+    <string name="vehicle_tab_adas">ระบบช่วยขับ (ADAS)</string>
+    <string name="vehicle_control_charging_tab">การชําระเงิน</string>
+    <string name="vehicle_locked">ล็อกอยู่</string>
+    <string name="vehicle_unlocked">ปลดล็อกแล้ว</string>
+    <string name="vehicle_close_trunk">ปิดท้ายรถ</string>
+    <string name="vehicle_ac_on">เปิดแอร์แล้ว</string>
+    <string name="vehicle_ac_off">ปิดแอร์แล้ว</string>
+    <string name="vehicle_seat_pos_1">ตำแหน่ง 1</string>
+    <string name="vehicle_seat_pos_2">ตำแหน่ง 2</string>
+    <string name="vehicle_all_windows">กระจกทั้งหมด</string>
+    <string name="vehicle_sunroof">ซันรูฟ</string>
+    <string name="vehicle_sunshade">ม่านบังแดด</string>
+    <string name="vehicle_btn_drl_title">ไฟส่องสว่างตอนกลางวัน (DRL)</string>
+    <string name="vehicle_btn_slw_title">แจ้งเตือนจำกัดความเร็ว</string>
+    <string name="vehicle_control_section_charge_cap">ขีดจำกัดการชาร์จ</string>
+    <string name="vehicle_tyre_no_signal">ไม่มีสัญญาณ</string>
+    <string name="vehicle_tyre_slow_leak">ลมซึม</string>
+    <string name="vehicle_tyre_fast_leak">ลมรั่วเร็ว</string>
+    <string name="vehicle_tyre_low">ลมยางอ่อน</string>
+    <string name="vehicle_tyre_high">ลมยางแข็ง</string>
+    <string name="vehicle_tyre_ok">ปกติ</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

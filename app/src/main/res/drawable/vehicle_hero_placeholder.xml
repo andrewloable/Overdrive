@@ -1,0 +1,80 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="80dp"
+    android:viewportWidth="200"
+    android:viewportHeight="80">
+
+    <!-- Car body — main silhouette -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M30,55 L30,45 Q32,38 40,35 L75,28 Q90,22 100,22 Q110,22 125,28 L160,35 Q168,38 170,45 L170,55 Z" />
+
+    <!-- Roof -->
+    <path
+        android:fillColor="#388E3C"
+        android:pathData="M70,35 L80,22 Q95,14 105,14 Q115,14 120,22 L130,35 Z" />
+
+    <!-- Front windscreen highlight -->
+    <path
+        android:fillColor="#80A5D6A7"
+        android:pathData="M72,33 L82,21 Q93,15 100,15 L100,33 Z" />
+
+    <!-- Rear windscreen highlight -->
+    <path
+        android:fillColor="#80A5D6A7"
+        android:pathData="M128,21 Q107,15 100,15 L100,33 L128,33 Z" />
+
+    <!-- Front wheel arch -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M50,55 Q50,44 62,44 Q74,44 74,55 Z" />
+
+    <!-- Rear wheel arch -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M126,55 Q126,44 138,44 Q150,44 150,55 Z" />
+
+    <!-- Front tyre -->
+    <path
+        android:fillColor="#1B1B1B"
+        android:pathData="M51,55 A11,11 0 0 1 73,55 Z" />
+    <path
+        android:fillColor="#616161"
+        android:pathData="M55,55 A7,7 0 0 1 69,55 Z" />
+
+    <!-- Rear tyre -->
+    <path
+        android:fillColor="#1B1B1B"
+        android:pathData="M127,55 A11,11 0 0 1 149,55 Z" />
+    <path
+        android:fillColor="#616161"
+        android:pathData="M131,55 A7,7 0 0 1 145,55 Z" />
+
+    <!-- Side body line (subtle) -->
+    <path
+        android:strokeColor="#60388E3C"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:pathData="M35,48 L165,48" />
+
+    <!-- Front bumper -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M28,50 L30,55 L35,55 L35,50 Z" />
+
+    <!-- Rear bumper -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M165,50 L170,50 L170,55 L165,55 Z" />
+
+    <!-- Headlights -->
+    <path
+        android:fillColor="#FFF59D"
+        android:pathData="M31,47 Q33,44 37,44 L37,48 Q33,48 31,47 Z" />
+
+    <!-- Tail lights -->
+    <path
+        android:fillColor="#EF5350"
+        android:pathData="M163,44 L167,44 Q169,44 169,47 L163,48 Z" />
+
+</vector>

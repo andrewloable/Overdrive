@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Tropeço</string>
+    <string name="vehicle_tab_climate">Clima</string>
+    <string name="vehicle_tab_seats">Sessões</string>
+    <string name="vehicle_tab_lights">Lâmpadas</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Carregamento</string>
+    <string name="vehicle_locked">Fechado .</string>
+    <string name="vehicle_unlocked">Desbloqueado</string>
+    <string name="vehicle_close_trunk">Tropeço fechado</string>
+    <string name="vehicle_ac_on">AC Ativado</string>
+    <string name="vehicle_ac_off">AC Desligado</string>
+    <string name="vehicle_seat_pos_1">Posição 1</string>
+    <string name="vehicle_seat_pos_2">Posição 2</string>
+    <string name="vehicle_all_windows">Todas as janelas</string>
+    <string name="vehicle_sunroof">Tecto solar</string>
+    <string name="vehicle_sunshade">Protector solar</string>
+    <string name="vehicle_btn_drl_title">Luzes de funcionamento diurno</string>
+    <string name="vehicle_btn_slw_title">Aviso de limite de velocidade</string>
+    <string name="vehicle_control_section_charge_cap">Limite de carga</string>
+    <string name="vehicle_tyre_no_signal">Nenhum sinal</string>
+    <string name="vehicle_tyre_slow_leak">Fugas lentas</string>
+    <string name="vehicle_tyre_fast_leak">FAST LEAK</string>
+    <string name="vehicle_tyre_low">Baixo</string>
+    <string name="vehicle_tyre_high">Alto</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

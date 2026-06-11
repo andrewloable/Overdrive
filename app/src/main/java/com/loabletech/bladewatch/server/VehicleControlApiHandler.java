@@ -434,12 +434,23 @@ public class VehicleControlApiHandler {
 
     /**
      * Battery preconditioning heat — cloud-only.
-     * Body: { "enabled": bool }
+     * Body: { "on": bool }  (ConnectRPC, proto field name)
+     *    or { "enabled": bool } (legacy REST)
      */
     private static void handleBatteryHeat(OutputStream out, String body) throws Exception {
         boolean enabled = false;
         if (body != null && !body.isEmpty()) {
-            try { enabled = new JSONObject(body).optBoolean("enabled", false); } catch (Exception ignored) {
+            try {
+                JSONObject req = new JSONObject(body);
+                // Accept proto "on" first (explicit-presence optional bool — always sent
+                // even when false now that the field is optional in the proto), then
+                // fall back to legacy "enabled".
+                if (req.has("on")) {
+                    enabled = req.optBoolean("on", false);
+                } else {
+                    enabled = req.optBoolean("enabled", false);
+                }
+            } catch (Exception ignored) {
                 logger.warn("Failed to parse batteryHeat body: " + ignored.getMessage());
             }
         }
@@ -683,28 +694,87 @@ public class VehicleControlApiHandler {
         }
     }
 
+    /** Parsed result for lights/ADAS requests. {@code error != null} means parse failure. */
+    static final class ToggleRequestParse {
+        final String target;
+        final boolean enable;
+        final String error;
+        private ToggleRequestParse(String target, boolean enable) {
+            this.target = target; this.enable = enable; this.error = null;
+        }
+        private ToggleRequestParse(String error) {
+            this.target = null; this.enable = false; this.error = error;
+        }
+        static ToggleRequestParse ok(String target, boolean enable) { return new ToggleRequestParse(target, enable); }
+        static ToggleRequestParse err(String error) { return new ToggleRequestParse(error); }
+    }
+
+    /**
+     * Pure parser for lights requests. Accepts proto names first ("action"/"on"),
+     * falls back to legacy names ("target"/"enable"). Errors if no boolean key present.
+     */
+    static ToggleRequestParse parseLightsRequest(JSONObject req) {
+        // Accept proto "action" first, fall back to legacy "target"
+        String target = req.has("action") ? req.optString("action", null) : req.optString("target", null);
+        if (!"dayTimeLight".equals(target)) {
+            return ToggleRequestParse.err(Messages.get("errors.vehicle_unsupported_target_with_target", target));
+        }
+        // Accept proto "on" first, fall back to legacy "enable"; absent boolean is an error
+        boolean enable;
+        if (req.has("on")) {
+            enable = req.optBoolean("on", false);
+        } else if (req.has("enable")) {
+            enable = req.optBoolean("enable", false);
+        } else {
+            return ToggleRequestParse.err("lights requires 'on'");
+        }
+        return ToggleRequestParse.ok(target, enable);
+    }
+
+    /**
+     * Pure parser for ADAS requests. Accepts proto names first ("action"/"on"),
+     * falls back to legacy names ("target"/"enable"). Errors if no boolean key present.
+     */
+    static ToggleRequestParse parseAdasRequest(JSONObject req) {
+        // Accept proto "action" first, fall back to legacy "target"
+        String target = req.has("action") ? req.optString("action", null) : req.optString("target", null);
+        if (!"speedLimitWarning".equals(target)) {
+            return ToggleRequestParse.err(Messages.get("errors.vehicle_unsupported_target_with_target", target));
+        }
+        // Accept proto "on" first, fall back to legacy "enable"; absent boolean is an error
+        boolean enable;
+        if (req.has("on")) {
+            enable = req.optBoolean("on", false);
+        } else if (req.has("enable")) {
+            enable = req.optBoolean("enable", false);
+        } else {
+            return ToggleRequestParse.err("adas requires 'on'");
+        }
+        return ToggleRequestParse.ok(target, enable);
+    }
+
     /**
      * Light controls — SDK_ONLY routed.
-     * Body: { "target": "dayTimeLight", "enable": true|false }
+     * Body: { "action": "dayTimeLight", "on": true|false }  (ConnectRPC)
+     *    or { "target": "dayTimeLight", "enable": true|false } (legacy REST)
      */
     private static void handleLights(OutputStream out, String body) throws Exception {
         JSONObject response = new JSONObject();
         try {
             JSONObject req = new JSONObject(body);
-            String target = req.optString("target", null);
-            boolean enable = req.optBoolean("enable", true);
-            if (!"dayTimeLight".equals(target)) {
+            ToggleRequestParse parsed = parseLightsRequest(req);
+            if (parsed.error != null) {
                 response.put("success", false);
-                response.put("error", Messages.get("errors.vehicle_unsupported_target_with_target", target));
+                response.put("error", parsed.error);
                 HttpResponse.sendJson(out, response.toString());
                 return;
             }
             CommandResult r = VehicleCommandRouter.getInstance()
-                    .execute(new VehicleCommandRouter.LightsCommand(enable));
-            logger.info("Lights: target=dayTimeLight enable=" + enable + " " + r.outcome);
+                    .execute(new VehicleCommandRouter.LightsCommand(parsed.enable));
+            logger.info("Lights: target=dayTimeLight enable=" + parsed.enable + " " + r.outcome);
             JSONObject resp = routedResponse(r, "lights");
-            resp.put("target", target);
-            resp.put("enable", enable);
+            resp.put("target", parsed.target);
+            resp.put("enable", parsed.enable);
             HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Light command failed: " + e.getMessage());
@@ -716,26 +786,26 @@ public class VehicleControlApiHandler {
 
     /**
      * ADAS controls — SDK_ONLY routed.
-     * Body: { "target": "speedLimitWarning", "enable": true|false }
+     * Body: { "action": "speedLimitWarning", "on": true|false }  (ConnectRPC)
+     *    or { "target": "speedLimitWarning", "enable": true|false } (legacy REST)
      */
     private static void handleAdas(OutputStream out, String body) throws Exception {
         JSONObject response = new JSONObject();
         try {
             JSONObject req = new JSONObject(body);
-            String target = req.optString("target", null);
-            boolean enable = req.optBoolean("enable", true);
-            if (!"speedLimitWarning".equals(target)) {
+            ToggleRequestParse parsed = parseAdasRequest(req);
+            if (parsed.error != null) {
                 response.put("success", false);
-                response.put("error", Messages.get("errors.vehicle_unsupported_target_with_target", target));
+                response.put("error", parsed.error);
                 HttpResponse.sendJson(out, response.toString());
                 return;
             }
             CommandResult r = VehicleCommandRouter.getInstance()
-                    .execute(new VehicleCommandRouter.AdasSpeedLimitWarningCommand(enable));
-            logger.info("Adas: target=speedLimitWarning enable=" + enable + " " + r.outcome);
+                    .execute(new VehicleCommandRouter.AdasSpeedLimitWarningCommand(parsed.enable));
+            logger.info("Adas: target=speedLimitWarning enable=" + parsed.enable + " " + r.outcome);
             JSONObject resp = routedResponse(r, "adas");
-            resp.put("target", target);
-            resp.put("enable", enable);
+            resp.put("target", parsed.target);
+            resp.put("enable", parsed.enable);
             HttpResponse.sendJson(out, resp.toString());
         } catch (Exception e) {
             logger.warn("Adas command failed: " + e.getMessage());

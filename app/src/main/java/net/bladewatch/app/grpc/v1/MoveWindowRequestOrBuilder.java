@@ -12,7 +12,7 @@ public interface MoveWindowRequestOrBuilder extends
 
   /**
    * <pre>
-   * Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+   * Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
    * </pre>
    *
    * <code>int32 window_index = 1 [json_name = "windowIndex"];</code>
@@ -42,10 +42,23 @@ public interface MoveWindowRequestOrBuilder extends
 
   /**
    * <pre>
-   * Optional percent target 0-100.
+   * Explicit presence: 0% (fully closed preset) is a default scalar and would
+   * be omitted from JSON without optional, routing the request to the direction
+   * path instead of the closed-loop positioning path.
    * </pre>
    *
-   * <code>int32 target_percent = 3 [json_name = "targetPercent"];</code>
+   * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
+   * @return Whether the targetPercent field is set.
+   */
+  boolean hasTargetPercent();
+  /**
+   * <pre>
+   * Explicit presence: 0% (fully closed preset) is a default scalar and would
+   * be omitted from JSON without optional, routing the request to the direction
+   * path instead of the closed-loop positioning path.
+   * </pre>
+   *
+   * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
    * @return The targetPercent.
    */
   int getTargetPercent();

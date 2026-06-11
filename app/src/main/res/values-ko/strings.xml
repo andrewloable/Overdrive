@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">트렁크</string>
+    <string name="vehicle_tab_climate">기후</string>
+    <string name="vehicle_tab_seats">좌석</string>
+    <string name="vehicle_tab_lights">조명</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">충전</string>
+    <string name="vehicle_locked">잠금</string>
+    <string name="vehicle_unlocked">잠금 해제</string>
+    <string name="vehicle_close_trunk">닫힌 트렁크</string>
+    <string name="vehicle_ac_on">AC 가동</string>
+    <string name="vehicle_ac_off">AC 종료</string>
+    <string name="vehicle_seat_pos_1">포지션 1</string>
+    <string name="vehicle_seat_pos_2">포지션 2</string>
+    <string name="vehicle_all_windows">모든 창</string>
+    <string name="vehicle_sunroof">태양 지붕</string>
+    <string name="vehicle_sunshade">햇빛 보호막</string>
+    <string name="vehicle_btn_drl_title">낮에 가동하는 조명</string>
+    <string name="vehicle_btn_slw_title">속도 제한 경고</string>
+    <string name="vehicle_control_section_charge_cap">충전 한도</string>
+    <string name="vehicle_tyre_no_signal">신호가 없습니다</string>
+    <string name="vehicle_tyre_slow_leak">느린 누출</string>
+    <string name="vehicle_tyre_fast_leak">빠른 누출</string>
+    <string name="vehicle_tyre_low">낮은</string>
+    <string name="vehicle_tyre_high">높은</string>
+    <string name="vehicle_tyre_ok">확인</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

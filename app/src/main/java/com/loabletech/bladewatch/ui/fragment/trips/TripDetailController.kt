@@ -1,7 +1,6 @@
 package net.bladewatch.app.ui.fragment.trips
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,8 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
-import net.bladewatch.app.ui.util.PreferencesManager
+import net.bladewatch.app.ui.common.BladeTheme
 import org.osmdroid.config.Configuration as OsmConfig
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
@@ -42,6 +40,7 @@ internal class TripDetailController(
     private val onClose: () -> Unit,
 ) {
     private val root = FrameLayout(context)
+    private val theme = BladeTheme(context)
     private val mapView = MapView(context)
     private val routeOverlay = Polyline(mapView)
     private val startMarker = Marker(mapView)
@@ -93,8 +92,7 @@ internal class TripDetailController(
     // ──────────────────────────────── BUILD ────────────────────────────────
 
     private fun buildView() {
-        val isDark = isDark()
-        root.setBackgroundColor(if (isDark) Color.parseColor("#121212") else Color.parseColor("#F5F5F5"))
+        root.setBackgroundColor(theme.bgColor())
         root.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         // Consume taps so they never fall through to the list underneath.
@@ -123,11 +121,10 @@ internal class TripDetailController(
     }
 
     private fun buildHeader(): LinearLayout {
-        val isDark = isDark()
         val bar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(if (isDark) Color.parseColor("#1E1E1E") else Color.WHITE)
+            setBackgroundColor(theme.surfaceColor())
             setPadding(dp(8), dp(8), dp(12), dp(8))
         }
         val backBtn = TextView(context).apply {
@@ -309,19 +306,18 @@ internal class TripDetailController(
     }
 
     private fun buildScoreBar(name: String, score: Int): LinearLayout {
-        val isDark = isDark()
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         }
         val label = TextView(context).apply {
             text = name
             textSize = 13f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(dp(130), ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val barBg = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(0, dp(8), 1f)
-            background = pillBackground(if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
+            background = pillBackground(theme.pillBgColor())
         }
         val fraction = score.coerceIn(0, 100) / 100f
         val fill = View(context).apply {
@@ -340,7 +336,7 @@ internal class TripDetailController(
         val scoreLabel = TextView(context).apply {
             text = "$score"
             textSize = 12f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
             setPadding(dp(6), 0, 0, 0)
         }
         row.addView(label); row.addView(barBg); row.addView(scoreLabel)
@@ -388,25 +384,14 @@ internal class TripDetailController(
 
     // ──────────────────────────────── HELPERS ──────────────────────────────
 
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> {
-                val night = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-                night == Configuration.UI_MODE_NIGHT_YES
-            }
-        }
-    }
+    private fun isDark() = theme.isDark()
 
     private fun pillBackground(color: Int): GradientDrawable =
         GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat() }
 
     private fun cardBackground(isDark: Boolean): GradientDrawable =
         GradientDrawable().apply {
-            setColor(if (isDark) Color.parseColor("#1E1E1E") else Color.WHITE)
+            setColor(theme.surfaceColor())
             cornerRadius = dp(8).toFloat()
         }
 
@@ -431,18 +416,16 @@ internal class TripDetailController(
     }
 
     private fun smallText(text: String): TextView {
-        val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = 13f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
         }
     }
 
     private fun centeredText(text: String, size: Float): TextView {
-        val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = size; gravity = Gravity.CENTER
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(32)
@@ -451,18 +434,17 @@ internal class TripDetailController(
     }
 
     private fun statBlock(label: String, value: String): LinearLayout {
-        val isDark = isDark()
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(6), 0, dp(6))
             addView(TextView(context).apply {
                 text = value; textSize = 16f; gravity = Gravity.CENTER
-                setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+                setTextColor(theme.textColor())
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
             })
             addView(TextView(context).apply {
                 this.text = label; textSize = 11f; gravity = Gravity.CENTER
-                setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                setTextColor(theme.mutedColor())
             })
         }
     }

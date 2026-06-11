@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Coffre</string>
+    <string name="vehicle_tab_climate">Climatisation</string>
+    <string name="vehicle_tab_seats">Sièges</string>
+    <string name="vehicle_tab_lights">Lumières</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Chargement</string>
+    <string name="vehicle_locked">Verrouillé</string>
+    <string name="vehicle_unlocked">Déverrouillé</string>
+    <string name="vehicle_close_trunk">Fermer coffre</string>
+    <string name="vehicle_ac_on">AC activé</string>
+    <string name="vehicle_ac_off">AC désactivé</string>
+    <string name="vehicle_seat_pos_1">Position 1</string>
+    <string name="vehicle_seat_pos_2">Position 2</string>
+    <string name="vehicle_all_windows">Toutes les fenêtres</string>
+    <string name="vehicle_sunroof">Toit ouvrant</string>
+    <string name="vehicle_sunshade">Pare-soleil</string>
+    <string name="vehicle_btn_drl_title">Lumières de jour</string>
+    <string name="vehicle_btn_slw_title">Avertissement de limite de vitesse</string>
+    <string name="vehicle_control_section_charge_cap">Limite de charge</string>
+    <string name="vehicle_tyre_no_signal">Aucun signal</string>
+    <string name="vehicle_tyre_slow_leak">Fuite lente</string>
+    <string name="vehicle_tyre_fast_leak">Fuite rapide</string>
+    <string name="vehicle_tyre_low">Basse</string>
+    <string name="vehicle_tyre_high">Haute</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

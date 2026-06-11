@@ -60,7 +60,23 @@ public class HttpResponse {
         response.put("error", error);
         sendJson(out, response.toString());
     }
-    
+
+    /** Send HTTP 400 Bad Request with a JSON body containing the error field. */
+    public static void sendJsonBadRequest(OutputStream out, String error) throws Exception {
+        JSONObject response = new JSONObject();
+        response.put("success", false);
+        response.put("error", error);
+        byte[] body = response.toString().getBytes("UTF-8");
+        String headers = "HTTP/1.1 400 Bad Request\r\n" +
+                "Content-Type: application/json\r\n" +
+                "Cache-Control: no-cache, no-store\r\n" +
+                "Content-Length: " + body.length + "\r\n" +
+                "Connection: close\r\n\r\n";
+        out.write(headers.getBytes());
+        out.write(body);
+        out.flush();
+    }
+
     /**
      * Send 401 Unauthorized response with JSON body.
      */

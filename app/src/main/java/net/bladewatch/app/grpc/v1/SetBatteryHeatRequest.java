@@ -48,10 +48,31 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.SetBatteryHeatRequest.class, net.bladewatch.app.grpc.v1.SetBatteryHeatRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int ON_FIELD_NUMBER = 1;
   private boolean on_ = false;
   /**
-   * <code>bool on = 1 [json_name = "on"];</code>
+   * <pre>
+   * Explicit presence: a pure disable request sets on=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), so
+   * the handler would never see the boolean. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool on = 1 [json_name = "on"];</code>
+   * @return Whether the on field is set.
+   */
+  @java.lang.Override
+  public boolean hasOn() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Explicit presence: a pure disable request sets on=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), so
+   * the handler would never see the boolean. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool on = 1 [json_name = "on"];</code>
    * @return The on.
    */
   @java.lang.Override
@@ -73,14 +94,14 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (on_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       output.writeBool(1, on_);
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-    if (on_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(1, on_);
     }
@@ -108,8 +129,11 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.SetBatteryHeatRequest other = (net.bladewatch.app.grpc.v1.SetBatteryHeatRequest) obj;
 
-    if (getOn()
-        != other.getOn()) return false;
+    if (hasOn() != other.hasOn()) return false;
+    if (hasOn()) {
+      if (getOn()
+          != other.getOn()) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -121,9 +145,11 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + ON_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getOn());
+    if (hasOn()) {
+      hash = (37 * hash) + ON_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getOn());
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -289,9 +315,12 @@ private static final long serialVersionUID = 0L;
 
     private void buildPartial0(net.bladewatch.app.grpc.v1.SetBatteryHeatRequest result) {
       int from_bitField0_ = bitField0_;
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.on_ = on_;
+        to_bitField0_ |= 0x00000001;
       }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -306,7 +335,7 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.SetBatteryHeatRequest other) {
       if (other == net.bladewatch.app.grpc.v1.SetBatteryHeatRequest.getDefaultInstance()) return this;
-      if (other.getOn() != false) {
+      if (other.hasOn()) {
         setOn(other.getOn());
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -359,7 +388,27 @@ private static final long serialVersionUID = 0L;
 
     private boolean on_ ;
     /**
-     * <code>bool on = 1 [json_name = "on"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets on=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), so
+     * the handler would never see the boolean. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool on = 1 [json_name = "on"];</code>
+     * @return Whether the on field is set.
+     */
+    @java.lang.Override
+    public boolean hasOn() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * Explicit presence: a pure disable request sets on=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), so
+     * the handler would never see the boolean. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool on = 1 [json_name = "on"];</code>
      * @return The on.
      */
     @java.lang.Override
@@ -367,7 +416,13 @@ private static final long serialVersionUID = 0L;
       return on_;
     }
     /**
-     * <code>bool on = 1 [json_name = "on"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets on=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), so
+     * the handler would never see the boolean. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool on = 1 [json_name = "on"];</code>
      * @param value The on to set.
      * @return This builder for chaining.
      */
@@ -379,7 +434,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool on = 1 [json_name = "on"];</code>
+     * <pre>
+     * Explicit presence: a pure disable request sets on=false, which a plain
+     * proto3 bool would omit from the JSON wire (default-scalar omission), so
+     * the handler would never see the boolean. optional forces it onto the wire.
+     * </pre>
+     *
+     * <code>optional bool on = 1 [json_name = "on"];</code>
      * @return This builder for chaining.
      */
     public Builder clearOn() {

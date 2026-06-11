@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.recording
 import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.ui.common.SaveResult
 import net.bladewatch.app.grpc.v1.FormatVolumeRequest
 import net.bladewatch.app.grpc.v1.GetQualityRequest
 import net.bladewatch.app.grpc.v1.GetStatsRequest
@@ -80,40 +81,61 @@ internal class RecordingSettingsClient {
         )
     }
 
-    fun saveMode(mode: String): Boolean = runBlocking {
+    fun saveMode(mode: String): SaveResult = runBlocking {
         // Recording mode goes through the SettingsService.SetRecordingMode Connect
         // RPC like every other client call (BladeWatch-pg0s removed the former raw
         // loopback-HTTP bypass). Auth is handled by the shared ConnectClientProvider
         // interceptor, so no per-call JWT plumbing is needed here.
         val req = SetRecordingModeRequest.newBuilder().setMode(mode).build()
-        val resp = ConnectClientProvider.settingsService().setRecordingMode(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.settingsService().setRecordingMode(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
-    fun saveQuality(quality: String, codec: String): Boolean = runBlocking {
+    fun saveQuality(quality: String, codec: String): SaveResult = runBlocking {
         val req = SetQualityRequest.newBuilder()
             .setRecordingQuality(quality)
             .setCodec(codec)
             .build()
-        val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                val err = m.error.takeIf { it.isNotEmpty() } ?: m.message.takeIf { !m.success && it.isNotEmpty() }
+                SaveResult(m.success, err)
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
-    fun saveRecordingLimit(segmentMinutes: Int): Boolean = runBlocking {
+    fun saveRecordingLimit(segmentMinutes: Int): SaveResult = runBlocking {
         val req = SetQualityRequest.newBuilder()
             .setRecordingSegmentMinutes(segmentMinutes)
             .build()
-        val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.settingsService().setQuality(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
-    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+    fun saveStorage(storageType: String, limitMb: Long): SaveResult = runBlocking {
         val req = SetStorageSettingsRequest.newBuilder()
             .setRecordingsStorageType(storageType)
             .setRecordingsLimitMb(limitMb)
             .build()
-        val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
     fun listFormattableVolumes(): List<FormattableVolume> = runBlocking {

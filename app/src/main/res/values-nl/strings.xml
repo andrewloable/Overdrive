@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Kofferbak</string>
+    <string name="vehicle_tab_climate">Klimaat</string>
+    <string name="vehicle_tab_seats">Zitplaatsen</string>
+    <string name="vehicle_tab_lights">Verlichting</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Opladen</string>
+    <string name="vehicle_locked">Op slot.</string>
+    <string name="vehicle_unlocked">Geopend</string>
+    <string name="vehicle_close_trunk">Sluit de kofferbak</string>
+    <string name="vehicle_ac_on">AC Aan</string>
+    <string name="vehicle_ac_off">AC uitgeschakeld</string>
+    <string name="vehicle_seat_pos_1">Positie 1</string>
+    <string name="vehicle_seat_pos_2">Positie 2</string>
+    <string name="vehicle_all_windows">Alle ramen</string>
+    <string name="vehicle_sunroof">Zonne dak</string>
+    <string name="vehicle_sunshade">Zonnebrand</string>
+    <string name="vehicle_btn_drl_title">Daglicht</string>
+    <string name="vehicle_btn_slw_title">Waarschuwing voor snelheidslimiet</string>
+    <string name="vehicle_control_section_charge_cap">Laadlimiet</string>
+    <string name="vehicle_tyre_no_signal">Geen signaal</string>
+    <string name="vehicle_tyre_slow_leak">SLOW LEAK</string>
+    <string name="vehicle_tyre_fast_leak">Snel lekken</string>
+    <string name="vehicle_tyre_low">Bespraak</string>
+    <string name="vehicle_tyre_high">HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET HET</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

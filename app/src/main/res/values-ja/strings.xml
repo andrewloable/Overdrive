@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">トランク</string>
+    <string name="vehicle_tab_climate">気候</string>
+    <string name="vehicle_tab_seats">座席</string>
+    <string name="vehicle_tab_lights">ライト</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">充電</string>
+    <string name="vehicle_locked">鍵を閉じる</string>
+    <string name="vehicle_unlocked">解鎖された</string>
+    <string name="vehicle_close_trunk">ストックを閉じる</string>
+    <string name="vehicle_ac_on">AC オン</string>
+    <string name="vehicle_ac_off">AC 終了</string>
+    <string name="vehicle_seat_pos_1">ポイント1</string>
+    <string name="vehicle_seat_pos_2">2 位</string>
+    <string name="vehicle_all_windows">すべてのウィンドウ</string>
+    <string name="vehicle_sunroof">屋根</string>
+    <string name="vehicle_sunshade">シャドウ</string>
+    <string name="vehicle_btn_drl_title">日中の走行灯</string>
+    <string name="vehicle_btn_slw_title">速度制限警告</string>
+    <string name="vehicle_control_section_charge_cap">充電上限</string>
+    <string name="vehicle_tyre_no_signal">信号がない</string>
+    <string name="vehicle_tyre_slow_leak">スローリーク</string>
+    <string name="vehicle_tyre_fast_leak">迅速な漏れ</string>
+    <string name="vehicle_tyre_low">低値</string>
+    <string name="vehicle_tyre_high">高い</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

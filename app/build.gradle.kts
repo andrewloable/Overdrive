@@ -476,6 +476,8 @@ dependencies {
     // JsonFormat (proto <-> JSON) for the Connect wire-parity contract tests.
     // Mirrors how the connect-kotlin Google-Java JSON strategy serializes/parses.
     testImplementation("com.google.protobuf:protobuf-java-util:4.35.0")
+    // Android's org.json is a stub in JVM unit tests; use the real implementation.
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

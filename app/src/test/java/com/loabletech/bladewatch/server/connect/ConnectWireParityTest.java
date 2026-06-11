@@ -18,9 +18,11 @@ import net.bladewatch.app.grpc.v1.ListRecordingsResponse;
 import net.bladewatch.app.grpc.v1.MoveWindowRequest;
 import net.bladewatch.app.grpc.v1.RecordingEntry;
 import net.bladewatch.app.grpc.v1.RecordingType;
+import net.bladewatch.app.grpc.v1.SetAdasRequest;
 import net.bladewatch.app.grpc.v1.SetChargeCapRequest;
 import net.bladewatch.app.grpc.v1.SetClimateRequest;
 import net.bladewatch.app.grpc.v1.SetConfigRequest;
+import net.bladewatch.app.grpc.v1.SetLightsRequest;
 import net.bladewatch.app.grpc.v1.SetQualityRequest;
 import net.bladewatch.app.grpc.v1.SetQualityResponse;
 import net.bladewatch.app.grpc.v1.SetSeatRequest;
@@ -407,5 +409,47 @@ public class ConnectWireParityTest {
         } catch (Exception expected) {
             // expected: InvalidProtocolBufferException (array where message expected)
         }
+    }
+
+    // ==================== VEH E1b: optional bool on / optional int32 target_percent ====================
+
+    @Test
+    public void setLights_disableDrl_emitsOnFalse() throws Exception {
+        // BladeWatch-pcfs: SetLightsRequest.on is optional so on=false must appear on the wire.
+        // A plain proto3 bool would be omitted (default-scalar omission), preventing the handler
+        // from distinguishing a disable from an absent field.
+        String j = json(SetLightsRequest.newBuilder().setAction("dayTimeLight").setOn(false).build());
+        assertField(j, "\"on\":false");
+        assertHasKey(j, "action");
+    }
+
+    @Test
+    public void setLights_enableDrl_emitsOnTrue() throws Exception {
+        String j = json(SetLightsRequest.newBuilder().setAction("dayTimeLight").setOn(true).build());
+        assertField(j, "\"on\":true");
+    }
+
+    @Test
+    public void setAdas_disableSlw_emitsOnFalse() throws Exception {
+        // BladeWatch-pcfs: SetAdasRequest.on is optional so on=false must appear on the wire.
+        String j = json(SetAdasRequest.newBuilder().setAction("speedLimitWarning").setOn(false).build());
+        assertField(j, "\"on\":false");
+        assertHasKey(j, "action");
+    }
+
+    @Test
+    public void setAdas_enableSlw_emitsOnTrue() throws Exception {
+        String j = json(SetAdasRequest.newBuilder().setAction("speedLimitWarning").setOn(true).build());
+        assertField(j, "\"on\":true");
+    }
+
+    @Test
+    public void moveWindow_zeroTargetPercent_emitsTargetPercent() throws Exception {
+        // BladeWatch-pcfs: MoveWindowRequest.target_percent is optional so 0% (fully closed
+        // preset) must appear on the wire. Without optional, target_percent=0 would be omitted
+        // and the handler would fall through to the direction code path instead of the
+        // closed-loop positioning path.
+        String j = json(MoveWindowRequest.newBuilder().setWindowIndex(1).setTargetPercent(0).build());
+        assertField(j, "\"targetPercent\":0");
     }
 }

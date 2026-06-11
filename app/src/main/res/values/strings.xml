@@ -843,4 +843,77 @@
         <item quantity="other">%1$d hr</item>
     </plurals>
 
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Trunk</string>
+    <string name="vehicle_tab_climate">Climate</string>
+    <string name="vehicle_tab_seats">Seats</string>
+    <string name="vehicle_tab_windows">Windows</string>
+    <string name="vehicle_tab_lights">Lights</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Charging</string>
+    <string name="vehicle_locked">Locked</string>
+    <string name="vehicle_unlocked">Unlocked</string>
+    <string name="vehicle_range_label">Range</string>
+    <string name="vehicle_data_unavailable">Vehicle data unavailable.</string>
+    <string name="vehicle_action_failed">Action failed. Check vehicle connection.</string>
+    <string name="vehicle_open_trunk">Open Trunk</string>
+    <string name="vehicle_close_trunk">Close Trunk</string>
+    <string name="vehicle_trunk_info_open">Opening the trunk will unlock the car first.</string>
+    <string name="vehicle_ac_on">AC On</string>
+    <string name="vehicle_ac_off">AC Off</string>
+    <string name="vehicle_max_cooling_on">Max Cooling: ON</string>
+    <string name="vehicle_max_cooling_off">Max Cooling: OFF</string>
+    <string name="vehicle_temp_label">Temperature</string>
+    <string name="vehicle_fan_speed_label">Fan Speed</string>
+    <string name="vehicle_fan_level">Level %1$d</string>
+    <string name="vehicle_inside_temp_fmt">Inside: %1$.1f°C</string>
+    <string name="vehicle_seat_driver">Driver</string>
+    <string name="vehicle_seat_passenger">Passenger</string>
+    <string name="vehicle_seat_no_controls">No seat controls available for this vehicle.</string>
+    <string name="vehicle_seat_heat_label">Heat %1$s</string>
+    <string name="vehicle_seat_cool_label">Cool %1$s</string>
+    <string name="vehicle_heat_off">(Off)</string>
+    <string name="vehicle_heat_low">(Low)</string>
+    <string name="vehicle_heat_high">(High)</string>
+    <string name="vehicle_seat_pos_1">Pos 1</string>
+    <string name="vehicle_seat_pos_2">Pos 2</string>
+    <string name="vehicle_all_windows">All Windows</string>
+    <string name="vehicle_window_front_left">Front Left</string>
+    <string name="vehicle_window_front_right">Front Right</string>
+    <string name="vehicle_window_rear_left">Rear Left</string>
+    <string name="vehicle_window_rear_right">Rear Right</string>
+    <string name="vehicle_window_close">Close</string>
+    <string name="vehicle_window_close_vent">Close Vent</string>
+    <string name="vehicle_window_vent_12">Vent 12%%</string>
+    <string name="vehicle_window_open_all">Open All</string>
+    <string name="vehicle_sunroof">Sunroof</string>
+    <string name="vehicle_sunshade">Sunshade</string>
+    <string name="vehicle_btn_drl_title">Daytime running lights</string>
+    <string name="vehicle_btn_slw_title">Speed limit warning</string>
+    <string name="vehicle_control_section_charge_cap">Charge limit</string>
+    <string name="vehicle_charge_cap_not_supported">Charge cap is not supported by this vehicle.</string>
+    <string name="vehicle_charge_limit_label">Charge Limit</string>
+    <string name="vehicle_enable_charge_limit">Enable Charge Limit</string>
+    <string name="vehicle_charge_limit_range">Minimum 50%%, maximum 100%%</string>
+    <string name="vehicle_tyre_no_signal">NO SIGNAL</string>
+    <string name="vehicle_tyre_slow_leak">SLOW LEAK</string>
+    <string name="vehicle_tyre_fast_leak">FAST LEAK</string>
+    <string name="vehicle_tyre_low">LOW</string>
+    <string name="vehicle_tyre_high">HIGH</string>
+    <string name="vehicle_tyre_ok">OK</string>
+    <string name="vehicle_tyre_check_pressure">Check pressure</string>
+    <string name="vehicle_toggle_on">ON</string>
+    <string name="vehicle_toggle_off">OFF</string>
+    <string name="vehicle_err_climate_control">Climate control failed.</string>
+    <string name="vehicle_err_max_cooling">Max cooling failed.</string>
+    <string name="vehicle_err_drl_control">DRL control failed.</string>
+    <string name="vehicle_err_slw_control">ADAS control failed.</string>
+    <string name="vehicle_err_charge_limit_toggle">Charge limit toggle failed.</string>
+<!-- END GENERATED vehicle-view i18n -->
+    <!-- Accessibility labels for vehicle controls (English-only; no web i18n equivalents) -->
+    <string name="vehicle_a11y_decrease_fmt">Decrease %1$s</string>
+    <string name="vehicle_a11y_increase_fmt">Increase %1$s</string>
+    <!-- Stale-state banner shown while cached state is displayed before live poll -->
+    <string name="vehicle_stale_connecting">Connecting…</string>
 </resources>

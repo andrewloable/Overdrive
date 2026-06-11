@@ -1,7 +1,6 @@
 package net.bladewatch.app.ui.fragment.surveillance
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -13,8 +12,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
-import net.bladewatch.app.ui.util.PreferencesManager
+import android.widget.Toast
+import net.bladewatch.app.ui.common.BladeTheme
 import org.osmdroid.config.Configuration as OsmConfig
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -25,6 +24,7 @@ class SurveillanceSettingsController(private val context: Context) {
 
     private val root = FrameLayout(context)
     private val client = SurveillanceSettingsClient()
+    private val theme = BladeTheme(context)
 
     private var activeTab = SurveillanceSettingsTab.GENERAL
     private lateinit var contentArea: LinearLayout
@@ -786,30 +786,27 @@ class SurveillanceSettingsController(private val context: Context) {
                 cameraRear = editCameraRear, cameraLeft = editCameraLeft,
                 deterrentAction = editDeterrent, deterrentCooldownSeconds = editDeterrentCooldown,
             )
-            when (activeTab) {
+            val result = when (activeTab) {
                 SurveillanceSettingsTab.STORAGE -> client.saveStorage(editStorageType, editStorageLimitMb)
                 else -> client.saveConfig(updated)
             }
-            root.post { loadData() }
+            root.post {
+                if (!result.ok) {
+                    val msg = result.error?.takeIf { it.isNotEmpty() } ?: "Save failed"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+                loadData()
+            }
         }, "SurvSettingsSave").apply { isDaemon = true; start() }
     }
 
     // ─────────────────────────── HELPERS ─────────────────────────────────
 
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
-    }
-
-    private fun bgColor() = if (isDark()) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
-    private fun surfaceColor() = if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE
-    private fun accentColor() = Color.parseColor("#4CAF50")
-    private fun inactivePillColor() = if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")
+    private fun isDark()            = theme.isDark()
+    private fun bgColor()           = theme.bgColor()
+    private fun surfaceColor()      = theme.surfaceColor()
+    private fun accentColor()       = theme.accentColor()
+    private fun inactivePillColor() = theme.pillBgColor()
     private fun mutedTextColor() = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
 
     private fun pill(color: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat() }

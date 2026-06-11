@@ -186,6 +186,11 @@ message VehicleCommandResponse {
   bool success = 1;
   string message = 2;
   string error = 3;
+  // Routing outcome from the server (e.g. "success", "not_supported", "failed").
+  // The REST handler already emits this key via routedResponse().
+  string outcome = 4;
+  // The routing path taken (e.g. "sdk_only", "cloud_only"). Emitted by routedResponse().
+  string path = 5;
 }
 
 message LockRequest {}
@@ -199,12 +204,14 @@ message TrunkRequest {
 }
 
 message MoveWindowRequest {
-  // Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+  // Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
   int32 window_index = 1;
   // Direction: "open" or "close".
   string direction = 2;
-  // Optional percent target 0-100.
-  int32 target_percent = 3;
+  // Explicit presence: 0% (fully closed preset) is a default scalar and would
+  // be omitted from JSON without optional, routing the request to the direction
+  // path instead of the closed-loop positioning path.
+  optional int32 target_percent = 3;
 }
 
 message SetClimateRequest {
@@ -234,16 +241,25 @@ message SetSeatRequest {
 
 message SetLightsRequest {
   string action = 1;
-  bool on = 2;
+  // Explicit presence: a pure disable request sets on=false, which a plain
+  // proto3 bool would omit from the JSON wire (default-scalar omission), so
+  // the handler would never see the boolean. optional forces it onto the wire.
+  optional bool on = 2;
 }
 
 message SetAdasRequest {
   string action = 1;
-  bool on = 2;
+  // Explicit presence: a pure disable request sets on=false, which a plain
+  // proto3 bool would omit from the JSON wire (default-scalar omission), so
+  // the handler would never see the boolean. optional forces it onto the wire.
+  optional bool on = 2;
 }
 
 message SetBatteryHeatRequest {
-  bool on = 1;
+  // Explicit presence: a pure disable request sets on=false, which a plain
+  // proto3 bool would omit from the JSON wire (default-scalar omission), so
+  // the handler would never see the boolean. optional forces it onto the wire.
+  optional bool on = 1;
 }
 
 message GetChargingScheduleRequest {}
@@ -266,7 +282,11 @@ message SetChargingScheduleRequest {
   string start_charge_time = 1;
   string end_charge_time = 2;
   int32 charge_way = 3;
-  bool enabled = 4;
+  // Explicit presence: a pure "disable only" request sets enabled=false,
+  // which a plain proto3 bool would omit from the JSON wire (default-scalar
+  // omission), causing the handler's has("enabled") check to fail. optional
+  // forces it onto the wire.
+  optional bool enabled = 4;
 }
 
 message GetChargeCapRequest {}

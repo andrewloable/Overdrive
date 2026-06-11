@@ -49,11 +49,12 @@ private static final long serialVersionUID = 0L;
             net.bladewatch.app.grpc.v1.MoveWindowRequest.class, net.bladewatch.app.grpc.v1.MoveWindowRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int WINDOW_INDEX_FIELD_NUMBER = 1;
   private int windowIndex_ = 0;
   /**
    * <pre>
-   * Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+   * Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
    * </pre>
    *
    * <code>int32 window_index = 1 [json_name = "windowIndex"];</code>
@@ -115,10 +116,26 @@ private static final long serialVersionUID = 0L;
   private int targetPercent_ = 0;
   /**
    * <pre>
-   * Optional percent target 0-100.
+   * Explicit presence: 0% (fully closed preset) is a default scalar and would
+   * be omitted from JSON without optional, routing the request to the direction
+   * path instead of the closed-loop positioning path.
    * </pre>
    *
-   * <code>int32 target_percent = 3 [json_name = "targetPercent"];</code>
+   * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
+   * @return Whether the targetPercent field is set.
+   */
+  @java.lang.Override
+  public boolean hasTargetPercent() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Explicit presence: 0% (fully closed preset) is a default scalar and would
+   * be omitted from JSON without optional, routing the request to the direction
+   * path instead of the closed-loop positioning path.
+   * </pre>
+   *
+   * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
    * @return The targetPercent.
    */
   @java.lang.Override
@@ -146,7 +163,7 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(direction_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, direction_);
     }
-    if (targetPercent_ != 0) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       output.writeInt32(3, targetPercent_);
     }
     getUnknownFields().writeTo(output);
@@ -160,7 +177,7 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(direction_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, direction_);
     }
-    if (targetPercent_ != 0) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(3, targetPercent_);
     }
@@ -192,8 +209,11 @@ private static final long serialVersionUID = 0L;
         != other.getWindowIndex()) return false;
     if (!getDirection()
         .equals(other.getDirection())) return false;
-    if (getTargetPercent()
-        != other.getTargetPercent()) return false;
+    if (hasTargetPercent() != other.hasTargetPercent()) return false;
+    if (hasTargetPercent()) {
+      if (getTargetPercent()
+          != other.getTargetPercent()) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -209,8 +229,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getWindowIndex();
     hash = (37 * hash) + DIRECTION_FIELD_NUMBER;
     hash = (53 * hash) + getDirection().hashCode();
-    hash = (37 * hash) + TARGET_PERCENT_FIELD_NUMBER;
-    hash = (53 * hash) + getTargetPercent();
+    if (hasTargetPercent()) {
+      hash = (37 * hash) + TARGET_PERCENT_FIELD_NUMBER;
+      hash = (53 * hash) + getTargetPercent();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -384,9 +406,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.direction_ = direction_;
       }
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.targetPercent_ = targetPercent_;
+        to_bitField0_ |= 0x00000001;
       }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -409,7 +434,7 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000002;
         onChanged();
       }
-      if (other.getTargetPercent() != 0) {
+      if (other.hasTargetPercent()) {
         setTargetPercent(other.getTargetPercent());
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -473,7 +498,7 @@ private static final long serialVersionUID = 0L;
     private int windowIndex_ ;
     /**
      * <pre>
-     * Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+     * Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
      * </pre>
      *
      * <code>int32 window_index = 1 [json_name = "windowIndex"];</code>
@@ -485,7 +510,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+     * Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
      * </pre>
      *
      * <code>int32 window_index = 1 [json_name = "windowIndex"];</code>
@@ -501,7 +526,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Window index: 0=LF, 1=RF, 2=LR, 3=RR, 4=sunroof, 5=sunshade.
+     * Window index: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
      * </pre>
      *
      * <code>int32 window_index = 1 [json_name = "windowIndex"];</code>
@@ -609,10 +634,26 @@ private static final long serialVersionUID = 0L;
     private int targetPercent_ ;
     /**
      * <pre>
-     * Optional percent target 0-100.
+     * Explicit presence: 0% (fully closed preset) is a default scalar and would
+     * be omitted from JSON without optional, routing the request to the direction
+     * path instead of the closed-loop positioning path.
      * </pre>
      *
-     * <code>int32 target_percent = 3 [json_name = "targetPercent"];</code>
+     * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
+     * @return Whether the targetPercent field is set.
+     */
+    @java.lang.Override
+    public boolean hasTargetPercent() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <pre>
+     * Explicit presence: 0% (fully closed preset) is a default scalar and would
+     * be omitted from JSON without optional, routing the request to the direction
+     * path instead of the closed-loop positioning path.
+     * </pre>
+     *
+     * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
      * @return The targetPercent.
      */
     @java.lang.Override
@@ -621,10 +662,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Optional percent target 0-100.
+     * Explicit presence: 0% (fully closed preset) is a default scalar and would
+     * be omitted from JSON without optional, routing the request to the direction
+     * path instead of the closed-loop positioning path.
      * </pre>
      *
-     * <code>int32 target_percent = 3 [json_name = "targetPercent"];</code>
+     * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
      * @param value The targetPercent to set.
      * @return This builder for chaining.
      */
@@ -637,10 +680,12 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Optional percent target 0-100.
+     * Explicit presence: 0% (fully closed preset) is a default scalar and would
+     * be omitted from JSON without optional, routing the request to the direction
+     * path instead of the closed-loop positioning path.
      * </pre>
      *
-     * <code>int32 target_percent = 3 [json_name = "targetPercent"];</code>
+     * <code>optional int32 target_percent = 3 [json_name = "targetPercent"];</code>
      * @return This builder for chaining.
      */
     public Builder clearTargetPercent() {

@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Trunk</string>
+    <string name="vehicle_tab_climate">Klima</string>
+    <string name="vehicle_tab_seats">Sitzplätze</string>
+    <string name="vehicle_tab_lights">Lichter</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Aufladung</string>
+    <string name="vehicle_locked">Verriegelt .</string>
+    <string name="vehicle_unlocked">Unverschlossen</string>
+    <string name="vehicle_close_trunk">Schließbarer Kofferraum</string>
+    <string name="vehicle_ac_on">AC Auf</string>
+    <string name="vehicle_ac_off">AC Ausgeschaltet</string>
+    <string name="vehicle_seat_pos_1">Position 1</string>
+    <string name="vehicle_seat_pos_2">Position 2</string>
+    <string name="vehicle_all_windows">Alle Fenster</string>
+    <string name="vehicle_sunroof">Sonnendach</string>
+    <string name="vehicle_sunshade">Sonnenschutz</string>
+    <string name="vehicle_btn_drl_title">Tageslich laufende Lichter</string>
+    <string name="vehicle_btn_slw_title">Geschwindigkeitsbegrenzungswarnung</string>
+    <string name="vehicle_control_section_charge_cap">Ladelimit</string>
+    <string name="vehicle_tyre_no_signal">Kein Signal</string>
+    <string name="vehicle_tyre_slow_leak">Langsames Leck</string>
+    <string name="vehicle_tyre_fast_leak">Schnelle Auslieferung</string>
+    <string name="vehicle_tyre_low">Niedrig</string>
+    <string name="vehicle_tyre_high">HIGH</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

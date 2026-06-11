@@ -1,13 +1,11 @@
 package net.bladewatch.app.ui.fragment.vehicle
 
+import android.util.Log
 import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.client.ConnectClientProvider
-import net.bladewatch.app.grpc.v1.FindCarRequest
-import net.bladewatch.app.grpc.v1.FlashRequest
 import net.bladewatch.app.grpc.v1.GetChargeCapRequest
 import net.bladewatch.app.grpc.v1.GetVehicleStateRequest
-import net.bladewatch.app.grpc.v1.LockRequest
 import net.bladewatch.app.grpc.v1.VehicleCommandResponse
 import net.bladewatch.app.grpc.v1.MoveWindowRequest
 import net.bladewatch.app.grpc.v1.SetAdasRequest
@@ -16,7 +14,6 @@ import net.bladewatch.app.grpc.v1.SetClimateRequest
 import net.bladewatch.app.grpc.v1.SetLightsRequest
 import net.bladewatch.app.grpc.v1.SetSeatRequest
 import net.bladewatch.app.grpc.v1.TrunkRequest
-import net.bladewatch.app.grpc.v1.UnlockRequest
 
 class VehicleClient {
 
@@ -66,8 +63,15 @@ class VehicleClient {
             fanLevel = m.climate.fanLevel.coerceIn(1, 7),
             maxCooling = m.climate.maxCooling,
         )
+        val tyres = TyreSetInfo(
+            fl = mapTyre(m.tyres.fl),
+            fr = mapTyre(m.tyres.fr),
+            rl = mapTyre(m.tyres.rl),
+            rr = mapTyre(m.tyres.rr),
+        )
         VehicleState(doors = doors, windows = windows, capabilities = caps,
-            battery = battery, lights = lights, adas = adas, seats = seats, climate = climate)
+            battery = battery, lights = lights, adas = adas, seats = seats, climate = climate,
+            tyres = tyres)
     }
 
     fun fetchChargeCap(): ChargingCapInfo? = runBlocking {
@@ -75,59 +79,59 @@ class VehicleClient {
             GetChargeCapRequest.newBuilder().build(), emptyMap()
         )
         if (resp !is ResponseMessage.Success || !resp.message.success) return@runBlocking null
-        val m = resp.message
-        ChargingCapInfo(
-            enabled = m.enabled,
-            percent = m.percent.coerceIn(50, 100),
-            supported = m.supported,
+        mapChargeCap(resp.message)
+    }
+
+    companion object {
+        internal fun mapTyre(t: net.bladewatch.app.grpc.v1.TyrePressure): TyreInfo = TyreInfo(
+            psi = t.psi.takeIf { it != 0.0 },
+            kPa = t.kPa.takeIf { it != 0 },
+            temperatureC = t.tempC.takeIf { it != 0 },
+            pressureState = t.pressureState,
+            airLeakState = t.leakState,
+            signalState = t.signalState,
         )
-    }
 
-    // ─── Security ────────────────────────────────────────────────────────────
+        internal fun mapCommandResult(m: net.bladewatch.app.grpc.v1.VehicleCommandResponse): VehicleCommandResult = VehicleCommandResult(
+            ok = m.success,
+            outcome = m.outcome.takeIf { it.isNotBlank() },
+            message = m.message.takeIf { it.isNotBlank() },
+        )
 
-    fun lock(): Boolean = vehicleCommand {
-        vehicleService().lock(LockRequest.newBuilder().build(), emptyMap())
-    }
-
-    fun unlock(): Boolean = vehicleCommand {
-        vehicleService().unlock(UnlockRequest.newBuilder().build(), emptyMap())
-    }
-
-    fun flashLights(): Boolean = vehicleCommand {
-        vehicleService().flash(FlashRequest.newBuilder().build(), emptyMap())
-    }
-
-    fun findCar(): Boolean = vehicleCommand {
-        vehicleService().findCar(FindCarRequest.newBuilder().build(), emptyMap())
+        internal fun mapChargeCap(m: net.bladewatch.app.grpc.v1.GetChargeCapResponse): ChargingCapInfo = ChargingCapInfo(
+            enabled = if (m.hasEnabled()) m.enabled else null,
+            percent = if (m.hasPercent()) m.percent.coerceIn(50, 100) else null,
+            supported = if (m.hasSupported()) m.supported else null,
+        )
     }
 
     // ─── Trunk ───────────────────────────────────────────────────────────────
 
-    fun trunkOpen(): Boolean = vehicleCommand {
+    fun trunkOpen(): VehicleCommandResult = vehicleCommand("trunk_open") {
         vehicleService().trunk(TrunkRequest.newBuilder().setAction("open").build(), emptyMap())
     }
 
-    fun trunkClose(): Boolean = vehicleCommand {
+    fun trunkClose(): VehicleCommandResult = vehicleCommand("trunk_close") {
         vehicleService().trunk(TrunkRequest.newBuilder().setAction("close").build(), emptyMap())
     }
 
     // ─── Climate ─────────────────────────────────────────────────────────────
 
-    fun climateOn(currentTemp: Int): Boolean = vehicleCommand {
+    fun climateOn(currentTemp: Int): VehicleCommandResult = vehicleCommand("climate_on") {
         vehicleService().setClimate(
             SetClimateRequest.newBuilder().setAction("power_on").setOn(true).setSetpointC(currentTemp.toDouble()).build(),
             emptyMap()
         )
     }
 
-    fun climateOff(): Boolean = vehicleCommand {
+    fun climateOff(): VehicleCommandResult = vehicleCommand("climate_off") {
         vehicleService().setClimate(
             SetClimateRequest.newBuilder().setAction("power_off").setOn(false).build(),
             emptyMap()
         )
     }
 
-    fun climateSetTemp(temp: Int): Boolean = vehicleCommand {
+    fun climateSetTemp(temp: Int): VehicleCommandResult = vehicleCommand("climate_temp") {
         val clamped = temp.coerceIn(17, 33)
         vehicleService().setClimate(
             SetClimateRequest.newBuilder().setAction("set_temp").setSetpointC(clamped.toDouble()).build(),
@@ -135,7 +139,7 @@ class VehicleClient {
         )
     }
 
-    fun climateSetFan(fan: Int): Boolean = vehicleCommand {
+    fun climateSetFan(fan: Int): VehicleCommandResult = vehicleCommand("climate_fan") {
         val clamped = fan.coerceIn(1, 7)
         vehicleService().setClimate(
             SetClimateRequest.newBuilder().setAction("set_fan").setFanLevel(clamped).build(),
@@ -143,7 +147,7 @@ class VehicleClient {
         )
     }
 
-    fun climateMaxCooling(enable: Boolean, restoreAcOn: Boolean, restoreTemp: Int, restoreFan: Int): Boolean = vehicleCommand {
+    fun climateMaxCooling(enable: Boolean, restoreAcOn: Boolean, restoreTemp: Int, restoreFan: Int): VehicleCommandResult = vehicleCommand("climate_max_cool") {
         vehicleService().setClimate(
             SetClimateRequest.newBuilder()
                 .setAction("max_cooling")
@@ -160,7 +164,7 @@ class VehicleClient {
 
     fun seatSetHeat(position: Int, newLevel: Int,
                     driverHeat: Int, driverVent: Int,
-                    passengerHeat: Int, passengerVent: Int): Boolean = vehicleCommand {
+                    passengerHeat: Int, passengerVent: Int): VehicleCommandResult = vehicleCommand("seat_heat_$position") {
         vehicleService().setSeat(
             SetSeatRequest.newBuilder()
                 .setSeatIndex(position)
@@ -177,7 +181,7 @@ class VehicleClient {
 
     fun seatSetCool(position: Int, newLevel: Int,
                     driverHeat: Int, driverVent: Int,
-                    passengerHeat: Int, passengerVent: Int): Boolean = vehicleCommand {
+                    passengerHeat: Int, passengerVent: Int): VehicleCommandResult = vehicleCommand("seat_cool_$position") {
         vehicleService().setSeat(
             SetSeatRequest.newBuilder()
                 .setSeatIndex(position)
@@ -192,7 +196,7 @@ class VehicleClient {
         )
     }
 
-    fun seatRecallPosition(position: Int): Boolean = vehicleCommand {
+    fun seatRecallPosition(position: Int): VehicleCommandResult = vehicleCommand("seat_pos_$position") {
         vehicleService().setSeat(
             SetSeatRequest.newBuilder()
                 .setSeatIndex(position)
@@ -204,7 +208,7 @@ class VehicleClient {
 
     // ─── Windows ─────────────────────────────────────────────────────────────
 
-    fun windowSetPercent(area: Int, targetPercent: Int): Boolean = vehicleCommand {
+    fun windowSetPercent(area: Int, targetPercent: Int): VehicleCommandResult = vehicleCommand("win_${area}_$targetPercent") {
         vehicleService().moveWindow(
             MoveWindowRequest.newBuilder()
                 .setWindowIndex(area)
@@ -214,21 +218,21 @@ class VehicleClient {
         )
     }
 
-    fun windowsAllOpen(): Boolean = vehicleCommand {
+    fun windowsAllOpen(): VehicleCommandResult = vehicleCommand("win_all_open") {
         vehicleService().moveWindow(
             MoveWindowRequest.newBuilder().setWindowIndex(0).setDirection("open").build(),
             emptyMap()
         )
     }
 
-    fun windowsAllClose(): Boolean = vehicleCommand {
+    fun windowsAllClose(): VehicleCommandResult = vehicleCommand("win_all_close") {
         vehicleService().moveWindow(
             MoveWindowRequest.newBuilder().setWindowIndex(0).setDirection("close").build(),
             emptyMap()
         )
     }
 
-    fun windowsAllVent(targetPercent: Int): Boolean = vehicleCommand {
+    fun windowsAllVent(targetPercent: Int): VehicleCommandResult = vehicleCommand("win_vent") {
         vehicleService().moveWindow(
             MoveWindowRequest.newBuilder().setWindowIndex(0).setTargetPercent(targetPercent).build(),
             emptyMap()
@@ -237,7 +241,7 @@ class VehicleClient {
 
     // ─── Lights ──────────────────────────────────────────────────────────────
 
-    fun setDrl(enable: Boolean): Boolean = vehicleCommand {
+    fun setDrl(enable: Boolean): VehicleCommandResult = vehicleCommand("drl") {
         vehicleService().setLights(
             SetLightsRequest.newBuilder().setAction("dayTimeLight").setOn(enable).build(),
             emptyMap()
@@ -246,7 +250,7 @@ class VehicleClient {
 
     // ─── ADAS ─────────────────────────────────────────────────────────────────
 
-    fun setSpeedLimitWarning(enable: Boolean): Boolean = vehicleCommand {
+    fun setSpeedLimitWarning(enable: Boolean): VehicleCommandResult = vehicleCommand("slw") {
         vehicleService().setAdas(
             SetAdasRequest.newBuilder().setAction("speedLimitWarning").setOn(enable).build(),
             emptyMap()
@@ -255,14 +259,14 @@ class VehicleClient {
 
     // ─── Charging ────────────────────────────────────────────────────────────
 
-    fun setChargeCapEnabled(enabled: Boolean): Boolean = vehicleCommand {
+    fun setChargeCapEnabled(enabled: Boolean): VehicleCommandResult = vehicleCommand("cap_toggle") {
         vehicleService().setChargeCap(
             SetChargeCapRequest.newBuilder().setEnabled(enabled).build(),
             emptyMap()
         )
     }
 
-    fun setChargeCapPercent(percent: Int): Boolean = vehicleCommand {
+    fun setChargeCapPercent(percent: Int): VehicleCommandResult = vehicleCommand("cap_pct") {
         vehicleService().setChargeCap(
             SetChargeCapRequest.newBuilder().setPercent(percent.coerceIn(50, 100)).build(),
             emptyMap()
@@ -271,12 +275,14 @@ class VehicleClient {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private fun vehicleCommand(block: suspend ConnectClientProvider.() -> ResponseMessage<VehicleCommandResponse>): Boolean = runBlocking {
+    private fun vehicleCommand(action: String, block: suspend ConnectClientProvider.() -> ResponseMessage<VehicleCommandResponse>): VehicleCommandResult = runBlocking {
         try {
             val resp = ConnectClientProvider.block()
-            resp is ResponseMessage.Success && resp.message.success
-        } catch (_: Exception) {
-            false
+            if (resp is ResponseMessage.Success) mapCommandResult(resp.message)
+            else VehicleCommandResult(ok = false, outcome = null, message = null)
+        } catch (e: Exception) {
+            Log.w("BladeWatch", "vehicleCommand($action): ${e.javaClass.simpleName}: ${e.message}")
+            VehicleCommandResult(ok = false, outcome = null, message = null)
         }
     }
 

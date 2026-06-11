@@ -155,21 +155,58 @@ Handled by `AudioTestApiHandler`:
 
 ## Vehicle Control
 
-Handled by `VehicleControlApiHandler`:
+Handled by `VehicleControlApiHandler`.
 
-- `GET /api/vehicle/state`.
-- `GET /api/vehicle/ac-diagnostics`.
-- `GET /api/vehicle/seat-diagnostics`.
-- `POST /api/vehicle/trunk`.
-- `POST /api/vehicle/window`.
-- `POST /api/vehicle/climate`.
-- `POST /api/vehicle/seat`.
-- `POST /api/vehicle/lights`.
-- `POST /api/vehicle/adas`.
-- `GET /api/vehicle/charge-cap`.
-- `POST /api/vehicle/charge-cap`.
+### Endpoints
 
-The following endpoints existed previously but are no longer supported. They return `NOT_SUPPORTED` or have been removed:
+- `GET /api/vehicle/state` — returns current door/window/trunk/lock/battery/climate/tyre/seats/lights/ADAS state.
+- `GET /api/vehicle/ac-diagnostics` — read-only AC SDK method probe.
+- `GET /api/vehicle/seat-diagnostics` — read-only seat hardware capability probe.
+- `POST /api/vehicle/trunk` — body `{ "action": "open" | "close" | "stop" }`.
+- `POST /api/vehicle/window` — see window variants below.
+- `POST /api/vehicle/climate` — body `{ "action": "power_on"|"power_off"|"set_temp"|"set_fan"|"max_cooling", ... }`.
+- `POST /api/vehicle/seat` — body `{ "action": "heating"|"ventilation"|"position", "position": 1–4, "level": 0–3, ... }`.
+- `POST /api/vehicle/lights` — body `{ "action": "dayTimeLight", "on": bool }` (ConnectRPC) or `{ "target": "dayTimeLight", "enable": bool }` (legacy REST). The boolean key is required; omitting both `on` and `enable` returns an error.
+- `POST /api/vehicle/adas` — body `{ "action": "speedLimitWarning", "on": bool }` (ConnectRPC) or `{ "target": "speedLimitWarning", "enable": bool }` (legacy REST). The boolean key is required; omitting both `on` and `enable` returns an error.
+- `GET /api/vehicle/charge-cap` — returns `{ success, percent, enabled, supported }`. `supported` is `null` until the first write-read-back probe; the UI shows optimistically until then.
+- `POST /api/vehicle/charge-cap` — body `{ "percent"?: 50–100, "enabled"?: bool }`. At least one field must be present; when both are present the toggle runs first.
+
+### Window endpoint variants
+
+`POST /api/vehicle/window` accepts two request forms:
+
+1. **Command form** — `{ "area": 0–6, "command": 1=open | 2=close | 3=stop }`. `area=0` + `command=2` routes through `CloseAllWindowsCommand` (CLOUD_FIRST). All other combinations are SDK_ONLY.
+2. **Target-percent form** — `{ "area": 0–6, "targetPercent": 0–100 }`. SDK closed-loop positioning. `area` must be 0–6; omitting it returns an error.
+
+Area mapping: 0=all, 1=LF, 2=RF, 3=LR, 4=RR, 5=sunroof, 6=sunshade.
+
+### VehicleCommandResponse shape
+
+All write endpoints return the `routedResponse` shape built by `VehicleControlApiHandler.routedResponse`:
+
+```json
+{
+  "success": true,
+  "commandSuccess": true,
+  "path": "local",
+  "latencyMs": 312,
+  "message": "Done",
+  "outcome": "success",
+  "action": "power_on"
+}
+```
+
+- `success` / `commandSuccess` — both true on `SUCCESS`; `commandSuccess` is included for legacy UI branches.
+- `path` — one of `"cloud"`, `"local"`, `"cloud-then-local"`, `"none"`.
+- `outcome` — lowercase `CommandResult.Outcome` name: `"success"`, `"not_supported"`, `"error"`, etc.
+- `message` — localized user-facing string.
+- `error` — present when `success` is false; the exception message or display message.
+
+Additional action-specific fields (e.g. `area`, `target`, `enable`, `percent`) are echoed in the response alongside the above keys.
+
+### Removed or unsupported endpoints
+
+The following endpoints existed previously but are no longer supported:
 
 - `GET /api/vehicle/cloud-status` — removed (required BYD cloud).
 - `GET /api/vehicle/cloud-lock` — removed (required BYD cloud MQTT lock source).
@@ -178,7 +215,7 @@ The following endpoints existed previously but are no longer supported. They ret
 - `POST /api/vehicle/flash` — not supported (cloud-only action).
 - `POST /api/vehicle/find-car` — not supported (cloud-only action).
 - `POST /api/vehicle/battery-heat` — not supported (cloud-only action).
-- `GET /api/vehicle/charging-schedule` — not supported (cloud-only action).
+- `GET /api/vehicle/charging-schedule` — returns `{ success: true, supported: false, reason: "cloud_not_configured" }`.
 - `POST /api/vehicle/charging-schedule` — not supported (cloud-only action).
 
 All supported vehicle actions use local SDK paths only.

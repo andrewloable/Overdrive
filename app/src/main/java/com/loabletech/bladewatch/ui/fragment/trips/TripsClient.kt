@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.trips
 import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.ui.common.SaveResult
 import net.bladewatch.app.grpc.v1.GetConfigRequest
 import net.bladewatch.app.grpc.v1.GetDnaRequest
 import net.bladewatch.app.grpc.v1.GetRangeRequest
@@ -160,7 +161,7 @@ internal class TripsClient {
         )
     }
 
-    fun saveConfig(enabled: Boolean, rate: Double, currency: String, distanceUnit: String): Boolean = runBlocking {
+    fun saveConfig(enabled: Boolean, rate: Double, currency: String, distanceUnit: String): SaveResult = runBlocking {
         val req = SetConfigRequest.newBuilder()
             .setEnabled(enabled)
             .setHasEnabled(true)
@@ -169,8 +170,13 @@ internal class TripsClient {
             .setCurrency(currency)
             .setDistanceUnit(distanceUnit)
             .build()
-        val resp = ConnectClientProvider.tripsService().setConfig(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.tripsService().setConfig(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
     fun fetchStorage(): TripsStorage? = runBlocking {
@@ -189,14 +195,19 @@ internal class TripsClient {
         )
     }
 
-    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+    fun saveStorage(storageType: String, limitMb: Long): SaveResult = runBlocking {
         val req = SetStorageRequest.newBuilder()
             .setStorageType(storageType)
             .setStorageLimitMb(limitMb)
             .setHasStorageLimitMb(true)
             .build()
-        val resp = ConnectClientProvider.tripsService().setStorage(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.tripsService().setStorage(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
     fun syncDatabase(): TripSyncResult = runBlocking {

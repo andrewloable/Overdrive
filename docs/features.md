@@ -96,6 +96,7 @@ The Android UI provides:
 - Settings.
 - Video playback.
 - WebView-hosted web pages.
+- Native vehicle view (7-tab layout with tyre pressure hero overlay).
 
 ## BYD Local Telemetry
 
@@ -128,9 +129,32 @@ The collector isolates failures by device type so one unavailable BYD API does n
 
 ## Local Vehicle Control
 
-Vehicle control uses the local BYD SDK through `VehicleCommandRouter`. There is no cloud control path.
+The Android app includes a native vehicle view implemented in `VehicleController` / `VehiclePanels`. It is a 7-tab layout built entirely from programmatic Android views (no XML inflation):
 
-Local SDK controls include:
+- **Trunk** — open/close, status indicator.
+- **Climate** — AC on/off, max cooling toggle, temperature and fan speed.
+- **Seats** — heat and ventilation level for driver/passenger; memory-recall positions where supported.
+- **Windows** — per-window open/close/vent controls (LF, RF, LR, RR) and sunroof/sunshade where present.
+- **Lights** — DRL toggle, speed-limit warning (ADAS).
+- **ADAS** — speed limit warning toggle (shared entry point with Lights tab).
+- **Charging** — charge cap percent and enable/disable.
+
+The hero region above the tabs shows a tyre pressure overlay: a car silhouette with per-corner cards (FL/FR/RL/RR) colour-coded by pressure tier (NORMAL/CAUTION/WARN/ALERT/MUTED). Alert cards distinguish fast vs slow air-leak states.
+
+The 3D car model viewer is not yet implemented in the native view (pending).
+
+The native vehicle view supports 17 languages. String resources are generated from the web i18n JSON bundles by `tools/i18n/generate_vehicle_strings.py`. 25 keys are translated; the remaining 40 English-only strings fall back automatically.
+
+All write actions route through `VehicleCommandRouter`. The following actions are not available in the native view because there is no local SDK path. They remain visible in the web-based vehicle-control page when BYD cloud is configured:
+
+- Lock and unlock.
+- Flash lights.
+- Find car.
+- Battery heat.
+- Charging schedule.
+- Smart charging.
+
+Local SDK controls available in both native view and web UI:
 
 - Climate.
 - Windows.
@@ -140,15 +164,6 @@ Local SDK controls include:
 - ADAS.
 - Charge cap.
 - Diagnostics and state reads.
-
-The following actions are not supported because they required a cloud backend that has been removed:
-
-- Lock and unlock.
-- Flash lights.
-- Find car.
-- Battery heat.
-- Charging schedule.
-- Smart charging.
 
 ## Trips and Analytics
 

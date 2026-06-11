@@ -207,9 +207,9 @@ public class DaemonLogger {
                         break;
                 }
             } catch (RuntimeException ignored) {
-                Log.w(META_TAG, "Console log call failed: " + ignored.getMessage());
                 // Local JVM unit tests do not provide a real android.util.Log
                 // implementation. Keep file/stdout logging working and move on.
+                // Do NOT call Log.* here — that would throw again.
             }
         }
         

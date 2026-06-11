@@ -1,14 +1,16 @@
 package net.bladewatch.app.ui.fragment.vehicle
 
-enum class VehicleTab(val label: String) {
-    SECURITY("Security"),
-    TRUNK("Trunk"),
-    CLIMATE("Climate"),
-    SEATS("Seats"),
-    WINDOWS("Windows"),
-    LIGHTS("Lights"),
-    ADAS("ADAS"),
-    CHARGING("Charging"),
+import androidx.annotation.StringRes
+import net.bladewatch.app.R
+
+enum class VehicleTab(@StringRes val labelRes: Int) {
+    TRUNK(R.string.vehicle_tab_trunk),
+    CLIMATE(R.string.vehicle_tab_climate),
+    SEATS(R.string.vehicle_tab_seats),
+    WINDOWS(R.string.vehicle_tab_windows),
+    LIGHTS(R.string.vehicle_tab_lights),
+    ADAS(R.string.vehicle_tab_adas),
+    CHARGING(R.string.vehicle_control_charging_tab),
 }
 
 // Door lock: 1=locked, 2=unlocked, -1=unknown
@@ -61,10 +63,32 @@ data class ClimateInfo(
     val maxCooling: Boolean = false,
 )
 
+data class TyreInfo(
+    val psi: Double?,
+    val kPa: Int?,
+    val temperatureC: Int?,
+    val pressureState: Int = 0,
+    val airLeakState: Int = 0,
+    val signalState: Int = 0,
+)
+
+data class TyreSetInfo(
+    val fl: TyreInfo = TyreInfo(null, null, null),
+    val fr: TyreInfo = TyreInfo(null, null, null),
+    val rl: TyreInfo = TyreInfo(null, null, null),
+    val rr: TyreInfo = TyreInfo(null, null, null),
+)
+
+data class VehicleCommandResult(
+    val ok: Boolean,
+    val outcome: String?,
+    val message: String?,
+)
+
 data class ChargingCapInfo(
-    val enabled: Boolean = false,
-    val percent: Int = 80,
-    val supported: Boolean? = null,  // null = not yet probed
+    val enabled: Boolean? = null,   // null = not yet probed
+    val percent: Int? = null,       // null = not yet probed
+    val supported: Boolean? = null, // null = not yet probed
 )
 
 data class VehicleState(
@@ -77,4 +101,6 @@ data class VehicleState(
     val seats: SeatsInfo = SeatsInfo(),
     val climate: ClimateInfo = ClimateInfo(),
     val chargeCap: ChargingCapInfo = ChargingCapInfo(),
+    val tyres: TyreSetInfo = TyreSetInfo(),
+    val loaded: Boolean = false,
 )

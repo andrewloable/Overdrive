@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Treno</string>
+    <string name="vehicle_tab_climate">Il clima</string>
+    <string name="vehicle_tab_seats">Sedi</string>
+    <string name="vehicle_tab_lights">Luce</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Carga</string>
+    <string name="vehicle_locked">Chiuso</string>
+    <string name="vehicle_unlocked">Sbloccata</string>
+    <string name="vehicle_close_trunk">Caso chiuso</string>
+    <string name="vehicle_ac_on">AC Attivo</string>
+    <string name="vehicle_ac_off">AC Off</string>
+    <string name="vehicle_seat_pos_1">Posizione 1</string>
+    <string name="vehicle_seat_pos_2">Posizione 2</string>
+    <string name="vehicle_all_windows">Tutte le finestre</string>
+    <string name="vehicle_sunroof">Sulla copertura solare</string>
+    <string name="vehicle_sunshade">Ombrello solare</string>
+    <string name="vehicle_btn_drl_title">Luce di corsa diurne</string>
+    <string name="vehicle_btn_slw_title">Avviso di limite di velocità</string>
+    <string name="vehicle_control_section_charge_cap">Limite di carica</string>
+    <string name="vehicle_tyre_no_signal">Nessun segnale</string>
+    <string name="vehicle_tyre_slow_leak">RIPORTA RILEGATO</string>
+    <string name="vehicle_tyre_fast_leak">FAST LEAK</string>
+    <string name="vehicle_tyre_low">Sotto</string>
+    <string name="vehicle_tyre_high">Alti</string>
+    <string name="vehicle_tyre_ok">OK</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

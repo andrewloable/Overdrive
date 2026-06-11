@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">ट्रंक</string>
+    <string name="vehicle_tab_climate">जलवायु</string>
+    <string name="vehicle_tab_seats">सीटें</string>
+    <string name="vehicle_tab_lights">रोशनी</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">चार्जिंग</string>
+    <string name="vehicle_locked">बंद</string>
+    <string name="vehicle_unlocked">अनलॉक किया गया</string>
+    <string name="vehicle_close_trunk">बंद ट्रंक</string>
+    <string name="vehicle_ac_on">AC चालू</string>
+    <string name="vehicle_ac_off">AC बंद</string>
+    <string name="vehicle_seat_pos_1">पद 1</string>
+    <string name="vehicle_seat_pos_2">पद 2</string>
+    <string name="vehicle_all_windows">सभी खिड़कियाँ</string>
+    <string name="vehicle_sunroof">धूप की छत</string>
+    <string name="vehicle_sunshade">सनशेड</string>
+    <string name="vehicle_btn_drl_title">दिन के समय चलने वाली रोशनी</string>
+    <string name="vehicle_btn_slw_title">गति सीमा चेतावनी</string>
+    <string name="vehicle_control_section_charge_cap">चार्ज सीमा</string>
+    <string name="vehicle_tyre_no_signal">कोई संकेत नहीं</string>
+    <string name="vehicle_tyre_slow_leak">धीमी लीक</string>
+    <string name="vehicle_tyre_fast_leak">तेजी से रिसाव</string>
+    <string name="vehicle_tyre_low">कम</string>
+    <string name="vehicle_tyre_high">उच्च</string>
+    <string name="vehicle_tyre_ok">ठीक है</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

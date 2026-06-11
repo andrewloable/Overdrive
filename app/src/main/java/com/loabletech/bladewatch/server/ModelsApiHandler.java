@@ -105,9 +105,29 @@ public class ModelsApiHandler {
         HttpResponse.sendJson(out, response.toString());
     }
 
+    /**
+     * Returns true iff the color string matches a valid 6-digit CSS hex color (#RRGGBB).
+     * Pure function — safe to call in unit tests.
+     */
+    static boolean isValidColor(String color) {
+        return color != null && color.matches("^#[0-9A-Fa-f]{6}$");
+    }
+
+    /**
+     * Returns true iff {@code id} is present in the manifest's models array.
+     * Pure function — safe to call in unit tests.
+     *
+     * @param manifest a parsed manifest JSONObject (must not be null)
+     * @param id       the candidate model id
+     */
+    static boolean isValidModelId(JSONObject manifest, String id) {
+        if (manifest == null || id == null) return false;
+        return findModel(manifest, id) != null;
+    }
+
     private static void handleSetSelected(OutputStream out, String body) throws Exception {
         if (body == null || body.isEmpty()) {
-            HttpResponse.sendJsonError(out, Messages.get("errors.models_empty_body"));
+            HttpResponse.sendJsonBadRequest(out, Messages.get("errors.models_empty_body"));
             return;
         }
         JSONObject incoming;
@@ -115,29 +135,29 @@ public class ModelsApiHandler {
             incoming = (JSONObject) new JSONTokener(body).nextValue();
         } catch (Exception e) {
             logger.warn("Failed to parse incoming JSON body: " + e.getMessage());
-            HttpResponse.sendJsonError(out, Messages.get("errors.models_invalid_json"));
+            HttpResponse.sendJsonBadRequest(out, Messages.get("errors.models_invalid_json"));
             return;
         }
         JSONObject patch = new JSONObject();
         if (incoming.has("modelId")) {
             String id = incoming.optString("modelId");
             JSONObject manifest = readManifest();
-            if (manifest != null && findModel(manifest, id) == null) {
-                HttpResponse.sendJsonError(out, Messages.get("errors.models_unknown_id_with_id", id));
+            if (manifest != null && !isValidModelId(manifest, id)) {
+                HttpResponse.sendJsonBadRequest(out, Messages.get("errors.models_unknown_id_with_id", id));
                 return;
             }
             patch.put("modelId", id);
         }
         if (incoming.has("color")) {
             String color = incoming.optString("color", "");
-            if (!color.matches("^#[0-9A-Fa-f]{6}$")) {
-                HttpResponse.sendJsonError(out, Messages.get("errors.models_invalid_color"));
+            if (!isValidColor(color)) {
+                HttpResponse.sendJsonBadRequest(out, Messages.get("errors.models_invalid_color"));
                 return;
             }
             patch.put("color", color);
         }
         if (patch.length() == 0) {
-            HttpResponse.sendJsonError(out, Messages.get("errors.models_nothing_to_update"));
+            HttpResponse.sendJsonBadRequest(out, Messages.get("errors.models_nothing_to_update"));
             return;
         }
         boolean ok = UnifiedConfigManager.setVehicle(patch);

@@ -519,4 +519,32 @@
         <item quantity="one">%1$d hr</item>
         <item quantity="other">%1$d hr</item>
     </plurals>
+
+<!-- BEGIN GENERATED vehicle-view i18n — DO NOT EDIT MANUALLY -->
+    <string name="vehicle_tab_trunk">Трубопровод</string>
+    <string name="vehicle_tab_climate">Климат</string>
+    <string name="vehicle_tab_seats">Седалища</string>
+    <string name="vehicle_tab_lights">Светы</string>
+    <string name="vehicle_tab_adas">ADAS</string>
+    <string name="vehicle_control_charging_tab">Заряды</string>
+    <string name="vehicle_locked">Закрыто</string>
+    <string name="vehicle_unlocked">Открыто</string>
+    <string name="vehicle_close_trunk">Закрытый багажник</string>
+    <string name="vehicle_ac_on">AC Включен</string>
+    <string name="vehicle_ac_off">AC Выключено</string>
+    <string name="vehicle_seat_pos_1">Постановка 1</string>
+    <string name="vehicle_seat_pos_2">Постановка 2</string>
+    <string name="vehicle_all_windows">Все окна</string>
+    <string name="vehicle_sunroof">Солнечная крыша</string>
+    <string name="vehicle_sunshade">Защита от солнца</string>
+    <string name="vehicle_btn_drl_title">Днем проходящие огни</string>
+    <string name="vehicle_btn_slw_title">Предупреждение о ограничении скорости</string>
+    <string name="vehicle_control_section_charge_cap">Лимит заряда</string>
+    <string name="vehicle_tyre_no_signal">Никакого сигнала</string>
+    <string name="vehicle_tyre_slow_leak">ПОЛНЫЕ ВЫЧАНИЕ</string>
+    <string name="vehicle_tyre_fast_leak">Быстрый утечка</string>
+    <string name="vehicle_tyre_low">Низкий уровень</string>
+    <string name="vehicle_tyre_high">Высокий</string>
+    <string name="vehicle_tyre_ok">ОК</string>
+<!-- END GENERATED vehicle-view i18n -->
 </resources>

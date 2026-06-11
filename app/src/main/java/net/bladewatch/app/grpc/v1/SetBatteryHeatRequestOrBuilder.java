@@ -11,7 +11,24 @@ public interface SetBatteryHeatRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>bool on = 1 [json_name = "on"];</code>
+   * <pre>
+   * Explicit presence: a pure disable request sets on=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), so
+   * the handler would never see the boolean. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool on = 1 [json_name = "on"];</code>
+   * @return Whether the on field is set.
+   */
+  boolean hasOn();
+  /**
+   * <pre>
+   * Explicit presence: a pure disable request sets on=false, which a plain
+   * proto3 bool would omit from the JSON wire (default-scalar omission), so
+   * the handler would never see the boolean. optional forces it onto the wire.
+   * </pre>
+   *
+   * <code>optional bool on = 1 [json_name = "on"];</code>
    * @return The on.
    */
   boolean getOn();

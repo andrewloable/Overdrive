@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.surveillance
 import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.client.ConnectClientProvider
+import net.bladewatch.app.ui.common.SaveResult
 import net.bladewatch.app.grpc.v1.AddZoneRequest
 import net.bladewatch.app.grpc.v1.DeleteZoneRequest
 import net.bladewatch.app.grpc.v1.DisableSurveillanceRequest
@@ -102,7 +103,7 @@ internal class SurveillanceSettingsClient {
         )
     }
 
-    fun saveConfig(config: SurveillanceConfig): Boolean = runBlocking {
+    fun saveConfig(config: SurveillanceConfig): SaveResult = runBlocking {
         val protoConfig = net.bladewatch.app.grpc.v1.SurveillanceConfig.newBuilder()
             .setEnabled(config.enabled)
             .setSensitivity(config.sensitivityLevel)
@@ -123,8 +124,13 @@ internal class SurveillanceSettingsClient {
             .setDeterrentCooldownSeconds(config.deterrentCooldownSeconds)
             .build()
         val req = SetSurveillanceConfigRequest.newBuilder().setConfig(protoConfig).build()
-        val resp = ConnectClientProvider.surveillanceService().setConfig(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.surveillanceService().setConfig(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
     fun toggleSurveillance(enable: Boolean): Boolean = runBlocking {
@@ -145,13 +151,18 @@ internal class SurveillanceSettingsClient {
         }
     }
 
-    fun saveStorage(storageType: String, limitMb: Long): Boolean = runBlocking {
+    fun saveStorage(storageType: String, limitMb: Long): SaveResult = runBlocking {
         val req = SetStorageSettingsRequest.newBuilder()
             .setSurveillanceStorageType(storageType)
             .setSurveillanceLimitMb(limitMb)
             .build()
-        val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())
-        resp is ResponseMessage.Success && resp.message.success
+        when (val resp = ConnectClientProvider.storageService().setStorageSettings(req, emptyMap())) {
+            is ResponseMessage.Success -> {
+                val m = resp.message
+                SaveResult(m.success, m.error.takeIf { it.isNotEmpty() })
+            }
+            is ResponseMessage.Failure -> SaveResult(false, resp.cause.message ?: "Network error")
+        }
     }
 
     fun toggleSafeLocations(enabled: Boolean): Boolean = runBlocking {

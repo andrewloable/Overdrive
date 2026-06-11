@@ -1,7 +1,6 @@
 package net.bladewatch.app.ui.fragment.vehicle
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -14,20 +13,22 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
-import net.bladewatch.app.ui.util.PreferencesManager
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import net.bladewatch.app.R
 
 class VehicleController(private val context: Context) {
 
     // ─── State ───────────────────────────────────────────────────────────────
 
     private var vehicleState = VehicleState()
-    private var currentTab = VehicleTab.SECURITY
+    private var currentTab = VehicleTab.TRUNK
     private val client = VehicleClient()
+    private val factory = VehicleViewFactory(context)
 
     // Seat local state — needed for full-state sends on every seat call
     private var driverHeat = 0; private var driverVent = 0
@@ -37,9 +38,24 @@ class VehicleController(private val context: Context) {
     private var acOn = false; private var setpointC = 22; private var fanLevel = 3; private var maxCooling = false
 
     private val running = AtomicBoolean(false)
-    private val inFlight = AtomicBoolean(false)
+    private val inFlight = ConcurrentHashMap<String, Boolean>()
     private var pollExecutor: ScheduledExecutorService? = null
     private val lastClick = mutableMapOf<String, Long>()
+
+    // In-place tab updater — populated each time renderTabContent() builds a new panel
+    private var currentPanelUpdater: ((PanelContext) -> Unit)? = null
+
+    // Hero region with tyre overlay
+    private lateinit var tyreOverlay: TyreOverlay
+
+    // Stale-state banner — visible when showing cached state before first live poll
+    private var staleBanner: TextView? = null
+
+    // Generation token: incremented on each startPolling so a stale executor can self-cancel
+    private val pollGeneration = AtomicInteger(0)
+
+    // Whether the current state is loaded from cache (not yet confirmed by a live poll)
+    private var isStale = false
 
     // ─── Views ───────────────────────────────────────────────────────────────
 
@@ -68,8 +84,10 @@ class VehicleController(private val context: Context) {
 
     fun onPause() {
         running.set(false)
+        pollGeneration.incrementAndGet()
         pollExecutor?.shutdownNow()
         pollExecutor = null
+        if (::tyreOverlay.isInitialized) tyreOverlay.cancelAnimations()
     }
 
     fun onDestroy() { onPause() }
@@ -81,7 +99,7 @@ class VehicleController(private val context: Context) {
     // ─── Build ───────────────────────────────────────────────────────────────
 
     private fun buildView() {
-        root.setBackgroundColor(bgColor())
+        root.setBackgroundColor(factory.bgColor())
         root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
         outerLayout = LinearLayout(context).apply {
@@ -89,23 +107,33 @@ class VehicleController(private val context: Context) {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
 
-        // Status card at top
         statusArea = buildStatusCard()
         outerLayout.addView(statusArea)
 
-        // Scrollable content
+        staleBanner = TextView(context).apply {
+            text = context.getString(R.string.vehicle_stale_connecting)
+            textSize = 11f; gravity = Gravity.CENTER
+            setTextColor(factory.mutedColor())
+            setPadding(factory.dp(8), factory.dp(4), factory.dp(8), factory.dp(4))
+            visibility = View.GONE
+        }
+        outerLayout.addView(staleBanner)
+
+        // Hero region: themed grid + car silhouette + tyre corner cards
+        tyreOverlay = TyreOverlay(context, factory)
+        outerLayout.addView(tyreOverlay.view)
+
         contentScroll = ScrollView(context).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             isFillViewport = true
         }
         contentArea = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(factory.dp(12), factory.dp(12), factory.dp(12), factory.dp(12))
         }
         contentScroll.addView(contentArea)
         outerLayout.addView(contentScroll)
 
-        // Tab bar at bottom
         val tabRow = buildTabBar()
         outerLayout.addView(tabRow)
 
@@ -115,41 +143,37 @@ class VehicleController(private val context: Context) {
     private fun buildStatusCard(): LinearLayout {
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(surfaceColor())
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setBackgroundColor(factory.surfaceColor())
+            setPadding(factory.dp(16), factory.dp(12), factory.dp(16), factory.dp(12))
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        // Lock status
         val lockSection = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val dot = View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(10), dp(10)).apply { marginEnd = dp(6) }
+            layoutParams = LinearLayout.LayoutParams(factory.dp(10), factory.dp(10)).apply { marginEnd = factory.dp(6) }
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.GRAY) }
         }
-        val lockTv = TextView(context).apply { text = "Checking…"; textSize = 13f; setTextColor(textColor()) }
+        val lockTv = TextView(context).apply { text = "—"; textSize = 13f; setTextColor(factory.textColor()) }  // "—" is a placeholder, replaced on first poll
         lockStatusDot = dot; lockStatusText = lockTv
-        lockSection.addView(dot)
-        lockSection.addView(lockTv)
+        lockSection.addView(dot); lockSection.addView(lockTv)
         card.addView(lockSection)
 
-        // Divider
         card.addView(View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(1), dp(24)).apply { marginStart = dp(8); marginEnd = dp(8) }
-            setBackgroundColor(dividerColor())
+            layoutParams = LinearLayout.LayoutParams(factory.dp(1), factory.dp(24)).apply { marginStart = factory.dp(8); marginEnd = factory.dp(8) }
+            setBackgroundColor(factory.dividerColor())
         })
 
-        // Battery
         val battSection = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val battTv = TextView(context).apply { text = "—"; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(textColor()) }
-        val rangeTv = TextView(context).apply { text = "Range"; textSize = 11f; gravity = Gravity.CENTER; setTextColor(mutedColor()) }
+        val battTv = TextView(context).apply { text = "—"; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(factory.textColor()) }
+        val rangeTv = TextView(context).apply { text = context.getString(R.string.vehicle_range_label); textSize = 11f; gravity = Gravity.CENTER; setTextColor(factory.mutedColor()) }
         batteryText = battTv; rangeText = rangeTv
         battSection.addView(battTv); battSection.addView(rangeTv)
         card.addView(battSection)
@@ -159,12 +183,12 @@ class VehicleController(private val context: Context) {
 
     private fun buildTabBar(): HorizontalScrollView {
         val scroll = HorizontalScrollView(context).apply {
-            setBackgroundColor(surfaceColor())
+            setBackgroundColor(factory.surfaceColor())
             isHorizontalScrollBarEnabled = false
         }
         tabBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(factory.dp(8), factory.dp(8), factory.dp(8), factory.dp(8))
         }
         for (tab in VehicleTab.entries) {
             tabBar.addView(buildTabPill(tab))
@@ -176,16 +200,17 @@ class VehicleController(private val context: Context) {
     private fun buildTabPill(tab: VehicleTab): TextView {
         val selected = tab == currentTab
         return TextView(context).apply {
-            text = tab.label
+            text = context.getString(tab.labelRes)
             textSize = 12f
             gravity = Gravity.CENTER
-            setPadding(dp(14), dp(7), dp(14), dp(7))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) }
+            setPadding(factory.dp(14), factory.dp(7), factory.dp(14), factory.dp(7))
+            minimumHeight = factory.dp(44)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = factory.dp(6) }
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(if (selected) accentColor() else pillBgColor())
+                cornerRadius = factory.dp(16).toFloat()
+                setColor(if (selected) factory.accentColor() else factory.pillBgColor())
             }
-            setTextColor(if (selected) Color.WHITE else textColor())
+            setTextColor(if (selected) Color.WHITE else factory.textColor())
             setOnClickListener {
                 currentTab = tab
                 rebuildTabBar()
@@ -197,8 +222,11 @@ class VehicleController(private val context: Context) {
     // ─── Rebuild helpers ─────────────────────────────────────────────────────
 
     private fun rebuildAll() {
+        if (::tyreOverlay.isInitialized) tyreOverlay.cancelAnimations()
         root.removeAllViews()
         lockStatusDot = null; lockStatusText = null; batteryText = null; rangeText = null
+        staleBanner = null
+        currentPanelUpdater = null
         buildView()
         applyStateToViews()
     }
@@ -211,23 +239,50 @@ class VehicleController(private val context: Context) {
         }
     }
 
+    /** Full tree rebuild for the current tab. Called on tab switch, action start/end, and config change. */
     private fun renderTabContent() {
         contentArea.removeAllViews()
-        when (currentTab) {
-            VehicleTab.SECURITY -> contentArea.addView(buildSecurityTab())
-            VehicleTab.TRUNK    -> contentArea.addView(buildTrunkTab())
-            VehicleTab.CLIMATE  -> contentArea.addView(buildClimateTab())
-            VehicleTab.SEATS    -> contentArea.addView(buildSeatsTab())
-            VehicleTab.WINDOWS  -> contentArea.addView(buildWindowsTab())
-            VehicleTab.LIGHTS   -> contentArea.addView(buildLightsTab())
-            VehicleTab.ADAS     -> contentArea.addView(buildAdasTab())
-            VehicleTab.CHARGING -> contentArea.addView(buildChargingTab())
+        val ctx = makePanelContext()
+        val result = when (currentTab) {
+            VehicleTab.TRUNK    -> buildTrunkTab(ctx)
+            VehicleTab.CLIMATE  -> buildClimateTab(ctx)
+            VehicleTab.SEATS    -> buildSeatsTab(ctx)
+            VehicleTab.WINDOWS  -> buildWindowsTab(ctx)
+            VehicleTab.LIGHTS   -> buildLightsTab(ctx)
+            VehicleTab.ADAS     -> buildAdasTab(ctx)
+            VehicleTab.CHARGING -> buildChargingTab(ctx)
         }
+        contentArea.addView(result.view)
+        currentPanelUpdater = result.update
     }
+
+    /** In-place update of the current tab — does NOT rebuild the view tree. Called from the poll path. */
+    private fun updateTabContent() {
+        currentPanelUpdater?.invoke(makePanelContext())
+    }
+
+    private fun makePanelContext() = PanelContext(
+        factory = factory,
+        state = vehicleState,
+        acOn = acOn, setpointC = setpointC, fanLevel = fanLevel, maxCooling = maxCooling,
+        driverHeat = driverHeat, driverVent = driverVent,
+        passengerHeat = passengerHeat, passengerVent = passengerVent,
+        isPending = { key -> inFlight[key] == true },
+        debounce = ::debounce,
+        post = { fn -> root.post(fn) },
+        toast = ::toast,
+        refresh = ::renderTabContent,
+        doAction = ::doVehicleAction,
+        updateState = { s -> vehicleState = s },
+        updateClimate = { ao, t, f, mc -> acOn = ao; setpointC = t; fanLevel = f; maxCooling = mc },
+        updateSeats = { dH, dV, pH, pV -> driverHeat = dH; driverVent = dV; passengerHeat = pH; passengerVent = pV },
+        client = client,
+    )
 
     // ─── State application ───────────────────────────────────────────────────
 
     private fun applyStateToViews() {
+        staleBanner?.visibility = if (isStale) View.VISIBLE else View.GONE
         val state = vehicleState
         // Sync seat local state from polled data
         driverHeat = state.seats.heat.getOrElse(0) { 0 }
@@ -239,10 +294,11 @@ class VehicleController(private val context: Context) {
 
         // Update status card
         val lockVal = state.doors.overall
-        val (dotColor, lockLabel) = when (lockVal) {
-            1 -> Pair(Color.parseColor("#4CAF50"), "Locked")
-            2 -> Pair(Color.parseColor("#FF9800"), "Unlocked")
-            else -> Pair(Color.GRAY, "Status unavailable")
+        val (dotColor, lockLabel) = when {
+            !state.loaded -> Pair(Color.GRAY, "—")
+            lockVal == 1  -> Pair(Color.parseColor("#4CAF50"), context.getString(R.string.vehicle_locked))
+            lockVal == 2  -> Pair(Color.parseColor("#FF9800"), context.getString(R.string.vehicle_unlocked))
+            else          -> Pair(Color.GRAY, "—")
         }
         (lockStatusDot?.background as? GradientDrawable)?.setColor(dotColor)
         lockStatusText?.text = lockLabel
@@ -251,420 +307,81 @@ class VehicleController(private val context: Context) {
             batteryText?.text = "${state.battery.soc}%"
             rangeText?.text = "${state.battery.rangeKm} km"
         } else {
-            batteryText?.text = "—"; rangeText?.text = "Range"
+            batteryText?.text = "—"; rangeText?.text = context.getString(R.string.vehicle_range_label)
         }
 
-        // Rebuild tab bar (might show/hide Seats) and current tab
+        // Update tyre overlay in place
+        tyreOverlay.update(state.tyres)
+
+        // Rebuild tab bar if seat capability changes visibility
         rebuildTabBar()
-        renderTabContent()
-    }
 
-    // ─── Tab: Security ───────────────────────────────────────────────────────
-
-    private fun buildSecurityTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Security"))
-        panel.addView(spacer(dp(12)))
-        val grid = makeTwoColGrid(
-            buildActionButton("Lock", Color.parseColor("#4CAF50")) { doVehicleAction("lock") { client.lock() } },
-            buildActionButton("Unlock", Color.parseColor("#FF9800")) { doVehicleAction("unlock") { client.unlock() } },
-            buildActionButton("Flash Lights", Color.parseColor("#2196F3")) { doVehicleAction("flash") { client.flashLights() } },
-            buildActionButton("Find Car", Color.parseColor("#9C27B0")) { doVehicleAction("find_car") { client.findCar() } },
-        )
-        panel.addView(grid)
-        return panel
-    }
-
-    // ─── Tab: Trunk ──────────────────────────────────────────────────────────
-
-    private fun buildTrunkTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Trunk"))
-        panel.addView(spacer(dp(8)))
-        panel.addView(infoLabel("Opening the trunk will unlock the car first."))
-        panel.addView(spacer(dp(12)))
-        val grid = makeTwoColGrid(
-            buildActionButton("Open Trunk", Color.parseColor("#FF9800")) { doVehicleAction("trunk_open") { client.trunkOpen() } },
-            buildActionButton("Close Trunk", Color.parseColor("#607D8B")) { doVehicleAction("trunk_close") { client.trunkClose() } },
-        )
-        panel.addView(grid)
-        return panel
-    }
-
-    // ─── Tab: Climate ────────────────────────────────────────────────────────
-
-    private fun buildClimateTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Climate"))
-        panel.addView(spacer(dp(12)))
-
-        // Inside temp if available
-        vehicleState.climate.insideTempC?.let {
-            panel.addView(centeredLabel("Inside: ${"%.1f".format(it)}°C"))
-            panel.addView(spacer(dp(8)))
+        // In-place update of current tab — never rebuilds the view tree
+        if (currentPanelUpdater != null) {
+            updateTabContent()
+        } else {
+            // First paint: do a full build
+            renderTabContent()
         }
-
-        // AC on/off
-        val acColor = if (acOn) Color.parseColor("#2196F3") else Color.parseColor("#607D8B")
-        val acLabel = if (acOn) "AC On" else "AC Off"
-        panel.addView(buildWideButton(acLabel, acColor) {
-            if (debounce("ac_toggle")) {
-                val nowOn = !acOn
-                acOn = nowOn
-                Thread({
-                    val ok = if (nowOn) client.climateOn(setpointC) else client.climateOff()
-                    root.post {
-                        if (!ok) { acOn = !nowOn; toast("Climate control failed.") }
-                        renderTabContent()
-                    }
-                }, "ClimateAC").apply { isDaemon = true; start() }
-            }
-        })
-        panel.addView(spacer(dp(8)))
-
-        // Max Cooling
-        val maxColor = if (maxCooling) Color.parseColor("#F44336") else Color.parseColor("#607D8B")
-        val maxLabel = if (maxCooling) "Max Cooling: ON" else "Max Cooling: OFF"
-        panel.addView(buildWideButton(maxLabel, maxColor) {
-            if (debounce("max_cooling")) {
-                val capturedAcOn = acOn; val capturedTemp = setpointC; val capturedFan = fanLevel
-                val nowMax = !maxCooling
-                maxCooling = nowMax
-                Thread({
-                    val ok = client.climateMaxCooling(nowMax, capturedAcOn, capturedTemp, capturedFan)
-                    root.post {
-                        if (!ok) { maxCooling = !nowMax; toast("Max cooling failed.") }
-                        else if (nowMax) {
-                            // Optimistic: max cooling sets acOn=true, temp=17, fan=7
-                            acOn = true; setpointC = 17; fanLevel = 7
-                        }
-                        renderTabContent()
-                    }
-                }, "ClimateMaxCool").apply { isDaemon = true; start() }
-            }
-        })
-        panel.addView(spacer(dp(12)))
-
-        // Temp stepper
-        panel.addView(buildStepper(
-            label = "Temperature",
-            value = "${setpointC}°C",
-            onMinus = {
-                if (debounce("temp_minus") && setpointC > 17) {
-                    setpointC--
-                    val t = setpointC
-                    Thread({ client.climateSetTemp(t); root.post { renderTabContent() } }, "ClimateTemp").apply { isDaemon = true; start() }
-                    renderTabContent()
-                }
-            },
-            onPlus = {
-                if (debounce("temp_plus") && setpointC < 33) {
-                    setpointC++
-                    val t = setpointC
-                    Thread({ client.climateSetTemp(t); root.post { renderTabContent() } }, "ClimateTemp").apply { isDaemon = true; start() }
-                    renderTabContent()
-                }
-            }
-        ))
-        panel.addView(spacer(dp(8)))
-
-        // Fan stepper
-        panel.addView(buildStepper(
-            label = "Fan Speed",
-            value = "Level $fanLevel",
-            onMinus = {
-                if (debounce("fan_minus") && fanLevel > 1) {
-                    fanLevel--
-                    val f = fanLevel
-                    Thread({ client.climateSetFan(f); root.post { renderTabContent() } }, "ClimateFan").apply { isDaemon = true; start() }
-                    renderTabContent()
-                }
-            },
-            onPlus = {
-                if (debounce("fan_plus") && fanLevel < 7) {
-                    fanLevel++
-                    val f = fanLevel
-                    Thread({ client.climateSetFan(f); root.post { renderTabContent() } }, "ClimateFan").apply { isDaemon = true; start() }
-                    renderTabContent()
-                }
-            }
-        ))
-        return panel
-    }
-
-    // ─── Tab: Seats ──────────────────────────────────────────────────────────
-
-    private fun buildSeatsTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Seats"))
-        panel.addView(spacer(dp(12)))
-        val caps = vehicleState.capabilities.seats
-
-        fun seatRow(title: String, heat: Int, cool: Int, hasHeat: Boolean, hasCool: Boolean, hasMemory: Boolean, position: Int): LinearLayout {
-            val row = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            row.addView(labelText(title))
-            row.addView(spacer(dp(6)))
-            val btns = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            if (hasHeat) {
-                btns.addView(buildCycleButton("Heat ${heatLabel(heat)}", accentColor()) {
-                    if (debounce("seat_heat_$position")) {
-                        val newLevel = (heat + 1) % 3
-                        if (position == 1) { driverHeat = newLevel; if (newLevel > 0) driverVent = 0 }
-                        else { passengerHeat = newLevel; if (newLevel > 0) passengerVent = 0 }
-                        val dH = driverHeat; val dV = driverVent; val pH = passengerHeat; val pV = passengerVent
-                        Thread({ client.seatSetHeat(position, newLevel, dH, dV, pH, pV); root.post { renderTabContent() } }, "SeatHeat").apply { isDaemon = true; start() }
-                        renderTabContent()
-                    }
-                })
-                btns.addView(spacer2(dp(8)))
-            }
-            if (hasCool) {
-                btns.addView(buildCycleButton("Cool ${heatLabel(cool)}", Color.parseColor("#2196F3")) {
-                    if (debounce("seat_cool_$position")) {
-                        val newLevel = (cool + 1) % 3
-                        if (position == 1) { driverVent = newLevel; if (newLevel > 0) driverHeat = 0 }
-                        else { passengerVent = newLevel; if (newLevel > 0) passengerHeat = 0 }
-                        val dH = driverHeat; val dV = driverVent; val pH = passengerHeat; val pV = passengerVent
-                        Thread({ client.seatSetCool(position, newLevel, dH, dV, pH, pV); root.post { renderTabContent() } }, "SeatCool").apply { isDaemon = true; start() }
-                        renderTabContent()
-                    }
-                })
-            }
-            if (hasMemory && position == 1) {
-                btns.addView(spacer2(dp(8)))
-                btns.addView(buildCycleButton("Pos 1", Color.parseColor("#9C27B0")) {
-                    if (debounce("seat_mem1")) doVehicleAction("seat_mem1") { client.seatRecallPosition(1) }
-                })
-                btns.addView(spacer2(dp(4)))
-                btns.addView(buildCycleButton("Pos 2", Color.parseColor("#9C27B0")) {
-                    if (debounce("seat_mem2")) doVehicleAction("seat_mem2") { client.seatRecallPosition(2) }
-                })
-            }
-            row.addView(btns)
-            return row
-        }
-
-        if (caps.driverHeat || caps.driverCool || caps.driverMemoryRecall) {
-            panel.addView(seatRow("Driver", driverHeat, driverVent, caps.driverHeat, caps.driverCool, caps.driverMemoryRecall, 1))
-            panel.addView(spacer(dp(12)))
-        }
-        if (caps.passengerHeat || caps.passengerCool) {
-            panel.addView(seatRow("Passenger", passengerHeat, passengerVent, caps.passengerHeat, caps.passengerCool, false, 2))
-        }
-        if (!caps.anyAvailable()) {
-            panel.addView(centeredLabel("No seat controls available for this vehicle."))
-        }
-        return panel
-    }
-
-    // ─── Tab: Windows ────────────────────────────────────────────────────────
-
-    private fun buildWindowsTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Windows"))
-        panel.addView(spacer(dp(12)))
-        val w = vehicleState.windows
-        val caps = vehicleState.capabilities.windows
-
-        // Per-window rows
-        fun windowRow(name: String, area: Int, current: Int) {
-            val row = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            val suffix = if (current == -1) "" else " ($current%)"
-            row.addView(labelText("$name$suffix"))
-            row.addView(spacer(dp(4)))
-            val btns = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            for (pct in listOf(0, 25, 50, 75, 100)) {
-                val isActive = current == pct
-                btns.addView(buildSmallPresetButton("$pct%", isActive) {
-                    if (debounce("win_${area}_$pct")) {
-                        Thread({ client.windowSetPercent(area, pct); root.post { renderTabContent() } }, "Win").apply { isDaemon = true; start() }
-                    }
-                })
-                if (pct != 100) btns.addView(spacer2(dp(4)))
-            }
-            row.addView(btns)
-            panel.addView(row)
-            panel.addView(spacer(dp(10)))
-        }
-
-        windowRow("Front Left", 1, w.lf)
-        windowRow("Front Right", 2, w.rf)
-        windowRow("Rear Left", 3, w.lr)
-        windowRow("Rear Right", 4, w.rr)
-
-        // All Windows controls
-        panel.addView(labelText("All Windows"))
-        panel.addView(spacer(dp(4)))
-        val allRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-        allRow.addView(buildSmallPresetButton("Close", false) {
-            if (debounce("win_all_close")) Thread({ client.windowsAllClose(); root.post { renderTabContent() } }, "WinAllClose").apply { isDaemon = true; start() }
-        })
-        allRow.addView(spacer2(dp(6)))
-        val isVented = listOf(w.lf, w.rf, w.lr, w.rr).filter { it != -1 }.let { vals ->
-            vals.isNotEmpty() && vals.all { it in 1..20 }
-        }
-        allRow.addView(buildSmallPresetButton(if (isVented) "Close Vent" else "Vent 12%", isVented) {
-            if (debounce("win_vent")) {
-                val target = if (isVented) 0 else 12
-                Thread({ client.windowsAllVent(target); root.post { renderTabContent() } }, "WinVent").apply { isDaemon = true; start() }
-            }
-        })
-        allRow.addView(spacer2(dp(6)))
-        allRow.addView(buildSmallPresetButton("Open All", false) {
-            if (debounce("win_all_open")) Thread({ client.windowsAllOpen(); root.post { renderTabContent() } }, "WinAllOpen").apply { isDaemon = true; start() }
-        })
-        panel.addView(allRow)
-
-        // Sunroof/Sunshade (conditional)
-        if (caps.sunroof) {
-            panel.addView(spacer(dp(10)))
-            windowRow("Sunroof", 5, w.sunroof)
-        }
-        if (caps.sunshade) {
-            panel.addView(spacer(dp(4)))
-            windowRow("Sunshade", 6, w.sunshade)
-        }
-        return panel
-    }
-
-    // ─── Tab: Lights ─────────────────────────────────────────────────────────
-
-    private fun buildLightsTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Lights"))
-        panel.addView(spacer(dp(12)))
-        val drl = vehicleState.lights.dayTimeLight
-        panel.addView(buildToggleRow("Daytime Running Lights", drl) { enable ->
-            if (debounce("drl")) {
-                val prev = vehicleState.lights.dayTimeLight
-                vehicleState = vehicleState.copy(lights = LightsInfo(dayTimeLight = enable))
-                Thread({
-                    val ok = client.setDrl(enable)
-                    root.post {
-                        if (!ok) { vehicleState = vehicleState.copy(lights = LightsInfo(dayTimeLight = prev)); toast("DRL control failed.") }
-                        renderTabContent()
-                    }
-                }, "DRL").apply { isDaemon = true; start() }
-                renderTabContent()
-            }
-        })
-        return panel
-    }
-
-    // ─── Tab: ADAS ───────────────────────────────────────────────────────────
-
-    private fun buildAdasTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("ADAS"))
-        panel.addView(spacer(dp(12)))
-        val slw = vehicleState.adas.speedLimitWarning
-        panel.addView(buildToggleRow("Speed Limit Warning", slw) { enable ->
-            if (debounce("slw")) {
-                val prev = slw
-                vehicleState = vehicleState.copy(adas = AdasInfo(speedLimitWarning = enable))
-                Thread({
-                    val ok = client.setSpeedLimitWarning(enable)
-                    root.post {
-                        if (!ok) { vehicleState = vehicleState.copy(adas = AdasInfo(speedLimitWarning = prev)); toast("ADAS control failed.") }
-                        renderTabContent()
-                    }
-                }, "SLW").apply { isDaemon = true; start() }
-                renderTabContent()
-            }
-        })
-        return panel
-    }
-
-    // ─── Tab: Charging ───────────────────────────────────────────────────────
-
-    private fun buildChargingTab(): LinearLayout {
-        val panel = makePanel()
-        panel.addView(sectionTitle("Charging"))
-        panel.addView(spacer(dp(12)))
-
-        val cap = vehicleState.chargeCap
-        // Smart charging schedule not available (cloud not configured)
-        panel.addView(infoLabel("Smart charging schedule requires cloud configuration (not currently available)."))
-        panel.addView(spacer(dp(12)))
-
-        if (cap.supported == false) {
-            panel.addView(infoLabel("Charge cap is not supported by this vehicle."))
-            return panel
-        }
-
-        panel.addView(labelText("Charge Limit"))
-        panel.addView(spacer(dp(6)))
-        panel.addView(buildToggleRow("Enable Charge Limit", cap.enabled) { enable ->
-            if (debounce("cap_toggle")) {
-                val prev = cap.enabled
-                vehicleState = vehicleState.copy(chargeCap = cap.copy(enabled = enable))
-                Thread({
-                    val ok = client.setChargeCapEnabled(enable)
-                    root.post {
-                        if (!ok) { vehicleState = vehicleState.copy(chargeCap = vehicleState.chargeCap.copy(enabled = prev)); toast("Charge limit toggle failed.") }
-                        renderTabContent()
-                    }
-                }, "CapToggle").apply { isDaemon = true; start() }
-                renderTabContent()
-            }
-        })
-
-        if (cap.enabled || cap.supported == null) {
-            panel.addView(spacer(dp(8)))
-            panel.addView(buildStepper(
-                label = "Charge Limit",
-                value = "${cap.percent}%",
-                onMinus = {
-                    if (debounce("cap_minus") && cap.percent > 50) {
-                        val newPct = (cap.percent - 5).coerceAtLeast(50)
-                        vehicleState = vehicleState.copy(chargeCap = cap.copy(percent = newPct))
-                        Thread({ client.setChargeCapPercent(newPct); root.post { renderTabContent() } }, "CapPct").apply { isDaemon = true; start() }
-                        renderTabContent()
-                    }
-                },
-                onPlus = {
-                    if (debounce("cap_plus") && cap.percent < 100) {
-                        val newPct = (cap.percent + 5).coerceAtMost(100)
-                        vehicleState = vehicleState.copy(chargeCap = cap.copy(percent = newPct))
-                        Thread({ client.setChargeCapPercent(newPct); root.post { renderTabContent() } }, "CapPct").apply { isDaemon = true; start() }
-                        renderTabContent()
-                    }
-                }
-            ))
-            panel.addView(spacer(dp(4)))
-            panel.addView(infoLabel("Minimum 50%, maximum 100%"))
-        }
-
-        return panel
     }
 
     // ─── Polling ─────────────────────────────────────────────────────────────
 
     private fun startPolling() {
+        val myGen = pollGeneration.incrementAndGet()
         Thread({
-            // Initial charge cap probe
-            client.fetchChargeCap()?.let { cap ->
-                root.post { vehicleState = vehicleState.copy(chargeCap = cap) }
+            // Instant first paint: apply cached state before any network call.
+            VehicleStateCache.load(context)?.let { cached ->
+                root.post {
+                    if (pollGeneration.get() == myGen) {
+                        vehicleState = cached
+                        isStale = true
+                        applyStateToViews()
+                    }
+                }
             }
+
+            // Initial charge cap probe
+            try {
+                client.fetchChargeCap()?.let { cap ->
+                    root.post { vehicleState = vehicleState.copy(chargeCap = cap) }
+                }
+            } catch (_: Exception) { /* non-fatal; the cap tab shows unknowns */ }
+
+            if (pollGeneration.get() != myGen) return@Thread
 
             val sched = Executors.newSingleThreadScheduledExecutor()
             pollExecutor = sched
             var failCount = 0
             sched.scheduleAtFixedRate({
-                if (!running.get()) { sched.shutdownNow(); return@scheduleAtFixedRate }
-                val state = client.fetchState()
-                if (state == null) {
-                    failCount++
-                    if (failCount >= 3) root.post {
-                        if (running.get()) showErrorState("Vehicle data unavailable. Check daemon status.")
-                    }
+                if (!running.get() || pollGeneration.get() != myGen) {
+                    sched.shutdownNow()
                     return@scheduleAtFixedRate
                 }
-                failCount = 0
-                root.post {
-                    if (running.get()) {
-                        vehicleState = state.copy(chargeCap = vehicleState.chargeCap)
-                        applyStateToViews()
+                try {
+                    val state = client.fetchState()
+                    if (state == null) {
+                        failCount++
+                        if (failCount >= 3) root.post {
+                            if (running.get()) showErrorState(context.getString(R.string.vehicle_data_unavailable))
+                        }
+                        return@scheduleAtFixedRate
+                    }
+                    failCount = 0
+                    val liveState = state.copy(chargeCap = vehicleState.chargeCap, loaded = true)
+                    VehicleStateCache.save(context, liveState)
+                    root.post {
+                        if (running.get() && pollGeneration.get() == myGen) {
+                            vehicleState = liveState
+                            isStale = false
+                            applyStateToViews()
+                        }
+                    }
+                } catch (e: Exception) {
+                    failCount++
+                    android.util.Log.w("BladeWatch", "Poll tick threw: ${e.javaClass.simpleName}: ${e.message}")
+                    if (failCount >= 3) root.post {
+                        if (running.get()) showErrorState(context.getString(R.string.vehicle_data_unavailable))
                     }
                 }
             }, 0, 3, TimeUnit.SECONDS)
@@ -678,18 +395,31 @@ class VehicleController(private val context: Context) {
 
     // ─── Action helper ───────────────────────────────────────────────────────
 
-    private fun doVehicleAction(key: String, action: () -> Boolean) {
+    private fun doVehicleAction(key: String, flashTarget: View?, action: () -> VehicleCommandResult) {
         if (!debounce(key)) return
-        if (!inFlight.compareAndSet(false, true)) return
-        renderTabContent()
+        if (inFlight[key] == true) return
+        inFlight[key] = true
+        updateTabContent()  // in-place: show pending state without rebuilding
         Thread({
-            val ok = action()
-            inFlight.set(false)
+            val result = action()
+            inFlight.remove(key)
             root.post {
-                if (!ok) toast("Action failed. Check vehicle connection.")
-                renderTabContent()
+                if (result.ok) {
+                    flashTarget?.let { flashSuccess(it) }
+                } else {
+                    val msg = result.message ?: result.outcome ?: context.getString(R.string.vehicle_action_failed)
+                    toast(msg)
+                }
+                renderTabContent()  // full rebuild after action completes to refresh click handlers
             }
         }, "VehicleAction-$key").apply { isDaemon = true; start() }
+    }
+
+    private fun flashSuccess(view: View) {
+        view.animate()
+            .alpha(0.4f).setDuration(120)
+            .withEndAction { view.animate().alpha(1.0f).setDuration(180).start() }
+            .start()
     }
 
     private fun debounce(key: String): Boolean {
@@ -703,176 +433,4 @@ class VehicleController(private val context: Context) {
     private fun toast(msg: String) {
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
-
-    // ─── UI component builders ───────────────────────────────────────────────
-
-    private fun makePanel() = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    }
-
-    private fun makeTwoColGrid(vararg views: View): LinearLayout {
-        val grid = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        var i = 0
-        while (i < views.size) {
-            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            views[i].layoutParams = lp
-            row.addView(views[i])
-            if (i + 1 < views.size) {
-                row.addView(spacer2(dp(8)))
-                views[i + 1].layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                row.addView(views[i + 1])
-            }
-            grid.addView(row)
-            if (i + 2 < views.size) grid.addView(spacer(dp(8)))
-            i += 2
-        }
-        return grid
-    }
-
-    private fun buildActionButton(label: String, color: Int, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
-        setPadding(dp(12), dp(14), dp(12), dp(14))
-        background = GradientDrawable().apply { setColor(color); cornerRadius = dp(8).toFloat() }
-        alpha = if (inFlight.get()) 0.5f else 1.0f
-        setOnClickListener { onClick() }
-    }
-
-    private fun buildWideButton(label: String, color: Int, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
-        setPadding(dp(16), dp(14), dp(16), dp(14))
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        background = GradientDrawable().apply { setColor(color); cornerRadius = dp(8).toFloat() }
-        setOnClickListener { onClick() }
-    }
-
-    private fun buildSmallPresetButton(label: String, active: Boolean, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 11f; gravity = Gravity.CENTER
-        setTextColor(if (active) Color.WHITE else textColor())
-        setPadding(dp(8), dp(6), dp(8), dp(6))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(6).toFloat()
-            setColor(if (active) accentColor() else pillBgColor())
-        }
-        setOnClickListener { onClick() }
-    }
-
-    private fun buildCycleButton(label: String, color: Int, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
-        setPadding(dp(10), dp(8), dp(10), dp(8))
-        background = GradientDrawable().apply { setColor(color); cornerRadius = dp(6).toFloat() }
-        setOnClickListener { onClick() }
-    }
-
-    private fun buildStepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit): LinearLayout {
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-        row.addView(TextView(context).apply {
-            text = label; textSize = 13f; setTextColor(textColor())
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        row.addView(buildRoundButton("−", onMinus))
-        row.addView(TextView(context).apply {
-            text = value; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(textColor())
-            layoutParams = LinearLayout.LayoutParams(dp(72), ViewGroup.LayoutParams.WRAP_CONTENT)
-        })
-        row.addView(buildRoundButton("+", onPlus))
-        return row
-    }
-
-    private fun buildRoundButton(label: String, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 18f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-        layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-        background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(accentColor()) }
-        setOnClickListener { onClick() }
-    }
-
-    private fun buildToggleRow(label: String, enabled: Boolean, onToggle: (Boolean) -> Unit): LinearLayout {
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable().apply { setColor(surfaceColor()); cornerRadius = dp(8).toFloat() }
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-        }
-        row.addView(TextView(context).apply {
-            text = label; textSize = 14f; setTextColor(textColor())
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        row.addView(buildTogglePill(enabled) { onToggle(!enabled) })
-        return row
-    }
-
-    private fun buildTogglePill(enabled: Boolean, onClick: () -> Unit) = TextView(context).apply {
-        text = if (enabled) "ON" else "OFF"
-        textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
-        setPadding(dp(14), dp(6), dp(14), dp(6))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(12).toFloat()
-            setColor(if (enabled) accentColor() else Color.parseColor("#607D8B"))
-        }
-        setOnClickListener { onClick() }
-    }
-
-    private fun sectionTitle(text: String) = TextView(context).apply {
-        this.text = text; textSize = 17f; typeface = Typeface.DEFAULT_BOLD; setTextColor(textColor())
-    }
-
-    private fun labelText(text: String) = TextView(context).apply {
-        this.text = text; textSize = 13f; setTextColor(mutedColor())
-    }
-
-    private fun centeredLabel(text: String) = TextView(context).apply {
-        this.text = text; textSize = 13f; gravity = Gravity.CENTER; setTextColor(mutedColor())
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) }
-    }
-
-    private fun infoLabel(text: String) = TextView(context).apply {
-        this.text = text; textSize = 12f; setTextColor(mutedColor())
-        background = GradientDrawable().apply {
-            setColor(if (isDark()) Color.parseColor("#1A2A1A") else Color.parseColor("#E8F5E9"))
-            cornerRadius = dp(6).toFloat()
-        }
-        setPadding(dp(10), dp(8), dp(10), dp(8))
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    }
-
-    private fun spacer(h: Int) = View(context).apply {
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
-    }
-
-    private fun spacer2(w: Int) = View(context).apply {
-        layoutParams = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
-    }
-
-    // ─── Theme ───────────────────────────────────────────────────────────────
-
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
-    }
-
-    private fun bgColor() = if (isDark()) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
-    private fun surfaceColor() = if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE
-    private fun textColor() = if (isDark()) Color.WHITE else Color.parseColor("#212121")
-    private fun mutedColor() = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
-    private fun dividerColor() = if (isDark()) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
-    private fun pillBgColor() = if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")
-    private fun accentColor() = Color.parseColor("#4CAF50")
-
-    private fun heatLabel(level: Int) = when (level) { 1 -> "(Low)"; 2 -> "(High)"; else -> "(Off)" }
-
-    private fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
 }

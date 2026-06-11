@@ -39,4 +39,46 @@ public interface VehicleCommandResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <pre>
+   * Routing outcome from the server (e.g. "success", "not_supported", "failed").
+   * The REST handler already emits this key via routedResponse().
+   * </pre>
+   *
+   * <code>string outcome = 4 [json_name = "outcome"];</code>
+   * @return The outcome.
+   */
+  java.lang.String getOutcome();
+  /**
+   * <pre>
+   * Routing outcome from the server (e.g. "success", "not_supported", "failed").
+   * The REST handler already emits this key via routedResponse().
+   * </pre>
+   *
+   * <code>string outcome = 4 [json_name = "outcome"];</code>
+   * @return The bytes for outcome.
+   */
+  com.google.protobuf.ByteString
+      getOutcomeBytes();
+
+  /**
+   * <pre>
+   * The routing path taken (e.g. "sdk_only", "cloud_only"). Emitted by routedResponse().
+   * </pre>
+   *
+   * <code>string path = 5 [json_name = "path"];</code>
+   * @return The path.
+   */
+  java.lang.String getPath();
+  /**
+   * <pre>
+   * The routing path taken (e.g. "sdk_only", "cloud_only"). Emitted by routedResponse().
+   * </pre>
+   *
+   * <code>string path = 5 [json_name = "path"];</code>
+   * @return The bytes for path.
+   */
+  com.google.protobuf.ByteString
+      getPathBytes();
 }

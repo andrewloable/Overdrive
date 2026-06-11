@@ -1,7 +1,6 @@
 package net.bladewatch.app.ui.fragment.trips
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -13,14 +12,15 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
-import net.bladewatch.app.ui.util.PreferencesManager
+import android.widget.Toast
+import net.bladewatch.app.ui.common.BladeTheme
 import java.util.Locale
 
 class TripsController(private val context: Context) {
 
     private val root = FrameLayout(context)
     private val client = TripsClient()
+    private val theme = BladeTheme(context)
 
     private var activeTab = TripsTab.TRIPS
     private var activeFilter = TripsDaysFilter.SEVEN
@@ -720,12 +720,16 @@ class TripsController(private val context: Context) {
         val distUnit = selectedDistUnit
         val storType = selectedStorageType
         Thread({
-            client.saveConfig(enabled, rate, currency, distUnit)
-            val currentStorage = editStorage
-            if (currentStorage != null) {
-                client.saveStorage(storType, currentStorage.limitMb)
+            val r1 = client.saveConfig(enabled, rate, currency, distUnit)
+            val r2 = editStorage?.let { client.saveStorage(storType, it.limitMb) }
+            root.post {
+                val failed = listOfNotNull(r1, r2).firstOrNull { !it.ok }
+                if (failed != null) {
+                    val msg = failed.error?.takeIf { it.isNotEmpty() } ?: "Save failed"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+                loadData()
             }
-            root.post { loadData() }
         }, "TripsSave").apply { isDaemon = true; start() }
     }
 
@@ -737,31 +741,20 @@ class TripsController(private val context: Context) {
         contentArea.addView(centeredText("No trips recorded yet", 16f))
     }
 
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> {
-                val night = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-                night == Configuration.UI_MODE_NIGHT_YES
-            }
-        }
-    }
+    private fun isDark() = theme.isDark()
 
     private fun pillBackground(color: Int): GradientDrawable =
         GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat() }
 
     private fun cardBackground(isDark: Boolean): GradientDrawable =
         GradientDrawable().apply {
-            setColor(if (isDark) Color.parseColor("#1E1E1E") else Color.WHITE)
+            setColor(if (isDark) theme.surfaceColor() else Color.WHITE)
             cornerRadius = dp(8).toFloat()
         }
 
     private fun inputBackground(isDark: Boolean): GradientDrawable =
         GradientDrawable().apply {
-            setColor(if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#F0F0F0"))
+            setColor(if (isDark) theme.inputBgColor() else theme.inputBgColor())
             cornerRadius = dp(4).toFloat()
         }
 
@@ -779,21 +772,19 @@ class TripsController(private val context: Context) {
     }
 
     private fun makeSegmentButton(label: String, selected: Boolean, onSelect: () -> Unit): TextView {
-        val isDark = isDark()
         return TextView(context).apply {
             text = label; textSize = 13f; gravity = Gravity.CENTER
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            background = pillBackground(if (selected) Color.parseColor("#4CAF50") else if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-            setTextColor(if (selected) Color.WHITE else if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+            background = pillBackground(if (selected) theme.accentColor() else theme.pillBgColor())
+            setTextColor(if (selected) Color.WHITE else theme.mutedColor())
             setOnClickListener { onSelect() }
         }
     }
 
     private fun labelText(text: String): TextView {
-        val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = 14f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
     }
