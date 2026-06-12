@@ -202,9 +202,13 @@ export default class SettingsComponent implements OnInit {
       this.codec.set(quality.codec || 'H264');
       if (quality.recordingSegmentMinutes) this.recordingLimit.set(quality.recordingSegmentMinutes);
       this.lang.set(locale.lang || 'en');
+      // GetLocaleResponse.supported is map<string,bool> (codes mapped to true),
+      // so resolve a human-readable language name from the code itself.
       const supported = locale.supported ?? {};
+      let dn: Intl.DisplayNames | null = null;
+      try { dn = new Intl.DisplayNames([locale.lang || 'en'], { type: 'language' }); } catch { /* unsupported env */ }
       this.supportedLangs.set(
-        Object.entries(supported).map(([code, label]) => ({ code, label: String(label) })),
+        Object.keys(supported).map(code => ({ code, label: (dn && dn.of(code)) || code })),
       );
     } catch {
       this.statusMsg.set('Failed to load settings');
@@ -471,7 +475,9 @@ export default class SettingsComponent implements OnInit {
       const mode = resp.recordingStatus?.configuredMode;
       if (mode) this.recordingMode.set(mode);
     } catch {
-      this.statusMsg.set('Failed to load daemon status');
+      // Don't surface this as a global banner — loadStatus runs on init (for the
+      // recording mode) and on the Daemons section. The Daemons section already
+      // shows an empty/unavailable state when systemStatus is null.
     }
   }
 

@@ -79,9 +79,10 @@ export default class DashboardComponent implements OnInit, OnDestroy {
 
   readonly servicesChip = computed<ChipState>(() => {
     const s = this.status();
-    if (!s) return 'off';
-    // The web client has no daemon health list; infer "services up" from the
-    // fact that GetStatus answered with a pipeline/recording block.
+    // The daemon is serving this very page, so services are never fully "Down"
+    // from the web client's vantage point. Before the first status arrives, or
+    // when the camera pipeline is idle, show "Partial"; "Up" when it's running.
+    if (!s) return 'warn';
     return s.recordingStatus?.pipelineRunning ? 'on' : 'warn';
   });
 

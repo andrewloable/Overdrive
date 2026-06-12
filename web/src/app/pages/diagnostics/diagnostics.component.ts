@@ -136,33 +136,21 @@ export default class DiagnosticsComponent implements OnInit, OnDestroy {
       const ssid = (net?.ssid ?? '').trim();
       const ip = (net?.ip ?? '').trim();
 
+      // The connection itself is derived from the client's own reachability
+      // (this page loaded through the daemon), NOT from the device network block
+      // (which is often empty over the web client). getStatus succeeding here
+      // means the daemon is reachable, so the connection is online.
+      const conn = this.connectionState();
       let topLine: string;
       if (ssid && ssid !== '<unknown ssid>' && ssid !== '0x') {
         topLine = ssid;
-      } else if (type) {
+      } else if (type && type.toLowerCase() !== 'none' && type.toLowerCase() !== 'offline') {
         topLine = this.titleCase(type);
       } else {
-        topLine = 'Offline';
+        topLine = conn.network;
       }
 
-      // Tunnel/LAN HTTP state: enabled bind that is not loopback -> reachable.
-      const lanEnabled = net?.lanHttpEnabled ?? false;
-      const bind = (net?.httpBind ?? '').trim();
-      const offline = !type || type.toLowerCase() === 'none' || type.toLowerCase() === 'offline';
-      let tunnelDot: DotState;
-      let tunnelLabel: string;
-      if (offline) {
-        tunnelDot = 'offline';
-        tunnelLabel = 'Tunnel · Offline';
-      } else if (lanEnabled && bind && !bind.startsWith('127.')) {
-        tunnelDot = 'online';
-        tunnelLabel = 'Tunnel · Online';
-      } else {
-        tunnelDot = 'neutral';
-        tunnelLabel = 'Tunnel · Loopback';
-      }
-
-      this.network.set({ topLine, ip, tunnelLabel, tunnelDot });
+      this.network.set({ topLine, ip, tunnelLabel: conn.label, tunnelDot: conn.dot });
 
       // ----- Camera tile -----
       // Active = recording or view-only camera ids; available = device camera ids.
@@ -177,14 +165,26 @@ export default class DiagnosticsComponent implements OnInit, OnDestroy {
         this.camera.set({ value: 'Offline', dot: 'offline', cameraId: -1 });
       }
     } catch {
-      this.network.set({
-        topLine: 'Offline',
-        ip: '',
-        tunnelLabel: 'Tunnel · Offline',
-        tunnelDot: 'offline',
-      });
-      this.camera.set({ value: 'Offline', dot: 'offline', cameraId: -1 });
+      // The page is loaded via this connection, so it is reachable; only the
+      // device status query failed. Keep the connection state honest and mark
+      // the device details as unknown rather than claiming "Offline".
+      const conn = this.connectionState();
+      this.network.set({ topLine: conn.network, ip: '', tunnelLabel: conn.label, tunnelDot: conn.dot });
+      this.camera.set({ value: 'Unknown', dot: 'neutral', cameraId: -1 });
     }
+  }
+
+  /**
+   * Connection state inferred from the URL the client actually reached the
+   * daemon through — reliable regardless of what the device network block says.
+   */
+  private connectionState(): { label: string; dot: DotState; network: string } {
+    const host = (typeof window !== 'undefined' && window.location?.hostname) || '';
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+    const isLan = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
+    if (isLocal) return { label: 'Local · Online', dot: 'online', network: 'Local' };
+    if (isLan) return { label: 'LAN · Online', dot: 'online', network: host };
+    return { label: 'Tunnel · Online', dot: 'online', network: 'Connected' };
   }
 
   /** Storage tile from StorageService.GetStorageSettings (clips + used + free). */

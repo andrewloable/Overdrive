@@ -16,22 +16,6 @@
   }
 }
 
-/* 3D hero */
-.hero {
-  background: var(--bg-surface, #16161A);
-  border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 14px;
-}
-.hero-frame {
-  display: block;
-  width: 100%;
-  height: 200px;
-  border: 0;
-  background: transparent;
-}
-
 /* Status pills */
 .pill-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .pill {
