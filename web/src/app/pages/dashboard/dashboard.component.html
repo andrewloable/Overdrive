@@ -1,56 +1,182 @@
 <div class="page">
-  <div class="stream-section">
-    <div class="stream-wrap">
-      <canvas #streamCanvas class="stream-canvas"></canvas>
-      <div class="stream-badge" [class.live]="streamConnected()">
-        {{ streamConnected() ? '● LIVE' : '○ Connecting…' }}
+  <!-- ===================== Trip-stats hero ("This Week") ===================== -->
+  <section class="hero">
+    <div class="hero-head">
+      <span class="hero-eyebrow">This Week</span>
+      <span class="hero-headline">{{ weekHeadline() }}</span>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-value">{{ tripsLabel() }}</span>
+        <span class="hero-stat-label">Trips</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">{{ distanceLabel() }}</span>
+        <span class="hero-stat-label">Distance</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">{{ driveTimeLabel() }}</span>
+        <span class="hero-stat-label">Drive time</span>
       </div>
     </div>
 
-    <div class="cam-selector">
-      @for (cam of cameras; track cam.id) {
-        <button class="cam-btn" [class.active]="selectedCam() === cam.id" (click)="selectCamera(cam.id)">
-          {{ cam.label }}
-        </button>
-      }
-    </div>
+    <a class="btn btn-primary hero-cta" routerLink="/trips">View all trips</a>
+  </section>
+
+  <!-- ===================== Status chips ===================== -->
+  <div class="chip-row">
+    <span class="chip" [class]="'chip-' + tunnelChip()">
+      <span class="chip-dot"></span>
+      {{ chipText(tunnelChip(), 'Tunnel · Online', 'Tunnel · Connecting', 'Tunnel · Offline') }}
+    </span>
+    <span class="chip" [class]="'chip-' + servicesChip()">
+      <span class="chip-dot"></span>
+      {{ chipText(servicesChip(), 'Services · Up', 'Services · Partial', 'Services · Down') }}
+    </span>
+    <span class="chip" [class]="'chip-' + recordingChip()">
+      <span class="chip-dot"></span>
+      {{ chipText(recordingChip(), 'Recording', 'Recording', 'Idle') }}
+    </span>
   </div>
 
-  @if (loading()) {
-    <div class="loading">Loading status…</div>
-  } @else if (status(); as s) {
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Battery</div>
-        <div class="stat-value brand">{{ batteryLabel() }}</div>
-        @if (chargingLabel()) {
-          <div class="stat-sub">{{ chargingLabel() }}</div>
+  <!-- ===================== Metric tiles ===================== -->
+  <div class="metric-grid">
+    <a class="metric-tile" routerLink="/live">
+      <span class="metric-label">Live</span>
+      <span class="metric-value">Camera</span>
+      <span class="metric-sub">Open the live feed</span>
+    </a>
+
+    <a class="metric-tile" routerLink="/recording">
+      <span class="metric-label">Recordings</span>
+      <span class="metric-value" [class.recording]="recordingChip() === 'on'">
+        {{ recordingChip() === 'on' ? 'REC' : 'Idle' }}
+      </span>
+      <span class="metric-sub">View clips</span>
+    </a>
+
+    <a class="metric-tile" routerLink="/diagnostics">
+      <span class="metric-label">Diagnostics</span>
+      <span class="metric-value">Health</span>
+      <span class="metric-sub">Network · Storage · Camera</span>
+    </a>
+
+    <button type="button" class="metric-tile" (click)="openBatteryDialog()">
+      <span class="metric-label">Vehicle</span>
+      <span class="metric-value">{{ vehicleTileLabel() }}</span>
+      <span class="metric-sub">Battery capacity</span>
+    </button>
+  </div>
+
+  <a class="metric-tile metric-wide" routerLink="/vehicle">
+    <span class="metric-label">Vehicle</span>
+    <span class="metric-value">Appearance &amp; controls</span>
+    <span class="metric-sub">Open vehicle page</span>
+  </a>
+
+  <!-- ===================== Connect card ===================== -->
+  <section class="card connect-card">
+    <div class="section-title">Connect</div>
+
+    <div class="connect-body">
+      <div class="qr-box">
+        @if (qrDataUrl()) {
+          <img class="qr-img" [src]="qrDataUrl()" alt="QR code for the share link" />
+        } @else {
+          <div class="qr-placeholder">No URL</div>
         }
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Range</div>
-        <div class="stat-value">{{ rangeLabel() }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Recording</div>
-        <div class="stat-value" [class.recording]="s.recordingStatus?.isRecording">
-          {{ s.recordingStatus?.isRecording ? 'REC' : 'Idle' }}
+
+      <div class="connect-info">
+        <div class="info-row">
+          <span class="info-label">Share link</span>
+          <button type="button" class="info-value link" (click)="copyUrl()" [title]="tunnelUrl()">
+            {{ tunnelUrl() || '—' }}
+          </button>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">GPS</div>
-        <div class="stat-value small">
-          {{ s.gpsJson ? 'Active' : 'No fix' }}
+        <div class="info-row">
+          <span class="info-label">Device ID</span>
+          <button type="button" class="info-value mono" (click)="copyDeviceId()" [title]="deviceId()">
+            {{ deviceId() || '—' }}
+          </button>
         </div>
       </div>
     </div>
 
-    @if (s.network) {
-      <div class="card net-card">
-        <span class="net-type">{{ s.network.type || 'Network' }}</span>
-        @if (s.network.ssid) { <span class="net-ssid">{{ s.network.ssid }}</span> }
-        @if (s.network.ip) { <span class="net-ip">{{ s.network.ip }}</span> }
-      </div>
+    @if (statusMsg()) {
+      <div class="connect-toast">{{ statusMsg() }}</div>
     }
-  }
+
+    <p class="connect-note">
+      Scan the QR or tap a value to copy. The access code and password are
+      managed on the device — they can't be viewed or changed from the web for
+      security.
+    </p>
+  </section>
 </div>
+
+<!-- ===================== Battery-capacity dialog ===================== -->
+@if (batteryDialogOpen()) {
+  <div class="dialog-overlay" (click)="closeBatteryDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-title">Battery capacity</div>
+      <p class="dialog-desc">
+        Set the nominal usable capacity (kWh) for this vehicle. Used for State of
+        Health and energy estimates.
+      </p>
+
+      @let sh = soh();
+      <div class="soh-hero">
+        <span class="soh-percent">{{ sohPercentLabel() }}</span>
+        <span class="soh-caption">State of Health</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="capInput">Nominal capacity (kWh)</label>
+        <input
+          id="capInput"
+          class="form-input"
+          type="number"
+          inputmode="decimal"
+          min="8"
+          max="120"
+          step="0.1"
+          placeholder="e.g. 82.5"
+          [value]="capacityInput()"
+          (input)="onCapacityInput($any($event.target).value)" />
+      </div>
+
+      <div class="info-grid">
+        <div class="info-cell">
+          <span class="info-cell-label">Source</span>
+          <span class="info-cell-value">{{ sh.nominalSource || '—' }}</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-cell-label">Current</span>
+          <span class="info-cell-value">
+            {{ sh.nominalCapacityKwh > 0 ? (sh.nominalCapacityKwh.toFixed(1) + ' kWh') : '—' }}
+          </span>
+        </div>
+        <div class="info-cell">
+          <span class="info-cell-label">SOH source</span>
+          <span class="info-cell-value">{{ sh.displaySource || '—' }}</span>
+        </div>
+      </div>
+
+      @if (batteryDialogMsg()) {
+        <div class="dialog-msg">{{ batteryDialogMsg() }}</div>
+      }
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">Close</button>
+        <button type="button" class="btn btn-danger" (click)="resetCapacity()" [disabled]="sohSaving()">
+          Reset
+        </button>
+        <button type="button" class="btn btn-primary" (click)="saveCapacity()" [disabled]="sohSaving()">
+          {{ sohSaving() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

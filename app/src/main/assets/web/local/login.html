@@ -296,10 +296,9 @@
                 <input type="text"
                        id="tokenInput"
                        class="form-input"
-                       placeholder="xxxxxxxx"
+                       placeholder="Access code"
                        autocomplete="off"
                        spellcheck="false"
-                       maxlength="8"
                        style="text-align: center; font-size: 20px; letter-spacing: 0.2em;">
                 <p class="form-hint" data-i18n="login.find_hint">Find this in your BladeWatch app → Dashboard → Access Code</p>
                 <p class="form-error" id="tokenError"></p>
@@ -367,13 +366,6 @@
             
             if (!accessCode) {
                 errorEl.textContent = 'Please enter your access code';
-                errorEl.classList.add('visible');
-                document.getElementById('tokenInput').classList.add('error');
-                return;
-            }
-            
-            if (accessCode.length !== 8) {
-                errorEl.textContent = 'Access code must be 8 characters';
                 errorEl.classList.add('visible');
                 document.getElementById('tokenInput').classList.add('error');
                 return;

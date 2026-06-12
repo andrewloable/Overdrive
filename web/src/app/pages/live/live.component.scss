@@ -1,0 +1,124 @@
+@import '../../shared/page-shared';
+
+// Full-bleed live view: kill the page-shared padding so the camera fills.
+:host {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  height: 100%;
+  background: #000;
+}
+
+.live {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.stream-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  // Fall back to a 16:9 box on short viewports where flex can't stretch.
+  aspect-ratio: 16 / 9;
+  background: #0a0a0e;
+  overflow: hidden;
+}
+
+.stream-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.stream-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #71717a);
+
+  &.live {
+    color: var(--danger, #ef4444);
+  }
+}
+
+.stream-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+
+.banner-text {
+  font-size: 13px;
+  color: var(--text-secondary, #a1a1aa);
+}
+
+.banner-retry {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #000;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary, #00d4aa) 0%,
+    var(--brand-secondary, #0ea5e9) 100%
+  );
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.cam-selector {
+  display: flex;
+  gap: 0;
+  background: #111;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.cam-btn {
+  flex: 1;
+  padding: 12px 4px;
+  background: none;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted, #71717a);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &.active {
+    color: var(--brand-primary, #00d4aa);
+    background: rgba(0, 212, 170, 0.08);
+  }
+
+  &:hover:not(.active) {
+    color: var(--text-secondary, #a1a1aa);
+    background: rgba(255, 255, 255, 0.04);
+  }
+}

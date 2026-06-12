@@ -32,3 +32,250 @@
   font-size: 14px;
   color: var(--text-secondary, #A1A1AA);
 }
+
+/* ---- Sub-rail shell ---- */
+.settings-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #A1A1AA);
+  font: inherit;
+  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover { background: var(--surface-hover, rgba(255,255,255,0.04)); }
+  &.active {
+    background: var(--brand-primary-dim, rgba(0,212,170,0.12));
+    color: var(--text-primary, #fff);
+    font-weight: 600;
+  }
+}
+
+.soon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted, #71717A);
+  margin-left: auto;
+}
+
+.settings-detail { min-width: 0; }
+
+/* Theme tiles */
+.tile-row { display: flex; gap: 10px; }
+
+.theme-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: 12px;
+  background: var(--bg-elevated, #1E1E24);
+  color: var(--text-secondary, #A1A1AA);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 0.15s ease;
+
+  &.active { border-color: var(--brand-primary, #00D4AA); color: var(--text-primary, #fff); }
+}
+
+.theme-swatch {
+  width: 40px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  &[data-theme-preview='auto']  { background: linear-gradient(135deg, #0a0a0a 50%, #f4f4f5 50%); }
+  &[data-theme-preview='light'] { background: #f4f4f5; }
+  &[data-theme-preview='dark']  { background: #0a0a0a; }
+}
+
+/* Segmented control */
+.seg {
+  display: inline-flex;
+  background: var(--bg-elevated, #1E1E24);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #A1A1AA);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &.active { background: var(--brand-primary, #00D4AA); color: #06281f; font-weight: 600; }
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted, #71717A);
+  margin: 10px 0 0;
+}
+
+.placeholder { text-align: center; padding: 32px 16px; }
+
+/* ---- Recording sub-tabs ---- */
+.sub-tabs {
+  display: flex;
+  margin-bottom: 12px;
+  .seg-btn { flex: 1; }
+}
+
+/* Allow segmented controls to wrap when there are many options */
+.seg-wrap { flex-wrap: wrap; }
+.seg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- Note / danger cards ---- */
+.note-card {
+  background: var(--brand-primary-dim, rgba(0,212,170,0.08));
+  border-color: rgba(0,212,170,0.25);
+}
+
+.danger-card {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* ---- Recording mode radio list ---- */
+.radio-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  background: var(--bg-elevated, #1E1E24);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary, #fff);
+  transition: border-color 0.15s ease;
+
+  &.active { border-color: var(--brand-primary, #00D4AA); }
+}
+
+.radio-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.radio-label { font-size: 14px; color: var(--text-primary, #fff); }
+.radio-desc { font-size: 12px; color: var(--text-muted, #71717A); }
+.radio-dot { font-size: 18px; color: var(--brand-primary, #00D4AA); }
+
+/* ---- Range slider ---- */
+.slider-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin-bottom: 6px;
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--brand-primary, #00D4AA);
+}
+
+/* ---- Info grid (storage / privacy) ---- */
+.info-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary, #A1A1AA);
+
+  b { color: var(--text-primary, #fff); font-weight: 600; text-align: right; }
+  .path { font-size: 11px; word-break: break-all; color: var(--text-muted, #71717A); }
+}
+
+/* ---- Daemon status rows ---- */
+.daemon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.daemon-name { font-size: 14px; color: var(--text-primary, #fff); flex: 0 0 auto; min-width: 150px; }
+.daemon-detail { font-size: 12px; color: var(--text-muted, #71717A); flex: 1; }
+
+.link-btn {
+  float: right;
+  border: none;
+  background: transparent;
+  color: var(--brand-primary, #00D4AA);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ---- Safe zone rows ---- */
+.zone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.zone-name { font-size: 13px; color: var(--text-primary, #fff); }
+.zone-radius { color: var(--text-muted, #71717A); }
+
+.zone-del {
+  border: none;
+  background: transparent;
+  color: var(--danger, #EF4444);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+@media (max-width: 720px) {
+  .settings-shell { grid-template-columns: 1fr; }
+  .settings-rail {
+    flex-direction: row;
+    overflow-x: auto;
+    position: static;
+    padding-bottom: 4px;
+  }
+  .rail-item { width: auto; white-space: nowrap; }
+  .soon-dot { margin-left: 4px; }
+}

@@ -1,0 +1,28 @@
+<div class="live">
+  <div class="stream-wrap">
+    <canvas #streamCanvas class="stream-canvas"></canvas>
+
+    <div class="stream-badge" [class.live]="streamConnected()">
+      {{ streamConnected() ? '● LIVE' : '○ Connecting…' }}
+    </div>
+
+    @if (!streamConnected()) {
+      <div class="stream-banner">
+        <span class="banner-text">Camera stream not connected</span>
+        <button type="button" class="banner-retry" (click)="retryStream()">Retry</button>
+      </div>
+    }
+  </div>
+
+  <div class="cam-selector">
+    @for (cam of cameras; track cam.id) {
+      <button
+        type="button"
+        class="cam-btn"
+        [class.active]="selectedCam() === cam.id"
+        (click)="selectCamera(cam.id)">
+        {{ cam.label }}
+      </button>
+    }
+  </div>
+</div>

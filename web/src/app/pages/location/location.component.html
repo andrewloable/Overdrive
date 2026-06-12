@@ -1,0 +1,39 @@
+<div class="location-page">
+  <!-- Full-bleed map; container must always exist so Leaflet can mount. -->
+  <div class="map" #mapEl></div>
+
+  <!-- Status banner — parity with LocationUiStateMapper.panelModel.
+       Centered overlay until a fix arrives, then pinned top-left over the map. -->
+  <div class="banner" [class.compact]="showMap()" [class.centered]="!showMap()">
+    <div class="banner-title">{{ bannerTitle() }}</div>
+    @if (bannerSubtitle()) {
+      <div class="banner-subtitle">{{ bannerSubtitle() }}</div>
+    }
+    @if (status() === 'fresh' || status() === 'stale') {
+      @if (googleMapsUrl()) {
+        <a class="banner-link" [href]="googleMapsUrl()" target="_blank" rel="noopener">
+          Open in Google Maps
+        </a>
+      }
+    }
+  </div>
+
+  <!-- Map Appearance selector Auto / Light / Dark (LocationSettingsStore). -->
+  @if (showMap()) {
+    <div class="mode-selector" role="group" aria-label="Map appearance">
+      <button type="button" [class.active]="theme() === 'auto'" (click)="setTheme('auto')">Auto</button>
+      <button type="button" [class.active]="theme() === 'light'" (click)="setTheme('light')">Light</button>
+      <button type="button" [class.active]="theme() === 'dark'" (click)="setTheme('dark')">Dark</button>
+    </div>
+  }
+
+  <!-- Recenter button — shown only after the user pans away (follow off). -->
+  @if (showRecenter()) {
+    <button type="button" class="recenter-btn" (click)="recenter()" aria-label="Recenter on car">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path fill="currentColor"
+          d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 3h-2.07A7.01 7.01 0 0 0 13 5.07V3h-2v2.07A7.01 7.01 0 0 0 5.07 11H3v2h2.07A7.01 7.01 0 0 0 11 18.93V21h2v-2.07A7.01 7.01 0 0 0 18.93 13H21v-2Zm-9 6a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/>
+      </svg>
+    </button>
+  }
+</div>

@@ -1,56 +1,93 @@
 @use 'sass:math';
 @import '../../shared/page-shared';
 
-.gauge-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.gauge-card {
+.metric-card {
   background: var(--bg-surface, #16161A);
   border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
   border-radius: 12px;
   padding: 16px;
+  margin-bottom: 12px;
 }
 
-.gauge-label {
-  font-size: 12px;
-  color: var(--text-muted, #71717A);
+.metric-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.gauge-bar {
+.metric-bar-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 56px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.metric-bar-label {
+  font-size: 12px;
+  color: var(--text-muted, #71717A);
+}
+
+.metric-bar {
   height: 6px;
   background: var(--bg-elevated, #1E1E24);
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
 }
 
-.gauge-fill {
+.metric-fill {
   height: 100%;
-  background: var(--brand-primary, #00D4AA);
   border-radius: 3px;
   transition: width 0.5s ease;
+  background: var(--brand-primary, #00D4AA);
 
+  &.primary   { background: var(--brand-primary, #00D4AA); }
+  &.secondary { background: #6366F1; }
+  &.tertiary  { background: #14B8A6; }
+  &.error     { background: #F97316; }
   &.warn { background: #F59E0B; }
   &.crit { background: var(--danger, #EF4444); }
-  &.temp { background: #F97316; }
-  &.fps { background: #6366F1; }
 }
 
-.gauge-value {
-  font-size: 20px;
+.metric-bar-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  text-align: right;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-elevated, #1E1E24);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.grid-label {
+  font-size: 11px;
+  color: var(--text-muted, #71717A);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.grid-value {
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary, #fff);
 }
 
-.gauge-sub {
-  font-size: 11px;
-  color: var(--text-muted, #71717A);
-  margin-top: 2px;
+.actions {
+  margin-top: 16px;
 }

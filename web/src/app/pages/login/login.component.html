@@ -26,10 +26,9 @@
         [ngModel]="accessCode()"
         (ngModelChange)="accessCode.set($event)"
         (keypress)="onKeyPress($event)"
-        placeholder="xxxxxxxx"
+        placeholder="Access code"
         autocomplete="off"
         spellcheck="false"
-        maxlength="8"
       >
       <p class="form-hint">Find this in your BladeWatch app → Dashboard → Access Code</p>
       @if (error()) {

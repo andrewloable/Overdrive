@@ -1,12 +1,16 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ConnectClients } from '../../core/connect/connect-clients';
-import type { RecordingEntry } from '../../../../gen/bladewatch/v1/recordings_pb';
+import {
+  VideoPlayerComponent,
+  type PlayerItem,
+} from '../../shared/video-player/video-player.component';
+import type { RecordingEntry } from '../../../gen/bladewatch/v1/recordings_pb';
 
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, VideoPlayerComponent],
   templateUrl: './events.component.html',
   styleUrl: './events.component.scss',
 })
@@ -16,7 +20,16 @@ export default class EventsComponent implements OnInit {
   readonly events = signal<readonly RecordingEntry[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
-  readonly activeVideo = signal<RecordingEntry | null>(null);
+  readonly activeFile = signal<PlayerItem | null>(null);
+
+  /** Playlist for the shared player — the full ordered events list. */
+  readonly playlist = computed<PlayerItem[]>(() =>
+    this.events().map((e) => ({
+      filename: e.filename,
+      title: e.timeLabel || e.dateLabel || e.filename,
+      hasEvents: e.hasEvents,
+    })),
+  );
 
   ngOnInit(): void {
     this.loadEvents();
@@ -25,7 +38,7 @@ export default class EventsComponent implements OnInit {
   private async loadEvents(): Promise<void> {
     try {
       const resp = await this.clients.recordings.listRecordings({
-        type: 2 as any,
+        type: 'sentry',
         pageSize: 100,
       });
       this.events.set(resp.recordings ?? []);
@@ -36,8 +49,26 @@ export default class EventsComponent implements OnInit {
     }
   }
 
-  playVideo(rec: RecordingEntry): void { this.activeVideo.set(rec); }
-  closeVideo(): void { this.activeVideo.set(null); }
+  playVideo(rec: RecordingEntry): void {
+    this.activeFile.set({
+      filename: rec.filename,
+      title: rec.timeLabel || rec.dateLabel || rec.filename,
+      hasEvents: rec.hasEvents,
+    });
+  }
+
+  onPlayerFileChange(item: PlayerItem): void {
+    this.activeFile.set(item);
+  }
+
+  closeVideo(): void {
+    this.activeFile.set(null);
+  }
+
+  /** int64 timestamp → number for DatePipe (0 when unset). */
+  tsMs(ev: RecordingEntry): number {
+    return Number(ev.timestampMs);
+  }
 
   typeBadge(type: string | number): string {
     const map: Record<string, string> = { SENTRY: 'Sentry', PROXIMITY: 'Proximity', '2': 'Sentry', '3': 'Proximity' };

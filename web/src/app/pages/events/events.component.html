@@ -1,13 +1,13 @@
 <div class="page">
   <div class="page-header"><h1>Events</h1></div>
 
-  @if (activeVideo(); as rec) {
-    <div class="video-overlay" (click)="closeVideo()">
-      <div class="video-container" (click)="$event.stopPropagation()">
-        <button class="close-btn" (click)="closeVideo()">✕</button>
-        <video [src]="'/video/' + rec.filename" controls autoplay class="video-player"></video>
-      </div>
-    </div>
+  @if (activeFile(); as file) {
+    <app-video-player
+      [file]="file"
+      [playlist]="playlist()"
+      (fileChange)="onPlayerFileChange($event)"
+      (close)="closeVideo()"
+    />
   }
 
   @if (loading()) {
@@ -24,8 +24,8 @@
           </div>
           <div class="event-info">
             <div class="event-badge" [class]="typeBadge(ev.type)">{{ typeBadge(ev.type) }}</div>
-            <div class="event-time">{{ ev.timestampMs ? (ev.timestampMs | date:'mediumDate') : ev.dateLabel }}</div>
-            <div class="event-time-detail">{{ ev.timestampMs ? (ev.timestampMs | date:'shortTime') : ev.timeLabel }}</div>
+            <div class="event-time">{{ tsMs(ev) ? (tsMs(ev) | date:'mediumDate') : ev.dateLabel }}</div>
+            <div class="event-time-detail">{{ tsMs(ev) ? (tsMs(ev) | date:'shortTime') : ev.timeLabel }}</div>
             @if (ev.detectedClasses && ev.detectedClasses.length > 0) {
               <div class="event-classes">{{ ev.detectedClasses.join(', ') }}</div>
             }

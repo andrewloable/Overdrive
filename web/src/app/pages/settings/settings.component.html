@@ -8,74 +8,487 @@
   @if (loading()) {
     <div class="loading">Loading…</div>
   } @else {
-    <div class="card">
-      <div class="section-title">Recording Quality</div>
-      <div class="form-group">
-        <label class="form-label">Quality Tier</label>
-        <select class="form-select" [ngModel]="recordingQuality()" (ngModelChange)="recordingQuality.set($event)">
-          <option value="ECONOMY">Economy</option>
-          <option value="STANDARD">Standard</option>
-          <option value="HIGH">High</option>
-          <option value="PREMIUM">Premium</option>
-          <option value="MAX">Max</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Video Codec</label>
-        <select class="form-select" [ngModel]="codec()" (ngModelChange)="codec.set($event)">
-          <option value="H264">H.264 (AVC)</option>
-          <option value="H265">H.265 (HEVC)</option>
-        </select>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" (click)="saveQuality()" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save Quality' }}
-        </button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Language</div>
-      <div class="form-group">
-        <label class="form-label">App Language</label>
-        <select class="form-select" [ngModel]="lang()" (ngModelChange)="lang.set($event)">
-          @for (l of supportedLangs(); track l.code) {
-            <option [value]="l.code">{{ l.label }}</option>
-          } @empty {
-            <option [value]="lang()">{{ lang() }}</option>
-          }
-        </select>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" (click)="saveLang()" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save Language' }}
-        </button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Updates</div>
-      @if (updateInfo(); as info) {
-        @if (info.available) {
-          <div class="update-available">
-            <div class="update-version">v{{ info.remoteVersion }} available</div>
-            @if (info.releaseNotes) {
-              <div class="update-notes">{{ info.releaseNotes }}</div>
-            }
-            <button class="btn btn-primary" (click)="installUpdate()" [disabled]="installing()">
-              {{ installing() ? 'Installing…' : 'Install Update' }}
-            </button>
-          </div>
-        } @else {
-          <p class="up-to-date">You're running v{{ info.currentVersion }} — up to date.</p>
-        }
-      } @else {
-        <div class="actions">
-          <button class="btn btn-secondary" (click)="checkUpdate()" [disabled]="checkingUpdate()">
-            {{ checkingUpdate() ? 'Checking…' : 'Check for Updates' }}
+    <div class="settings-shell">
+      <!-- Section sub-rail -->
+      <nav class="settings-rail" role="tablist">
+        @for (s of sections; track s.id) {
+          <button type="button" class="rail-item" role="tab"
+                  [class.active]="active() === s.id"
+                  (click)="select(s.id)">
+            {{ s.label }}
+            @if (!s.ready) { <span class="soon-dot" title="Coming soon"></span> }
           </button>
-        </div>
-      }
+        }
+      </nav>
+
+      <!-- Detail pane -->
+      <section class="settings-detail">
+        @switch (active()) {
+          @case ('appearance') {
+            <div class="card">
+              <div class="section-title">Theme</div>
+              <div class="tile-row">
+                @for (t of ['auto','light','dark']; track t) {
+                  <button type="button" class="theme-tile" [class.active]="theme() === t"
+                          (click)="setTheme($any(t))">
+                    <span class="theme-swatch" [attr.data-theme-preview]="t"></span>
+                    <span class="theme-name">{{ t | titlecase }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Navigation Side</div>
+              <div class="seg">
+                @for (d of ['left','right','auto']; track d) {
+                  <button type="button" class="seg-btn" [class.active]="driveSide() === d"
+                          (click)="setDriveSide($any(d))">{{ d | titlecase }}</button>
+                }
+              </div>
+              <p class="hint">Left = LHD, Right = RHD, Auto follows the vehicle.</p>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Language</div>
+              <div class="form-group">
+                <label class="form-label">App Language</label>
+                <select class="form-select" [ngModel]="lang()" (ngModelChange)="lang.set($event)">
+                  @for (l of supportedLangs(); track l.code) {
+                    <option [value]="l.code">{{ l.label }}</option>
+                  } @empty {
+                    <option [value]="lang()">{{ lang() }}</option>
+                  }
+                </select>
+              </div>
+              <div class="actions">
+                <button class="btn btn-primary" (click)="saveLang()" [disabled]="saving()">
+                  {{ saving() ? 'Saving…' : 'Save Language' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Updates</div>
+              @if (updateInfo()) {
+                @let info = updateInfo()!;
+                @if (info.available) {
+                  <div class="update-version">v{{ info.remoteVersion }} available</div>
+                  @if (info.releaseNotes) { <div class="update-notes">{{ info.releaseNotes }}</div> }
+                  <button class="btn btn-primary" (click)="installUpdate()" [disabled]="installing()">
+                    {{ installing() ? 'Installing…' : 'Install Update' }}
+                  </button>
+                } @else {
+                  <p class="up-to-date">You're running v{{ info.currentVersion }} — up to date.</p>
+                }
+              } @else {
+                <div class="actions">
+                  <button class="btn btn-secondary" (click)="checkUpdate()" [disabled]="checkingUpdate()">
+                    {{ checkingUpdate() ? 'Checking…' : 'Check for Updates' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          @case ('recording') {
+            <!-- Capture / Quality / Storage tabs mirror native RecordingSettings -->
+            <div class="seg sub-tabs">
+              <button type="button" class="seg-btn" [class.active]="recordingTab() === 'capture'"
+                      (click)="setRecordingTab('capture')">Capture</button>
+              <button type="button" class="seg-btn" [class.active]="recordingTab() === 'quality'"
+                      (click)="setRecordingTab('quality')">Quality</button>
+              <button type="button" class="seg-btn" [class.active]="recordingTab() === 'storage'"
+                      (click)="setRecordingTab('storage')">Storage</button>
+            </div>
+
+            @switch (recordingTab()) {
+              @case ('capture') {
+                <div class="card">
+                  <div class="section-title">Recording Mode (ACC ON)</div>
+                  <p class="hint" style="margin-top:0">Choose when dashcam recording should occur while driving.</p>
+                  <div class="radio-list">
+                    @for (m of recordingModes; track m.value) {
+                      <button type="button" class="radio-row" [class.active]="recordingMode() === m.value"
+                              (click)="recordingMode.set(m.value)">
+                        <span class="radio-text">
+                          <span class="radio-label">{{ m.label }}</span>
+                          <span class="radio-desc">{{ m.description }}</span>
+                        </span>
+                        <span class="radio-dot">{{ recordingMode() === m.value ? '◉' : '○' }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="section-title">Recording Limit</div>
+                  <p class="hint" style="margin-top:0">Maximum length per file. Recordings split into new files at this interval.</p>
+                  <div class="seg">
+                    @for (lim of recordingLimits; track lim) {
+                      <button type="button" class="seg-btn" [class.active]="recordingLimit() === lim"
+                              (click)="recordingLimit.set(lim)">{{ lim }} min</button>
+                    }
+                  </div>
+                  <div class="actions">
+                    <button class="btn btn-primary" (click)="saveCapture()" [disabled]="saving()">
+                      {{ saving() ? 'Saving…' : 'Apply Changes' }}
+                    </button>
+                  </div>
+                </div>
+              }
+
+              @case ('quality') {
+                <div class="card">
+                  <div class="section-title">Recording Quality</div>
+                  <div class="form-group">
+                    <label class="form-label">Quality Tier</label>
+                    <select class="form-select" [ngModel]="recordingQuality()" (ngModelChange)="recordingQuality.set($event)">
+                      <option value="ECONOMY">Economy</option>
+                      <option value="STANDARD">Standard</option>
+                      <option value="HIGH">High</option>
+                      <option value="PREMIUM">Premium</option>
+                      <option value="MAX">Max</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Video Codec</label>
+                    <select class="form-select" [ngModel]="codec()" (ngModelChange)="codec.set($event)">
+                      <option value="H264">H.264 (AVC)</option>
+                      <option value="H265">H.265 (HEVC)</option>
+                    </select>
+                  </div>
+                  <div class="actions">
+                    <button class="btn btn-primary" (click)="saveQuality()" [disabled]="saving()">
+                      {{ saving() ? 'Saving…' : 'Save Quality' }}
+                    </button>
+                  </div>
+                </div>
+              }
+
+              @case ('storage') {
+                @if (storage()) {
+                  @let st = storage()!;
+                  <div class="card">
+                    <div class="section-title">Recording Storage</div>
+                    <label class="form-label">Storage Location</label>
+                    <div class="seg">
+                      <button type="button" class="seg-btn" [class.active]="recStorageType() === 'INTERNAL'"
+                              (click)="setRecStorageType('INTERNAL')">Internal</button>
+                      <button type="button" class="seg-btn" [class.active]="recStorageType() === 'SD_CARD'"
+                              [disabled]="!st.sdCardAvailable"
+                              (click)="setRecStorageType('SD_CARD')">
+                        SD Card{{ st.sdCardAvailable ? '' : ' (N/A)' }}
+                      </button>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px">
+                      <label class="form-label">Storage Limit — auto-deletes oldest when reached</label>
+                      <div class="slider-value">{{ formatMb(recLimitMb()) }}</div>
+                      <input type="range" class="range" [min]="recLimitMin()" [max]="recLimitMax()" [step]="100"
+                             [ngModel]="recLimitMb()" (ngModelChange)="recLimitMb.set(+$event)" />
+                    </div>
+
+                    <div class="info-grid">
+                      <div class="info-row"><span>Usage</span><b>{{ formatBytes(st.recordingsSizeBytes) }} / {{ st.recordingsLimitMb }} MB limit</b></div>
+                      <div class="info-row"><span>Files</span><b>{{ st.recordingsCount }} recordings</b></div>
+                      @if (st.recordingsPath) { <div class="info-row"><span>Path</span><b class="path">{{ st.recordingsPath }}</b></div> }
+                      @if (st.internalFreeFormatted) { <div class="info-row"><span>Internal Free</span><b>{{ st.internalFreeFormatted }}</b></div> }
+                      @if (st.sdCardAvailable && st.sdCardFreeFormatted) { <div class="info-row"><span>SD Card Free</span><b>{{ st.sdCardFreeFormatted }}</b></div> }
+                    </div>
+
+                    <div class="actions">
+                      <button class="btn btn-primary" (click)="saveStorage()" [disabled]="saving()">
+                        {{ saving() ? 'Saving…' : 'Apply Changes' }}
+                      </button>
+                      <button class="btn btn-secondary" (click)="syncStorageCatalog()" [disabled]="saving()">Sync Database</button>
+                    </div>
+                  </div>
+
+                  @if (st.sdCardAvailable) {
+                    <div class="card danger-card">
+                      <div class="section-title">Format External Drive</div>
+                      <p class="hint" style="margin-top:0">Permanently erases ALL data on the SD card or USB drive.</p>
+                      <div class="actions">
+                        <button class="btn btn-danger" (click)="formatVolume()" [disabled]="formatBusy()">
+                          {{ formatBusy() ? 'Formatting…' : (formatConfirm() ? 'Tap again to ERASE' : 'Format SD Card / USB') }}
+                        </button>
+                        @if (formatConfirm()) {
+                          <button class="btn btn-secondary" (click)="formatConfirm.set(false)">Cancel</button>
+                        }
+                      </div>
+                    </div>
+                  }
+                } @else {
+                  <div class="card"><p class="hint">Loading storage…</p></div>
+                }
+              }
+            }
+          }
+
+          @case ('surveillance') {
+            <div class="card note-card">
+              <p class="hint" style="margin:0">
+                These are the full detection and recording settings for the sentry pipeline.
+                Live snapshots, the master enable toggle, and the heatmap are on the
+                <b>Surveillance</b> page.
+              </p>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Detection</div>
+              <label class="form-label">Environment Preset</label>
+              <div class="seg seg-wrap">
+                @for (p of survPresets; track p) {
+                  <button type="button" class="seg-btn" [class.active]="survPreset() === p"
+                          (click)="survPreset.set(p)">{{ p | titlecase }}</button>
+                }
+              </div>
+
+              <label class="form-label" style="margin-top:16px">Sensitivity (1 = strict, 5 = sensitive): {{ survSensitivity() }}</label>
+              <div class="seg">
+                @for (lvl of survSensitivityLevels; track lvl) {
+                  <button type="button" class="seg-btn" [class.active]="survSensitivity() === lvl"
+                          (click)="survSensitivity.set(lvl)">{{ lvl }}</button>
+                }
+              </div>
+
+              <label class="form-label" style="margin-top:16px">Detect Objects</label>
+              <div class="toggle-row">
+                <span class="toggle-label">Person</span>
+                <button type="button" class="toggle" [class.on]="survDetectPerson()" (click)="survDetectPerson.set(!survDetectPerson())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Car</span>
+                <button type="button" class="toggle" [class.on]="survDetectCar()" (click)="survDetectCar.set(!survDetectCar())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Bike</span>
+                <button type="button" class="toggle" [class.on]="survDetectBike()" (click)="survDetectBike.set(!survDetectBike())"></button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Event Recording</div>
+              <label class="form-label">Pre-record (seconds before event): {{ survPreRecord() }}</label>
+              <div class="seg seg-wrap">
+                @for (sec of survPreRecordOptions; track sec) {
+                  <button type="button" class="seg-btn" [class.active]="survPreRecord() === sec"
+                          (click)="survPreRecord.set(sec)">{{ sec }}s</button>
+                }
+              </div>
+              <label class="form-label" style="margin-top:16px">Post-record (seconds after event): {{ survPostRecord() }}</label>
+              <div class="seg seg-wrap">
+                @for (sec of survPostRecordOptions; track sec) {
+                  <button type="button" class="seg-btn" [class.active]="survPostRecord() === sec"
+                          (click)="survPostRecord.set(sec)">{{ sec }}s</button>
+                }
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">AI &amp; Deterrent</div>
+              <div class="toggle-row">
+                <span class="toggle-label">AI Detection</span>
+                <button type="button" class="toggle" [class.on]="survAiEnabled()" (click)="survAiEnabled.set(!survAiEnabled())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Night Mode</span>
+                <button type="button" class="toggle" [class.on]="survNightMode()" (click)="survNightMode.set(!survNightMode())"></button>
+              </div>
+              <label class="form-label" style="margin-top:12px">Deterrent Action</label>
+              <div class="seg">
+                @for (d of survDeterrents; track d) {
+                  <button type="button" class="seg-btn" [class.active]="survDeterrent() === d"
+                          (click)="survDeterrent.set(d)">{{ d | titlecase }}</button>
+                }
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Camera Selection</div>
+              <div class="toggle-row">
+                <span class="toggle-label">Front</span>
+                <button type="button" class="toggle" [class.on]="survCameraFront()" (click)="survCameraFront.set(!survCameraFront())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Right</span>
+                <button type="button" class="toggle" [class.on]="survCameraRight()" (click)="survCameraRight.set(!survCameraRight())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Rear</span>
+                <button type="button" class="toggle" [class.on]="survCameraRear()" (click)="survCameraRear.set(!survCameraRear())"></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Left</span>
+                <button type="button" class="toggle" [class.on]="survCameraLeft()" (click)="survCameraLeft.set(!survCameraLeft())"></button>
+              </div>
+              <div class="actions">
+                <button class="btn btn-primary" (click)="saveSurveillance()" [disabled]="saving()">
+                  {{ saving() ? 'Saving…' : 'Apply Changes' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Safe Locations</div>
+              <div class="toggle-row">
+                <span>
+                  <span class="toggle-label">Disable at Safe Locations</span>
+                  <span class="toggle-sub">Camera won't start when parked in a saved zone.</span>
+                </span>
+                <button type="button" class="toggle" [class.on]="safeLocationsEnabled()" (click)="toggleSafeLocations()"></button>
+              </div>
+              @for (zone of safeZones(); track zone.id) {
+                <div class="zone-row">
+                  <span class="zone-name">{{ zone.name }} <span class="zone-radius">({{ zone.radiusM }}m)</span></span>
+                  <button type="button" class="zone-del" (click)="deleteZone(zone.id)">✕</button>
+                </div>
+              } @empty {
+                <p class="hint">No safe locations added yet. Add zones from the Surveillance page where the live map is available.</p>
+              }
+            </div>
+          }
+
+          @case ('overlay') {
+            <div class="card note-card">
+              <p class="hint" style="margin:0">
+                The floating status pill is rendered by an on-device overlay service.
+                These toggles control its segments. Visibility is stored in the device's
+                unified config; there is <b>no web RPC</b> for it yet, so changes made here
+                are remembered in this browser but applied on the head unit only.
+              </p>
+            </div>
+            <div class="card">
+              <div class="section-title">Overlay Indicators</div>
+              <div class="toggle-row">
+                <span>
+                  <span class="toggle-label">Camera / recording indicator</span>
+                  <span class="toggle-sub">Shows REC / PROX while the camera pipeline is active.</span>
+                </span>
+                <button type="button" class="toggle" [class.on]="overlayCamera()"
+                        (click)="setOverlayCamera(!overlayCamera())"></button>
+              </div>
+              <div class="toggle-row">
+                <span>
+                  <span class="toggle-label">Trip indicator</span>
+                  <span class="toggle-sub">Shows TRIP while a trip is being recorded.</span>
+                </span>
+                <button type="button" class="toggle" [class.on]="overlayTrip()"
+                        (click)="setOverlayTrip(!overlayTrip())"></button>
+              </div>
+            </div>
+          }
+
+          @case ('daemons') {
+            <div class="card note-card">
+              <p class="hint" style="margin:0">
+                Read-only daemon status derived from the live system status feed.
+                Starting/stopping daemons and configuring the Zrok tunnel token are
+                <b>device-only</b> actions on the head unit — there is no web RPC for them yet.
+              </p>
+            </div>
+            <div class="card">
+              <div class="section-title">
+                Daemon Status
+                <button type="button" class="link-btn" (click)="refreshDaemons()">Refresh</button>
+              </div>
+              @if (systemStatus()) {
+                @for (row of daemonRows(); track row.label) {
+                  <div class="daemon-row">
+                    <span class="daemon-name">{{ row.label }}</span>
+                    <span class="daemon-detail">{{ row.detail }}</span>
+                    <span class="status-badge" [class.active]="row.running" [class.inactive]="!row.running">
+                      {{ row.running ? 'Running' : 'Stopped' }}
+                    </span>
+                  </div>
+                }
+              } @else {
+                <p class="hint">Loading status…</p>
+              }
+            </div>
+          }
+
+          @case ('privacy') {
+            <div class="card">
+              <div class="section-title">On-device Privacy</div>
+              <p class="hint" style="margin-top:0">
+                All footage and telemetry stay on the head unit. Nothing is uploaded unless
+                you explicitly enable BYD cloud or a tunnel. Recordings live under
+                <code>/storage/emulated/0/BladeWatch</code> on the device.
+              </p>
+            </div>
+
+            <div class="card">
+              <div class="section-title">Local Storage Usage</div>
+              @if (storage()) {
+                @let st = storage()!;
+                <div class="info-grid">
+                  <div class="info-row"><span>Recordings</span><b>{{ formatBytes(st.recordingsSizeBytes) }} · {{ st.recordingsCount }} files</b></div>
+                  <div class="info-row"><span>Surveillance</span><b>{{ formatBytes(st.surveillanceSizeBytes) }} · {{ st.surveillanceCount }} files</b></div>
+                  @if (st.internalFreeFormatted) { <div class="info-row"><span>Internal Free</span><b>{{ st.internalFreeFormatted }}</b></div> }
+                  @if (st.sdCardAvailable && st.sdCardFreeFormatted) { <div class="info-row"><span>SD Card Free</span><b>{{ st.sdCardFreeFormatted }}</b></div> }
+                </div>
+              } @else {
+                <p class="hint">Loading storage…</p>
+              }
+            </div>
+
+            <div class="card">
+              <div class="section-title">Developer Diagnostics</div>
+              <p class="hint" style="margin-top:0">
+                Daemon timing logs and debug app logs are toggled in the device's unified
+                config. There is <b>no web RPC</b> for these flags — set them in the head
+                unit's Settings &rarr; Privacy &amp; data pane.
+              </p>
+              <div class="toggle-row">
+                <span class="toggle-label">Daemon timing logs <span class="toggle-sub">device-only</span></span>
+                <button type="button" class="toggle" disabled></button>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label">Debug app logs <span class="toggle-sub">device-only</span></span>
+                <button type="button" class="toggle" disabled></button>
+              </div>
+            </div>
+
+            <div class="card danger-card">
+              <div class="section-title">Reset Data</div>
+              <p class="hint" style="margin-top:0">
+                Preview which old clips the cleanup routine would delete, then free space.
+                Cleanup removes the oldest unprotected recordings.
+              </p>
+              <div class="actions">
+                <button class="btn btn-secondary" (click)="previewCleanup()" [disabled]="cleanupBusy()">
+                  {{ cleanupBusy() ? 'Working…' : 'Preview Cleanup' }}
+                </button>
+              </div>
+              @if (cleanupPreview()) {
+                @let prev = cleanupPreview()!;
+                <div class="info-grid" style="margin-top:12px">
+                  <div class="info-row"><span>Deletable</span><b>{{ formatBytes(prev.totalDeletableBytes) }} across {{ prev.totalDeletableCount }} files</b></div>
+                </div>
+                @if (prev.totalDeletableCount > 0) {
+                  <div class="actions">
+                    <button class="btn btn-danger" (click)="triggerCleanup()" [disabled]="cleanupBusy()">
+                      {{ cleanupConfirm() ? 'Tap again to delete' : 'Run Cleanup' }}
+                    </button>
+                    @if (cleanupConfirm()) {
+                      <button class="btn btn-secondary" (click)="cleanupConfirm.set(false)">Cancel</button>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          @default {
+            <div class="card placeholder">
+              <div class="section-title">{{ active() | titlecase }}</div>
+              <p class="hint">This section is being built to match the native app.</p>
+            </div>
+          }
+        }
+      </section>
     </div>
   }
 </div>

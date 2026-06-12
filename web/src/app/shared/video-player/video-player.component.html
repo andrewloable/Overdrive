@@ -1,0 +1,70 @@
+<div class="vp-overlay" (click)="onClose()">
+  <div class="vp-shell" (click)="$event.stopPropagation()">
+    <div class="vp-topbar">
+      <div class="vp-title" [title]="title()">{{ title() }}</div>
+      <button class="vp-close" type="button" (click)="onClose()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="vp-stage">
+      <video
+        #video
+        class="vp-video"
+        [src]="src()"
+        controls
+        autoplay
+        (loadedmetadata)="onLoadedMetadata()"
+        (timeupdate)="onTimeUpdate()"
+        (ended)="onEnded()"
+      ></video>
+    </div>
+
+    <!-- Detection-event timeline: colored spans + live playhead. Falls back to
+         a bare duration track + playhead when no spans are available. -->
+    <div class="vp-timeline-row">
+      <span class="vp-time">{{ fmt(currentMs()) }}</span>
+      <div class="vp-timeline" (click)="seekFromEvent($event)">
+        <div class="vp-track"></div>
+        @for (s of spansView(); track $index) {
+          <div
+            class="vp-span"
+            [class]="spanClass(s)"
+            [style.left]="spanLeft(s)"
+            [style.width]="spanWidth(s)"
+          ></div>
+        }
+        <div class="vp-playhead" [style.left]="playheadLeft()"></div>
+      </div>
+      <span class="vp-time">{{ fmt(durationMs()) }}</span>
+    </div>
+
+    @if (legend()) {
+      <div class="vp-legend">{{ legend() }}</div>
+    } @else if (spansView().length === 0) {
+      <div class="vp-legend vp-legend-muted">No detection events</div>
+    }
+
+    @if (hasPlaylist()) {
+      <div class="vp-transport">
+        <button
+          class="vp-nav"
+          type="button"
+          (click)="prev()"
+          [disabled]="!canPrev()"
+          aria-label="Previous clip"
+        >
+          ‹ Prev
+        </button>
+        <span class="vp-count">{{ index() + 1 | number }} / {{ playlistCount() | number }}</span>
+        <button
+          class="vp-nav"
+          type="button"
+          (click)="next()"
+          [disabled]="!canNext()"
+          aria-label="Next clip"
+        >
+          Next ›
+        </button>
+      </div>
+    }
+  </div>
+</div>

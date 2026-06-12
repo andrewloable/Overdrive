@@ -2,29 +2,102 @@
   <div class="page-header">
     <h1>Recordings</h1>
     @if (usedBytes() > 0) {
-      <div class="stats-bar">{{ usedMb() | number }} MB · {{ totalCount() }} files</div>
+      <div class="stats-bar">{{ usedMb() | number }} MB · {{ totalCount() | number }} files</div>
     }
   </div>
 
   @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
 
-  <div class="filter-tabs">
-    @for (f of filters; track f.key) {
-      <button class="filter-tab" [class.active]="activeFilter() === f.key" (click)="setFilter(f.key)">
-        {{ f.label }}
-      </button>
+  <!-- Segmented source control with running counts -->
+  <div class="segmented">
+    <button
+      class="segment"
+      [class.active]="segment() === 'DASHCAM'"
+      (click)="setSegment('DASHCAM')"
+    >
+      Dashcam <span class="seg-count">{{ dashcamCount() | number }}</span>
+    </button>
+    <button
+      class="segment"
+      [class.active]="segment() === 'SURVEILLANCE'"
+      (click)="setSegment('SURVEILLANCE')"
+    >
+      Surveillance <span class="seg-count">{{ surveillanceCount() | number }}</span>
+    </button>
+  </div>
+
+  <!-- Date navigation -->
+  <div class="date-row">
+    <div class="date-presets">
+      <button class="date-pill" [class.active]="dateLabel() === 'Today'" (click)="goToday()">Today</button>
+      <button class="date-pill" [class.active]="dateLabel() === 'Yesterday'" (click)="goYesterday()">Yesterday</button>
+      <button class="date-pill" [class.active]="dateMode() === 'ALL'" (click)="setDateMode('ALL')">All</button>
+    </div>
+    @if (dateMode() === 'DAY') {
+      <div class="date-nav">
+        <button class="date-arrow" (click)="shiftDay(-1)" aria-label="Previous day">‹</button>
+        <span class="date-label">{{ dateLabel() }}</span>
+        <button
+          class="date-arrow"
+          (click)="shiftDay(1)"
+          [disabled]="!canGoNextDay()"
+          aria-label="Next day"
+        >›</button>
+      </div>
+    } @else {
+      <span class="date-label">{{ dateLabel() }}</span>
     }
   </div>
 
-  @if (activeVideo(); as rec) {
-    <div class="video-overlay" (click)="closeVideo()">
-      <div class="video-container" (click)="$event.stopPropagation()">
-        <button class="close-btn" (click)="closeVideo()">✕</button>
-        <video [src]="'/video/' + rec.filename" controls autoplay class="video-player"></video>
-        <div class="video-title">{{ rec.filename }}</div>
-      </div>
+  <!-- Filter chips: per-segment -->
+  @if (segment() === 'SURVEILLANCE') {
+    <div class="chip-row">
+      <span class="chip-group-label">Who</span>
+      @for (c of actorChips; track c.key) {
+        <button class="chip" [class.active]="isActor(c.key)" (click)="toggleActor(c.key)">{{ c.label }}</button>
+      }
+    </div>
+    <div class="chip-row">
+      <span class="chip-group-label">Severity</span>
+      @for (c of severityChips; track c.key) {
+        <button class="chip" [class.active]="isSeverity(c.key)" (click)="toggleSeverity(c.key)">{{ c.label }}</button>
+      }
+      @if (chipsActive()) {
+        <button class="chip chip-reset" (click)="resetChips()">Reset</button>
+      }
+    </div>
+  } @else {
+    <div class="chip-row">
+      <span class="chip-group-label">Type</span>
+      @for (c of typeChips; track c.key) {
+        <button class="chip" [class.active]="isType(c.key)" (click)="toggleType(c.key)">{{ c.label }}</button>
+      }
+      @if (chipsActive()) {
+        <button class="chip chip-reset" (click)="resetChips()">Reset</button>
+      }
     </div>
   }
+
+  <!-- Multi-select toolbar -->
+  <div class="select-bar">
+    @if (selectMode()) {
+      <span class="select-count">{{ selectedCount() | number }} selected</span>
+      <button class="select-action" (click)="selectAllVisible()">
+        {{ allVisibleSelected() ? 'Deselect All' : 'Select All' }}
+      </button>
+      <button
+        class="select-action danger"
+        (click)="deleteSelected()"
+        [disabled]="selectedCount() === 0"
+      >Delete</button>
+      <button class="select-action" (click)="exitSelect()">Cancel</button>
+    } @else {
+      <span class="select-count">{{ visibleCount() | number }} clips</span>
+      @if (visibleCount() > 0) {
+        <button class="select-action" (click)="enterSelect()">Select</button>
+      }
+    }
+  </div>
 
   @if (loading()) {
     <div class="loading">Loading…</div>
@@ -32,31 +105,48 @@
     <div class="error-card">{{ error() }}</div>
   } @else {
     <div class="recording-grid">
-      @for (rec of recordings(); track rec.filename) {
-        <div class="recording-card">
+      @for (rec of visible(); track rec.filename) {
+        <div class="recording-card" [class.selected]="isSelected(rec.filename)">
           <div class="thumb-wrap" (click)="playVideo(rec)">
             <img [src]="'/thumb/' + rec.filename" [alt]="rec.filename" class="thumb" loading="lazy">
-            <div class="play-overlay">
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
-            </div>
-            @if (rec.durationSeconds > 0) {
-              <div class="duration">{{ rec.durationSeconds }}s</div>
+            @if (selectMode()) {
+              <div class="select-check" [class.on]="isSelected(rec.filename)">
+                @if (isSelected(rec.filename)) { ✓ }
+              </div>
+            } @else {
+              <div class="play-overlay">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+              </div>
+            }
+            @if (durationSec(rec) > 0) {
+              <div class="duration">{{ durationSec(rec) }}s</div>
             }
           </div>
           <div class="rec-info">
             <div class="rec-time">{{ rec.timeLabel || rec.dateLabel }}</div>
-            <div class="rec-type-badge" [class]="rec.type">{{ rec.type }}</div>
+            <div class="rec-type-badge" [class]="typeName(rec.type)">{{ typeName(rec.type) }}</div>
           </div>
-          <button class="delete-btn" (click)="deleteRecording(rec)" title="Delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-            </svg>
-          </button>
+          @if (!selectMode()) {
+            <button class="delete-btn" (click)="deleteRecording(rec, $event)" title="Delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          }
         </div>
       } @empty {
         <div class="empty-text">No recordings found.</div>
       }
     </div>
+  }
+
+  @if (activeFile(); as file) {
+    <app-video-player
+      [file]="file"
+      [playlist]="playlist()"
+      (fileChange)="onPlayerFileChange($event)"
+      (close)="closeVideo()"
+    />
   }
 </div>

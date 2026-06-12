@@ -29,3 +29,110 @@
   line-height: 1.6;
   margin: 0 0 8px;
 }
+
+/* Tappable cards (License, Getting Started) */
+.card-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+
+  &:hover { background: var(--surface-hover, rgba(255,255,255,0.04)); }
+
+  .card-action-text .about-text { margin-bottom: 0; }
+
+  .chevron {
+    font-size: 22px;
+    line-height: 1;
+    color: var(--text-muted, #71717A);
+    flex: 0 0 auto;
+  }
+}
+
+/* Modal (license / setup) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--surface-card, #18181B);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--text-primary, #fff); }
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #71717A);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  &:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+}
+
+.modal-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary, #A1A1AA);
+  margin: 0 0 16px;
+}
+
+.license-text {
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary, #A1A1AA);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setup-step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin-bottom: 2px;
+}
+
+.setup-step-detail {
+  font-size: 13px;
+  color: var(--text-secondary, #A1A1AA);
+  line-height: 1.5;
+}

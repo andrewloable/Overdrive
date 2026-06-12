@@ -6,10 +6,15 @@
   @if (loading()) {
     <div class="loading">Loading…</div>
   } @else {
+    <!-- Identity card: brand + version + build/package -->
     <div class="card">
       <div class="info-row">
         <span class="info-label">App Version</span>
         <span class="info-value">{{ appVersion() || '—' }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Build</span>
+        <span class="info-value mono">{{ packageId }}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Device ID</span>
@@ -21,10 +26,62 @@
       </div>
     </div>
 
+    <!-- License card -> full MIT text -->
+    <button type="button" class="card card-action" (click)="open('license')">
+      <div class="card-action-text">
+        <div class="section-title">License</div>
+        <p class="about-text">MIT License — tap to read the full text.</p>
+      </div>
+      <span class="chevron">›</span>
+    </button>
+
+    <!-- Getting Started card -> setup steps -->
+    <button type="button" class="card card-action" (click)="open('setup')">
+      <div class="card-action-text">
+        <div class="section-title">Getting Started</div>
+        <p class="about-text">Three quick steps to get the best experience.</p>
+      </div>
+      <span class="chevron">›</span>
+    </button>
+
     <div class="card">
       <div class="section-title">BladeWatch</div>
       <p class="about-text">Advanced sentry mode and dashcam system for BYD vehicles.</p>
       <p class="about-text">Your data stays on your device. No cloud required.</p>
+    </div>
+  }
+
+  <!-- License dialog -->
+  @if (openDialog() === 'license') {
+    <div class="modal-backdrop" (click)="close()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>License</h2>
+          <button type="button" class="modal-close" (click)="close()" aria-label="Close">✕</button>
+        </div>
+        <pre class="license-text">{{ licenseText }}</pre>
+      </div>
+    </div>
+  }
+
+  <!-- Getting Started dialog -->
+  @if (openDialog() === 'setup') {
+    <div class="modal-backdrop" (click)="close()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Getting Started</h2>
+          <button type="button" class="modal-close" (click)="close()" aria-label="Close">✕</button>
+        </div>
+        <p class="modal-subtitle">Three quick steps to get the best experience:</p>
+        <ol class="setup-steps">
+          @for (step of setupSteps; track step.title) {
+            <li class="setup-step">
+              <div class="setup-step-title">{{ step.title }}</div>
+              <div class="setup-step-detail">{{ step.detail }}</div>
+            </li>
+          }
+        </ol>
+      </div>
     </div>
   }
 </div>

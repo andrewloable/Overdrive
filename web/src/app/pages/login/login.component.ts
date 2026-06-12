@@ -40,10 +40,6 @@ export class LoginComponent implements OnInit {
       this.error.set('Please enter your access code');
       return;
     }
-    if (code.length !== 8) {
-      this.error.set('Access code must be 8 characters');
-      return;
-    }
     const devId = this.deviceId();
     if (!devId || devId === 'Connection error' || devId === 'Unknown device' || devId === 'Loading...') {
       this.statusMessage.set({ text: 'Device ID not loaded. Please refresh.', type: 'error' });

@@ -36,7 +36,16 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return document.cookie.split(';').some(c => c.trim().startsWith('byd_session='));
+    // The JWT lives in the `byd_session` cookie, which the server sets HttpOnly
+    // — JavaScript cannot read it, so checking it here always fails and traps
+    // the user in a /login redirect loop. The server also sets a non-HttpOnly
+    // `byd_auth=1` hint cookie (same lifetime, set by both the REST /auth/token
+    // and Connect AuthService.Login paths) precisely so the SPA can detect an
+    // active session. Test that instead.
+    return document.cookie.split(';').some(c => {
+      const t = c.trim();
+      return t.startsWith('byd_auth=') && t.slice('byd_auth='.length) !== '';
+    });
   }
 
   static connectErrorMessage(err: unknown): string {
@@ -51,7 +60,11 @@ export class AuthService {
   }
 
   private clearAndRedirect(): void {
+    // byd_session is HttpOnly (the logout RPC expires it server-side); clear the
+    // JS-readable byd_auth hint cookie locally so isAuthenticated() flips to
+    // false immediately, before the guard re-evaluates.
     document.cookie = 'byd_session=; path=/; max-age=0; samesite=lax';
+    document.cookie = 'byd_auth=; path=/; max-age=0; samesite=lax';
     this.authState$.next(false);
     this.router.navigate(['/login']);
   }

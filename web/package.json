@@ -6,7 +6,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "generate": "cd ../proto && buf generate"
+    "generate": "cd ../proto && buf generate",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@angular/animations": "^19.0.0",
@@ -21,6 +25,8 @@
     "@connectrpc/connect-web": "^2.0.0",
     "@ngx-translate/core": "^16.0.4",
     "@ngx-translate/http-loader": "^16.0.1",
+    "leaflet": "^1.9.4",
+    "qrcode": "^1.5.4",
     "rxjs": "^7.8.0",
     "zone.js": "~0.15.0"
   },
@@ -30,6 +36,9 @@
     "@angular/build": "^19.0.0",
     "@angular/compiler-cli": "^19.0.0",
     "@bufbuild/protoc-gen-es": "^2.0.0",
+    "@playwright/test": "^1.60.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/qrcode": "^1.5.6",
     "typescript": "~5.6.0",
     "vite": "^6.0.0"
   }

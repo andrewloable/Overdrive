@@ -1,0 +1,173 @@
+@import '../../shared/page-shared';
+// NOTE: leaflet/dist/leaflet.css is imported as a side-effect in
+// location.component.ts (Vite resolves it). Sass cannot resolve that bare
+// node_modules path here, so it must NOT be @imported in this file.
+
+// This is a full-bleed map screen, so drop the shared page padding.
+:host {
+  display: block;
+  padding: 0;
+}
+
+.location-page {
+  position: relative;
+  width: 100%;
+  // Explicit height is mandatory or Leaflet renders blank (rule 3).
+  height: 78vh;
+  min-height: 420px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0c0c0f;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+
+  // Dark mode: invert the OSM tiles to match osmdroid INVERT_COLORS.
+  // Applied to the Leaflet container via the .bw-map-dark class so the
+  // marker / controls (added as children) stay un-inverted below.
+  &.bw-map-dark .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+  }
+
+  &.bw-map-dark {
+    background: #000;
+  }
+}
+
+// Car marker — DivIcon, rotation applied inline per heading.
+:host ::ng-deep .bw-car-divicon {
+  background: transparent;
+  border: none;
+}
+
+:host ::ng-deep .bw-car-marker {
+  width: 48px;
+  height: 48px;
+  transform-origin: 50% 50%;
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+
+// ---- status banner ----
+.banner {
+  position: absolute;
+  z-index: 1000;
+  background: rgba(16, 16, 16, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 14px 20px;
+  color: #fff;
+  pointer-events: none;
+
+  .banner-link {
+    pointer-events: auto;
+  }
+
+  &.centered {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    max-width: 80%;
+  }
+
+  &.compact {
+    top: 12px;
+    left: 12px;
+    max-width: calc(100% - 120px);
+  }
+}
+
+.banner-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.banner-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary, #d0d0d0);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-primary, #00d4aa);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ---- map appearance selector ----
+.mode-selector {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(16, 16, 16, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+
+  button {
+    min-width: 56px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &.active {
+      color: #151515;
+      background: rgba(239, 239, 239, 0.93);
+    }
+  }
+}
+
+// ---- recenter button ----
+.recenter-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(16, 16, 16, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background: rgba(32, 32, 32, 0.9);
+    transform: translateY(-1px);
+  }
+}

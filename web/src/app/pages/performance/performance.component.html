@@ -7,41 +7,75 @@
     <div class="loading">Loading metrics…</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
-  } @else if (metrics(); as m) {
-    <div class="gauge-grid">
-      <div class="gauge-card">
-        <div class="gauge-label">CPU</div>
-        <div class="gauge-bar">
-          <div class="gauge-fill" [style.width.%]="m.cpuPercent" [class.warn]="m.cpuPercent > 70" [class.crit]="m.cpuPercent > 90"></div>
-        </div>
-        <div class="gauge-value">{{ m.cpuPercent | number:'1.0-1' }}%</div>
-      </div>
+  } @else if (metrics()) {
+    @let m = metrics()!;
 
-      <div class="gauge-card">
-        <div class="gauge-label">Memory</div>
-        <div class="gauge-bar">
-          <div class="gauge-fill" [style.width.%]="m.memPercent" [class.warn]="m.memPercent > 70" [class.crit]="m.memPercent > 90"></div>
+    <!-- CPU -->
+    <div class="metric-card">
+      <div class="metric-title">CPU</div>
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">System Usage</span>
+        <div class="metric-bar">
+          <div class="metric-fill primary" [style.width.%]="m.cpu.system"
+               [class.warn]="m.cpu.system > 70" [class.crit]="m.cpu.system > 90"></div>
         </div>
-        <div class="gauge-value">{{ m.memPercent | number:'1.0-1' }}%</div>
-        @if (m.memTotalMb > 0) {
-          <div class="gauge-sub">{{ m.memUsedMb | number:'1.0-0' }} / {{ m.memTotalMb | number:'1.0-0' }} MB</div>
-        }
+        <span class="metric-bar-value">{{ m.cpu.system | number:'1.0-1' }}%</span>
       </div>
-
-      <div class="gauge-card">
-        <div class="gauge-label">Temperature</div>
-        <div class="gauge-bar">
-          <div class="gauge-fill temp" [style.width.%]="(m.tempC / 80) * 100" [class.warn]="m.tempC > 55" [class.crit]="m.tempC > 70"></div>
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">App Usage</span>
+        <div class="metric-bar">
+          <div class="metric-fill secondary" [style.width.%]="m.cpu.app"></div>
         </div>
-        <div class="gauge-value">{{ m.tempC | number:'1.0-1' }}°C</div>
+        <span class="metric-bar-value">{{ m.cpu.app | number:'1.0-1' }}%</span>
       </div>
+      <div class="metric-grid">
+        <div class="grid-cell"><span class="grid-label">Frequency</span><span class="grid-value">{{ m.cpu.freqMhz | number:'1.0-0' }} MHz</span></div>
+        <div class="grid-cell"><span class="grid-label">Temperature</span><span class="grid-value">{{ m.cpu.tempC > 0 ? (m.cpu.tempC | number:'1.0-1') + '°C' : 'N/A' }}</span></div>
+      </div>
+    </div>
 
-      <div class="gauge-card">
-        <div class="gauge-label">Camera FPS</div>
-        <div class="gauge-bar">
-          <div class="gauge-fill fps" [style.width.%]="(m.fps / 30) * 100"></div>
+    <!-- Memory -->
+    <div class="metric-card">
+      <div class="metric-title">Memory</div>
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">Usage</span>
+        <div class="metric-bar">
+          <div class="metric-fill tertiary" [style.width.%]="m.memory.usagePercent"
+               [class.warn]="m.memory.usagePercent > 70" [class.crit]="m.memory.usagePercent > 90"></div>
         </div>
-        <div class="gauge-value">{{ m.fps | number:'1.0-1' }}</div>
+        <span class="metric-bar-value">{{ m.memory.usagePercent | number:'1.0-1' }}%</span>
+      </div>
+      <div class="metric-grid">
+        <div class="grid-cell"><span class="grid-label">Total</span><span class="grid-value">{{ m.memory.totalMb | number:'1.0-0' }} MB</span></div>
+        <div class="grid-cell"><span class="grid-label">Used</span><span class="grid-value">{{ m.memory.usedMb | number:'1.0-0' }} MB</span></div>
+        <div class="grid-cell"><span class="grid-label">App</span><span class="grid-value">{{ m.memory.appTotalMb | number:'1.0-1' }} MB</span></div>
+      </div>
+    </div>
+
+    <!-- GPU -->
+    <div class="metric-card">
+      <div class="metric-title">GPU</div>
+      <div class="metric-bar-row">
+        <span class="metric-bar-label">Usage</span>
+        <div class="metric-bar">
+          <div class="metric-fill error" [style.width.%]="m.gpu.usage"
+               [class.warn]="m.gpu.usage > 70" [class.crit]="m.gpu.usage > 90"></div>
+        </div>
+        <span class="metric-bar-value">{{ m.gpu.usage | number:'1.0-1' }}%</span>
+      </div>
+      <div class="metric-grid">
+        <div class="grid-cell"><span class="grid-label">Frequency</span><span class="grid-value">{{ m.gpu.freqMhz | number:'1.0-0' }} MHz</span></div>
+        <div class="grid-cell"><span class="grid-label">Temperature</span><span class="grid-value">{{ m.gpu.tempC > 0 ? (m.gpu.tempC | number:'1.0-1') + '°C' : 'N/A' }}</span></div>
+      </div>
+    </div>
+
+    <!-- App Process -->
+    <div class="metric-card">
+      <div class="metric-title">App Process</div>
+      <div class="metric-grid">
+        <div class="grid-cell"><span class="grid-label">Threads</span><span class="grid-value">{{ m.app.threads }}</span></div>
+        <div class="grid-cell"><span class="grid-label">GC Cycles</span><span class="grid-value">{{ m.app.gcCount }}</span></div>
+        <div class="grid-cell"><span class="grid-label">Open FDs</span><span class="grid-value">{{ m.app.openFds }}</span></div>
       </div>
     </div>
 

@@ -1,0 +1,171 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Diagnostics</h1>
+    <p class="page-sub">System health and tools</p>
+  </div>
+
+  <!-- ===================== HEALTH ===================== -->
+  <div class="section-title">Health</div>
+
+  <div class="health-grid">
+    <!-- Network -->
+    <div class="health-tile">
+      <div class="tile-head">
+        <span class="tile-label">Network</span>
+      </div>
+      @let n = network();
+      <div class="tile-value">{{ n.topLine }}</div>
+      @if (n.ip) {
+        <div class="tile-ip">{{ n.ip }}</div>
+      }
+      <div class="tile-foot">
+        <span class="dot" [class]="'dot-' + n.tunnelDot"></span>
+        <span class="tile-foot-text">{{ n.tunnelLabel }}</span>
+      </div>
+    </div>
+
+    <!-- Storage -->
+    <div class="health-tile">
+      <div class="tile-head">
+        <span class="tile-label">Storage</span>
+      </div>
+      @let s = storage();
+      <div class="tile-value">{{ s.usedLine }}</div>
+      <div class="tile-foot">
+        <span class="tile-foot-text">{{ s.freeLine }}</span>
+      </div>
+    </div>
+
+    <!-- Camera (clickable -> Camera Probe) -->
+    <button type="button" class="health-tile clickable" (click)="openCameraDialog()">
+      <div class="tile-head">
+        <span class="tile-label">Camera</span>
+        <span class="dot" [class]="'dot-' + camera().dot"></span>
+      </div>
+      <div class="tile-value">{{ camera().value }}</div>
+      <div class="tile-foot">
+        <span class="tile-foot-text">Tap to reconfigure</span>
+      </div>
+    </button>
+
+    <!-- Battery (clickable -> Battery Health) -->
+    <button type="button" class="health-tile clickable" (click)="openBatteryDialog()">
+      <div class="tile-head">
+        <span class="tile-label">Battery</span>
+        <span class="dot" [class]="'dot-' + battery().dot"></span>
+      </div>
+      <div class="tile-value">{{ battery().value }}</div>
+      <div class="tile-foot">
+        <span class="tile-foot-text">Tap for battery health</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- ===================== TOOLS ===================== -->
+  <div class="section-title tools-title">Tools</div>
+
+  <div class="tools-grid">
+    <button type="button" class="tool-card" (click)="openCameraDialog()">
+      <span class="tool-label">Camera probe</span>
+    </button>
+
+    <button type="button" class="tool-card" (click)="openBatteryDialog()">
+      <span class="tool-label">Battery health</span>
+    </button>
+
+    <a class="tool-card" routerLink="/performance">
+      <span class="tool-label">Performance</span>
+    </a>
+
+    <a class="tool-card" routerLink="/settings">
+      <span class="tool-label">Settings</span>
+    </a>
+  </div>
+</div>
+
+<!-- ===================== Camera Probe dialog ===================== -->
+@if (cameraDialogOpen()) {
+  <div class="dialog-overlay" (click)="closeCameraDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-title">Camera probe</div>
+      <p class="dialog-desc">
+        Choose Auto to let BladeWatch detect the camera, or pin a specific camera index.
+        Changes apply on the next camera restart.
+      </p>
+
+      <div class="radio-list">
+        <label class="radio-row" [class.selected]="cameraSelection() === -1">
+          <input
+            type="radio"
+            name="cameraSel"
+            [checked]="cameraSelection() === -1"
+            (change)="selectCamera(-1)" />
+          <span class="radio-text">Auto</span>
+        </label>
+
+        @for (id of cameraOptions; track id) {
+          <label class="radio-row" [class.selected]="cameraSelection() === id">
+            <input
+              type="radio"
+              name="cameraSel"
+              [checked]="cameraSelection() === id"
+              (change)="selectCamera(id)" />
+            <span class="radio-text">Camera {{ id }}</span>
+          </label>
+        }
+      </div>
+
+      @if (cameraDialogMsg()) {
+        <div class="dialog-msg">{{ cameraDialogMsg() }}</div>
+      }
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCameraDialog()">Close</button>
+        <button type="button" class="btn btn-primary" (click)="saveCamera()" [disabled]="cameraSaving()">
+          {{ cameraSaving() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===================== Battery Health dialog ===================== -->
+@if (batteryDialogOpen()) {
+  <div class="dialog-overlay" (click)="closeBatteryDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-title">Battery health</div>
+
+      @let sh = soh();
+      <div class="soh-hero">
+        <span class="soh-percent">{{ sohPercentLabel() }}</span>
+        <span class="soh-caption">State of Health</span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-cell">
+          <span class="info-label">Source</span>
+          <span class="info-value">{{ sh.displaySource || '—' }}</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-label">Nominal capacity</span>
+          <span class="info-value">{{ sh.nominalCapacityKwh > 0 ? (sh.nominalCapacityKwh.toFixed(1) + ' kWh') : '—' }}</span>
+        </div>
+        <div class="info-cell">
+          <span class="info-label">Calibration</span>
+          <span class="info-value">{{ sh.nominalSource || '—' }}</span>
+        </div>
+      </div>
+
+      @if (batteryDialogMsg()) {
+        <div class="dialog-msg">{{ batteryDialogMsg() }}</div>
+      }
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">Close</button>
+        <button type="button" class="btn btn-danger" (click)="resetSoh()" [disabled]="sohResetting()">
+          {{ sohResetting() ? 'Resetting…' : 'Reset SOH' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

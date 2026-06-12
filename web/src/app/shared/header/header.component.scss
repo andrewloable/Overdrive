@@ -1,0 +1,68 @@
+:host {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--bg-base, #0A0A0B);
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, #fff);
+  text-decoration: none;
+}
+
+.header-end { display: flex; align-items: center; gap: 8px; }
+
+.tunnel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 46vw;
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  background: var(--bg-surface, #16161A);
+  color: var(--text-secondary, #A1A1AA);
+  border-radius: 18px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover { border-color: var(--brand-primary, #00D4AA); }
+
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--brand-primary, #00D4AA);
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 3px rgba(0,212,170,0.18);
+  }
+  .url {
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .copy-ic { width: 14px; height: 14px; flex: 0 0 auto; }
+}
+
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  color: var(--text-secondary, #A1A1AA);
+  &:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); color: var(--text-primary, #fff); }
+  svg { width: 20px; height: 20px; }
+}
