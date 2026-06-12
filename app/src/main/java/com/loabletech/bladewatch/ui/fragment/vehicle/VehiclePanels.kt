@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.vehicle
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import net.bladewatch.app.R
@@ -79,15 +80,14 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
     val factory = ctx.factory
     val str = factory.context
     val panel = factory.makePanel()
-    panel.addView(factory.sectionTitle(str.getString(R.string.vehicle_tab_climate)))
-    panel.addView(factory.spacer(factory.dp(12)))
 
-    val insideTempTv = factory.centeredLabel(
+    // Inside-temp caption (compact, no section title — the tab already says Climate).
+    val insideTempTv = factory.labelText(
         ctx.state.climate.insideTempC?.let { str.getString(R.string.vehicle_inside_temp_fmt, it) } ?: ""
     ).also { tv ->
         tv.visibility = if (ctx.state.climate.insideTempC != null) View.VISIBLE else View.GONE
         panel.addView(tv)
-        panel.addView(factory.spacer(factory.dp(8)))
+        panel.addView(factory.spacer(factory.dp(6)))
     }
 
     // AC button
@@ -105,9 +105,6 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
             }, "ClimateAC").apply { isDaemon = true; start() }
         }
     }
-    panel.addView(acBtn)
-    panel.addView(factory.spacer(factory.dp(8)))
-
     // Max cooling button
     fun maxColor(on: Boolean) = if (on) Color.parseColor("#F44336") else Color.parseColor("#607D8B")
     val maxCoolBtn = factory.buildWideButton(
@@ -127,8 +124,9 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
             }, "ClimateMaxCool").apply { isDaemon = true; start() }
         }
     }
-    panel.addView(maxCoolBtn)
-    panel.addView(factory.spacer(factory.dp(12)))
+    // Row 1: AC | Max Cooling side by side (uses the wide landscape width).
+    panel.addView(factory.rowOf(acBtn, maxCoolBtn))
+    panel.addView(factory.spacer(factory.dp(8)))
 
     val (tempRow, tempValueTv) = factory.buildStepperResult(
         label = str.getString(R.string.vehicle_temp_label),
@@ -150,9 +148,6 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
             }
         }
     )
-    panel.addView(tempRow)
-    panel.addView(factory.spacer(factory.dp(8)))
-
     val (fanRow, fanValueTv) = factory.buildStepperResult(
         label = str.getString(R.string.vehicle_fan_speed_label),
         value = VehicleFormatters.formatFan(str.getString(R.string.vehicle_fan_level), ctx.fanLevel, ctx.state.loaded),
@@ -173,7 +168,15 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
             }
         }
     )
-    panel.addView(fanRow)
+    // Row 2: temperature stepper | fan stepper, each in a faint glass cell.
+    fun stepperCell(inner: View) = LinearLayout(factory.context).apply {
+        background = factory.glassCell(14)
+        setPadding(factory.dp(10), factory.dp(2), factory.dp(10), factory.dp(2))
+        addView(inner, LinearLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT))
+    }
+    panel.addView(factory.rowOf(stepperCell(tempRow), stepperCell(fanRow)))
 
     return PanelResult(panel) { newCtx ->
         val newStr = factory.context
@@ -293,19 +296,23 @@ fun buildWindowsTab(ctx: PanelContext): PanelResult {
     val factory = ctx.factory
     val str = factory.context
     val panel = factory.makePanel()
-    panel.addView(factory.sectionTitle(str.getString(R.string.vehicle_tab_windows)))
-    panel.addView(factory.spacer(factory.dp(12)))
     val w = ctx.state.windows
     val caps = ctx.state.capabilities.windows
 
     data class WindowRowRefs(val label: TextView, val presetBtns: Map<Int, TextView>)
     val rowRefs = mutableListOf<WindowRowRefs>()
 
-    fun windowRow(name: String, area: Int, current: Int) {
-        val row = LinearLayout(factory.context).apply { orientation = LinearLayout.VERTICAL }
+    // One window control as a compact glass cell: name+% label over a row of
+    // preset buttons. Returns the cell so callers can pack them into a grid.
+    fun windowCell(name: String, area: Int, current: Int): View {
+        val cell = LinearLayout(factory.context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = factory.glassCell(14)
+            setPadding(factory.dp(10), factory.dp(8), factory.dp(10), factory.dp(8))
+        }
         val pctLabel = factory.labelText("$name (${VehicleFormatters.formatWindowPct(current)})")
-        row.addView(pctLabel)
-        row.addView(factory.spacer(factory.dp(4)))
+        cell.addView(pctLabel)
+        cell.addView(factory.spacer(factory.dp(4)))
         val btns = LinearLayout(factory.context).apply { orientation = LinearLayout.HORIZONTAL }
         val presetBtnRefs = mutableMapOf<Int, TextView>()
         for (pct in listOf(0, 25, 50, 75, 100)) {
@@ -315,19 +322,24 @@ fun buildWindowsTab(ctx: PanelContext): PanelResult {
                 ctx.doAction("win_${area}_$pct", null) { ctx.client.windowSetPercent(area, pct) }
             }
             presetBtnRefs[pct] = btn
-            btns.addView(btn)
-            if (pct != 100) btns.addView(factory.spacer2(factory.dp(4)))
+            btns.addView(btn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                if (pct != 0) marginStart = factory.dp(4)
+            })
         }
-        row.addView(btns)
-        panel.addView(row)
-        panel.addView(factory.spacer(factory.dp(10)))
+        cell.addView(btns)
         rowRefs.add(WindowRowRefs(pctLabel, presetBtnRefs))
+        return cell
     }
 
-    windowRow(str.getString(R.string.vehicle_window_front_left), 1, w.lf)
-    windowRow(str.getString(R.string.vehicle_window_front_right), 2, w.rf)
-    windowRow(str.getString(R.string.vehicle_window_rear_left), 3, w.lr)
-    windowRow(str.getString(R.string.vehicle_window_rear_right), 4, w.rr)
+    // 2×2 grid: FL | FR over RL | RR — mirrors the car, halves the height.
+    panel.addView(factory.rowOf(
+        windowCell(str.getString(R.string.vehicle_window_front_left), 1, w.lf),
+        windowCell(str.getString(R.string.vehicle_window_front_right), 2, w.rf)))
+    panel.addView(factory.spacer(factory.dp(8)))
+    panel.addView(factory.rowOf(
+        windowCell(str.getString(R.string.vehicle_window_rear_left), 3, w.lr),
+        windowCell(str.getString(R.string.vehicle_window_rear_right), 4, w.rr)))
+    panel.addView(factory.spacer(factory.dp(8)))
 
     panel.addView(factory.labelText(str.getString(R.string.vehicle_all_windows)))
     panel.addView(factory.spacer(factory.dp(4)))
@@ -349,13 +361,13 @@ fun buildWindowsTab(ctx: PanelContext): PanelResult {
     })
     panel.addView(allRow)
 
-    if (caps.sunroof) {
-        panel.addView(factory.spacer(factory.dp(10)))
-        windowRow(str.getString(R.string.vehicle_sunroof), 5, w.sunroof)
-    }
-    if (caps.sunshade) {
-        panel.addView(factory.spacer(factory.dp(4)))
-        windowRow(str.getString(R.string.vehicle_sunshade), 6, w.sunshade)
+    // Sunroof / sunshade (when equipped) — side by side if both present.
+    val extras = mutableListOf<View>()
+    if (caps.sunroof) extras.add(windowCell(str.getString(R.string.vehicle_sunroof), 5, w.sunroof))
+    if (caps.sunshade) extras.add(windowCell(str.getString(R.string.vehicle_sunshade), 6, w.sunshade))
+    if (extras.isNotEmpty()) {
+        panel.addView(factory.spacer(factory.dp(8)))
+        panel.addView(if (extras.size == 2) factory.rowOf(extras[0], extras[1]) else extras[0])
     }
 
     return PanelResult(panel) { newCtx ->

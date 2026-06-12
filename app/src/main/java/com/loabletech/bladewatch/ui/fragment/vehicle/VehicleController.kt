@@ -45,7 +45,7 @@ class VehicleController(private val context: Context) {
     // ─── State ───────────────────────────────────────────────────────────────
 
     private var vehicleState = VehicleState()
-    private var currentTab = VehicleTab.TRUNK
+    private var currentTab = VehicleTab.CLIMATE
     private val client = VehicleClient()
     private val factory = VehicleViewFactory(context)
 
@@ -170,23 +170,30 @@ class VehicleController(private val context: Context) {
         }
         outerLayout.addView(staleBanner)
 
-        // Transparent spacer — the 3D car shows through this band.
+        // Transparent spacer — the 3D car fills whatever height the controls
+        // panel doesn't need (weight 1 absorbs the slack), so the car is as big
+        // as possible while the panel sizes to its content.
         outerLayout.addView(View(context), LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.85f))
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Bottom glass panel: appearance bar + tabs + tab content.
+        // Bottom glass panel: appearance bar + tabs + tab content. Wraps to its
+        // content height so the compact control grids show fully without scrolling.
         val bottomPanel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = factory.glassPanelRadii(20, 20, 0, 0)
             elevation = factory.dp(8).toFloat()
             clipToPadding = false
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         bottomPanel.addView(buildAppearanceBar())
         bottomPanel.addView(buildTabBar())
 
+        // Scroll is a safety net for very tall tabs; compact grids normally fit
+        // without it. Capped so it can never grow taller than the car area.
         contentScroll = ScrollView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             isFillViewport = true
         }
         contentArea = LinearLayout(context).apply {
@@ -278,11 +285,9 @@ class VehicleController(private val context: Context) {
             setPadding(factory.dp(14), factory.dp(7), factory.dp(14), factory.dp(7))
             minimumHeight = factory.dp(44)
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = factory.dp(6) }
-            background = GradientDrawable().apply {
-                cornerRadius = factory.dp(16).toFloat()
-                if (selected) setColor(factory.accentColor())
-                else { setColor(Color.argb(0x70, 255, 255, 255)); setStroke(factory.dp(1), Color.argb(0xB0, 255, 255, 255)) }
-            }
+            background = if (selected) GradientDrawable().apply {
+                cornerRadius = factory.dp(16).toFloat(); setColor(factory.accentColor())
+            } else factory.glassChip(16)
             setTextColor(if (selected) Color.WHITE else factory.glassText())
             setOnClickListener {
                 currentTab = tab
@@ -322,11 +327,7 @@ class VehicleController(private val context: Context) {
             gravity = Gravity.CENTER
             setTextColor(factory.glassText())
             layoutParams = LinearLayout.LayoutParams(factory.dp(28), factory.dp(28)).apply { marginEnd = factory.dp(6) }
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setStroke(factory.dp(1), Color.argb(0xB0, 255, 255, 255))
-                setColor(Color.argb(0x70, 255, 255, 255))
-            }
+            background = factory.glassChip(14).apply { shape = GradientDrawable.OVAL }
             contentDescription = context.getString(R.string.vehicle_appearance_custom_color)
             isFocusable = true; isClickable = true
             setOnClickListener { showCustomColorPicker() }
@@ -555,13 +556,9 @@ class VehicleController(private val context: Context) {
         contentArea.removeAllViews()
         val ctx = makePanelContext()
         val result = when (currentTab) {
-            VehicleTab.TRUNK    -> buildTrunkTab(ctx)
             VehicleTab.CLIMATE  -> buildClimateTab(ctx)
             VehicleTab.SEATS    -> buildSeatsTab(ctx)
             VehicleTab.WINDOWS  -> buildWindowsTab(ctx)
-            VehicleTab.LIGHTS   -> buildLightsTab(ctx)
-            VehicleTab.ADAS     -> buildAdasTab(ctx)
-            VehicleTab.CHARGING -> buildChargingTab(ctx)
         }
         contentArea.addView(result.view)
         currentPanelUpdater = result.update

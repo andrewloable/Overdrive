@@ -40,34 +40,68 @@ class VehicleViewFactory(val context: Context) {
 
     // ─── Liquid glass (Apple-style frosted overlay) ──────────────────────────
     // API 29 has no live backdrop blur (RenderEffect is 31+), so the look is
-    // approximated with a translucent light fill + bright hairline edge over the
-    // full-bleed 3D car. Text stays dark for contrast on the light frost.
+    // approximated with a translucent fill + hairline edge over the full-bleed
+    // 3D car. Everything is theme-aware: light frost + dark text in light mode,
+    // dark frost + light text in dark mode, so controls stay legible in both.
 
-    fun glassText()   = Color.parseColor("#15151A")
-    fun glassMuted()  = Color.parseColor("#5A5A66")
+    fun glassText()   = if (isDark()) Color.parseColor("#F2F2F7") else Color.parseColor("#15151A")
+    fun glassMuted()  = if (isDark()) Color.parseColor("#AEB0BA") else Color.parseColor("#5A5A66")
     /** Tint for the studio backdrop behind the 3D car. */
-    fun glassBgTop()    = Color.parseColor("#F6F8FC")
-    fun glassBgBottom() = Color.parseColor("#DDE3EE")
+    fun glassBgTop()    = if (isDark()) Color.parseColor("#22252E") else Color.parseColor("#F6F8FC")
+    fun glassBgBottom() = if (isDark()) Color.parseColor("#0C0D11") else Color.parseColor("#DDE3EE")
 
-    /** Rounded translucent panel: bright frost + hairline top-edge highlight. */
+    /** Frosted fill — bright white frost (light) / smoky dark frost (dark). */
+    private fun glassFill(alpha: Int) =
+        if (isDark()) Color.argb(alpha, 0x2C, 0x2E, 0x38) else Color.argb(alpha, 255, 255, 255)
+    /** Hairline edge highlight — always a soft white catch-light. */
+    private fun glassStroke() =
+        if (isDark()) Color.argb(0x42, 255, 255, 255) else Color.argb(0xC8, 255, 255, 255)
+
+    /** Rounded translucent panel: frost + hairline highlight. */
     fun glassPanel(cornerRadiusDp: Int, fillAlpha: Int = 0x9E): GradientDrawable =
         GradientDrawable().apply {
-            setColor(Color.argb(fillAlpha, 255, 255, 255))
+            setColor(glassFill(fillAlpha))
             cornerRadius = dp(cornerRadiusDp).toFloat()
-            setStroke(dp(1), Color.argb(0xC8, 255, 255, 255))
+            setStroke(dp(1), glassStroke())
         }
 
     /** Same frost with independently-rounded corners (e.g. only the top). */
     fun glassPanelRadii(tl: Int, tr: Int, br: Int, bl: Int, fillAlpha: Int = 0x9E): GradientDrawable =
         GradientDrawable().apply {
-            setColor(Color.argb(fillAlpha, 255, 255, 255))
+            setColor(glassFill(fillAlpha))
             val r = floatArrayOf(
                 dp(tl).toFloat(), dp(tl).toFloat(), dp(tr).toFloat(), dp(tr).toFloat(),
                 dp(br).toFloat(), dp(br).toFloat(), dp(bl).toFloat(), dp(bl).toFloat(),
             )
             cornerRadii = r
-            setStroke(dp(1), Color.argb(0xC8, 255, 255, 255))
+            setStroke(dp(1), glassStroke())
         }
+
+    /** Faint inset cell used to group a control on the glass panel. */
+    fun glassCell(cornerRadiusDp: Int = 14): GradientDrawable = glassPanel(cornerRadiusDp, fillAlpha = 0x66)
+
+    /** Translucent chip background for unselected pills (theme-aware). */
+    fun glassChip(cornerRadiusDp: Int): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(glassFill(0x5A))
+            cornerRadius = dp(cornerRadiusDp).toFloat()
+            setStroke(dp(1), glassStroke())
+        }
+
+    /** Equal-weight horizontal row of cells with gaps between them. */
+    fun rowOf(vararg cells: View): LinearLayout {
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        cells.forEachIndexed { i, cell ->
+            if (i > 0) row.addView(spacer2(dp(8)))
+            cell.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            row.addView(cell)
+        }
+        return row
+    }
 
     // ─── Accessibility helper ────────────────────────────────────────────────
 

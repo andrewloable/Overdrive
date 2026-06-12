@@ -4,13 +4,9 @@ import androidx.annotation.StringRes
 import net.bladewatch.app.R
 
 enum class VehicleTab(@StringRes val labelRes: Int) {
-    TRUNK(R.string.vehicle_tab_trunk),
     CLIMATE(R.string.vehicle_tab_climate),
     SEATS(R.string.vehicle_tab_seats),
     WINDOWS(R.string.vehicle_tab_windows),
-    LIGHTS(R.string.vehicle_tab_lights),
-    ADAS(R.string.vehicle_tab_adas),
-    CHARGING(R.string.vehicle_control_charging_tab),
 }
 
 // Door lock: 1=locked, 2=unlocked, -1=unknown

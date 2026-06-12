@@ -4183,6 +4183,21 @@ public class BydDataCollector {
     public boolean moveWindowToPercent(int area, int targetPercent) {
         if (area < 1 || area > 6) return false;
         if (targetPercent < 0 || targetPercent > 100) return false;
+
+        // Sunroof (5) and sunshade (6) have no reliable continuous position
+        // feedback on this vehicle — getSunroofPosition() reports 0 throughout
+        // travel, so the closed-loop controller below mistakes "no progress" for
+        // a stall and sends STOP after ~1.2 s, cutting the panel off partway.
+        // These panels expose hardware one-touch commands (open/close/half) that
+        // auto-drive to the end stop, so issue those directly and skip the loop.
+        if (area >= 5) {
+            int cmd;
+            if (targetPercent >= 75) cmd = 1;       // one-touch full open
+            else if (targetPercent <= 25) cmd = 2;  // one-touch full close
+            else cmd = 4;                            // half
+            return setWindowCommand(area, cmd);
+        }
+
         int areaIdx = area - 1;
 
         final int target = targetPercent;
