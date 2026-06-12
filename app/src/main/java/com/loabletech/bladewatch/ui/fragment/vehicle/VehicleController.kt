@@ -80,6 +80,7 @@ class VehicleController(private val context: Context) {
         if (running.compareAndSet(false, true)) {
             startPolling()
         }
+        if (::tyreOverlay.isInitialized) tyreOverlay.heroResume()
     }
 
     fun onPause() {
@@ -87,10 +88,16 @@ class VehicleController(private val context: Context) {
         pollGeneration.incrementAndGet()
         pollExecutor?.shutdownNow()
         pollExecutor = null
-        if (::tyreOverlay.isInitialized) tyreOverlay.cancelAnimations()
+        if (::tyreOverlay.isInitialized) {
+            tyreOverlay.cancelAnimations()
+            tyreOverlay.heroPause()
+        }
     }
 
-    fun onDestroy() { onPause() }
+    fun onDestroy() {
+        onPause()
+        if (::tyreOverlay.isInitialized) tyreOverlay.heroDestroy()
+    }
 
     fun onConfigurationChanged() {
         rebuildAll()
@@ -222,13 +229,19 @@ class VehicleController(private val context: Context) {
     // ─── Rebuild helpers ─────────────────────────────────────────────────────
 
     private fun rebuildAll() {
-        if (::tyreOverlay.isInitialized) tyreOverlay.cancelAnimations()
+        if (::tyreOverlay.isInitialized) {
+            tyreOverlay.cancelAnimations()
+            // buildView() creates a fresh TyreOverlay + Filament engine; tear
+            // down the old one first so GL contexts don't accumulate.
+            tyreOverlay.heroDestroy()
+        }
         root.removeAllViews()
         lockStatusDot = null; lockStatusText = null; batteryText = null; rangeText = null
         staleBanner = null
         currentPanelUpdater = null
         buildView()
         applyStateToViews()
+        if (running.get()) tyreOverlay.heroResume()
     }
 
     private fun rebuildTabBar() {

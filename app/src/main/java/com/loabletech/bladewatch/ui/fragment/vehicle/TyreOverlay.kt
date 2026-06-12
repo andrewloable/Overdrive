@@ -60,6 +60,9 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
 
     val view: View get() = frame
 
+    private lateinit var hero: VehicleHeroView
+    private lateinit var placeholderView: ImageView
+
     private val flCard: TyreCard  // front-left of car = screen RIGHT, BOTTOM
     private val frCard: TyreCard  // front-right of car = screen LEFT,  BOTTOM
     private val rlCard: TyreCard  // rear-left of car  = screen RIGHT,  TOP
@@ -72,14 +75,31 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         })
 
-        // Car silhouette
-        val carView = ImageView(context).apply {
+        // Car: 3D GLB hero (Filament) with the old 2D silhouette as fallback
+        // while loading or if 3D init/load fails on this device.
+        placeholderView = ImageView(context).apply {
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.vehicle_hero_placeholder))
             scaleType = ImageView.ScaleType.FIT_CENTER
             layoutParams = FrameLayout.LayoutParams(
                 factory.dp(200), factory.dp(80), Gravity.CENTER)
         }
-        frame.addView(carView)
+        frame.addView(placeholderView)
+
+        hero = VehicleHeroView(context)
+        if (hero.isAvailable) {
+            hero.view.layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            frame.addView(hero.view)
+            hero.onModelState = { loaded ->
+                placeholderView.visibility = if (loaded) View.GONE else View.VISIBLE
+                hero.view.visibility = if (loaded) View.VISIBLE else View.INVISIBLE
+            }
+            hero.view.visibility = View.INVISIBLE
+            // TODO(BladeWatch-w5iz): resolve via /api/models/selected + manifest.
+            // The persisted selections (seal5-dmi-dynamic/premium, destroyer)
+            // all map to destroyer.glb today.
+            hero.loadBundledModel("destroyer.glb")
+        }
 
         // Tyre cards — mirrored: car-left (FL/RL) on screen-right
         rrCard = buildCard("RR")
@@ -216,4 +236,10 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
             it.pulseAnimator = null
         }
     }
+
+    // ─── 3D hero lifecycle (driven by VehicleController) ─────────────────────
+
+    fun heroResume() { if (::hero.isInitialized) hero.onResume() }
+    fun heroPause() { if (::hero.isInitialized) hero.onPause() }
+    fun heroDestroy() { if (::hero.isInitialized) hero.destroy() }
 }

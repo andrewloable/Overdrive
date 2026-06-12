@@ -447,6 +447,14 @@ dependencies {
     
     implementation(libs.androidx.work.runtime.ktx)
     
+    // Filament 3D engine for the native Vehicle hero (GLB rendering).
+    // gltfio = glTF/GLB loader with built-in Draco decode (the bundled car
+    // models all use KHR_draco_mesh_compression); filament-utils = ModelViewer
+    // helper + orbit Manipulator. Keep all three pinned to the same version.
+    implementation("com.google.android.filament:filament-android:1.71.5")
+    implementation("com.google.android.filament:gltfio-android:1.71.5")
+    implementation("com.google.android.filament:filament-utils-android:1.71.5")
+
     // TensorFlow Lite for AI inference (replaces NCNN)
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")  // GPU acceleration
