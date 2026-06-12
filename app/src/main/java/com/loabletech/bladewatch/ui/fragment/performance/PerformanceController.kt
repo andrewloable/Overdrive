@@ -1,9 +1,7 @@
 package net.bladewatch.app.ui.fragment.performance
 
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -12,7 +10,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatDelegate
+import net.bladewatch.app.R
 import net.bladewatch.app.auth.AuthManager
 import net.bladewatch.app.ui.util.PreferencesManager
 import org.json.JSONObject
@@ -61,7 +59,7 @@ class PerformanceController(private val context: Context) {
     // ─────────────────────────── BUILD ───────────────────────────────────
 
     private fun buildView() {
-        root.setBackgroundColor(bgColor())
+        root.setBackgroundColor(colorAttr(com.google.android.material.R.attr.colorSurface))
         root.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val scroll = ScrollView(context).apply {
@@ -71,7 +69,8 @@ class PerformanceController(private val context: Context) {
         }
         contentArea = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            val p = dimen(R.dimen.page_padding_horizontal)
+            setPadding(p, p, p, p)
         }
         scroll.addView(contentArea)
         root.addView(scroll)
@@ -92,7 +91,6 @@ class PerformanceController(private val context: Context) {
                 val data = httpGetJson("/api/performance") ?: return@scheduleAtFixedRate
                 latestData = data
                 root.post { if (running.get()) renderData(data) }
-                // heartbeat
                 val id = clientId
                 if (id != null) httpPost("/api/performance/heartbeat", """{"clientId":"$id"}""")
             }, 0, 3, TimeUnit.SECONDS)
@@ -101,34 +99,36 @@ class PerformanceController(private val context: Context) {
 
     // ─────────────────────────── RENDER ──────────────────────────────────
 
-    private fun applyTheme() { root.setBackgroundColor(bgColor()) }
+    private fun applyTheme() {
+        root.setBackgroundColor(colorAttr(com.google.android.material.R.attr.colorSurface))
+    }
 
     private fun showPlaceholder(msg: String) {
         contentArea.removeAllViews()
-        contentArea.addView(centeredText(msg, 14f))
+        contentArea.addView(centeredText(msg))
     }
 
     private fun renderData(data: JSONObject?) {
         applyTheme()
         contentArea.removeAllViews()
         if (data == null || data.length() == 0) {
-            contentArea.addView(centeredText("Performance data unavailable.\nMake sure the daemon is running.", 14f))
+            contentArea.addView(centeredText("Performance data unavailable.\nMake sure the daemon is running."))
             return
         }
 
-        // Header
         contentArea.addView(sectionLabel("System Performance"))
         contentArea.addView(spacer(dp(12)))
 
-        // CPU card
         val cpu = data.optJSONObject("cpu")
         if (cpu != null) {
             val card = makeCard()
             card.addView(cardTitle("CPU"))
             card.addView(spacer(dp(8)))
-            card.addView(metricBar("System Usage", cpu.optDouble("system").toFloat(), "%", accentColor()))
+            card.addView(metricBar("System Usage", cpu.optDouble("system").toFloat(), "%",
+                colorAttr(androidx.appcompat.R.attr.colorPrimary)))
             card.addView(spacer(dp(6)))
-            card.addView(metricBar("App Usage", cpu.optDouble("app").toFloat(), "%", Color.parseColor("#2196F3")))
+            card.addView(metricBar("App Usage", cpu.optDouble("app").toFloat(), "%",
+                colorAttr(com.google.android.material.R.attr.colorSecondary)))
             card.addView(spacer(dp(8)))
             val grid = makeGrid(
                 "Frequency" to "${cpu.optInt("freqMhz")} MHz",
@@ -138,13 +138,13 @@ class PerformanceController(private val context: Context) {
             contentArea.addView(spacer(dp(12)))
         }
 
-        // Memory card
         val mem = data.optJSONObject("memory")
         if (mem != null) {
             val card = makeCard()
             card.addView(cardTitle("Memory"))
             card.addView(spacer(dp(8)))
-            card.addView(metricBar("Usage", mem.optDouble("usagePercent").toFloat(), "%", Color.parseColor("#9C27B0")))
+            card.addView(metricBar("Usage", mem.optDouble("usagePercent").toFloat(), "%",
+                colorAttr(com.google.android.material.R.attr.colorTertiary)))
             card.addView(spacer(dp(8)))
             val card2 = makeGrid(
                 "Total" to "%.0f MB".format(mem.optDouble("totalMb")),
@@ -155,13 +155,13 @@ class PerformanceController(private val context: Context) {
             contentArea.addView(spacer(dp(12)))
         }
 
-        // GPU card
         val gpu = data.optJSONObject("gpu")
         if (gpu != null) {
             val card = makeCard()
             card.addView(cardTitle("GPU"))
             card.addView(spacer(dp(8)))
-            card.addView(metricBar("Usage", gpu.optDouble("usage").toFloat(), "%", Color.parseColor("#FF9800")))
+            card.addView(metricBar("Usage", gpu.optDouble("usage").toFloat(), "%",
+                colorAttr(androidx.appcompat.R.attr.colorError)))
             card.addView(spacer(dp(8)))
             val grid = makeGrid(
                 "Frequency" to "${gpu.optDouble("freqMhz").toInt()} MHz",
@@ -171,7 +171,6 @@ class PerformanceController(private val context: Context) {
             contentArea.addView(spacer(dp(12)))
         }
 
-        // App metrics
         val app = data.optJSONObject("app")
         if (app != null) {
             val card = makeCard()
@@ -186,7 +185,7 @@ class PerformanceController(private val context: Context) {
             contentArea.addView(spacer(dp(12)))
         }
 
-        contentArea.addView(centeredText("Refreshing every 3 seconds", 11f))
+        contentArea.addView(centeredText("Refreshing every 3 seconds"))
     }
 
     // ─────────────────────────── HTTP ────────────────────────────────────
@@ -238,18 +237,22 @@ class PerformanceController(private val context: Context) {
         val row = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val hdr = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         hdr.addView(TextView(context).apply {
-            text = label; textSize = 12f; setTextColor(mutedTextColor())
+            text = label
+            setTextAppearance(R.style.TextAppearance_BladeWatch_LabelMedium)
+            setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurfaceVariant))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
         hdr.addView(TextView(context).apply {
-            text = "${"%.1f".format(value)}$suffix"; textSize = 12f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            text = "${"%.1f".format(value)}$suffix"
+            setTextAppearance(R.style.TextAppearance_BladeWatch_LabelMedium)
+            setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurface))
         })
         row.addView(hdr)
         row.addView(spacer(dp(4)))
+        val trackColor = colorAttr(com.google.android.material.R.attr.colorSurfaceContainerHighest)
         val barBg = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(6))
-            background = GradientDrawable().apply { setColor(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")); cornerRadius = dp(3).toFloat() }
+            background = GradientDrawable().apply { setColor(trackColor); cornerRadius = dp(3).toFloat() }
         }
         val fraction = (value.coerceIn(0f, 100f) / 100f)
         val fillLayout = LinearLayout(context).apply {
@@ -275,50 +278,60 @@ class PerformanceController(private val context: Context) {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
-            col.addView(TextView(context).apply { text = value; textSize = 14f; gravity = Gravity.CENTER; setTextColor(if (isDark()) Color.WHITE else Color.BLACK); typeface = Typeface.DEFAULT_BOLD })
-            col.addView(TextView(context).apply { this.text = label; textSize = 11f; gravity = Gravity.CENTER; setTextColor(mutedTextColor()) })
+            col.addView(TextView(context).apply {
+                text = value
+                setTextAppearance(R.style.TextAppearance_BladeWatch_TitleMedium)
+                gravity = Gravity.CENTER
+                setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurface))
+            })
+            col.addView(TextView(context).apply {
+                this.text = label
+                setTextAppearance(R.style.TextAppearance_BladeWatch_LabelMedium)
+                gravity = Gravity.CENTER
+                setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurfaceVariant))
+            })
             row.addView(col)
         }
         return row
     }
 
-    private fun isDark(): Boolean {
-        val mode = if (PreferencesManager.isInitialized()) PreferencesManager.getThemeMode()
-                   else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        return when (mode) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
-    }
-
-    private fun bgColor() = if (isDark()) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
-    private fun surfaceColor() = if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE
-    private fun accentColor() = Color.parseColor("#4CAF50")
-    private fun mutedTextColor() = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
-
     private fun makeCard() = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        background = GradientDrawable().apply { setColor(surfaceColor()); cornerRadius = dp(8).toFloat() }
-        setPadding(dp(16), dp(12), dp(16), dp(12))
+        background = GradientDrawable().apply {
+            setColor(colorAttr(com.google.android.material.R.attr.colorSurfaceContainer))
+            cornerRadius = dimen(R.dimen.card_radius_sm).toFloat()
+        }
+        val pad = dimen(R.dimen.card_padding_standard)
+        setPadding(pad, dp(12), pad, dp(12))
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     private fun cardTitle(text: String) = TextView(context).apply {
-        this.text = text; textSize = 15f; typeface = Typeface.DEFAULT_BOLD
-        setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+        this.text = text
+        setTextAppearance(R.style.TextAppearance_BladeWatch_TitleMedium)
+        setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurface))
     }
 
     private fun sectionLabel(text: String) = TextView(context).apply {
-        this.text = text; textSize = 16f; typeface = Typeface.DEFAULT_BOLD
-        setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+        this.text = text
+        setTextAppearance(R.style.TextAppearance_BladeWatch_TitleLarge)
+        setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurface))
     }
 
-    private fun centeredText(text: String, size: Float) = TextView(context).apply {
-        this.text = text; textSize = size; gravity = Gravity.CENTER; setTextColor(mutedTextColor())
+    private fun centeredText(text: String) = TextView(context).apply {
+        this.text = text
+        setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+        gravity = Gravity.CENTER
+        setTextColor(colorAttr(com.google.android.material.R.attr.colorOnSurfaceVariant))
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) }
     }
 
+    private fun colorAttr(attr: Int): Int {
+        val ta = context.obtainStyledAttributes(intArrayOf(attr))
+        return ta.getColor(0, Color.GRAY).also { ta.recycle() }
+    }
+
+    private fun dimen(resId: Int) = context.resources.getDimensionPixelSize(resId)
     private fun spacer(h: Int) = View(context).apply { layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h) }
     private fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
 }

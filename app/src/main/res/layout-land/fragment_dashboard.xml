@@ -58,11 +58,11 @@
                         android:text="@string/dashboard_trips_this_week"
                         android:letterSpacing="0.10"
                         android:textAllCaps="true"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                         android:textColor="?attr/colorOnPrimaryContainer" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnViewAllTrips"
+                        android:id="@+id/btnViewAllTrips" />
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
@@ -78,9 +78,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="@string/dashboard_trips_loading"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-                    android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineMedium"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
 
                 <!-- Three sub-stats row -->
                 <LinearLayout
@@ -101,16 +100,15 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/dashboard_metric_value_pending"
-                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                            android:textColor="?attr/colorOnPrimaryContainer"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                            android:textColor="?attr/colorOnPrimaryContainer" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_trips_label_trips"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnPrimaryContainer"
                             android:alpha="0.7" />
                     </LinearLayout>
@@ -134,16 +132,15 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/dashboard_metric_value_pending"
-                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                            android:textColor="?attr/colorOnPrimaryContainer"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                            android:textColor="?attr/colorOnPrimaryContainer" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_trips_label_distance"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnPrimaryContainer"
                             android:alpha="0.7" />
                     </LinearLayout>
@@ -167,16 +164,15 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/dashboard_metric_value_pending"
-                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                            android:textColor="?attr/colorOnPrimaryContainer"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                            android:textColor="?attr/colorOnPrimaryContainer" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_trips_label_time"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnPrimaryContainer"
                             android:alpha="0.7" />
                     </LinearLayout>
@@ -216,7 +212,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/dashboard_scan_to_connect"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -225,7 +221,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="monospace"
                             android:text="@string/dashboard_device_id_loading"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textIsSelectable="true" />
                     </LinearLayout>
@@ -278,7 +274,7 @@
                         android:fontFamily="monospace"
                         android:maxWidth="240dp"
                         android:singleLine="true"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                         android:textColor="?attr/colorPrimary"
                         android:textIsSelectable="true"
                         android:visibility="gone" />
@@ -295,7 +291,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="6dp"
                         android:text="@string/dashboard_access_code"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <LinearLayout
@@ -315,7 +311,7 @@
                             android:letterSpacing="0.12"
                             android:singleLine="true"
                             android:text="@string/dashboard_token_masked"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                             android:textColor="?attr/colorOnSurface" />
 
                         <ImageView
@@ -349,7 +345,7 @@
                         android:layout_marginTop="4dp">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSetPassword"
+                            android:id="@+id/btnSetPassword" />
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="36dp"
@@ -359,7 +355,7 @@
                             android:textAllCaps="false" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRegenerateToken"
+                            android:id="@+id/btnRegenerateToken" />
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="36dp"
@@ -398,7 +394,7 @@
                 app:singleLine="true">
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipTunnel"
+                    android:id="@+id/heroChipTunnel" />
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -411,7 +407,7 @@
                     app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipServices"
+                    android:id="@+id/heroChipServices" />
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -423,7 +419,7 @@
                     app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipRecording"
+                    android:id="@+id/heroChipRecording" />
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -476,9 +472,8 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="@string/dashboard_metric_value_pending"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:id="@+id/metricStorageValue"
@@ -488,7 +483,7 @@
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/dashboard_metric_recordings"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -542,16 +537,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="@string/dashboard_tunnel_offline"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_metric_tunnel"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -590,16 +584,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="@string/dashboard_daemons_running_default"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_metric_services"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -637,16 +630,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="@string/dashboard_action_live"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_action_live_subtitle"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -686,16 +678,15 @@
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/dashboard_vehicle_tap_to_set"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="@string/dashboard_metric_vehicle"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

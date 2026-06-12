@@ -25,7 +25,9 @@
     <dimen name="card_gap_horizontal">12dp</dimen>      <!-- total — split as 6dp/6dp on each side -->
     <dimen name="card_gap_horizontal_half">6dp</dimen>   <!-- per-side margin in horizontal grids -->
 
-    <!-- Card radii -->
+    <!-- Card radii (parity with CSS radius-xs/sm/md/lg/xl/2xl/full) -->
+    <dimen name="card_radius_xs">4dp</dimen>            <!-- M3 extra-small: very small chips, badge corners -->
+    <dimen name="card_radius_sm">8dp</dimen>            <!-- M3 small: nav-rail active indicator, small badges -->
     <dimen name="card_radius_standard">20dp</dimen>     <!-- Dashboard metrics, Diagnostics tiles, Integrations cards, Settings sections -->
     <dimen name="card_radius_hero">24dp</dimen>         <!-- Dashboard hero, Recordings preview pane -->
     <dimen name="card_radius_dialog">28dp</dimen>       <!-- M3 dialog spec; already wired via theme -->

@@ -66,7 +66,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/daemon_card_default_name"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
                 <TextView
@@ -143,7 +143,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/daemon_card_subprocesses"
-                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textAllCaps="true"
                 android:letterSpacing="0.06"

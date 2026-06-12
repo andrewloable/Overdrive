@@ -85,7 +85,7 @@ The Android app embeds these pages through a local WebView pointed at `http://12
 
 ## Android Native UI
 
-The Android UI provides:
+The Android UI provides (Material 3 — see [UI/UX Design Language](ui-ux-design-language.md)):
 
 - Material navigation rail shell.
 - Dashboard screens.

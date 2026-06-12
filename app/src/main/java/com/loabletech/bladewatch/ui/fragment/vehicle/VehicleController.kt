@@ -1,7 +1,7 @@
 package net.bladewatch.app.ui.fragment.vehicle
 
 import android.content.Context
-import android.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -247,7 +247,7 @@ class VehicleController(private val context: Context) {
         }
         val battTv = TextView(context).apply {
             text = context.getString(R.string.vehicle_status_charge_unknown)
-            textSize = 15f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.END
+            setTextAppearance(R.style.TextAppearance_BladeWatch_TitleMedium); gravity = Gravity.END
             setTextColor(factory.glassText())
         }
         val rangeTv = TextView(context).apply {
@@ -433,7 +433,7 @@ class VehicleController(private val context: Context) {
         if (manifestModels.isEmpty()) return
         val names = manifestModels.map { it.name }.toTypedArray()
         val currentIdx = manifestModels.indexOfFirst { it.id == selectedModelId }.coerceAtLeast(0)
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.vehicle_appearance_model_title))
             .setSingleChoiceItems(names, currentIdx) { dialog, which ->
                 dialog.dismiss()
@@ -510,7 +510,7 @@ class VehicleController(private val context: Context) {
         container.addView(makeSliderRow("G", g) { g = it })
         container.addView(makeSliderRow("B", b) { b = it })
 
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle(context.getString(R.string.vehicle_appearance_custom_color))
             .setView(container)
             .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -604,8 +604,8 @@ class VehicleController(private val context: Context) {
         val lockVal = state.doors.overall
         val (dotColor, lockLabel) = when {
             !state.loaded -> Pair(Color.GRAY, "—")
-            lockVal == 1  -> Pair(Color.parseColor("#4CAF50"), context.getString(R.string.vehicle_locked))
-            lockVal == 2  -> Pair(Color.parseColor("#FF9800"), context.getString(R.string.vehicle_unlocked))
+            lockVal == 1  -> Pair(factory.accentColor(), context.getString(R.string.vehicle_locked))
+            lockVal == 2  -> Pair(factory.warningColor(), context.getString(R.string.vehicle_unlocked))
             else          -> Pair(Color.GRAY, "—")
         }
         (lockStatusDot?.background as? GradientDrawable)?.setColor(dotColor)

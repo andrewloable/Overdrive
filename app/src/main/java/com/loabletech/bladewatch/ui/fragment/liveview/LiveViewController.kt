@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.liveview
 import android.content.Context
 import android.graphics.Color
 import android.graphics.SurfaceTexture
+import net.bladewatch.app.ui.common.BladeTheme
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -17,6 +18,7 @@ import android.widget.TextView
 
 internal class LiveViewController(private val context: Context) {
 
+    private val theme = BladeTheme(context)
     private val root = FrameLayout(context)
     private val textureView = TextureView(context)
     private val banner = LinearLayout(context)
@@ -98,7 +100,7 @@ internal class LiveViewController(private val context: Context) {
 
         banner.orientation = LinearLayout.VERTICAL
         banner.gravity = Gravity.CENTER
-        banner.setBackgroundColor(Color.parseColor("#CC000000"))
+        banner.setBackgroundColor(Color.argb(0xCC, 0, 0, 0))
         banner.setPadding(dp(32), dp(24), dp(32), dp(24))
         banner.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -122,7 +124,7 @@ internal class LiveViewController(private val context: Context) {
 
         directionBar.orientation = LinearLayout.HORIZONTAL
         directionBar.gravity = Gravity.CENTER_VERTICAL
-        directionBar.setBackgroundColor(Color.parseColor("#CC101010"))
+        directionBar.setBackgroundColor(Color.argb(0xCC, 0x10, 0x10, 0x10))
         directionBar.setPadding(dp(8), dp(4), dp(8), dp(4))
         LiveViewDirection.entries.forEach { dir ->
             val btn = TextView(context)
@@ -184,8 +186,8 @@ internal class LiveViewController(private val context: Context) {
             val btn = directionBar.getChildAt(i) as? TextView ?: continue
             val selected = btn.tag == state.direction
             if (selected) {
-                btn.setTextColor(Color.parseColor("#151515"))
-                btn.setBackgroundColor(Color.parseColor("#EDEFEFEF"))
+                btn.setTextColor(Color.rgb(0x15, 0x15, 0x15))
+                btn.setBackgroundColor(Color.argb(0xED, 0xEF, 0xEF, 0xEF))
             } else {
                 btn.setTextColor(Color.WHITE)
                 btn.setBackgroundColor(Color.TRANSPARENT)

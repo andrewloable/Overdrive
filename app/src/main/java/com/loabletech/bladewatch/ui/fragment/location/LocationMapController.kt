@@ -19,6 +19,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import net.bladewatch.app.ui.common.BladeTheme
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -30,6 +31,7 @@ class LocationMapController(
     private val context: Context,
     private val settingsStore: LocationSettingsStore = LocationSettingsStore(context),
 ) {
+    private val theme = BladeTheme(context)
     private val root = FrameLayout(context)
     private val mapView = MapView(context)
     private val marker = Marker(mapView)
@@ -163,7 +165,7 @@ class LocationMapController(
         recenterButton.setImageResource(android.R.drawable.ic_menu_mylocation)
         recenterButton.contentDescription = "Recenter on car"
         recenterButton.setColorFilter(Color.WHITE)
-        recenterButton.setBackgroundColor(Color.parseColor("#CC101010"))
+        recenterButton.setBackgroundColor(Color.argb(0xCC, 0x10, 0x10, 0x10))
         recenterButton.scaleType = ImageView.ScaleType.CENTER_INSIDE
         recenterButton.visibility = View.GONE
         recenterButton.setOnClickListener { recenterOnCar() }
@@ -179,13 +181,13 @@ class LocationMapController(
 
     private fun buildBanner(): View {
         banner.orientation = LinearLayout.VERTICAL
-        banner.setBackgroundColor(Color.parseColor("#CC101010"))
-        banner.setPadding(24, 20, 24, 20)
+        banner.setBackgroundColor(Color.argb(0xCC, 0x10, 0x10, 0x10))
+        banner.setPadding(dp(24), dp(20), dp(24), dp(20))
 
         bannerTitle.setTextColor(Color.WHITE)
         bannerTitle.textSize = 18f
 
-        bannerSubtitle.setTextColor(Color.parseColor("#D0D0D0"))
+        bannerSubtitle.setTextColor(Color.rgb(0xD0, 0xD0, 0xD0))
         bannerSubtitle.textSize = 14f
 
         bannerAction.visibility = View.GONE
@@ -200,7 +202,7 @@ class LocationMapController(
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = 16 },
+            ).apply { topMargin = dp(16) },
         )
 
         val lp = FrameLayout.LayoutParams(
@@ -208,8 +210,8 @@ class LocationMapController(
             ViewGroup.LayoutParams.WRAP_CONTENT,
         )
         lp.gravity = Gravity.CENTER
-        lp.leftMargin = 24
-        lp.rightMargin = 24
+        lp.leftMargin = dp(24)
+        lp.rightMargin = dp(24)
         banner.layoutParams = lp
         return banner
     }
@@ -224,7 +226,7 @@ class LocationMapController(
         val params = banner.layoutParams as FrameLayout.LayoutParams
         params.gravity = if (panel.showMap) Gravity.TOP or Gravity.START else Gravity.CENTER
         banner.layoutParams = params
-        val pad = if (panel.compact) 18 else 24
+        val pad = dp(if (panel.compact) 18 else 24)
         banner.setPadding(pad * 2, pad, pad * 2, pad)
         banner.visibility = View.VISIBLE
         renderRecenterButton()
@@ -298,7 +300,7 @@ class LocationMapController(
         modeSelectorContainer.orientation = LinearLayout.HORIZONTAL
         modeSelectorContainer.gravity = Gravity.CENTER_VERTICAL
         modeSelectorContainer.setPadding(dp(6), dp(6), dp(6), dp(6))
-        modeSelectorContainer.setBackgroundColor(Color.parseColor("#CC101010"))
+        modeSelectorContainer.setBackgroundColor(Color.argb(0xCC, 0x10, 0x10, 0x10))
         modeSelectorContainer.visibility = View.GONE
 
         configureModeButton(autoModeButton, "Auto") {
@@ -348,8 +350,8 @@ class LocationMapController(
 
     private fun renderModeButton(button: TextView, selected: Boolean) {
         if (selected) {
-            button.setTextColor(Color.parseColor("#151515"))
-            button.setBackgroundColor(Color.parseColor("#EDEFEFEF"))
+            button.setTextColor(Color.rgb(0x15, 0x15, 0x15))
+            button.setBackgroundColor(Color.argb(0xED, 0xEF, 0xEF, 0xEF))
         } else {
             button.setTextColor(Color.WHITE)
             button.setBackgroundColor(Color.TRANSPARENT)
@@ -369,7 +371,7 @@ class LocationMapController(
         paint.color = Color.argb(150, 0, 0, 0)
         canvas.drawCircle(center, center, size * 0.43f, paint)
 
-        paint.color = Color.parseColor("#005EFF")
+        paint.color = theme.accentColor()
         canvas.drawCircle(center, center, radius, paint)
 
         paint.style = Paint.Style.STROKE

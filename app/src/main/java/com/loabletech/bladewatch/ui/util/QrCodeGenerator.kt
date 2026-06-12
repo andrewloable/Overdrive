@@ -57,7 +57,7 @@ object QrCodeGenerator {
             content = content,
             size = size,
             darkColor = Color.WHITE,
-            lightColor = Color.parseColor("#2D2D44")
+            lightColor = Color.argb(0xFF, 0x2D, 0x2D, 0x44)
         )
     }
 }

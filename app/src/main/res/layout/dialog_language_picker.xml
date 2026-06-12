@@ -48,9 +48,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/language_picker_title"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                android:textColor="?attr/colorOnSurface" />
 
             <TextView
                 android:id="@+id/tvLangPickerSubtitle"

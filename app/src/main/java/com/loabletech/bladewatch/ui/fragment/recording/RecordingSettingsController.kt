@@ -122,7 +122,7 @@ class RecordingSettingsController(private val context: Context) {
             storageTabBtn to RecordingSettingsTab.STORAGE,
         ).forEach { (btn, tab) ->
             if (tab == activeTab) {
-                btn.background = pill(accentColor()); btn.setTextColor(Color.WHITE)
+                btn.background = pill(accentColor()); btn.setTextColor(theme.onAccentColor())
             } else {
                 btn.background = pill(inactivePillColor())
                 btn.setTextColor(mutedTextColor())
@@ -253,7 +253,7 @@ class RecordingSettingsController(private val context: Context) {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             background = GradientDrawable().apply {
-                setColor(if (selected) Color.parseColor("#1B5E20") else inactivePillColor())
+                setColor(if (selected) theme.accentColor() else inactivePillColor())
                 cornerRadius = dp(8).toFloat()
                 if (selected) setStroke(dp(2), accentColor())
             }
@@ -266,8 +266,7 @@ class RecordingSettingsController(private val context: Context) {
         }
         textBlock.addView(TextView(context).apply {
             text = mode.label; textSize = 14f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
-            if (selected) typeface = Typeface.DEFAULT_BOLD
+            setTextColor(theme.textColor())
         })
         textBlock.addView(TextView(context).apply {
             text = mode.description; textSize = 12f; setTextColor(mutedTextColor())
@@ -359,8 +358,7 @@ class RecordingSettingsController(private val context: Context) {
         card.addView(spacer(dp(4)))
         val limitValue = TextView(context).apply {
             text = formatMb(selectedLimitMb); textSize = 14f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
-            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(theme.textColor())
         }
         card.addView(limitValue)
         val seek = android.widget.SeekBar(context).apply {
@@ -417,9 +415,9 @@ class RecordingSettingsController(private val context: Context) {
     private fun buildFormatCard(): android.view.View {
         val card = makeCard()
         card.background = GradientDrawable().apply {
-            setColor(if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE)
+            setColor(theme.surfaceColor())
             cornerRadius = dp(8).toFloat()
-            setStroke(dp(1), Color.parseColor("#FF5722"))
+            setStroke(dp(1), theme.warningColor())
         }
         card.addView(sectionLabel("Format External Drive"))
         card.addView(spacer(dp(6)))
@@ -432,7 +430,7 @@ class RecordingSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = formatResultMessage
                     textSize = 13f
-                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                    setTextColor(if (isError) theme.errorColor() else theme.accentColor())
                 })
                 card.addView(spacer(dp(8)))
                 card.addView(TextView(context).apply {
@@ -450,8 +448,8 @@ class RecordingSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = "Tap again — ALL data will be ERASED"
                     textSize = 13f; gravity = android.view.Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                    background = pill(Color.parseColor("#F44336"))
+                    setTextColor(theme.onAccentColor())
+                    background = pill(theme.errorColor())
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -470,8 +468,8 @@ class RecordingSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = "Format SD Card / USB"
                     textSize = 13f; gravity = android.view.Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                    background = pill(Color.parseColor("#FF5722"))
+                    setTextColor(theme.onAccentColor())
+                    background = pill(theme.warningColor())
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -524,7 +522,7 @@ class RecordingSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = syncResultMessage
                     textSize = 13f
-                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                    setTextColor(if (isError) theme.errorColor() else theme.accentColor())
                 })
                 card.addView(spacer(dp(8)))
                 card.addView(TextView(context).apply {
@@ -539,7 +537,7 @@ class RecordingSettingsController(private val context: Context) {
             else -> card.addView(TextView(context).apply {
                 text = "Sync Database"
                 textSize = 13f; gravity = Gravity.CENTER
-                setTextColor(Color.WHITE)
+                setTextColor(theme.onAccentColor())
                 background = pill(accentColor())
                 setPadding(dp(16), dp(12), dp(16), dp(12))
                 layoutParams = LinearLayout.LayoutParams(
@@ -568,7 +566,7 @@ class RecordingSettingsController(private val context: Context) {
     private fun buildApplyButton(): TextView = TextView(context).apply {
         text = "Apply Changes"
         textSize = 14f; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
+        setTextColor(theme.onAccentColor())
         background = pill(accentColor())
         setPadding(dp(16), dp(12), dp(16), dp(12))
         layoutParams = LinearLayout.LayoutParams(
@@ -628,8 +626,7 @@ class RecordingSettingsController(private val context: Context) {
 
     private fun sectionLabel(text: String) = TextView(context).apply {
         this.text = text; textSize = 14f
-        setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
-        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(theme.textColor())
     }
 
     private fun fieldLabel(text: String) = TextView(context).apply {
@@ -648,7 +645,7 @@ class RecordingSettingsController(private val context: Context) {
         })
         addView(TextView(context).apply {
             text = value; textSize = 13f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
         })
     }
 

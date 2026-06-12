@@ -151,7 +151,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:background="?attr/colorSurface"
-                    app:titleTextAppearance="@style/TextAppearance.Material3.TitleMedium">
+                    app:titleTextAppearance="@style/TextAppearance.BladeWatch.TitleMedium">
 
                     <!--
                       Status pill (landscape variant). Same DOM shape as the
@@ -202,7 +202,7 @@
                                 android:maxWidth="320dp"
                                 android:singleLine="true"
                                 android:text="@string/url_connecting"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                                 android:textColor="?attr/colorPrimary"
                                 android:textIsSelectable="true" />
 

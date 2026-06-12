@@ -50,7 +50,7 @@
         android:minHeight="48dp"
         android:text="@string/zrok_reset_environment"
         android:textAllCaps="false"
-        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+        android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
         android:textColor="?attr/colorError"
         app:cornerRadius="20dp"
         app:strokeColor="?attr/colorError"

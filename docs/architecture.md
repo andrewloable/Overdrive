@@ -113,7 +113,7 @@ Initializes global app concerns:
 
 Owns the Android shell:
 
-- Material navigation rail.
+- Material navigation rail (Material 3 — see [UI/UX Design Language](ui-ux-design-language.md)).
 - Fragment navigation.
 - WebView entry points.
 - Storage setup.

@@ -43,7 +43,7 @@ private fun updatePill(pill: TextView, enabled: Boolean, factory: VehicleViewFac
     pill.contentDescription = if (labelTag != null) "$labelTag: $stateStr" else stateStr
     val gd = GradientDrawable().apply {
         cornerRadius = factory.dp(12).toFloat()
-        setColor(if (enabled) factory.accentColor() else Color.parseColor("#607D8B"))
+        setColor(if (enabled) factory.accentColor() else factory.pillBgColor())
     }
     pill.background = android.graphics.drawable.RippleDrawable(
         android.content.res.ColorStateList.valueOf(Color.argb(60, 255, 255, 255)), gd, null)
@@ -60,10 +60,10 @@ fun buildTrunkTab(ctx: PanelContext): PanelResult {
     panel.addView(factory.infoLabel(str.getString(R.string.vehicle_trunk_info_open)))
     panel.addView(factory.spacer(factory.dp(12)))
 
-    val openBtn = factory.buildActionButton(str.getString(R.string.vehicle_open_trunk), Color.parseColor("#FF9800"), ctx.isPending("trunk_open")) {
+    val openBtn = factory.buildActionButton(str.getString(R.string.vehicle_open_trunk), factory.warningColor(), ctx.isPending("trunk_open")) {
         ctx.doAction("trunk_open", null) { ctx.client.trunkOpen() }
     }
-    val closeBtn = factory.buildActionButton(str.getString(R.string.vehicle_close_trunk), Color.parseColor("#607D8B"), ctx.isPending("trunk_close")) {
+    val closeBtn = factory.buildActionButton(str.getString(R.string.vehicle_close_trunk), factory.pillBgColor(), ctx.isPending("trunk_close")) {
         ctx.doAction("trunk_close", null) { ctx.client.trunkClose() }
     }
     panel.addView(factory.makeTwoColGrid(openBtn, closeBtn))
@@ -91,7 +91,7 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
     }
 
     // AC button
-    fun acColor(on: Boolean) = if (on) Color.parseColor("#2196F3") else Color.parseColor("#607D8B")
+    fun acColor(on: Boolean) = if (on) factory.accentColor() else factory.pillBgColor()
     val acBtn = factory.buildWideButton(if (ctx.acOn) str.getString(R.string.vehicle_ac_on) else str.getString(R.string.vehicle_ac_off), acColor(ctx.acOn)) {
         if (ctx.debounce("ac_toggle")) {
             val nowOn = !ctx.acOn
@@ -106,7 +106,7 @@ fun buildClimateTab(ctx: PanelContext): PanelResult {
         }
     }
     // Max cooling button
-    fun maxColor(on: Boolean) = if (on) Color.parseColor("#F44336") else Color.parseColor("#607D8B")
+    fun maxColor(on: Boolean) = if (on) factory.errorColor() else factory.pillBgColor()
     val maxCoolBtn = factory.buildWideButton(
         if (ctx.maxCooling) str.getString(R.string.vehicle_max_cooling_on) else str.getString(R.string.vehicle_max_cooling_off), maxColor(ctx.maxCooling)
     ) {
@@ -239,7 +239,7 @@ fun buildSeatsTab(ctx: PanelContext): PanelResult {
             btns.addView(factory.spacer2(factory.dp(8)))
         }
         if (hasCool) {
-            val btn = factory.buildCycleButton(str.getString(R.string.vehicle_seat_cool_label, factory.heatLabel(cool)), Color.parseColor("#2196F3")) {
+            val btn = factory.buildCycleButton(str.getString(R.string.vehicle_seat_cool_label, factory.heatLabel(cool)), factory.accentColor()) {
                 if (ctx.debounce("seat_cool_$position")) {
                     val newLevel = (cool + 1) % 3
                     val newDriverVent = if (position == 1) newLevel else ctx.driverVent
@@ -257,11 +257,11 @@ fun buildSeatsTab(ctx: PanelContext): PanelResult {
         }
         if (hasMemory && position == 1) {
             btns.addView(factory.spacer2(factory.dp(8)))
-            btns.addView(factory.buildCycleButton(str.getString(R.string.vehicle_seat_pos_1), Color.parseColor("#9C27B0")) {
+            btns.addView(factory.buildCycleButton(str.getString(R.string.vehicle_seat_pos_1), factory.colorAttr(com.google.android.material.R.attr.colorSecondary)) {
                 if (ctx.debounce("seat_mem1")) ctx.doAction("seat_mem1", null) { ctx.client.seatRecallPosition(1) }
             })
             btns.addView(factory.spacer2(factory.dp(4)))
-            btns.addView(factory.buildCycleButton(str.getString(R.string.vehicle_seat_pos_2), Color.parseColor("#9C27B0")) {
+            btns.addView(factory.buildCycleButton(str.getString(R.string.vehicle_seat_pos_2), factory.colorAttr(com.google.android.material.R.attr.colorSecondary)) {
                 if (ctx.debounce("seat_mem2")) ctx.doAction("seat_mem2", null) { ctx.client.seatRecallPosition(2) }
             })
         }

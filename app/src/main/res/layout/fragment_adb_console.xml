@@ -25,9 +25,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/adb_console_hero_title"
-        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-        android:textColor="?attr/colorOnSurface"
-        android:textStyle="bold" />
+        android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+        android:textColor="?attr/colorOnSurface" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -65,7 +64,7 @@
                     android:layout_marginEnd="8dp"
                     android:fontFamily="monospace"
                     android:text="@string/adb_prompt"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                     android:textColor="?attr/colorPrimary" />
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -105,7 +104,7 @@
                 android:letterSpacing="0.06"
                 android:text="@string/adb_preset_commands_header"
                 android:textAllCaps="true"
-                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <androidx.recyclerview.widget.RecyclerView
@@ -134,7 +133,7 @@
             android:letterSpacing="0.06"
             android:text="@string/adb_output_header"
             android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.button.MaterialButton

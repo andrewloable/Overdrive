@@ -37,9 +37,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/settings_privacy_title"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            android:textColor="?attr/colorOnSurface"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:layout_width="match_parent"
@@ -84,7 +83,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_privacy_stance_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -106,7 +105,7 @@
             android:letterSpacing="0.06"
             android:text="@string/settings_privacy_overline_storage"
             android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.card.MaterialCardView
@@ -151,7 +150,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_privacy_storage_unavailable"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
                 </LinearLayout>
 
@@ -190,7 +189,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_privacy_storage_unavailable"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
                 </LinearLayout>
             </LinearLayout>
@@ -204,7 +203,7 @@
             android:letterSpacing="0.06"
             android:text="@string/settings_developer_overline"
             android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.card.MaterialCardView
@@ -238,7 +237,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_developer_timing_logs_title"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -283,7 +282,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_developer_debug_logs_title"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -314,7 +313,7 @@
             android:letterSpacing="0.06"
             android:text="@string/settings_privacy_overline_reset"
             android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.card.MaterialCardView
@@ -349,7 +348,7 @@
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
                         android:text="@string/settings_action_reset_data"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnErrorContainer" />
                 </LinearLayout>
 

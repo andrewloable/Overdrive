@@ -162,7 +162,7 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
         root.addView(headerRow)
 
         val psiTv = TextView(context).apply {
-            text = "—"; textSize = 17f; typeface = Typeface.DEFAULT_BOLD
+            text = "—"; setTextAppearance(R.style.TextAppearance_BladeWatch_TitleMedium)
             setTextColor(factory.glassText())
         }
         root.addView(psiTv)
@@ -196,10 +196,10 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
         val tier = VehicleFormatters.tyreTier(t)
         val dotColor = when (tier) {
             TyreTier.MUTED   -> Color.GRAY
-            TyreTier.ALERT   -> Color.parseColor("#F44336")
-            TyreTier.WARN    -> Color.parseColor("#FF9800")
-            TyreTier.CAUTION -> Color.parseColor("#FFC107")
-            TyreTier.NORMAL  -> Color.parseColor("#4CAF50")
+            TyreTier.ALERT   -> factory.errorColor()
+            TyreTier.WARN    -> factory.warningColor()
+            TyreTier.CAUTION -> factory.warningColor()
+            TyreTier.NORMAL  -> factory.accentColor()
         }
         (card.dot.background as? android.graphics.drawable.GradientDrawable)?.setColor(dotColor)
 

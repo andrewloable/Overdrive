@@ -51,6 +51,7 @@
     --status-info: #85CFFF;
 
     /* Shape */
+    --radius-xs: 4px;
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-lg: 20px;
@@ -90,6 +91,7 @@
     /* Legacy aliases (do not use in new code) */
     --bg-base: var(--surface);
     --bg-surface: var(--surface-container);
+    --bg-secondary: var(--surface-container-low);
     --bg-elevated: var(--surface-container-high);
     --bg-hover: var(--surface-container-highest);
     --text-primary: var(--on-surface);

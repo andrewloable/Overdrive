@@ -27,9 +27,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/settings_about_title"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            android:textColor="?attr/colorOnSurface"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:layout_width="match_parent"
@@ -73,7 +72,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:text="@string/app_name"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
                         android:textColor="?attr/colorOnSurface" />
                 </LinearLayout>
 
@@ -144,8 +143,8 @@
                 android:layout_height="wrap_content">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/card_icon_standard"
+                    android:layout_height="@dimen/card_icon_standard"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_check"
                     app:tint="?attr/colorPrimary" />
@@ -161,7 +160,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_about_license_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -197,8 +196,8 @@
                 android:layout_height="wrap_content">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/card_icon_standard"
+                    android:layout_height="@dimen/card_icon_standard"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_star"
                     app:tint="?attr/colorPrimary" />
@@ -214,7 +213,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/setup_guide_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView

@@ -53,9 +53,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/diagnostics_hero_title"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                android:textColor="?attr/colorOnSurface" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -80,7 +79,7 @@
         android:letterSpacing="0.06"
         android:text="@string/diagnostics_health_section"
         android:textAllCaps="true"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
     <!-- HEALTH 2×2 — row 1 -->
@@ -127,7 +126,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/diagnostics_health_network"
                     android:textAllCaps="true"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <!-- Top line: SSID / Mobile / Ethernet / Offline. Bound at runtime. -->
@@ -139,9 +138,8 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/diagnostics_metric_online"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <!-- Bottom line: tunnel dot + state. Bound at runtime. -->
                 <LinearLayout
@@ -208,7 +206,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/diagnostics_health_storage"
                     android:textAllCaps="true"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <!-- Top line: "X clips · Y used". Bound at runtime. -->
@@ -220,9 +218,8 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/diagnostics_metric_pending"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <!-- Bottom line: "Z free". Bound at runtime. -->
                 <TextView
@@ -299,7 +296,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/diagnostics_health_camera"
                     android:textAllCaps="true"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
@@ -308,9 +305,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="@string/diagnostics_metric_pending"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -366,7 +362,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/diagnostics_health_battery"
                     android:textAllCaps="true"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
@@ -375,9 +371,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="@string/diagnostics_metric_pending"
-                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
@@ -391,7 +386,7 @@
         android:letterSpacing="0.06"
         android:text="@string/diagnostics_tools_section"
         android:textAllCaps="true"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
     <!-- TOOLS 2×2 — row 1 -->

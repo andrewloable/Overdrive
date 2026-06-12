@@ -13,7 +13,7 @@
     android:clickable="true"
     android:focusable="true"
     android:fontFamily="monospace"
-    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+    android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
     android:textColor="?attr/colorOnSurface"
     app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
     app:chipCornerRadius="@dimen/card_radius_accent"

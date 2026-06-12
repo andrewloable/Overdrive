@@ -1,14 +1,13 @@
 package net.bladewatch.app.ui.fragment.settings
 
-import android.app.AlertDialog
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import net.bladewatch.app.BuildConfig
 import net.bladewatch.app.R
 
@@ -46,23 +45,16 @@ class SettingsAboutFragment : Fragment() {
         }
         val tv = TextView(ctx).apply {
             this.text = text
-            textSize = 13f
-            setTextColor(resolveAttr(android.R.attr.textColorPrimary))
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
             val pad = dp(16)
             setPadding(pad, pad, pad, pad)
         }
         val scroll = ScrollView(ctx).apply { addView(tv) }
-        AlertDialog.Builder(ctx)
+        MaterialAlertDialogBuilder(ctx)
             .setTitle(getString(R.string.settings_about_license_title))
             .setView(scroll)
             .setPositiveButton(android.R.string.ok, null)
             .show()
-    }
-
-    private fun resolveAttr(attr: Int): Int {
-        val tv = TypedValue()
-        requireContext().theme.resolveAttribute(attr, tv, true)
-        return tv.data
     }
 
     private fun dp(v: Int): Int =

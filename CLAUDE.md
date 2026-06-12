@@ -194,6 +194,7 @@ When changing route handlers, daemon ports, config paths, startup timing, tunnel
 - Storage/config/media changes → `data-flow-and-storage.md`
 - Auth / IPC token / secret store / cross-process file permission changes → `ipc-auth-and-secrets.md`
 - User-facing changes → `features.md`
+- UI/UX, design-language, theme, or color/typography/shape/motion token changes → `ui-ux-design-language.md`
 
 ## Security Notes
 

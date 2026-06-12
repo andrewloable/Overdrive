@@ -215,7 +215,7 @@
     </style>
 
     <style name="MaterialAlertDialog.BladeWatch.Title" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:textAppearance">@style/TextAppearance.Material3.HeadlineSmall</item>
+        <item name="android:textAppearance">@style/TextAppearance.BladeWatch.HeadlineSmall</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
@@ -235,7 +235,7 @@
         <item name="android:minWidth">88dp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="android:textAppearance">@style/TextAppearance.Material3.LabelLarge</item>
+        <item name="android:textAppearance">@style/TextAppearance.BladeWatch.LabelLarge</item>
         <item name="backgroundTint">?attr/colorPrimary</item>
         <item name="android:textColor">?attr/colorOnPrimary</item>
     </style>
@@ -245,7 +245,7 @@
     <style name="Widget.BladeWatch.M3.Button.Dialog.Neutral" parent="Widget.Material3.Button.TextButton.Dialog">
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textAppearance">@style/TextAppearance.Material3.LabelLarge</item>
+        <item name="android:textAppearance">@style/TextAppearance.BladeWatch.LabelLarge</item>
     </style>
 
     <!-- Custom-view dialog theme: same color/shape inheritance, but lets
@@ -294,7 +294,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_marginStart">16dp</item>
-        <item name="android:textAppearance">@style/TextAppearance.Material3.TitleMedium</item>
+        <item name="android:textAppearance">@style/TextAppearance.BladeWatch.TitleMedium</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 

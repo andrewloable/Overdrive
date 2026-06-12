@@ -46,9 +46,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/settings_section_appearance"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            android:textColor="?attr/colorOnSurface"
-            android:textStyle="bold" />
+            android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:layout_width="match_parent"
@@ -78,7 +77,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_theme_label"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
                 <!-- Tile row. Equal-weight, 8dp inter-margin. The id
@@ -129,7 +128,7 @@
                                 android:layout_marginTop="10dp"
                                 android:text="@string/settings_theme_auto"
                                 android:textAlignment="center"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                                 android:textColor="?attr/colorOnSurface" />
                         </LinearLayout>
                     </FrameLayout>
@@ -184,7 +183,7 @@
                                 android:layout_marginTop="10dp"
                                 android:text="@string/settings_theme_light"
                                 android:textAlignment="center"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                                 android:textColor="?attr/colorOnSurface" />
                         </LinearLayout>
                     </FrameLayout>
@@ -239,7 +238,7 @@
                                 android:layout_marginTop="10dp"
                                 android:text="@string/settings_theme_dark"
                                 android:textAlignment="center"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                                 android:textColor="?attr/colorOnSurface" />
                         </LinearLayout>
                     </FrameLayout>
@@ -276,7 +275,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_drive_side_label"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
                 <TextView
@@ -317,7 +316,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_drive_side_left"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
@@ -352,7 +351,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_drive_side_right"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
@@ -387,7 +386,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_drive_side_auto"
-                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                                 android:textColor="?attr/colorOnSurface" />
 
                             <TextView
@@ -448,7 +447,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_language_card_title"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
@@ -456,7 +455,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleLarge"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView

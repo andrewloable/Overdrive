@@ -8,8 +8,8 @@ import net.bladewatch.app.ui.util.PreferencesManager
 
 /**
  * Single source of design tokens shared across all native screens.
- * Colour tokens match the web assets' CSS custom properties so the native
- * and WebView surfaces stay visually consistent when the theme changes.
+ * Colors are resolved from the active M3 theme at call time, ensuring
+ * correct light/dark values without hard-coded hex values.
  */
 class BladeTheme(val context: Context) {
 
@@ -23,20 +23,25 @@ class BladeTheme(val context: Context) {
         }
     }
 
-    fun bgColor()       = if (isDark()) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
-    fun surfaceColor()  = if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE
-    fun textColor()     = if (isDark()) Color.WHITE              else Color.parseColor("#212121")
-    fun mutedColor()    = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
-    fun dividerColor()  = if (isDark()) Color.parseColor("#333333") else Color.parseColor("#E0E0E0")
-    fun pillBgColor()   = if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")
-    fun inputBgColor()  = if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#F0F0F0")
+    fun bgColor()       = colorAttr(com.google.android.material.R.attr.colorSurface)
+    fun surfaceColor()  = colorAttr(com.google.android.material.R.attr.colorSurfaceContainer)
+    fun textColor()     = colorAttr(com.google.android.material.R.attr.colorOnSurface)
+    fun mutedColor()    = colorAttr(com.google.android.material.R.attr.colorOnSurfaceVariant)
+    fun dividerColor()  = colorAttr(com.google.android.material.R.attr.colorOutlineVariant)
+    fun pillBgColor()   = colorAttr(com.google.android.material.R.attr.colorSurfaceContainerHighest)
+    fun inputBgColor()  = colorAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
 
-    /** Accent green — not theme-dependent. */
-    fun accentColor()   = Color.parseColor("#4CAF50")
-    /** Semantic warning amber. */
-    fun warningColor()  = Color.parseColor("#F59E0B")
-    /** Semantic error red. */
-    fun errorColor()    = Color.parseColor("#EF4444")
+    fun accentColor()     = colorAttr(androidx.appcompat.R.attr.colorPrimary)
+    fun onAccentColor()   = colorAttr(com.google.android.material.R.attr.colorOnPrimary)
+    fun warningColor()    = colorAttr(com.google.android.material.R.attr.colorTertiary)
+    fun onWarningColor()  = colorAttr(com.google.android.material.R.attr.colorOnTertiary)
+    fun errorColor()      = colorAttr(androidx.appcompat.R.attr.colorError)
+    fun onErrorColor()    = colorAttr(com.google.android.material.R.attr.colorOnError)
 
     fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun colorAttr(attr: Int): Int {
+        val ta = context.obtainStyledAttributes(intArrayOf(attr))
+        return ta.getColor(0, Color.GRAY).also { ta.recycle() }
+    }
 }

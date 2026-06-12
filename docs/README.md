@@ -8,6 +8,7 @@ BladeWatch is an Android application for BYD DiLink vehicles. The app coordinate
 
 - [Architecture](architecture.md) describes the major modules, runtime boundaries, startup lifecycle, and component relationships.
 - [Features](features.md) catalogs the user-facing and system-facing features implemented by the app.
+- [UI/UX Design Language](ui-ux-design-language.md) documents the Material 3 design system shared by the native Android shell and the embedded web UI — color roles, typography, shape, elevation, motion, components, and the cross-layer token pipeline.
 - [Data Flow and Storage](data-flow-and-storage.md) explains where data comes from, how it moves between components, and where it is persisted.
 - [Daemons and Processes](daemons-and-processes.md) documents Android components, app-process daemons, watchdogs, foreground services, and local IPC ports.
 - [IPC, Authentication & Secrets](ipc-auth-and-secrets.md) explains the app/daemon UID split, the IPC token bootstrap, the secret-fetch and JWT flows, the **required `/data/local/tmp` file permissions**, and the failure modes that surface as "Camera unavailable".

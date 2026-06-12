@@ -49,7 +49,7 @@
             android:letterSpacing="0.06"
             android:text="@string/logs_panel_title"
             android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <Spinner

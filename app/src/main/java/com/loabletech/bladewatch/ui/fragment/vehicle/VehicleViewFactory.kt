@@ -21,14 +21,17 @@ class VehicleViewFactory(val context: Context) {
 
     // ─── Theme ───────────────────────────────────────────────────────────────
 
-    fun isDark()        = theme.isDark()
-    fun bgColor()       = theme.bgColor()
-    fun surfaceColor()  = theme.surfaceColor()
-    fun textColor()     = theme.textColor()
-    fun mutedColor()    = theme.mutedColor()
-    fun dividerColor()  = theme.dividerColor()
-    fun pillBgColor()   = theme.pillBgColor()
-    fun accentColor()   = theme.accentColor()
+    fun isDark()          = theme.isDark()
+    fun bgColor()         = theme.bgColor()
+    fun surfaceColor()    = theme.surfaceColor()
+    fun textColor()       = theme.textColor()
+    fun mutedColor()      = theme.mutedColor()
+    fun dividerColor()    = theme.dividerColor()
+    fun pillBgColor()     = theme.pillBgColor()
+    fun accentColor()     = theme.accentColor()
+    fun onAccentColor()   = theme.onAccentColor()
+    fun warningColor()    = theme.warningColor()
+    fun errorColor()      = theme.errorColor()
 
     fun heatLabel(level: Int) = when (level) {
         1 -> context.getString(R.string.vehicle_heat_low)
@@ -44,11 +47,11 @@ class VehicleViewFactory(val context: Context) {
     // 3D car. Everything is theme-aware: light frost + dark text in light mode,
     // dark frost + light text in dark mode, so controls stay legible in both.
 
-    fun glassText()   = if (isDark()) Color.parseColor("#F2F2F7") else Color.parseColor("#15151A")
-    fun glassMuted()  = if (isDark()) Color.parseColor("#AEB0BA") else Color.parseColor("#5A5A66")
+    fun glassText()      = colorAttr(com.google.android.material.R.attr.colorOnSurface)
+    fun glassMuted()     = colorAttr(com.google.android.material.R.attr.colorOnSurfaceVariant)
     /** Tint for the studio backdrop behind the 3D car. */
-    fun glassBgTop()    = if (isDark()) Color.parseColor("#22252E") else Color.parseColor("#F6F8FC")
-    fun glassBgBottom() = if (isDark()) Color.parseColor("#0C0D11") else Color.parseColor("#DDE3EE")
+    fun glassBgTop()     = colorAttr(com.google.android.material.R.attr.colorSurfaceContainer)
+    fun glassBgBottom()  = colorAttr(com.google.android.material.R.attr.colorSurfaceContainerLow)
 
     /** Frosted fill — bright white frost (light) / smoky dark frost (dark). */
     private fun glassFill(alpha: Int) =
@@ -151,7 +154,7 @@ class VehicleViewFactory(val context: Context) {
     }
 
     fun buildActionButton(label: String, color: Int, pending: Boolean = false, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = label; setTextAppearance(R.style.TextAppearance_BladeWatch_LabelLarge); gravity = Gravity.CENTER
         setTextColor(Color.WHITE)
         setPadding(dp(12), dp(14), dp(12), dp(14))
         minimumHeight = dp(44); minimumWidth = dp(44)
@@ -164,7 +167,7 @@ class VehicleViewFactory(val context: Context) {
     }
 
     fun buildWideButton(label: String, color: Int, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = label; setTextAppearance(R.style.TextAppearance_BladeWatch_LabelLarge); gravity = Gravity.CENTER
         setTextColor(Color.WHITE)
         setPadding(dp(16), dp(14), dp(16), dp(14))
         minimumHeight = dp(44)
@@ -190,7 +193,7 @@ class VehicleViewFactory(val context: Context) {
     }
 
     fun buildCycleButton(label: String, color: Int, onClick: () -> Unit) = TextView(context).apply {
-        text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        text = label; setTextAppearance(R.style.TextAppearance_BladeWatch_LabelMedium); gravity = Gravity.CENTER
         setTextColor(Color.WHITE)
         setPadding(dp(10), dp(8), dp(10), dp(8))
         minimumHeight = dp(44); minimumWidth = dp(44)
@@ -205,7 +208,7 @@ class VehicleViewFactory(val context: Context) {
      */
     fun buildStepperResult(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit): Pair<LinearLayout, TextView> {
         val valueTv = TextView(context).apply {
-            text = value; textSize = 14f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            text = value; setTextAppearance(R.style.TextAppearance_BladeWatch_LabelLarge); gravity = Gravity.CENTER
             setTextColor(textColor())
             layoutParams = LinearLayout.LayoutParams(dp(72), ViewGroup.LayoutParams.WRAP_CONTENT)
         }
@@ -262,13 +265,13 @@ class VehicleViewFactory(val context: Context) {
         val stateStr = if (enabled) context.getString(R.string.vehicle_toggle_on) else context.getString(R.string.vehicle_toggle_off)
         text = stateStr
         contentDescription = stateStr
-        textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        setTextAppearance(R.style.TextAppearance_BladeWatch_LabelMedium); gravity = Gravity.CENTER
         setTextColor(Color.WHITE)
         setPadding(dp(14), dp(6), dp(14), dp(6))
         minimumHeight = dp(44); minimumWidth = dp(44)
         val base = GradientDrawable().apply {
             cornerRadius = dp(12).toFloat()
-            setColor(if (enabled) accentColor() else Color.parseColor("#607D8B"))
+            setColor(if (enabled) accentColor() else pillBgColor())
         }
         background = ripple(base)
         setOnClickListener { onClick() }
@@ -276,7 +279,7 @@ class VehicleViewFactory(val context: Context) {
     }
 
     fun sectionTitle(text: String) = TextView(context).apply {
-        this.text = text; textSize = 17f; typeface = Typeface.DEFAULT_BOLD; setTextColor(textColor())
+        this.text = text; setTextAppearance(R.style.TextAppearance_BladeWatch_TitleLarge); setTextColor(textColor())
     }
 
     fun labelText(text: String) = TextView(context).apply {
@@ -291,7 +294,7 @@ class VehicleViewFactory(val context: Context) {
     fun infoLabel(text: String) = TextView(context).apply {
         this.text = text; textSize = 12f; setTextColor(mutedColor())
         background = GradientDrawable().apply {
-            setColor(if (isDark()) Color.parseColor("#1A2A1A") else Color.parseColor("#E8F5E9"))
+            setColor(surfaceColor())
             cornerRadius = dp(6).toFloat()
         }
         setPadding(dp(10), dp(8), dp(10), dp(8))
@@ -304,6 +307,11 @@ class VehicleViewFactory(val context: Context) {
 
     fun spacer2(w: Int) = View(context).apply {
         layoutParams = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+
+    fun colorAttr(attr: Int): Int {
+        val ta = context.obtainStyledAttributes(intArrayOf(attr))
+        return ta.getColor(0, Color.GRAY).also { ta.recycle() }
     }
 
 }

@@ -61,7 +61,7 @@
             android:layout_marginBottom="20dp"
             android:letterSpacing="0.08"
             android:text="@string/settings_subrail_overline"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <!-- Scrollable rail body — host for dynamic rows.

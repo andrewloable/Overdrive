@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import android.widget.Toast
+import net.bladewatch.app.R
 import net.bladewatch.app.ui.common.BladeTheme
 import org.osmdroid.config.Configuration as OsmConfig
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -144,7 +145,7 @@ class SurveillanceSettingsController(private val context: Context) {
     private fun updateTabs() {
         tabBtns.forEach { (tab, btn) ->
             if (tab == activeTab) {
-                btn.background = pill(accentColor()); btn.setTextColor(Color.WHITE)
+                btn.background = pill(accentColor()); btn.setTextColor(theme.onAccentColor())
             } else {
                 btn.background = pill(inactivePillColor()); btn.setTextColor(mutedTextColor())
             }
@@ -228,7 +229,7 @@ class SurveillanceSettingsController(private val context: Context) {
         val toggleRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val toggleLabel = TextView(context).apply {
             text = "Enable Surveillance"; textSize = 14f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val sw = SwitchCompat(context).apply { isChecked = editEnabled }
@@ -266,7 +267,7 @@ class SurveillanceSettingsController(private val context: Context) {
         val toggleRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val featureLabel = TextView(context).apply {
             text = "Disable at Safe Locations"; textSize = 14f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val safeSwitch = SwitchCompat(context).apply { isChecked = safeLocFeatureEnabled }
@@ -329,11 +330,11 @@ class SurveillanceSettingsController(private val context: Context) {
                 }
                 val zoneText = TextView(context).apply {
                     text = "${zone.name}  (${zone.radiusM}m)"; textSize = 13f
-                    setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+                    setTextColor(theme.textColor())
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
                 val deleteBtn = TextView(context).apply {
-                    text = "✕"; textSize = 16f; setTextColor(Color.parseColor("#F44336"))
+                    text = "✕"; textSize = 16f; setTextColor(theme.errorColor())
                     setPadding(dp(8), dp(4), dp(4), dp(4))
                     setOnClickListener {
                         Thread({ client.deleteSafeZone(zone.id); root.post { loadData() } }, "SafeZoneDel").apply { isDaemon = true; start() }
@@ -404,7 +405,7 @@ class SurveillanceSettingsController(private val context: Context) {
         listOf("Person" to { editDetectPerson }, "Car" to { editDetectCar }, "Bike" to { editDetectBike }).forEachIndexed { idx, (label, getter) ->
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             val lv = TextView(context).apply {
-                text = label; textSize = 13f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+                text = label; textSize = 13f; setTextColor(theme.textColor())
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
             val sw2 = SwitchCompat(context).apply {
@@ -489,8 +490,7 @@ class SurveillanceSettingsController(private val context: Context) {
         card.addView(spacer(dp(4)))
         val limitValue = TextView(context).apply {
             text = formatMb(editStorageLimitMb); textSize = 14f
-            setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
-            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(theme.textColor())
         }
         card.addView(limitValue)
         val seek = android.widget.SeekBar(context).apply {
@@ -537,9 +537,9 @@ class SurveillanceSettingsController(private val context: Context) {
     private fun buildFormatCard(): View {
         val card = makeCard()
         card.background = GradientDrawable().apply {
-            setColor(if (isDark()) Color.parseColor("#1E1E1E") else Color.WHITE)
+            setColor(theme.surfaceColor())
             cornerRadius = dp(8).toFloat()
-            setStroke(dp(1), Color.parseColor("#FF5722"))
+            setStroke(dp(1), theme.warningColor())
         }
         card.addView(sectionLabel("Format External Drive"))
         card.addView(spacer(dp(6)))
@@ -552,7 +552,7 @@ class SurveillanceSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = formatResultMessage
                     textSize = 13f
-                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                    setTextColor(if (isError) theme.errorColor() else theme.accentColor())
                 })
                 card.addView(spacer(dp(8)))
                 card.addView(TextView(context).apply {
@@ -570,8 +570,8 @@ class SurveillanceSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = "Tap again — ALL data will be ERASED"
                     textSize = 13f; gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                    background = pill(Color.parseColor("#F44336"))
+                    setTextColor(theme.onAccentColor())
+                    background = pill(theme.errorColor())
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -590,8 +590,8 @@ class SurveillanceSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = "Format SD Card / USB"
                     textSize = 13f; gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                    background = pill(Color.parseColor("#FF5722"))
+                    setTextColor(theme.onAccentColor())
+                    background = pill(theme.warningColor())
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -644,7 +644,7 @@ class SurveillanceSettingsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = syncResultMessage
                     textSize = 13f
-                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                    setTextColor(if (isError) theme.errorColor() else theme.accentColor())
                 })
                 card.addView(spacer(dp(8)))
                 card.addView(TextView(context).apply {
@@ -659,7 +659,7 @@ class SurveillanceSettingsController(private val context: Context) {
             else -> card.addView(TextView(context).apply {
                 text = "Sync Database"
                 textSize = 13f; gravity = Gravity.CENTER
-                setTextColor(Color.WHITE)
+                setTextColor(theme.onAccentColor())
                 background = pill(accentColor())
                 setPadding(dp(16), dp(12), dp(16), dp(12))
                 layoutParams = LinearLayout.LayoutParams(
@@ -693,7 +693,7 @@ class SurveillanceSettingsController(private val context: Context) {
         listOf("Front" to { editCameraFront }, "Right" to { editCameraRight }, "Rear" to { editCameraRear }, "Left" to { editCameraLeft }).forEachIndexed { idx, (label, getter) ->
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(2), 0, dp(2)) }
             val lv = TextView(context).apply {
-                text = label; textSize = 13f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+                text = label; textSize = 13f; setTextColor(theme.textColor())
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
             val sw = SwitchCompat(context).apply {
@@ -715,7 +715,7 @@ class SurveillanceSettingsController(private val context: Context) {
 
         val aiRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val aiLabel = TextView(context).apply {
-            text = "AI Detection"; textSize = 14f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            text = "AI Detection"; textSize = 14f; setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val aiSw = SwitchCompat(context).apply {
@@ -728,7 +728,7 @@ class SurveillanceSettingsController(private val context: Context) {
 
         val nightRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val nightLabel = TextView(context).apply {
-            text = "Night Mode"; textSize = 14f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK)
+            text = "Night Mode"; textSize = 14f; setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val nightSw = SwitchCompat(context).apply {
@@ -758,7 +758,7 @@ class SurveillanceSettingsController(private val context: Context) {
 
     private fun buildApplyButton(): TextView = TextView(context).apply {
         text = "Apply Changes"; textSize = 14f; gravity = Gravity.CENTER
-        setTextColor(Color.WHITE); background = pill(accentColor())
+        setTextColor(theme.onAccentColor()); background = pill(accentColor())
         setPadding(dp(16), dp(12), dp(16), dp(12))
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         setOnClickListener { applyChanges() }
@@ -807,7 +807,7 @@ class SurveillanceSettingsController(private val context: Context) {
     private fun surfaceColor()      = theme.surfaceColor()
     private fun accentColor()       = theme.accentColor()
     private fun inactivePillColor() = theme.pillBgColor()
-    private fun mutedTextColor() = if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#666666")
+    private fun mutedTextColor() = if (isDark()) theme.mutedColor() else theme.mutedColor()
 
     private fun pill(color: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat() }
     private fun makeCard() = LinearLayout(context).apply {
@@ -821,25 +821,25 @@ class SurveillanceSettingsController(private val context: Context) {
             text = label; textSize = 12f; gravity = Gravity.CENTER
             setPadding(dp(8), dp(8), dp(8), dp(8))
             background = pill(if (selected) accentColor() else inactivePillColor())
-            setTextColor(if (selected) Color.WHITE else mutedTextColor())
+            setTextColor(if (selected) theme.onAccentColor() else mutedTextColor())
             setOnClickListener { onClick() }
         }
     private fun makeActionBtn(label: String, onClick: () -> Unit): TextView =
         TextView(context).apply {
             text = label; textSize = 13f; gravity = Gravity.CENTER
-            setTextColor(Color.WHITE); background = pill(Color.parseColor("#2196F3"))
+            setTextColor(theme.onAccentColor()); background = pill(theme.accentColor())
             setPadding(dp(12), dp(10), dp(12), dp(10))
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             setOnClickListener { onClick() }
         }
     private fun sectionLabel(text: String) = TextView(context).apply {
-        this.text = text; textSize = 14f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+        this.text = text; setTextAppearance(R.style.TextAppearance_BladeWatch_LabelLarge); setTextColor(theme.textColor())
     }
     private fun fieldLabel(text: String) = TextView(context).apply { this.text = text; textSize = 12f; setTextColor(mutedTextColor()) }
     private fun infoRow(label: String, value: String): LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         addView(TextView(context).apply { text = label; textSize = 13f; setTextColor(mutedTextColor()); layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-        addView(TextView(context).apply { text = value; textSize = 13f; setTextColor(if (isDark()) Color.WHITE else Color.BLACK) })
+        addView(TextView(context).apply { text = value; textSize = 13f; setTextColor(theme.textColor()) })
     }
     private fun centeredText(text: String, size: Float) = TextView(context).apply {
         this.text = text; textSize = size; gravity = Gravity.CENTER; setTextColor(mutedTextColor())

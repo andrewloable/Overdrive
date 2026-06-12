@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import net.bladewatch.app.R
 import net.bladewatch.app.ui.common.BladeTheme
 import org.osmdroid.config.Configuration as OsmConfig
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -130,7 +131,7 @@ internal class TripDetailController(
         val backBtn = TextView(context).apply {
             text = "‹  Back"
             textSize = 15f
-            setTextColor(Color.parseColor("#4CAF50"))
+            setTextColor(theme.accentColor())
             setPadding(dp(8), dp(8), dp(12), dp(8))
             setOnClickListener { onClose() }
         }
@@ -193,15 +194,15 @@ internal class TripDetailController(
             false
         }
 
-        routeOverlay.outlinePaint.color = Color.parseColor("#6366F1")
+        routeOverlay.outlinePaint.color = theme.accentColor()
         routeOverlay.outlinePaint.strokeWidth = dp(4).toFloat()
         routeOverlay.outlinePaint.isAntiAlias = true
 
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        startMarker.icon = dotMarker(Color.parseColor("#22C55E"))
+        startMarker.icon = dotMarker(theme.accentColor())
         startMarker.title = "Start"
         endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        endMarker.icon = dotMarker(Color.parseColor("#EF4444"))
+        endMarker.icon = dotMarker(theme.errorColor())
         endMarker.title = "End"
 
         applyMapAppearance()
@@ -344,9 +345,9 @@ internal class TripDetailController(
     }
 
     private fun scoreColor(score: Int): Int = when {
-        score >= 70 -> Color.parseColor("#4CAF50")
-        score >= 40 -> Color.parseColor("#F59E0B")
-        else -> Color.parseColor("#EF4444")
+        score >= 70 -> theme.accentColor()
+        score >= 40 -> theme.warningColor()
+        else -> theme.errorColor()
     }
 
     // ──────────────────────────────── MAP THEME ────────────────────────────
@@ -406,12 +407,10 @@ internal class TripDetailController(
         }
     }
 
-    private fun labelText(text: String, size: Float, bold: Boolean): TextView {
-        val isDark = isDark()
+    private fun labelText(text: String, size: Float, bold: Boolean = false): TextView {
         return TextView(context).apply {
             this.text = text; textSize = size
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
-            if (bold) typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(theme.textColor())
         }
     }
 
@@ -438,9 +437,9 @@ internal class TripDetailController(
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(6), 0, dp(6))
             addView(TextView(context).apply {
-                text = value; textSize = 16f; gravity = Gravity.CENTER
+                text = value; gravity = Gravity.CENTER
+                setTextAppearance(R.style.TextAppearance_BladeWatch_TitleMedium)
                 setTextColor(theme.textColor())
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
             })
             addView(TextView(context).apply {
                 this.text = label; textSize = 11f; gravity = Gravity.CENTER

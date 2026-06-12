@@ -45,9 +45,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/recordings_title"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineSmall"
                 android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold"
                 android:singleLine="true"
                 android:ellipsize="end" />
 
@@ -475,7 +474,7 @@
                         android:layout_marginTop="14dp"
                         android:gravity="center"
                         android:text="@string/recordings_preview_placeholder_title"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView

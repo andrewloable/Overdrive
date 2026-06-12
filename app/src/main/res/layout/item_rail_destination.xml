@@ -48,6 +48,6 @@
         android:gravity="center_horizontal"
         android:maxLines="1"
         android:ellipsize="end"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
         android:textColor="@color/rail_item_label_tint" />
 </LinearLayout>

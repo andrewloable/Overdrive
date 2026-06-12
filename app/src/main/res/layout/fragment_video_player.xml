@@ -71,7 +71,7 @@
             android:ellipsize="middle"
             android:maxLines="1"
             android:text="@string/player_title_recording"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.TitleMedium"
             android:textColor="#FFFFFF" />
 
         <TextView
@@ -79,7 +79,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
             android:textColor="#B3FFFFFF" />
 
         <!--

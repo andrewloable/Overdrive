@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_base">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvAppTitle"
@@ -12,9 +12,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="48dp"
         android:text="BladeWatch"
-        android:textColor="@color/brand_primary"
-        android:textSize="28sp"
-        android:textStyle="bold"
+        android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineMedium"
+        android:textColor="?attr/colorPrimary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -25,8 +24,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="System Starting"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAppTitle" />
@@ -35,12 +34,12 @@
         android:id="@+id/cardStartupProgress"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginStart="@dimen/page_padding_horizontal"
+        android:layout_marginEnd="@dimen/page_padding_horizontal"
         android:layout_marginTop="32dp"
-        app:cardBackgroundColor="@color/bg_surface"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
+        app:cardCornerRadius="@dimen/card_radius_standard"
+        app:cardElevation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAppSubtitle">
@@ -55,8 +54,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:paddingStart="@dimen/card_padding_standard"
+                android:paddingEnd="@dimen/card_padding_standard"
                 android:paddingTop="14dp"
                 android:paddingBottom="14dp"
                 android:gravity="center_vertical">
@@ -67,16 +66,16 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Preparing system..."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:id="@+id/tvStartupElapsed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0s"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
             </LinearLayout>
 
@@ -84,15 +83,15 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/bg_hover" />
+                android:background="?attr/colorOutlineVariant" />
 
             <!-- Camera Daemon row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:paddingStart="@dimen/card_padding_standard"
+                android:paddingEnd="@dimen/card_padding_standard"
                 android:paddingTop="12dp"
                 android:paddingBottom="12dp"
                 android:gravity="center_vertical">
@@ -110,8 +109,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Camera Daemon"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp" />
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <TextView
                     android:id="@+id/tvCameraStatus"
@@ -120,8 +119,8 @@
                     android:minWidth="64dp"
                     android:gravity="end"
                     android:text="WAITING"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
                 <TextView
                     android:id="@+id/tvCameraElapsed"
@@ -131,8 +130,8 @@
                     android:minWidth="32dp"
                     android:gravity="end"
                     android:text="—"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
             </LinearLayout>
 
@@ -140,15 +139,15 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/bg_hover" />
+                android:background="?attr/colorOutlineVariant" />
 
             <!-- Sentry Daemon row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:paddingStart="@dimen/card_padding_standard"
+                android:paddingEnd="@dimen/card_padding_standard"
                 android:paddingTop="12dp"
                 android:paddingBottom="12dp"
                 android:gravity="center_vertical">
@@ -166,8 +165,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Sentry Daemon"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp" />
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <TextView
                     android:id="@+id/tvSentryStatus"
@@ -176,8 +175,8 @@
                     android:minWidth="64dp"
                     android:gravity="end"
                     android:text="WAITING"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
                 <TextView
                     android:id="@+id/tvSentryElapsed"
@@ -187,8 +186,8 @@
                     android:minWidth="32dp"
                     android:gravity="end"
                     android:text="—"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
             </LinearLayout>
 
@@ -196,15 +195,15 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/bg_hover" />
+                android:background="?attr/colorOutlineVariant" />
 
             <!-- ACC Sentry row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:paddingStart="@dimen/card_padding_standard"
+                android:paddingEnd="@dimen/card_padding_standard"
                 android:paddingTop="12dp"
                 android:paddingBottom="12dp"
                 android:gravity="center_vertical">
@@ -222,8 +221,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="ACC Sentry"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp" />
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <TextView
                     android:id="@+id/tvAccSentryStatus"
@@ -232,8 +231,8 @@
                     android:minWidth="64dp"
                     android:gravity="end"
                     android:text="WAITING"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
                 <TextView
                     android:id="@+id/tvAccSentryElapsed"
@@ -243,8 +242,8 @@
                     android:minWidth="32dp"
                     android:gravity="end"
                     android:text="—"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
+                    android:textColor="?attr/colorOutline" />
 
             </LinearLayout>
 
@@ -259,8 +258,8 @@
         android:layout_marginEnd="32dp"
         android:layout_marginTop="24dp"
         android:indeterminate="true"
-        app:indicatorColor="@color/brand_primary"
-        app:trackColor="@color/bg_elevated"
+        app:indicatorColor="?attr/colorPrimary"
+        app:trackColor="?attr/colorSurfaceContainerHighest"
         app:trackCornerRadius="2dp"
         app:trackThickness="4dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -269,7 +268,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnContinueAnyway"
-        style="@style/Widget.Material3.Button.OutlinedButton"
+        style="@style/Widget.BladeWatch.M3.Button.Outlined"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"

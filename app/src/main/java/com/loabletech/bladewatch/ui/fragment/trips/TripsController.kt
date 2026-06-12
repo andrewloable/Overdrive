@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import android.widget.Toast
+import net.bladewatch.app.R
 import net.bladewatch.app.ui.common.BladeTheme
 import java.util.Locale
 
@@ -104,7 +105,7 @@ class TripsController(private val context: Context) {
 
     private fun buildView() {
         val isDark = isDark()
-        val bg = if (isDark) Color.parseColor("#121212") else Color.parseColor("#F5F5F5")
+        val bg = theme.bgColor()
         root.setBackgroundColor(bg)
         root.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -137,7 +138,7 @@ class TripsController(private val context: Context) {
 
     private fun buildTabBar(): LinearLayout {
         val isDark = isDark()
-        val tabBg = if (isDark) Color.parseColor("#1E1E1E") else Color.WHITE
+        val tabBg = theme.surfaceColor()
         val bar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundColor(tabBg)
@@ -177,11 +178,11 @@ class TripsController(private val context: Context) {
         listOf(tripsTabBtn to TripsTab.TRIPS, statsTabBtn to TripsTab.STATS, storageTabBtn to TripsTab.STORAGE)
             .forEach { (btn, tab) ->
                 if (tab == activeTab) {
-                    btn.background = pillBackground(Color.parseColor("#4CAF50"))
-                    btn.setTextColor(Color.WHITE)
+                    btn.background = pillBackground(theme.accentColor())
+                    btn.setTextColor(theme.onAccentColor())
                 } else {
-                    btn.background = pillBackground(if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-                    btn.setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+                    btn.background = pillBackground(theme.pillBgColor())
+                    btn.setTextColor(theme.mutedColor())
                 }
             }
     }
@@ -247,7 +248,7 @@ class TripsController(private val context: Context) {
 
     private fun applyTheme() {
         val isDark = isDark()
-        root.setBackgroundColor(if (isDark) Color.parseColor("#121212") else Color.parseColor("#F5F5F5"))
+        root.setBackgroundColor(theme.bgColor())
     }
 
     // ──────────────────────── TRIPS TAB ────────────────────────────────────
@@ -302,12 +303,12 @@ class TripsController(private val context: Context) {
             textSize = 13f
             setPadding(dp(12), dp(6), dp(12), dp(6))
             background = pillBackground(
-                if (selected) Color.parseColor("#4CAF50")
-                else if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE")
+                if (selected) theme.accentColor()
+                else theme.pillBgColor()
             )
             setTextColor(
                 if (selected) Color.WHITE
-                else if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#555555")
+                else theme.mutedColor()
             )
             setOnClickListener {
                 activeFilter = filter
@@ -357,13 +358,13 @@ class TripsController(private val context: Context) {
         val dateView = TextView(context).apply {
             text = trip.formattedDate
             textSize = 13f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val scoreView = TextView(context).apply {
             text = if (trip.overallScore > 0) "Score: ${trip.overallScore}" else ""
             textSize = 12f
-            setTextColor(Color.parseColor("#4CAF50"))
+            setTextColor(theme.accentColor())
         }
         row1.addView(dateView); row1.addView(scoreView)
         card.addView(row1)
@@ -376,7 +377,7 @@ class TripsController(private val context: Context) {
         val detailView = TextView(context).apply {
             text = detailText
             textSize = 12f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         row2.addView(detailView)
@@ -384,7 +385,7 @@ class TripsController(private val context: Context) {
             val costView = TextView(context).apply {
                 text = "${trip.currency} %.2f".format(trip.tripCost)
                 textSize = 12f
-                setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                setTextColor(theme.mutedColor())
             }
             row2.addView(costView)
         }
@@ -470,16 +471,16 @@ class TripsController(private val context: Context) {
         val label = TextView(context).apply {
             text = name
             textSize = 13f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(dp(130), ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val barBg = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(0, dp(8), 1f)
-            background = pillBackground(if (isDark) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
+            background = pillBackground(theme.pillBgColor())
         }
         val fraction = score.coerceIn(0, 100) / 100f
         val fill = View(context).apply {
-            background = pillBackground(Color.parseColor("#4CAF50"))
+            background = pillBackground(theme.accentColor())
             layoutParams = FrameLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT)
         }
         barBg.addView(fill)
@@ -496,7 +497,7 @@ class TripsController(private val context: Context) {
         val scoreLabel = TextView(context).apply {
             text = "$score"
             textSize = 12f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
             setPadding(dp(6), 0, 0, 0)
         }
         row.addView(label); row.addView(barBg); row.addView(scoreLabel)
@@ -524,7 +525,7 @@ class TripsController(private val context: Context) {
         val analyticsLabel = TextView(context).apply {
             text = "Trip Analytics"
             textSize = 14f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         val sw = SwitchCompat(context).apply {
@@ -542,8 +543,8 @@ class TripsController(private val context: Context) {
         val currEdit = android.widget.EditText(context).apply {
             setText(cfg?.currency ?: "USD")
             textSize = 14f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
-            setHintTextColor(if (isDark) Color.parseColor("#666666") else Color.parseColor("#AAAAAA"))
+            setTextColor(theme.textColor())
+            setHintTextColor(theme.mutedColor())
             background = inputBackground(isDark)
             setPadding(dp(8), dp(6), dp(8), dp(6))
             maxLines = 1
@@ -554,7 +555,7 @@ class TripsController(private val context: Context) {
         val rateEdit = android.widget.EditText(context).apply {
             setText("%.4f".format(cfg?.electricityRate ?: 0.0))
             textSize = 14f
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
             background = inputBackground(isDark)
             setPadding(dp(8), dp(6), dp(8), dp(6))
             maxLines = 1
@@ -573,16 +574,16 @@ class TripsController(private val context: Context) {
         val distRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val kmBtn = makeSegmentButton("km", distUnit == "km") {
             selectedDistUnit = "km"
-            distanceUnitKmBtn?.background = pillBackground(Color.parseColor("#4CAF50")); distanceUnitKmBtn?.setTextColor(Color.WHITE)
-            distanceUnitMiBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-            distanceUnitMiBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+            distanceUnitKmBtn?.background = pillBackground(theme.accentColor()); distanceUnitKmBtn?.setTextColor(theme.onAccentColor())
+            distanceUnitMiBtn?.background = pillBackground(theme.pillBgColor())
+            distanceUnitMiBtn?.setTextColor(if (isDark()) theme.mutedColor() else theme.mutedColor())
         }
         distanceUnitKmBtn = kmBtn
         val miBtn = makeSegmentButton("mi", distUnit == "mi") {
             selectedDistUnit = "mi"
-            distanceUnitMiBtn?.background = pillBackground(Color.parseColor("#4CAF50")); distanceUnitMiBtn?.setTextColor(Color.WHITE)
-            distanceUnitKmBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-            distanceUnitKmBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+            distanceUnitMiBtn?.background = pillBackground(theme.accentColor()); distanceUnitMiBtn?.setTextColor(theme.onAccentColor())
+            distanceUnitKmBtn?.background = pillBackground(theme.pillBgColor())
+            distanceUnitKmBtn?.setTextColor(if (isDark()) theme.mutedColor() else theme.mutedColor())
         }
         distanceUnitMiBtn = miBtn
         distRow.addView(kmBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, dp(8), 0) })
@@ -597,18 +598,18 @@ class TripsController(private val context: Context) {
         val locRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val intBtn = makeSegmentButton("Internal", storType == "INTERNAL") {
             selectedStorageType = "INTERNAL"
-            storageInternalBtn?.background = pillBackground(Color.parseColor("#4CAF50")); storageInternalBtn?.setTextColor(Color.WHITE)
-            storageSdBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-            storageSdBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+            storageInternalBtn?.background = pillBackground(theme.accentColor()); storageInternalBtn?.setTextColor(theme.onAccentColor())
+            storageSdBtn?.background = pillBackground(theme.pillBgColor())
+            storageSdBtn?.setTextColor(if (isDark()) theme.mutedColor() else theme.mutedColor())
         }
         storageInternalBtn = intBtn
         val sdAvail = storage?.sdCardAvailable ?: false
         val sdBtn = makeSegmentButton("SD Card${if (!sdAvail) " (N/A)" else ""}", storType == "SD_CARD") {
             if (sdAvail) {
                 selectedStorageType = "SD_CARD"
-                storageSdBtn?.background = pillBackground(Color.parseColor("#4CAF50")); storageSdBtn?.setTextColor(Color.WHITE)
-                storageInternalBtn?.background = pillBackground(if (isDark()) Color.parseColor("#2C2C2C") else Color.parseColor("#EEEEEE"))
-                storageInternalBtn?.setTextColor(if (isDark()) Color.parseColor("#AAAAAA") else Color.parseColor("#555555"))
+                storageSdBtn?.background = pillBackground(theme.accentColor()); storageSdBtn?.setTextColor(theme.onAccentColor())
+                storageInternalBtn?.background = pillBackground(theme.pillBgColor())
+                storageInternalBtn?.setTextColor(if (isDark()) theme.mutedColor() else theme.mutedColor())
             }
         }
         sdBtn.isEnabled = sdAvail
@@ -624,7 +625,7 @@ class TripsController(private val context: Context) {
             val usageTv = TextView(context).apply {
                 text = "${storage.usedMb} ${storage.usedUnit} used / ${storage.limitMb} MB limit  ·  ${storage.tripsCount} trips"
                 textSize = 12f
-                setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                setTextColor(theme.mutedColor())
             }
             card.addView(usageTv)
             card.addView(spacer(dp(4)))
@@ -632,7 +633,7 @@ class TripsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = storage.storagePath
                     textSize = 11f
-                    setTextColor(if (isDark) Color.parseColor("#777777") else Color.parseColor("#888888"))
+                    setTextColor(theme.mutedColor())
                 })
             }
         }
@@ -644,8 +645,8 @@ class TripsController(private val context: Context) {
             text = "Apply Changes"
             textSize = 14f
             gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = pillBackground(Color.parseColor("#4CAF50"))
+            setTextColor(theme.onAccentColor())
+            background = pillBackground(theme.accentColor())
             setPadding(dp(16), dp(10), dp(16), dp(10))
             setOnClickListener { saveStorageSettings() }
         }
@@ -664,7 +665,7 @@ class TripsController(private val context: Context) {
         card.addView(TextView(context).apply {
             text = "Reconcile the trips index with telemetry files on disk."
             textSize = 12f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
         })
         card.addView(spacer(dp(12)))
         when {
@@ -673,13 +674,13 @@ class TripsController(private val context: Context) {
                 card.addView(TextView(context).apply {
                     text = syncResultMessage
                     textSize = 13f
-                    setTextColor(if (isError) Color.parseColor("#F44336") else Color.parseColor("#4CAF50"))
+                    setTextColor(if (isError) theme.errorColor() else theme.accentColor())
                 })
                 card.addView(spacer(dp(8)))
                 card.addView(TextView(context).apply {
                     text = "Dismiss"
                     textSize = 13f; gravity = Gravity.CENTER
-                    setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                    setTextColor(theme.mutedColor())
                     setPadding(0, dp(4), 0, dp(4))
                     setOnClickListener { syncResultMessage = null; renderCurrentTab() }
                 })
@@ -688,8 +689,8 @@ class TripsController(private val context: Context) {
             else -> card.addView(TextView(context).apply {
                 text = "Sync Database"
                 textSize = 13f; gravity = Gravity.CENTER
-                setTextColor(Color.WHITE)
-                background = pillBackground(Color.parseColor("#4CAF50"))
+                setTextColor(theme.onAccentColor())
+                background = pillBackground(theme.accentColor())
                 setPadding(dp(16), dp(12), dp(16), dp(12))
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -748,7 +749,7 @@ class TripsController(private val context: Context) {
 
     private fun cardBackground(isDark: Boolean): GradientDrawable =
         GradientDrawable().apply {
-            setColor(if (isDark) theme.surfaceColor() else Color.WHITE)
+            setColor(theme.surfaceColor())
             cornerRadius = dp(8).toFloat()
         }
 
@@ -783,9 +784,9 @@ class TripsController(private val context: Context) {
 
     private fun labelText(text: String): TextView {
         return TextView(context).apply {
-            this.text = text; textSize = 14f
+            this.text = text
+            setTextAppearance(R.style.TextAppearance_BladeWatch_LabelLarge)
             setTextColor(theme.textColor())
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
     }
 
@@ -793,7 +794,7 @@ class TripsController(private val context: Context) {
         val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = 12f
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
         }
     }
 
@@ -801,7 +802,7 @@ class TripsController(private val context: Context) {
         val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = 28f; gravity = Gravity.CENTER
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(theme.textColor())
         }
     }
 
@@ -809,7 +810,7 @@ class TripsController(private val context: Context) {
         val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = 13f; gravity = Gravity.CENTER
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
         }
     }
 
@@ -817,7 +818,7 @@ class TripsController(private val context: Context) {
         val isDark = isDark()
         return TextView(context).apply {
             this.text = text; textSize = size; gravity = Gravity.CENTER
-            setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+            setTextColor(theme.mutedColor())
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(32)
@@ -831,13 +832,13 @@ class TripsController(private val context: Context) {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(4), 0, dp(4))
             addView(TextView(context).apply {
-                text = value; textSize = 18f; gravity = Gravity.CENTER
-                setTextColor(if (isDark) Color.WHITE else Color.BLACK)
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                text = value; gravity = Gravity.CENTER
+                setTextAppearance(R.style.TextAppearance_BladeWatch_HeadlineSmall)
+                setTextColor(theme.textColor())
             })
             addView(TextView(context).apply {
                 this.text = label; textSize = 11f; gravity = Gravity.CENTER
-                setTextColor(if (isDark) Color.parseColor("#AAAAAA") else Color.parseColor("#666666"))
+                setTextColor(theme.mutedColor())
             })
         }
     }
