@@ -5,15 +5,18 @@ import com.connectrpc.ResponseMessage
 import kotlinx.coroutines.runBlocking
 import net.bladewatch.app.client.ConnectClientProvider
 import net.bladewatch.app.grpc.v1.GetChargeCapRequest
+import net.bladewatch.app.grpc.v1.GetModelsManifestRequest
+import net.bladewatch.app.grpc.v1.GetSelectedModelRequest
 import net.bladewatch.app.grpc.v1.GetVehicleStateRequest
-import net.bladewatch.app.grpc.v1.VehicleCommandResponse
 import net.bladewatch.app.grpc.v1.MoveWindowRequest
 import net.bladewatch.app.grpc.v1.SetAdasRequest
 import net.bladewatch.app.grpc.v1.SetChargeCapRequest
 import net.bladewatch.app.grpc.v1.SetClimateRequest
 import net.bladewatch.app.grpc.v1.SetLightsRequest
 import net.bladewatch.app.grpc.v1.SetSeatRequest
+import net.bladewatch.app.grpc.v1.SetSelectedModelRequest
 import net.bladewatch.app.grpc.v1.TrunkRequest
+import net.bladewatch.app.grpc.v1.VehicleCommandResponse
 
 class VehicleClient {
 
@@ -103,6 +106,62 @@ class VehicleClient {
             percent = if (m.hasPercent()) m.percent.coerceIn(50, 100) else null,
             supported = if (m.hasSupported()) m.supported else null,
         )
+    }
+
+    // ─── Appearance ──────────────────────────────────────────────────────────
+
+    fun fetchAppearance(): VehicleAppearance? = runBlocking {
+        try {
+            val resp = ConnectClientProvider.systemService().getSelectedModel(
+                GetSelectedModelRequest.newBuilder().build(), emptyMap()
+            )
+            if (resp !is ResponseMessage.Success) return@runBlocking null
+            val m = resp.message
+            if (m.modelId.isBlank() && m.color.isBlank()) null
+            else VehicleAppearance(modelId = m.modelId, color = m.color)
+        } catch (e: Exception) {
+            Log.w("BladeWatch", "fetchAppearance: ${e.javaClass.simpleName}: ${e.message}")
+            null
+        }
+    }
+
+    fun saveAppearance(modelId: String?, color: String?): Boolean = runBlocking {
+        try {
+            val req = SetSelectedModelRequest.newBuilder().apply {
+                if (!modelId.isNullOrBlank()) this.modelId = modelId
+                if (!color.isNullOrBlank()) this.color = color
+            }.build()
+            val resp = ConnectClientProvider.systemService().setSelectedModel(req, emptyMap())
+            resp is ResponseMessage.Success
+        } catch (e: Exception) {
+            Log.w("BladeWatch", "saveAppearance: ${e.javaClass.simpleName}: ${e.message}")
+            false
+        }
+    }
+
+    fun fetchManifest(): List<ModelEntry> = runBlocking {
+        try {
+            val resp = ConnectClientProvider.systemService().getModelsManifest(
+                GetModelsManifestRequest.newBuilder().build(), emptyMap()
+            )
+            if (resp !is ResponseMessage.Success) return@runBlocking emptyList()
+            val json = resp.message.manifestJson
+            val obj = org.json.JSONObject(json)
+            val models = obj.getJSONArray("models")
+            (0 until models.length()).map { i ->
+                val m = models.getJSONObject(i)
+                val id = m.getString("id")
+                ModelEntry(
+                    id = id,
+                    name = m.getString("name"),
+                    file = m.optString("file", "$id.glb"),
+                    bundled = m.optBoolean("bundled", false)
+                )
+            }
+        } catch (e: Exception) {
+            Log.w("BladeWatch", "fetchManifest: ${e.javaClass.simpleName}: ${e.message}")
+            emptyList()
+        }
     }
 
     // ─── Trunk ───────────────────────────────────────────────────────────────

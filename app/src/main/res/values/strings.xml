@@ -916,4 +916,12 @@
     <string name="vehicle_a11y_increase_fmt">Increase %1$s</string>
     <!-- Stale-state banner shown while cached state is displayed before live poll -->
     <string name="vehicle_stale_connecting">Connecting…</string>
+    <!-- Appearance bar -->
+    <string name="vehicle_appearance_model_title">Select Model</string>
+    <string name="vehicle_appearance_custom_color">Custom color</string>
+    <!-- Status card charge/range labels -->
+    <string name="vehicle_status_charge_fmt">Charge: %1$d%%</string>
+    <string name="vehicle_status_range_fmt">Range: %1$d km</string>
+    <string name="vehicle_status_charge_unknown">Charge: —</string>
+    <string name="vehicle_status_range_unknown">Range: —</string>
 </resources>

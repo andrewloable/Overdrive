@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BladeWatch Vehicle Hero</title>
+<style>
+    /* Transparent page: the native GridView shows through behind the car,
+       exactly like the old vehicle-control canvas over the page grid. */
+    html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+    #heroCanvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="heroCanvas"></canvas>
+
+<!-- Three.js r147 UMD + Draco — same local vendor stack as the old
+     vehicle-control page. Chrome 58+ compatible: no modules, no optional
+     chaining. All local, no network needed. -->
+<script src="../shared/vendor/three.min.js"></script>
+<script src="../shared/vendor/DRACOLoader.js"></script>
+<script src="../shared/vendor/GLTFLoader.js"></script>
+<script src="../shared/vendor/OrbitControls.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    var scene, camera, renderer, controls;
+    var carModel = null;
+    var bodyPaintMeshes = [];
+    var baseColor = new THREE.Color(0xE8E8EC).convertSRGBToLinear();
+    var loadGen = 0;
+    var running = true;
+    var lastFrameMs = 0;
+    var FRAME_INTERVAL_MS = 33;   // ~30fps cap (head-unit GPU budget)
+
+    var canvas = document.getElementById('heroCanvas');
+
+    function init() {
+        scene = new THREE.Scene();
+
+        var w = window.innerWidth, h = window.innerHeight;
+        camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 1000);
+        camera.position.set(4, 2.0, 5);
+
+        renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: false,           // head-unit GPU: DPR-capped instead
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        renderer.setSize(w, h, false);
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.setClearColor(0x000000, 0);
+
+        // Lighting parity with vehicle-control.js addLighting()
+        scene.add(new THREE.HemisphereLight(0x88aacc, 0x222244, 1.0));
+        var keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        keyLight.position.set(5, 8, 5);
+        scene.add(keyLight);
+        var fillLight = new THREE.DirectionalLight(0x8899bb, 0.6);
+        fillLight.position.set(-5, 4, -3);
+        scene.add(fillLight);
+        var backLight = new THREE.DirectionalLight(0x6644aa, 0.3);
+        backLight.position.set(0, 3, -6);
+        scene.add(backLight);
+
+        controls = new THREE.OrbitControls(camera, canvas);
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2.4;       // ≈ the old 0.25 rad/s idle spin
+        controls.maxPolarAngle = Math.PI / 2.05;
+        controls.target.set(0, 0.2, 0);
+        // Two-finger pinch dolly (zoom). Clamp so the car can't be zoomed to a
+        // dot or pushed through the near plane on the head-unit touchscreen.
+        controls.enableZoom = true;
+        controls.zoomSpeed = 0.9;
+        controls.minDistance = 3.0;
+        controls.maxDistance = 12.0;
+        controls.update();
+
+        window.addEventListener('resize', onResize);
+        requestAnimationFrame(tick);
+
+        if (window.AndroidHero && AndroidHero.onReady) AndroidHero.onReady();
+    }
+
+    function onResize() {
+        var w = window.innerWidth, h = window.innerHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+    }
+
+    function tick(nowMs) {
+        requestAnimationFrame(tick);
+        if (!running) return;
+        if (nowMs - lastFrameMs < FRAME_INTERVAL_MS) return;
+        lastFrameMs = nowMs;
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    // ── Body paint detection — port of vehicle-control.js ────────────────────
+
+    function meshMaterialLabel(node, mat) {
+        return ((node.name || '') + ' ' + ((mat && mat.name) || '')).toLowerCase();
+    }
+
+    function looksLikeBodyPaint(node, mat) {
+        if (!mat || mat.transparent || mat.opacity <= 0.9) return false;
+        if (!mat.color) return false;
+
+        var label = meshMaterialLabel(node, mat);
+        var bodyKeyword = /(body|paint|door|hood|bonnet|trunk|boot|fender|quarter|bumper|mirrorcap|mirror_cap|roof|panel|sideskirt|side_skirt|shell)/.test(label);
+        var excludeKeyword = /(glass|window|windscreen|windshield|screen|chrome|trim|tire|tyre|wheel|rim|brake|light|lamp|led|interior|seat|dash|grille|grill|logo|badge|plate|handle|exhaust)/.test(label);
+        if (excludeKeyword && !bodyKeyword) return false;
+
+        var col = mat.color;
+        var brightness = col.r * 0.299 + col.g * 0.587 + col.b * 0.114;
+        var metalness = mat.metalness !== undefined ? mat.metalness : 0;
+        var roughness = mat.roughness !== undefined ? mat.roughness : 0.5;
+        var emissiveLevel = 0;
+        if (mat.emissive) emissiveLevel = mat.emissive.r + mat.emissive.g + mat.emissive.b;
+
+        var isVeryDark = brightness < 0.05;
+        var isGlass = mat.transparent || mat.opacity < 0.95;
+        var isLikelyChrome = brightness > 0.82 && metalness > 0.78 && roughness < 0.35;
+        var isLikelyLamp = brightness > 0.75 && emissiveLevel > 0.05;
+        if (isGlass || isLikelyChrome || isLikelyLamp) return false;
+        if (bodyKeyword) return true;
+        if (isVeryDark) return false;
+        return metalness < 0.88 && roughness >= 0.08 && roughness <= 0.95;
+    }
+
+    // ── Model loading ─────────────────────────────────────────────────────────
+
+    function disposeCarModel() {
+        if (!carModel) return;
+        scene.remove(carModel);
+        carModel.traverse(function(node) {
+            if (node.isMesh) {
+                if (node.geometry) node.geometry.dispose();
+                var mats = Array.isArray(node.material) ? node.material : [node.material];
+                for (var i = 0; i < mats.length; i++) {
+                    var m = mats[i];
+                    if (!m) continue;
+                    for (var k in m) {
+                        if (m[k] && m[k].isTexture) m[k].dispose();
+                    }
+                    m.dispose();
+                }
+            }
+        });
+        carModel = null;
+        bodyPaintMeshes = [];
+    }
+
+    var gltfLoader = null;
+    function getLoader() {
+        if (gltfLoader) return gltfLoader;
+        gltfLoader = new THREE.GLTFLoader();
+        var draco = new THREE.DRACOLoader();
+        draco.setDecoderPath('../shared/vendor/draco/');
+        draco.setDecoderConfig({ type: 'js' });   // JS decoder: WebView wasm MIME quirks
+        gltfLoader.setDRACOLoader(draco);
+        return gltfLoader;
+    }
+
+    function loadModel(file) {
+        var gen = ++loadGen;
+        getLoader().load(
+            '../shared/models/' + file,
+            function(gltf) {
+                if (gen !== loadGen) return;
+                disposeCarModel();
+                carModel = gltf.scene;
+
+                bodyPaintMeshes = [];
+                carModel.traverse(function(node) {
+                    if (node.isMesh) {
+                        var mat = node.material;
+                        if (looksLikeBodyPaint(node, mat)) {
+                            mat.color.set(baseColor);
+                            mat.needsUpdate = true;
+                            bodyPaintMeshes.push(node);
+                        }
+                        if (mat && mat.isMeshStandardMaterial) {
+                            mat.envMapIntensity = 1.0;
+                            mat.needsUpdate = true;
+                        }
+                    }
+                });
+
+                // Center at origin and scale so the car fills the hero strip
+                // (equivalent of the Filament port's transformToUnitCube).
+                var box = new THREE.Box3().setFromObject(carModel);
+                var center = box.getCenter(new THREE.Vector3());
+                var size = box.getSize(new THREE.Vector3());
+                var maxDim = Math.max(size.x, size.y, size.z) || 1;
+                var scale = 4.0 / maxDim;
+                carModel.scale.setScalar(scale);
+                carModel.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+
+                scene.add(carModel);
+                if (window.AndroidHero && AndroidHero.onModelState) AndroidHero.onModelState(true);
+            },
+            undefined,
+            function(err) {
+                if (gen !== loadGen) return;
+                console.error('Hero model load failed: ' + (err && err.message ? err.message : err));
+                if (window.AndroidHero && AndroidHero.onModelState) AndroidHero.onModelState(false);
+            }
+        );
+    }
+
+    function setColor(hex) {
+        try {
+            baseColor = new THREE.Color(hex).convertSRGBToLinear();
+        } catch (e) { return; }
+        for (var i = 0; i < bodyPaintMeshes.length; i++) {
+            var mesh = bodyPaintMeshes[i];
+            if (mesh.material && mesh.material.color) {
+                mesh.material.color.copy(baseColor);
+                mesh.material.needsUpdate = true;
+            }
+        }
+    }
+
+    window.Hero = {
+        loadModel: loadModel,
+        setColor: setColor,
+        setRunning: function(on) { running = !!on; lastFrameMs = 0; }
+    };
+
+    init();
+})();
+</script>
+</body>
+</html>

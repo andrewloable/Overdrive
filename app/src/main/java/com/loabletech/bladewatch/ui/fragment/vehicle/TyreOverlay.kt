@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import net.bladewatch.app.R
@@ -52,6 +53,10 @@ private data class TyreCard(
 
 class TyreOverlay(private val context: Context, private val factory: VehicleViewFactory) {
 
+    companion object {
+        const val DEFAULT_FALLBACK_GLB = "destroyer.glb"
+    }
+
     private val frame: FrameLayout = FrameLayout(context).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, factory.dp(220)
@@ -62,6 +67,7 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
 
     private lateinit var hero: VehicleHeroView
     private lateinit var placeholderView: ImageView
+    private lateinit var loadingSpinner: ProgressBar
 
     private val flCard: TyreCard  // front-left of car = screen RIGHT, BOTTOM
     private val frCard: TyreCard  // front-right of car = screen LEFT,  BOTTOM
@@ -75,15 +81,26 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         })
 
-        // Car: 3D GLB hero (Filament) with the old 2D silhouette as fallback
-        // while loading or if 3D init/load fails on this device.
+        // The 2D silhouette is kept only as a last-resort fallback for when the
+        // 3D hero fails to load (no WebView provider, or a GLB load error).
+        // During a normal load the circular spinner below is shown instead.
         placeholderView = ImageView(context).apply {
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.vehicle_hero_placeholder))
             scaleType = ImageView.ScaleType.FIT_CENTER
             layoutParams = FrameLayout.LayoutParams(
                 factory.dp(200), factory.dp(80), Gravity.CENTER)
+            visibility = View.GONE
         }
         frame.addView(placeholderView)
+
+        // Circular loading indicator shown while the GLB streams in / decodes.
+        loadingSpinner = ProgressBar(context).apply {
+            isIndeterminate = true
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(factory.accentColor())
+            layoutParams = FrameLayout.LayoutParams(
+                factory.dp(36), factory.dp(36), Gravity.CENTER)
+        }
+        frame.addView(loadingSpinner)
 
         hero = VehicleHeroView(context)
         if (hero.isAvailable) {
@@ -91,14 +108,19 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             frame.addView(hero.view)
             hero.onModelState = { loaded ->
+                loadingSpinner.visibility = View.GONE
                 placeholderView.visibility = if (loaded) View.GONE else View.VISIBLE
                 hero.view.visibility = if (loaded) View.VISIBLE else View.INVISIBLE
             }
             hero.view.visibility = View.INVISIBLE
-            // TODO(BladeWatch-w5iz): resolve via /api/models/selected + manifest.
-            // The persisted selections (seal5-dmi-dynamic/premium, destroyer)
-            // all map to destroyer.glb today.
-            hero.loadBundledModel("destroyer.glb")
+            // Show the default car (Seal 5 DM-i / destroyer.glb) right away;
+            // startAppearanceLoad() swaps in the persisted selection once the
+            // daemon responds. The WebView queues this until hero.html is ready.
+            hero.loadBundledModel(DEFAULT_FALLBACK_GLB)
+        } else {
+            // No 3D engine available → spinner is pointless; show the silhouette.
+            loadingSpinner.visibility = View.GONE
+            placeholderView.visibility = View.VISIBLE
         }
 
         // Tyre cards — mirrored: car-left (FL/RL) on screen-right
@@ -242,4 +264,21 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
     fun heroResume() { if (::hero.isInitialized) hero.onResume() }
     fun heroPause() { if (::hero.isInitialized) hero.onPause() }
     fun heroDestroy() { if (::hero.isInitialized) hero.destroy() }
+
+    fun heroLoadModel(glbFile: String) {
+        if (::hero.isInitialized && hero.isAvailable) {
+            // Show the spinner over the current car only if this is a real swap;
+            // loadBundledModel no-ops when the file is already showing.
+            if (hero.willChangeModel(glbFile)) {
+                loadingSpinner.visibility = View.VISIBLE
+                hero.view.visibility = View.INVISIBLE
+                placeholderView.visibility = View.GONE
+            }
+            hero.loadBundledModel(glbFile)
+        }
+    }
+
+    fun heroApplyColor(colorHex: String) {
+        if (::hero.isInitialized && hero.isAvailable) hero.applyBodyColor(colorHex)
+    }
 }

@@ -91,6 +91,10 @@ data class ChargingCapInfo(
     val supported: Boolean? = null, // null = not yet probed
 )
 
+data class ModelEntry(val id: String, val name: String, val file: String, val bundled: Boolean)
+
+data class VehicleAppearance(val modelId: String, val color: String)
+
 data class VehicleState(
     val doors: DoorState = DoorState(),
     val windows: WindowState = WindowState(),
