@@ -3,9 +3,7 @@ package net.bladewatch.app.ui.fragment.vehicle
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -17,25 +15,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import net.bladewatch.app.R
-
-// ─── Grid background view ─────────────────────────────────────────────────────
-
-private class GridView(context: Context, private val isDark: Boolean) : View(context) {
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (isDark) Color.parseColor("#1AFFFFFF") else Color.parseColor("#18000000")
-        strokeWidth = 1f
-    }
-    private val bgColor = if (isDark) Color.parseColor("#1a1a2e") else Color.parseColor("#F0F2F0")
-
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(bgColor)
-        val step = 28f * resources.displayMetrics.density
-        var x = 0f
-        while (x <= width) { canvas.drawLine(x, 0f, x, height.toFloat(), linePaint); x += step }
-        var y = 0f
-        while (y <= height) { canvas.drawLine(0f, y, width.toFloat(), y, linePaint); y += step }
-    }
-}
 
 // ─── Tyre card ────────────────────────────────────────────────────────────────
 
@@ -57,9 +36,11 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
         const val DEFAULT_FALLBACK_GLB = "destroyer.glb"
     }
 
+    // Full-bleed: the 3D car is the page background; everything else floats on
+    // glass over it. Transparent so the controller's light studio backdrop shows.
     private val frame: FrameLayout = FrameLayout(context).apply {
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, factory.dp(220)
+        layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
         )
     }
 
@@ -75,12 +56,6 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
     private val rrCard: TyreCard  // rear-right of car = screen LEFT,   TOP
 
     init {
-        // Grid background
-        frame.addView(GridView(context, factory.isDark()).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        })
-
         // The 2D silhouette is kept only as a last-resort fallback for when the
         // 3D hero fails to load (no WebView provider, or a GLB load error).
         // During a normal load the circular spinner below is shown instead.
@@ -88,25 +63,26 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.vehicle_hero_placeholder))
             scaleType = ImageView.ScaleType.FIT_CENTER
             layoutParams = FrameLayout.LayoutParams(
-                factory.dp(200), factory.dp(80), Gravity.CENTER)
+                factory.dp(260), factory.dp(110), Gravity.CENTER)
             visibility = View.GONE
         }
-        frame.addView(placeholderView)
 
         // Circular loading indicator shown while the GLB streams in / decodes.
         loadingSpinner = ProgressBar(context).apply {
             isIndeterminate = true
             indeterminateTintList = android.content.res.ColorStateList.valueOf(factory.accentColor())
             layoutParams = FrameLayout.LayoutParams(
-                factory.dp(36), factory.dp(36), Gravity.CENTER)
+                factory.dp(40), factory.dp(40), Gravity.CENTER)
         }
-        frame.addView(loadingSpinner)
 
         hero = VehicleHeroView(context)
         if (hero.isAvailable) {
             hero.view.layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            // Hero first (bottom), then spinner/placeholder above it.
             frame.addView(hero.view)
+            frame.addView(placeholderView)
+            frame.addView(loadingSpinner)
             hero.onModelState = { loaded ->
                 loadingSpinner.visibility = View.GONE
                 placeholderView.visibility = if (loaded) View.GONE else View.VISIBLE
@@ -119,42 +95,52 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
             hero.loadBundledModel(DEFAULT_FALLBACK_GLB)
         } else {
             // No 3D engine available → spinner is pointless; show the silhouette.
+            frame.addView(placeholderView)
+            frame.addView(loadingSpinner)
             loadingSpinner.visibility = View.GONE
             placeholderView.visibility = View.VISIBLE
         }
 
-        // Tyre cards — mirrored: car-left (FL/RL) on screen-right
+        // Tyre cards float as glass over the car, stacked in two columns in the
+        // upper area so they stay clear of the bottom controls panel. Mirror is
+        // preserved: car-left tyres (RR/FR) on screen-left, car-right (RL/FL) right.
         rrCard = buildCard("RR")
-        frame.addView(rrCard.root, cornerLp(Gravity.TOP or Gravity.START, 24, 22))
-
-        rlCard = buildCard("RL")
-        frame.addView(rlCard.root, cornerLp(Gravity.TOP or Gravity.END, 24, 22))
-
         frCard = buildCard("FR")
-        frame.addView(frCard.root, cornerLp(Gravity.BOTTOM or Gravity.START, 16, 22))
-
+        rlCard = buildCard("RL")
         flCard = buildCard("FL")
-        frame.addView(flCard.root, cornerLp(Gravity.BOTTOM or Gravity.END, 16, 22))
+
+        frame.addView(buildTyreColumn(rrCard, frCard), columnLp(Gravity.TOP or Gravity.START))
+        frame.addView(buildTyreColumn(rlCard, flCard), columnLp(Gravity.TOP or Gravity.END))
     }
 
-    private fun cornerLp(gravity: Int, vertMarginDp: Int, horzMarginDp: Int): FrameLayout.LayoutParams {
+    private fun buildTyreColumn(top: TyreCard, bottom: TyreCard): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(top.root)
+            addView(bottom.root, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = factory.dp(8) })
+        }
+    }
+
+    private fun columnLp(gravity: Int): FrameLayout.LayoutParams {
         return FrameLayout.LayoutParams(
-            factory.dp(92), ViewGroup.LayoutParams.WRAP_CONTENT, gravity
+            factory.dp(96), ViewGroup.LayoutParams.WRAP_CONTENT, gravity
         ).apply {
-            val v = factory.dp(vertMarginDp); val h = factory.dp(horzMarginDp)
-            setMargins(h, v, h, v)
+            val m = factory.dp(14)
+            // Top margin clears the status pills overlaid at the very top.
+            setMargins(m, factory.dp(60), m, m)
         }
     }
 
     private fun buildCard(cornerLabel: String): TyreCard {
-        val isDark = factory.isDark()
-        val bgColor = if (isDark) Color.parseColor("#CC1E1E1E") else Color.parseColor("#CCFFFFFF")
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(factory.dp(6), factory.dp(6), factory.dp(6), factory.dp(6))
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(bgColor); cornerRadius = factory.dp(8).toFloat()
-            }
+            setPadding(factory.dp(10), factory.dp(8), factory.dp(10), factory.dp(8))
+            background = factory.glassPanel(14)
+            elevation = factory.dp(4).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
         val headerRow = LinearLayout(context).apply {
@@ -169,7 +155,7 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
             }
         }
         val labelTv = TextView(context).apply {
-            text = cornerLabel; textSize = 10f; setTextColor(factory.mutedColor())
+            text = cornerLabel; textSize = 10f; setTextColor(factory.glassMuted())
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         headerRow.addView(dot); headerRow.addView(labelTv)
@@ -177,22 +163,22 @@ class TyreOverlay(private val context: Context, private val factory: VehicleView
 
         val psiTv = TextView(context).apply {
             text = "—"; textSize = 17f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(factory.textColor())
+            setTextColor(factory.glassText())
         }
         root.addView(psiTv)
 
         val kpaTv = TextView(context).apply {
-            text = "— kPa"; textSize = 10f; setTextColor(factory.mutedColor())
+            text = "— kPa"; textSize = 10f; setTextColor(factory.glassMuted())
         }
         root.addView(kpaTv)
 
         val tempTv = TextView(context).apply {
-            text = ""; textSize = 10f; setTextColor(factory.mutedColor())
+            text = ""; textSize = 10f; setTextColor(factory.glassMuted())
         }
         root.addView(tempTv)
 
         val stateTv = TextView(context).apply {
-            text = ""; textSize = 10f; setTextColor(factory.mutedColor())
+            text = ""; textSize = 10f; setTextColor(factory.glassMuted())
         }
         root.addView(stateTv)
 

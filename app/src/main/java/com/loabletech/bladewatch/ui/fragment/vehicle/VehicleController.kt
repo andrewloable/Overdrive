@@ -137,12 +137,25 @@ class VehicleController(private val context: Context) {
     // ─── Build ───────────────────────────────────────────────────────────────
 
     private fun buildView() {
-        root.setBackgroundColor(factory.bgColor())
+        // Light studio backdrop behind the full-bleed 3D car (the WebView canvas
+        // is transparent, so this gradient is what shows around the model).
+        root.background = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(factory.glassBgTop(), factory.glassBgBottom())
+        )
         root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
+        // ── Layer 0: full-bleed 3D car + floating glass tyre cards ──────────────
+        tyreOverlay = TyreOverlay(context, factory)
+        root.addView(tyreOverlay.view, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        // ── Layer 1: glass control overlay ──────────────────────────────────────
         outerLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            clipChildren = false
+            clipToPadding = false
         }
 
         statusArea = buildStatusCard()
@@ -151,18 +164,26 @@ class VehicleController(private val context: Context) {
         staleBanner = TextView(context).apply {
             text = context.getString(R.string.vehicle_stale_connecting)
             textSize = 11f; gravity = Gravity.CENTER
-            setTextColor(factory.mutedColor())
+            setTextColor(factory.glassMuted())
             setPadding(factory.dp(8), factory.dp(4), factory.dp(8), factory.dp(4))
             visibility = View.GONE
         }
         outerLayout.addView(staleBanner)
 
-        // Hero region: themed grid + car silhouette + tyre corner cards
-        tyreOverlay = TyreOverlay(context, factory)
-        outerLayout.addView(tyreOverlay.view)
+        // Transparent spacer — the 3D car shows through this band.
+        outerLayout.addView(View(context), LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.85f))
 
-        // Appearance bar: color swatches + model label
-        outerLayout.addView(buildAppearanceBar())
+        // Bottom glass panel: appearance bar + tabs + tab content.
+        val bottomPanel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = factory.glassPanelRadii(20, 20, 0, 0)
+            elevation = factory.dp(8).toFloat()
+            clipToPadding = false
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.15f)
+        }
+        bottomPanel.addView(buildAppearanceBar())
+        bottomPanel.addView(buildTabBar())
 
         contentScroll = ScrollView(context).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -170,69 +191,71 @@ class VehicleController(private val context: Context) {
         }
         contentArea = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(factory.dp(12), factory.dp(12), factory.dp(12), factory.dp(12))
+            setPadding(factory.dp(12), factory.dp(8), factory.dp(12), factory.dp(12))
         }
         contentScroll.addView(contentArea)
-        outerLayout.addView(contentScroll)
+        bottomPanel.addView(contentScroll)
 
-        val tabRow = buildTabBar()
-        outerLayout.addView(tabRow)
-
+        outerLayout.addView(bottomPanel)
         root.addView(outerLayout)
     }
 
     private fun buildStatusCard(): LinearLayout {
-        val card = LinearLayout(context).apply {
+        // Top overlay row: a lock glass-pill on the left, a charge/range glass-pill
+        // on the right, with the 3D car visible in the gap between them.
+        val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(factory.surfaceColor())
-            setPadding(factory.dp(16), factory.dp(12), factory.dp(16), factory.dp(12))
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(factory.dp(14), factory.dp(12), factory.dp(14), factory.dp(4))
+            clipChildren = false
         }
 
-        val lockSection = LinearLayout(context).apply {
+        // Lock pill
+        val lockPill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            background = factory.glassPanel(16)
+            elevation = factory.dp(3).toFloat()
+            setPadding(factory.dp(12), factory.dp(7), factory.dp(14), factory.dp(7))
         }
         val dot = View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(factory.dp(10), factory.dp(10)).apply { marginEnd = factory.dp(6) }
+            layoutParams = LinearLayout.LayoutParams(factory.dp(10), factory.dp(10)).apply { marginEnd = factory.dp(7) }
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.GRAY) }
         }
-        val lockTv = TextView(context).apply { text = "—"; textSize = 13f; setTextColor(factory.textColor()) }  // "—" is a placeholder, replaced on first poll
+        val lockTv = TextView(context).apply { text = "—"; textSize = 13f; setTextColor(factory.glassText()) }
         lockStatusDot = dot; lockStatusText = lockTv
-        lockSection.addView(dot); lockSection.addView(lockTv)
-        card.addView(lockSection)
+        lockPill.addView(dot); lockPill.addView(lockTv)
+        row.addView(lockPill)
 
-        card.addView(View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(factory.dp(1), factory.dp(24)).apply { marginStart = factory.dp(8); marginEnd = factory.dp(8) }
-            setBackgroundColor(factory.dividerColor())
-        })
+        // Spacer — car shows between the pills
+        row.addView(View(context), LinearLayout.LayoutParams(0, factory.dp(1), 1f))
 
-        // Charge + range, labeled and right-aligned at the top-right of the card
-        val battSection = LinearLayout(context).apply {
+        // Charge / range pill
+        val battPill = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.END
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            background = factory.glassPanel(16)
+            elevation = factory.dp(3).toFloat()
+            setPadding(factory.dp(14), factory.dp(6), factory.dp(14), factory.dp(6))
         }
         val battTv = TextView(context).apply {
             text = context.getString(R.string.vehicle_status_charge_unknown)
             textSize = 15f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.END
-            setTextColor(factory.textColor())
+            setTextColor(factory.glassText())
         }
         val rangeTv = TextView(context).apply {
             text = context.getString(R.string.vehicle_status_range_unknown)
-            textSize = 11f; gravity = Gravity.END; setTextColor(factory.mutedColor())
+            textSize = 11f; gravity = Gravity.END; setTextColor(factory.glassMuted())
         }
         batteryText = battTv; rangeText = rangeTv
-        battSection.addView(battTv); battSection.addView(rangeTv)
-        card.addView(battSection)
+        battPill.addView(battTv); battPill.addView(rangeTv)
+        row.addView(battPill)
 
-        return card
+        return row
     }
 
     private fun buildTabBar(): HorizontalScrollView {
         val scroll = HorizontalScrollView(context).apply {
-            setBackgroundColor(factory.surfaceColor())
             isHorizontalScrollBarEnabled = false
         }
         tabBar = LinearLayout(context).apply {
@@ -257,9 +280,10 @@ class VehicleController(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = factory.dp(6) }
             background = GradientDrawable().apply {
                 cornerRadius = factory.dp(16).toFloat()
-                setColor(if (selected) factory.accentColor() else factory.pillBgColor())
+                if (selected) setColor(factory.accentColor())
+                else { setColor(Color.argb(0x70, 255, 255, 255)); setStroke(factory.dp(1), Color.argb(0xB0, 255, 255, 255)) }
             }
-            setTextColor(if (selected) Color.WHITE else factory.textColor())
+            setTextColor(if (selected) Color.WHITE else factory.glassText())
             setOnClickListener {
                 currentTab = tab
                 rebuildTabBar()
@@ -274,8 +298,7 @@ class VehicleController(private val context: Context) {
         val bar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(factory.surfaceColor())
-            setPadding(factory.dp(12), factory.dp(8), factory.dp(12), factory.dp(8))
+            setPadding(factory.dp(14), factory.dp(10), factory.dp(14), factory.dp(8))
         }
 
         // Color swatches
@@ -297,12 +320,12 @@ class VehicleController(private val context: Context) {
             text = "+"
             textSize = 16f
             gravity = Gravity.CENTER
-            setTextColor(factory.textColor())
+            setTextColor(factory.glassText())
             layoutParams = LinearLayout.LayoutParams(factory.dp(28), factory.dp(28)).apply { marginEnd = factory.dp(6) }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setStroke(factory.dp(1), factory.mutedColor())
-                setColor(factory.pillBgColor())
+                setStroke(factory.dp(1), Color.argb(0xB0, 255, 255, 255))
+                setColor(Color.argb(0x70, 255, 255, 255))
             }
             contentDescription = context.getString(R.string.vehicle_appearance_custom_color)
             isFocusable = true; isClickable = true
@@ -315,7 +338,7 @@ class VehicleController(private val context: Context) {
         val modelTv = TextView(context).apply {
             text = "BYD Seal 5 DM-i Dynamic"   // default; replaced by manifest name on fetch
             textSize = 12f
-            setTextColor(factory.mutedColor())
+            setTextColor(factory.glassMuted())
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }

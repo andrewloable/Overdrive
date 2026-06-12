@@ -38,6 +38,37 @@ class VehicleViewFactory(val context: Context) {
 
     fun dp(v: Int) = (v * context.resources.displayMetrics.density + 0.5f).toInt()
 
+    // ─── Liquid glass (Apple-style frosted overlay) ──────────────────────────
+    // API 29 has no live backdrop blur (RenderEffect is 31+), so the look is
+    // approximated with a translucent light fill + bright hairline edge over the
+    // full-bleed 3D car. Text stays dark for contrast on the light frost.
+
+    fun glassText()   = Color.parseColor("#15151A")
+    fun glassMuted()  = Color.parseColor("#5A5A66")
+    /** Tint for the studio backdrop behind the 3D car. */
+    fun glassBgTop()    = Color.parseColor("#F6F8FC")
+    fun glassBgBottom() = Color.parseColor("#DDE3EE")
+
+    /** Rounded translucent panel: bright frost + hairline top-edge highlight. */
+    fun glassPanel(cornerRadiusDp: Int, fillAlpha: Int = 0x9E): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(Color.argb(fillAlpha, 255, 255, 255))
+            cornerRadius = dp(cornerRadiusDp).toFloat()
+            setStroke(dp(1), Color.argb(0xC8, 255, 255, 255))
+        }
+
+    /** Same frost with independently-rounded corners (e.g. only the top). */
+    fun glassPanelRadii(tl: Int, tr: Int, br: Int, bl: Int, fillAlpha: Int = 0x9E): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(Color.argb(fillAlpha, 255, 255, 255))
+            val r = floatArrayOf(
+                dp(tl).toFloat(), dp(tl).toFloat(), dp(tr).toFloat(), dp(tr).toFloat(),
+                dp(br).toFloat(), dp(br).toFloat(), dp(bl).toFloat(), dp(bl).toFloat(),
+            )
+            cornerRadii = r
+            setStroke(dp(1), Color.argb(0xC8, 255, 255, 255))
+        }
+
     // ─── Accessibility helper ────────────────────────────────────────────────
 
     /** Makes TalkBack announce a TextView-styled button with the "Button" role. */
