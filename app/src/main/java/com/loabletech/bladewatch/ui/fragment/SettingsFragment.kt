@@ -118,6 +118,12 @@ class SettingsFragment : Fragment() {
         val rowsContainer =
             root.findViewById<LinearLayout>(R.id.subrailRowsContainer) ?: return
 
+        // Keep the sub-rail on the same edge as the main navigation rail so
+        // the two read as one continuous rail. When the main rail is on the
+        // right (drive-side "right"/"auto-RHD"), the sub-rail moves to the
+        // right and the detail pane's outer gap flips to its start edge.
+        applySubrailSide(root)
+
         val savedName = savedInstanceState?.getString(KEY_SECTION)
         currentSection = savedName
             ?.let { name -> Section.values().firstOrNull { it.name == name } }
@@ -147,6 +153,51 @@ class SettingsFragment : Fragment() {
         // so the page paints in one frame; rotation: also skip (saved
         // section is already "current" from the user's perspective).
         selectSection(currentSection, animate = false, force = true)
+    }
+
+    /**
+     * Re-mirror the sub-rail when the drive-side changes while Settings is
+     * already open. The Appearance pane calls this right after it flips the
+     * main rail, so the sub-rail follows live instead of only after the
+     * Settings page is left and reopened. Safe no-op in portrait.
+     */
+    fun refreshSubrailSide() {
+        val root = view ?: return
+        val isLandscape = resources.configuration.orientation ==
+            Configuration.ORIENTATION_LANDSCAPE
+        if (isLandscape && root.findViewById<View>(R.id.settingsContent) != null) {
+            applySubrailSide(root)
+        }
+    }
+
+    /**
+     * Mirror the two-pane layout to match the main navigation rail's edge.
+     * Default (rail left): sub-rail left, detail pane right with an end gap.
+     * Rail right (drive-side "right"/"auto-RHD"): sub-rail right, detail pane
+     * left with a start gap — so the sub-rail sits flush against the main
+     * rail instead of being stranded on the opposite side.
+     */
+    private fun applySubrailSide(root: View) {
+        val rootGroup = root as? LinearLayout ?: return
+        val subrail = root.findViewById<View>(R.id.settingsSubrailContainer) ?: return
+        val detail = root.findViewById<View>(R.id.settingsDetailPane) ?: return
+
+        val railOnRight = (activity as? MainActivity)?.isMainRailOnRight() ?: false
+
+        // Reorder children so the sub-rail hugs the same edge as the main rail.
+        val subrailIsLast = rootGroup.indexOfChild(subrail) == rootGroup.childCount - 1
+        if (railOnRight != subrailIsLast) {
+            rootGroup.removeView(subrail)
+            if (railOnRight) rootGroup.addView(subrail) else rootGroup.addView(subrail, 0)
+        }
+
+        // Detail pane keeps its outer gap on the screen-edge side.
+        val gap = resources.getDimensionPixelSize(R.dimen.page_padding_top)
+        (detail.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+            lp.marginStart = if (railOnRight) gap else 0
+            lp.marginEnd = if (railOnRight) 0 else gap
+            detail.layoutParams = lp
+        }
     }
 
     /**

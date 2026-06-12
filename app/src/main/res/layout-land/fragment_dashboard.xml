@@ -62,7 +62,7 @@
                         android:textColor="?attr/colorOnPrimaryContainer" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnViewAllTrips" />
+                        android:id="@+id/btnViewAllTrips"
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
@@ -345,7 +345,7 @@
                         android:layout_marginTop="4dp">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSetPassword" />
+                            android:id="@+id/btnSetPassword"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="36dp"
@@ -355,7 +355,7 @@
                             android:textAllCaps="false" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRegenerateToken" />
+                            android:id="@+id/btnRegenerateToken"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
                             android:layout_height="36dp"
@@ -394,7 +394,7 @@
                 app:singleLine="true">
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipTunnel" />
+                    android:id="@+id/heroChipTunnel"
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -407,7 +407,7 @@
                     app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipServices" />
+                    android:id="@+id/heroChipServices"
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -419,7 +419,7 @@
                     app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
-                    android:id="@+id/heroChipRecording" />
+                    android:id="@+id/heroChipRecording"
                     style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

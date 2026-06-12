@@ -12,6 +12,7 @@ import androidx.fragment.app.FragmentManager
 import net.bladewatch.app.R
 import net.bladewatch.app.server.LocaleManager
 import net.bladewatch.app.ui.MainActivity
+import net.bladewatch.app.ui.fragment.SettingsFragment
 import net.bladewatch.app.ui.dialog.LanguagePickerDialog
 import net.bladewatch.app.ui.fragment.WebViewFragment
 import net.bladewatch.app.ui.util.PreferencesManager
@@ -154,6 +155,10 @@ class SettingsAppearanceFragment : Fragment() {
         PreferencesManager.setDriveSide(side)
         applyDriveSideSelection(side)
         (activity as? MainActivity)?.applyDriveSide()
+        // Flip the Settings sub-rail to the same edge immediately, while this
+        // page is open — otherwise it only re-mirrors on the next visit.
+        // Runs after applyDriveSide() so the main-rail side is already settled.
+        (parentFragment as? SettingsFragment)?.refreshSubrailSide()
     }
 
     private fun applyDriveSideSelection(side: String) {

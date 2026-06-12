@@ -56,6 +56,11 @@ class ZrokLauncher(
         
         // Flag to track if token has been loaded from storage
         private var tokenLoaded = false
+
+        // One-shot guard: auto-repair a revoked environment (401
+        // shareUnauthorized on reserve) at most once per launch attempt, so a
+        // persistently-bad token can't spin in an enable→reserve→401 loop.
+        private var zrokReEnableAttempted = false
         
         // Reserved share token (obtained from `zrok reserve` command)
         // Set this after running reserve command once
@@ -108,6 +113,8 @@ class ZrokLauncher(
     fun launchZrok(callback: ZrokCallback) {
         logManager.info(TAG, "Launching Zrok tunnel...")
         callback.onLog("Loading token...")
+        // Fresh launch — allow one environment repair if reserve hits a 401.
+        zrokReEnableAttempted = false
         
         // First ensure token is loaded from unified storage
         ensureTokenLoaded { hasToken ->
@@ -837,6 +844,10 @@ class ZrokLauncher(
                         uniqueName = generateUniqueName(context)
                         saveUniqueName(uniqueName)
                         executeAutoReserve(callback, 0) // Reset retry count for new name
+                    } else if (isZrokUnauthorized(output)) {
+                        // 401 shareUnauthorized — the local environment.json exists
+                        // but the server no longer trusts it. Repair and retry.
+                        recoverRevokedZrokEnvironment(callback)
                     } else if (output.contains("error") || output.contains("failed") || output.contains("ERROR")) {
                         logManager.error(TAG, "Reserve failed: $output")
                         callback.onError("Failed to reserve URL: $output")
@@ -849,8 +860,13 @@ class ZrokLauncher(
                 
                 override fun onError(error: String) {
                     logManager.error(TAG, "Reserve command failed: $error")
-                    // Check if it's a timeout or network issue - retry
-                    if (error.contains("timeout") || error.contains("connection")) {
+                    // 401 shareUnauthorized — stale/revoked environment. The
+                    // reserve runs `... 2>&1` so the CLI error surfaces here as
+                    // a non-zero exit. Repair the environment and retry once.
+                    if (isZrokUnauthorized(error)) {
+                        recoverRevokedZrokEnvironment(callback)
+                    } else if (error.contains("timeout") || error.contains("connection")) {
+                        // Timeout or network issue - retry
                         callback.onLog("⚠️ Connection issue, retrying...")
                         executeAutoReserve(callback, retryCount + 1)
                     } else {
@@ -860,7 +876,74 @@ class ZrokLauncher(
             }
         )
     }
-    
+
+    /**
+     * True when a zrok CLI result indicates the environment is no longer
+     * authorized (HTTP 401 / shareUnauthorized). Covers both the reserve
+     * stdout (`2>&1`) and the non-zero-exit error string.
+     */
+    private fun isZrokUnauthorized(text: String): Boolean {
+        val l = text.lowercase()
+        return l.contains("shareunauthorized") ||
+            l.contains("unauthorized") ||
+            l.contains("[post /share][401]") ||
+            Regex("\\b401\\b").containsMatchIn(l)
+    }
+
+    /**
+     * Repair a revoked zrok environment after a 401 on reserve.
+     *
+     * The launcher treats "environment.json exists" as "already enabled" to
+     * avoid burning device registrations, but that file can outlive the
+     * server-side trust (token rotated, environment deleted, or a new enable
+     * token was entered while the stale file short-circuited the enable step).
+     * When reserve returns 401, wipe the local identity and re-run
+     * `zrok enable` with the saved token; a successful enable flows back into
+     * checkReserveAndLaunch, which reserves again with valid credentials.
+     *
+     * Guarded by [zrokReEnableAttempted] so a genuinely bad/expired token
+     * fails with a clear message instead of looping.
+     */
+    private fun recoverRevokedZrokEnvironment(callback: ZrokCallback) {
+        if (zrokReEnableAttempted) {
+            logManager.error(TAG, "Zrok re-enable already attempted this launch; giving up on 401")
+            callback.onError(
+                "Zrok authorization failed (401). Your enable token looks invalid or expired — " +
+                    "open Daemons → Zrok, tap Reset Zrok Environment, and enter a fresh token from zrok.io."
+            )
+            return
+        }
+        zrokReEnableAttempted = true
+
+        if (zrokToken.isEmpty()) {
+            callback.onError(
+                "Zrok authorization failed (401) and no enable token is configured. " +
+                    "Set your token in Daemons → Zrok."
+            )
+            return
+        }
+
+        logManager.warn(TAG, "Reserve returned 401 — stale environment.json. Wiping identity and re-enabling.")
+        callback.onLog("⚠️ Zrok environment expired — re-enabling with your token...")
+
+        // Remove the stale identity so `zrok enable` re-registers cleanly.
+        // Keep the saved unique_name so the reserved URL stays stable.
+        adbShellExecutor.execute(
+            command = "rm -rf $ZROK_IDENTITY_FILE /data/local/tmp/.zrok/identities /data/local/tmp/.zrok/metadata.json",
+            callback = object : AdbShellExecutor.ShellCallback {
+                override fun onSuccess(output: String) {
+                    // Re-enable; on success it chains into checkReserveAndLaunch.
+                    enableZrokWithConfig(callback)
+                }
+                override fun onError(error: String) {
+                    // Even if the cleanup reports an error, attempt the enable.
+                    logManager.warn(TAG, "Zrok identity cleanup reported: $error")
+                    enableZrokWithConfig(callback)
+                }
+            }
+        )
+    }
+
     /**
      * Enable zrok environment with token.
      */

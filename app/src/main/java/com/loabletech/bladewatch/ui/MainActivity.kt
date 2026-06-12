@@ -726,6 +726,7 @@ class MainActivity : AppCompatActivity() {
         appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.dashboardFragment,
+                R.id.locationFragment,
                 R.id.liveViewFragment,
                 R.id.recordingsFragment,
                 R.id.vehicleControlFragment,
@@ -972,6 +973,19 @@ class MainActivity : AppCompatActivity() {
             shellContainer.addView(railScroll)
             shellContainer.addView(stage)
         }
+    }
+
+    /**
+     * True when the main navigation rail currently sits on the right edge.
+     * Reflects the live view arrangement (after [applyDriveSide] has resolved
+     * "left"/"right"/"auto"), so callers don't have to re-run vehicle
+     * detection. Screens with their own sub-rail (e.g. Settings) read this to
+     * keep their sub-rail adjacent to the main rail.
+     */
+    fun isMainRailOnRight(): Boolean {
+        if (!::shellContainer.isInitialized) return false
+        val first = shellContainer.getChildAt(0) ?: return false
+        return first.id != R.id.navigationRailScroll
     }
 
     private fun detectVehicleRailOnRight(): Boolean {
