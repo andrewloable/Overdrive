@@ -14,9 +14,12 @@ was migrated to native.
 ## 1. The big picture
 
 BladeWatch is a hybrid app. The UI shell, navigation rail, and all primary
-screens are **native** (Kotlin Fragments). The daemon's HTTP server on
-`http://127.0.0.1:8080` still serves static assets for remote browser/tunnel
-clients, but all in-app screens now use native implementations.
+in-app screens are **native** (Kotlin Fragments). The daemon's HTTP server on
+`http://127.0.0.1:8080` serves the embedded web UI — now an **Angular 19 SPA**
+(see [Architecture](architecture.md) and the `web/` project) that talks to the
+daemon over **ConnectRPC** — for remote browser/tunnel clients. All in-app
+screens use native implementations; the SPA replaced the old static HTML pages
+that the WebView host once rendered.
 
 Migrated screens (complete list):
 
@@ -48,10 +51,14 @@ native fragments (see table above).
 | `recordingSettingsWebFragment` | `/recording` | ✓ Migrated → `RecordingSettingsController` |
 | `surveillanceSettingsWebFragment` | `/surveillance` | ✓ Migrated → `SurveillanceSettingsController` |
 
-Other daemon pages that were never wired as nav destinations remain available for
-remote access: `about.html`, `notifications.html`, `events.html`, `index.html`,
-`login.html`. `events.html` links are intercepted and rerouted to the native
-Recordings page (see §4, `shouldOverrideUrlLoading`).
+Remote browser/tunnel access is now the **Angular SPA**, whose router covers the
+same surface (dashboard, live, recording, surveillance, events, trips, vehicle,
+location, diagnostics, notifications, performance, settings, about, login). The
+old static HTML pages (`about.html`, `notifications.html`, `events.html`,
+`index.html`, `login.html`, …) are retained only under the daemon's `/legacy/`
+prefix for regression testing. In the native shell, `events`/`events.html` links
+are still intercepted and rerouted to the native Recordings page (see §4,
+`shouldOverrideUrlLoading`).
 
 ---
 
@@ -147,11 +154,15 @@ otherwise break localhost calls. Key behaviors:
 
 ### Daemon-side routing
 [HttpServer.java](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java)
-maps each route to a static file under `assets/web/local/` (extracted to
-`/data/local/tmp/web` at runtime). Both `/foo` and `/foo.html` resolve to
-`local/foo.html`. HTML is served `no-store`; shared static assets get 24 h
-`max-age`. API routes (`/api/...`) are handled separately and gated by
-`AuthMiddleware`.
+now serves the **Angular SPA** from `assets/web/angular/` (extracted to
+`/data/local/tmp/web/angular` at runtime): `/` and any unrecognised path return
+`angular/index.html` so the Angular router resolves the route client-side, and
+hashed build chunks are served from `/assets/` and `/vendor/`. The legacy static
+HTML pages are still reachable under the `/legacy/` prefix (mapping to
+`assets/web/local/`) for regression testing. RPC calls hit
+`/bladewatch.v1.<Service>/<Method>` and are dispatched by `ConnectDispatcher`;
+inline REST routes (`/api/...`) are handled separately. All routes pass through
+`AuthMiddleware` first.
 
 ---
 
@@ -204,5 +215,6 @@ WebView page, preserve them:
 - Nav graph: [nav_graph.xml](../app/src/main/res/navigation/nav_graph.xml)
 - Route handling: [HttpServer.java](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java)
 - Auth: [AuthManager.java](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java), [AuthMiddleware.java](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java)
-- Web assets: [app/src/main/assets/web/local/](../app/src/main/assets/web/local/)
+- Embedded web UI (Angular SPA): [web/](../web/), built/copied by [build.gradle.kts:497](../app/build.gradle.kts#L497), served from [app/src/main/assets/web/angular/](../app/src/main/assets/web/angular/)
+- Legacy web assets (under `/legacy/`): [app/src/main/assets/web/local/](../app/src/main/assets/web/local/)
 - Native migration exemplars: `LiveViewFragment`/`LiveViewController`/`LiveStreamClient`, `RecordingsFragment`, `LocationFragment`, `VehicleController`, `TripsController`, `PerformanceController`, `RecordingSettingsController`, `SurveillanceSettingsController`

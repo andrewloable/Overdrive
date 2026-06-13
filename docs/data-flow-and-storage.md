@@ -134,10 +134,16 @@ Legacy configs may be migrated from:
 Main secret path:
 
 ```text
-/data/local/tmp/bladewatch_secrets.json
+/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_secrets.json
 ```
 
-`SecretConfigStore` stores secret sections such as auth device secret and tunnel tokens. The intended permissions are owner-only. Direct writes are restricted to shell UID where practical; the Android app uses the TCP bridge when it cannot access the file directly.
+Like the unified config, the secret store now lives under the user-visible
+BladeWatch app-files tree so secrets survive uninstall/reinstall. A
+`/data/local/tmp/bladewatch_secrets.json` legacy mirror is still best-effort
+written for older hardcoded readers, and an existing legacy file is migrated to
+the new path on first init.
+
+`SecretConfigStore` stores secret sections such as auth device secret and tunnel tokens. The file is created with owner-only (`rw-------`) permissions. Direct writes are restricted to shell UID where practical; the Android app uses the TCP bridge when it cannot access the file directly.
 
 Sensitive values must not be logged or copied into docs.
 
@@ -183,11 +189,25 @@ The SD-card watchdog (`startSdCardWatchdog`) starts after the priority scan and 
 
 Storage cleanup behavior includes:
 
-- Default storage limit around `500 MB`.
-- Minimum supported limit around `100 MB`.
-- Maximum supported limit around `100 GB`.
-- Periodic cleanup checks around every `30 seconds`.
+- Default storage limit `500 MB` (per type: recordings, surveillance, proximity, trips).
+- Minimum supported limit `100 MB`.
+- Maximum limit is dynamic: the effective ceiling is the selected drive's physical free space when known. The static fallback ceiling is `2 TB` (`MAX_LIMIT_MB_INTERNAL` / `MAX_LIMIT_MB_SD_CARD`, both `2_000_000` MB). The proto exposes a separate `max_limit_mb_sd_card` field so the UI can clamp SD-card limits independently from internal.
+- Periodic cleanup checks every `30 seconds`.
 - Avoiding storage-directory switches while recording or surveillance is active.
+
+### Format Storage API
+
+`FormatStorageApiHandler` lets the UI wipe and re-mount a removable drive so a freshly inserted or full SD card / USB stick can be reused:
+
+- `GET /api/storage/format` — `ListFormatVolumes`. Returns the removable public volumes visible to `StorageManager`: `{ success, volumes: [{ volumeId, uuid, mounted, mountPath }] }`. `mountPath` is `/storage/<uuid>`.
+- `POST /api/storage/format` — `FormatVolume`. Body `{ "volumeId": "public:..." }`. Runs `sm unmount` → `sm format` → `sm mount` for the volume, polls up to ~10 seconds for the remount, then calls `StorageManager.discoverSdCard()` so the drive is re-picked-up.
+
+Guardrails:
+
+- Only removable `public:` volumes are accepted; internal emulated storage is rejected.
+- The request is refused with HTTP 409 while a recording is active.
+
+The proto contract is `StorageService.ListFormatVolumes` / `FormatVolume` in `proto/bladewatch/v1/storage.proto`.
 
 ## Web Assets
 
@@ -287,10 +307,11 @@ list-by-type-and-date queries fast.
 
 Clips are indexed the moment they are finalized:
 
-- Normal cam recordings — `AvmByteCallbackProbe.promoteFile()` after the
-  `tmp→final` rename.
-- Event / proximity recordings — `StorageManager.onFileSaved()` at the finalize
-  convergence point.
+- All clip types (normal cam, event, proximity) — `StorageManager.onFileSaved()`
+  at the single finalize convergence point. Every recording finalizes through
+  `HardwareEventRecorderGpu` (the `tmp→final` rename), which calls `onFileSaved()`,
+  which calls `MediaCatalogManager.indexRecording()`. The clip type is derived
+  from the filename prefix (`cam_`, `event_`, `proximity_`).
 - Sidecar enrichment — `EventTimelineCollector.writeJsonSidecar()` triggers a
   second upsert (MERGE by path) so the row is enriched with actor/severity data as
   soon as the `.json` sidecar is written; the two-phase upsert is idempotent.
@@ -333,14 +354,17 @@ Notification APIs expose categories, push subscription management, preferences, 
 
 ## Source References
 
-- Camera-to-recording path: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:58](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L58), [StorageManager.java:1921](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1921).
+- Camera-to-recording path: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuMosaicRecorder.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L31), [HardwareEventRecorderGpu.java:56](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L56), [StorageManager.java:2234](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L2234).
 - Live-stream path: [GpuSurveillancePipeline.java:30](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L30), [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19), [HttpServer.java:538](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L538).
-- Surveillance-event path: [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248).
-- Web UI to daemon: [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [WebViewFragment.kt:228](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L228).
+- Surveillance-event path: [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [SurveillanceEngineGpu.java:635](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L635), [SurveillanceEngineGpu.java:3095](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3095).
+- Web UI to daemon: [HttpServer.java:50](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L50), [AuthMiddleware.java:135](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L135), [WebViewFragment.kt:228](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L228).
 - App TCP client to daemon: [CameraDaemonClient.java:24](../app/src/main/java/com/loabletech/bladewatch/client/CameraDaemonClient.java#L24), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53).
-- Location IPC: [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350).
+- Location IPC: [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32), [SurveillanceIpcServer.java:23](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L23), [CameraDaemon.java:383](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L383).
 - BYD local data flow: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20).
 - Unified config, secrets, and auth identity: [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30), [SecretConfigStore.kt:22](../app/src/main/java/com/loabletech/bladewatch/config/SecretConfigStore.kt#L22), [AuthManager.java:50](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L349).
-- Media and SD-card storage: [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100), [StorageManager.java:120](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L120), [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1671](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1671), [StorageManager.java:1685](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1685).
-- Runtime assets and tunnel files: [build.gradle.kts:232](../app/build.gradle.kts#L232), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27).
-- Trips and notifications: [TripDetector.java:27](../app/src/main/java/com/loabletech/bladewatch/trips/TripDetector.java#L27), [TripAnalyticsManager.java:23](../app/src/main/java/com/loabletech/bladewatch/trips/TripAnalyticsManager.java#L23), [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30).
+- Media and SD-card storage: [StorageManager.java:100](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L100), [StorageManager.java:113](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L113), [StorageManager.java:918](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L918), [StorageManager.java:967](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L967), [StorageManager.java:2378](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L2378).
+- Format storage API: [FormatStorageApiHandler.java:27](../app/src/main/java/com/loabletech/bladewatch/server/FormatStorageApiHandler.java#L27), [storage.proto:20](../proto/bladewatch/v1/storage.proto#L20).
+- Media catalog and sync: [MediaCatalogManager.java:26](../app/src/main/java/com/loabletech/bladewatch/media/MediaCatalogManager.java#L26), [MediaCatalogManager.java:81](../app/src/main/java/com/loabletech/bladewatch/media/MediaCatalogManager.java#L81), [MediaCatalogManager.java:130](../app/src/main/java/com/loabletech/bladewatch/media/MediaCatalogManager.java#L130), [RecordingsApiHandler.java:185](../app/src/main/java/com/loabletech/bladewatch/server/RecordingsApiHandler.java#L185).
+- Trip database and sync: [TripDatabase.java:19](../app/src/main/java/com/loabletech/bladewatch/trips/TripDatabase.java#L19), [TripDatabase.java:30](../app/src/main/java/com/loabletech/bladewatch/trips/TripDatabase.java#L30).
+- Runtime assets and tunnel files: [build.gradle.kts:226](../app/build.gradle.kts#L226), [HttpServer.java:50](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L50), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27).
+- Trips and notifications: [TripDetector.java:27](../app/src/main/java/com/loabletech/bladewatch/trips/TripDetector.java#L27), [TripAnalyticsManager.java:23](../app/src/main/java/com/loabletech/bladewatch/trips/TripAnalyticsManager.java#L23), [TripApiHandler.java:35](../app/src/main/java/com/loabletech/bladewatch/trips/TripApiHandler.java#L35), [NotificationApiHandler.java:31](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L31).

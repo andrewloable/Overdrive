@@ -37,7 +37,7 @@ Each detailed document includes a `Source References` section. References use `f
 - Surveillance IPC TCP: `127.0.0.1:19877`.
 - Embedded web server: `127.0.0.1:8080` by default, or `0.0.0.0:8080` only when LAN HTTP is explicitly enabled.
 - Main shared config: `/storage/emulated/0/BladeWatch/data/bladewatch_config.json` (mirrored to `/data/local/tmp/bladewatch_config.json` for legacy readers).
-- Shared daemon secret store: `/data/local/tmp/bladewatch_secrets.json`.
+- Shared daemon secret store: `/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_secrets.json` (owner-only `rw-------`; `/data/local/tmp/bladewatch_secrets.json` is the legacy mirror).
 - Media base directory: `/storage/emulated/0/BladeWatch`.
 
 ## Security Notes

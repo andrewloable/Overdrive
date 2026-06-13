@@ -1,6 +1,6 @@
 # BYD Integrations
 
-BladeWatch integrates with BYD vehicles through local BYD Android framework APIs available on the head unit. There is no cloud integration path; all vehicle data and controls use the local SDK only.
+BladeWatch integrates with BYD vehicles through local BYD Android framework APIs available on the head unit. There is no BYD cloud integration path in this codebase; all vehicle data and controls use the local SDK only. (A previous generation used BYD cloud over HTTPS + MQTT v5 with Bangcle white-box crypto; that code has been removed. Commands that only had a cloud implementation now resolve to `NOT_SUPPORTED` — see Vehicle Control below.)
 
 ## Android Manifest Permissions
 
@@ -109,29 +109,55 @@ Do not change door lock mapping without checking both local SDK behavior and web
 
 ## Vehicle Control
 
-`VehicleControlApiHandler` exposes vehicle-control HTTP endpoints. All controls go through `VehicleCommandRouter` using the local BYD SDK only.
+`VehicleControlApiHandler` exposes vehicle-control HTTP endpoints. All controls go through `VehicleCommandRouter`, which dispatches to the local BYD SDK (`BydDataCollector`) only. The contract is defined by `VehicleService` in `proto/bladewatch/v1/vehicle.proto`; the REST handler is the HTTP mapping of those RPCs.
 
-Actions supported via local SDK include:
+### Command surface
 
-- Climate.
-- Windows.
-- Seats.
-- Trunk.
-- Lights.
-- ADAS.
-- Charge cap.
-- Diagnostics and state reads.
+`VehicleService` RPCs and their `/api/vehicle/*` mappings:
 
-The following actions were previously supported through a cloud path that no longer exists. They now return `NOT_SUPPORTED`:
+- State reads: `GetState` (`GET /api/vehicle/state`), `GetAcDiagnostics`, `GetSeatDiagnostics`.
+- Climate: `SetClimate` (`POST /api/vehicle/climate`) — power on/off, set temperature, fan level, wind mode, and max-cooling. Max-cooling carries restore parameters so prior AC power/temp/fan state can be re-applied when it is turned off.
+- Windows: `MoveWindow` (`POST /api/vehicle/window`) — per-window open/close by direction, or closed-loop positioning to a target percent. Window index `0` means all side windows; `1`–`4` are the four doors; `5`/`6` are sunroof/sunshade.
+- Seats: `SetSeat` (`POST /api/vehicle/seat`) — per-seat heating and ventilation levels, and seat-memory position recall. The request also carries the full current seat state (driver/passenger heat and vent) so the SDK call is applied against a consistent snapshot.
+- Lights/appearance: `SetLights` (`POST /api/vehicle/lights`) — daytime running light (DRL) on/off.
+- ADAS: `SetAdas` (`POST /api/vehicle/adas`) — speed-limit-warning on/off.
+- Trunk/tailgate: `Trunk` (`POST /api/vehicle/trunk`) — open, close, or stop the tailgate motor. Trunk open invokes the local tailgate motor directly with no remote-unlock pre-step, so a locked vehicle may decline the motor or trip the alarm.
+- Charge cap (BEV): `GetChargeCap`/`SetChargeCap` (`/api/vehicle/charge-cap`) — `BYDAutoChargingDevice` stop-capacity percent (50–100%) and on/off switch. The collector probes the framework on first write and reports failure if the value does not stick.
 
-- Lock and unlock.
-- Flash lights.
-- Find car.
-- Battery heat.
-- Charging schedule.
-- Smart charging.
+The bodywork range and battery SOC, door/window/trunk/sunroof status, light/ADAS state, seat heat/cool levels, climate setpoint, and tyre pressures are all returned by `GetState` for the UI to render.
 
-`VehicleCommandRouter` routes all requests through SDK-only paths. Cloud-first and cloud-only strategies are no longer present.
+### Commands with no local primitive
+
+The following actions were previously implemented through a BYD cloud path that no longer exists in this codebase. Their RPCs and request types are kept for API compatibility, but they have no local SDK path and resolve to `NOT_SUPPORTED`:
+
+- Lock and unlock (`Lock`, `Unlock`).
+- Flash lights (`Flash`).
+- Find car (`FindCar`).
+- Battery heat (`SetBatteryHeat`).
+- Charging schedule (`GetChargingSchedule`/`SetChargingSchedule` — readback reports `supported=false` with reason `cloud_not_configured` so the UI hides the section).
+- Smart charging master switch.
+
+`VehicleCommandRouter` only exposes `Outcome.{SUCCESS, FAILED, NOT_SUPPORTED, ...}` and `Path.{SDK, NONE}`. Every dispatch returns a structured `CommandResult` whose `outcome`/`path` are surfaced in the JSON response so the UI can render a "sent via direct connection" (local) badge. Cloud-first and cloud-only routing strategies are no longer present.
+
+## GPS / Location
+
+GPS is not read from the BYD SDK. A separate `LocationSidecarService` runs under the app UID, obtains fixes from Android location providers, and pushes updates to the daemon over the surveillance IPC channel (port 19877). `GpsMonitor` (daemon side) receives `updateFromIpc(...)`, caches the last fix to `/data/local/tmp/gps_cache.json`, and feeds `SafeLocationManager` for geofence checks. It rejects `(0,0)` fixes and loads the cached fix on startup for immediate availability.
+
+`GpsApiHandler` exposes the location HTTP surface, mapped from the `VehicleService` GPS RPCs:
+
+- `GetGpsLocation` (`GET /api/gps`) — returns the location JSON (`GpsMonitor.getLocationJson()`: lat/lng, speed, heading, accuracy, altitude, timestamp) plus a Google Maps URL.
+- `StartGps` (`POST /api/gps/start`) — starts the sidecar service.
+- `StopGps` (`POST /api/gps/stop`) — stops GPS tracking.
+
+The web Location page polls `GetGpsLocation` every few seconds and renders a Leaflet map with a heading-rotated car marker; it is a presentation layer over the same cached fix, not a separate location source.
+
+## 3D Vehicle Hero
+
+The Vehicle Control page shows a rotating 3D model of the car. This is a **web/GPU rendering of the vehicle, not a native BYD SDK feature** — it does not read or control the car. The shipped renderer is **Three.js r147** (with Draco-compressed GLB models under `web/shared/models/`, e.g. Seal, Seal U, Dolphin, Atto 3, Han, Tang, M6, Seagull, Destroyer), served from `web/hero/hero.html`.
+
+It is rendered in a small embedded WebView (`VehicleHeroView`) inside the native vehicle fragment, with `TyreOverlay` floating tyre-pressure and control cards over the full-bleed car background. The native side drives it through an `AndroidHero`/`Hero` JS bridge (`loadModel`, `setColor`, `setRunning`); the selected model and body paint color are user-chosen vehicle-appearance settings, not live telemetry.
+
+History note: an earlier change integrated a native **Filament** 3D engine for the hero, but the head unit's Adreno 610 GL driver crashes under sustained `gltfio` rendering, so the hero was reverted to the proven Three.js WebView stack. The public surface was kept identical to the Filament version. Do not describe the current hero as native Filament.
 
 ## Lock Detection for Surveillance
 
@@ -152,4 +178,7 @@ The following actions were previously supported through a cloud path that no lon
 - Local telemetry collector and reflection-based device access: [BydDataCollector.java:20](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L20), [BydDataCollector.java:247](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L247), [BydDataCollector.java:3907](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L3907).
 - ACC, gear, and event plumbing: [BydConstants.java:10](../app/src/main/java/com/loabletech/bladewatch/byd/BydConstants.java#L10), [GearMonitor.java:132](../app/src/main/java/com/loabletech/bladewatch/monitor/GearMonitor.java#L132), [CameraDaemon.java:1905](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1905), [CameraDaemon.java:2206](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L2206).
 - Door lock and surveillance gating: [CameraDaemon.java:1764](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1764), [CameraDaemon.java:1439](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1439), [AccSentryDaemon.java:1900](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L1900).
-- Vehicle control routing and handlers: [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleCommandRouter.java:37](../app/src/main/java/com/loabletech/bladewatch/byd/routing/VehicleCommandRouter.java#L37), [VehicleControlApiHandler.java:488](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L488), [VehicleControlApiHandler.java:627](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L627), [VehicleControlApiHandler.java:796](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L796).
+- Vehicle control contract and routing: [vehicle.proto:32](../proto/bladewatch/v1/vehicle.proto#L32), [VehicleControlApiHandler.java:43](../app/src/main/java/com/loabletech/bladewatch/server/VehicleControlApiHandler.java#L43), [VehicleCommandRouter.java:17](../app/src/main/java/com/loabletech/bladewatch/byd/routing/VehicleCommandRouter.java#L17), [VehicleCommandRouter.java:315](../app/src/main/java/com/loabletech/bladewatch/byd/routing/VehicleCommandRouter.java#L315).
+- Local SDK control primitives: [BydDataCollector.java:3839](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L3839), [BydDataCollector.java:4803](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L4803), [BydDataCollector.java:5064](../app/src/main/java/com/loabletech/bladewatch/byd/BydDataCollector.java#L5064).
+- GPS / location: [vehicle.proto:51](../proto/bladewatch/v1/vehicle.proto#L51), [GpsApiHandler.java:18](../app/src/main/java/com/loabletech/bladewatch/server/GpsApiHandler.java#L18), [GpsApiHandler.java:24](../app/src/main/java/com/loabletech/bladewatch/server/GpsApiHandler.java#L24), [GpsMonitor.java:23](../app/src/main/java/com/loabletech/bladewatch/monitor/GpsMonitor.java#L23), [GpsMonitor.java:84](../app/src/main/java/com/loabletech/bladewatch/monitor/GpsMonitor.java#L84), [GpsMonitor.java:253](../app/src/main/java/com/loabletech/bladewatch/monitor/GpsMonitor.java#L253).
+- 3D vehicle hero (web/native, Three.js — not Filament): [hero.html:15](../app/src/main/assets/web/hero/hero.html#L15), [hero.html:20](../app/src/main/assets/web/hero/hero.html#L20), [VehicleHeroView.kt:18](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/vehicle/VehicleHeroView.kt#L18), [VehicleHeroView.kt:33](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/vehicle/VehicleHeroView.kt#L33), [TyreOverlay.kt:33](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/vehicle/TyreOverlay.kt#L33).

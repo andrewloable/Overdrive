@@ -8,19 +8,29 @@ BladeWatch exposes a local authenticated web server and can optionally front it 
 | --- | --- | --- | --- |
 | `19876` | `127.0.0.1` | `TcpCommandServer` | JSON command IPC for camera daemon control and secret bridge |
 | `19877` | `127.0.0.1` | `SurveillanceIpcServer` | JSON IPC for surveillance, GPS, and update actions |
-| `8080` | `127.0.0.1` by default | `HttpServer` | Web UI, REST APIs, video, thumbnails, WebSocket streaming |
+| `8080` | `127.0.0.1` by default | `HttpServer` | Web UI, REST APIs, ConnectRPC (`/bladewatch.v1.*`), video, thumbnails, WebSocket streaming |
+
+Both IPC servers (`19876`/`19877`) authenticate callers with the bootstrap token
+in `/data/local/tmp/bladewatch_ipc_token` (`IpcTokenManager`). That file is
+world-readable (`644`) on purpose so the app UID can authenticate to the
+shell-UID daemon; the secret store it gates remains `600`. The IPC token is not
+exposed over HTTP — see `docs/ipc-auth-and-secrets.md`.
 
 ## Embedded HTTP Server
 
-The HTTP server serves:
+The HTTP server serves (all on a single port so a Zrok tunnel can expose both
+HTTP and WebSocket):
 
-- Static web UI pages.
-- Shared JavaScript and CSS.
-- i18n resources.
-- Auth endpoints.
-- REST APIs.
-- Video and thumbnail resources.
-- WebSocket streaming.
+- The Angular SPA build (`/`, `/assets/*`, `/vendor/*`) plus legacy pages.
+- Shared JavaScript, CSS, and i18n resources.
+- Auth endpoints (`/auth/*`).
+- The REST API (`/api/*`, `/status`, `/video/*`, `/thumb/*`, `/snapshot/*`).
+- The ConnectRPC / gRPC-style API under the `/bladewatch.v1.*` route prefix,
+  consumed by the Angular SPA. Unary calls use `application/json`, streaming
+  uses `application/connect+json`; both require `Connect-Protocol-Version: 1`.
+  The Connect handlers wrap the REST handlers, so they share the same auth and
+  the same bind. See `docs/http-api-reference.md` for the full surface.
+- WebSocket streaming on the `/ws` upgrade path.
 
 Default bind:
 
@@ -34,29 +44,39 @@ LAN mode bind:
 0.0.0.0:8080
 ```
 
-LAN mode is disabled by default and controlled by unified network config.
+LAN mode is disabled by default and controlled by unified network config
+(`UnifiedConfigManager.isLanHttpEnabled()`). `GET /status` echoes the active
+bind (`httpBind`) and a warning when LAN HTTP is on.
 
 ## Authentication
 
 `AuthMiddleware` protects the HTTP server.
 
-Public paths include:
+Public paths (no auth at all):
 
-- `/auth/status`.
-- `/auth/token`.
-- `/auth/logout`.
-- `/login`.
-- `/login.html`.
-- `/manifest.json`.
-- `/sw.js`.
-- `/shared/*`.
-- `/i18n/*`.
+- `/auth/status`, `/auth/token`, `/auth/logout`.
+- `/login`, `/login.html`.
+- `/manifest.json`, `/sw.js`, `/favicon.ico`.
+- `/shared/*`, `/i18n/*` (prefixes).
+- `/bladewatch.v1.AuthService/Login` — the Connect login RPC must be reachable
+  before a session exists. All other `/bladewatch.v1.*` Connect calls are
+  protected by the same middleware that guards REST.
+
+Note: `/auth/*` paths are routed in `HttpServer.handleClient` before the auth
+middleware runs, so they are always reachable regardless of the list above.
 
 Protected requests require:
 
-- Bearer JWT, or
-- `byd_session` cookie, or
-- signed thumbnail token for specific `/thumb/*` access.
+- Bearer JWT (`Authorization: Bearer <jwt>`), or
+- `byd_session` cookie (HttpOnly JWT), or
+- signed thumbnail token for specific `/thumb/*?t=<jws>` access.
+
+Cookies set on successful `/auth/token`:
+
+- `byd_session` — the JWT itself, **HttpOnly** (not readable by JS), used by the
+  WebView and browser for authenticated requests.
+- `byd_auth=1` — a non-HttpOnly hint cookie so client JS can tell it is logged
+  in without exposing the JWT. Both expire together; logout clears both.
 
 Release builds require JWT auth even from loopback clients because Android loopback is shared across apps. Debug builds can bypass loopback auth only when tunnel-forwarding headers are absent.
 
@@ -145,9 +165,11 @@ Risk notes:
 
 ## Source References
 
-- Local daemon and server ports: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350), [CameraConfiguration.kt:11](../app/src/main/java/com/loabletech/bladewatch/daemon/camera/CameraConfiguration.kt#L11).
-- HTTP bind mode and LAN opt-in: [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49), [UnifiedConfigManager.kt:559](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L559), [UnifiedConfigManager.kt:567](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L567).
-- Auth middleware, JWTs, and token state: [AuthManager.java:50](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L50), [AuthManager.java:349](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L349), [AuthManager.java:463](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L463), [AuthMiddleware.java:133](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L133), [AuthApiHandler.java:26](../app/src/main/java/com/loabletech/bladewatch/server/AuthApiHandler.java#L26).
-- WebSocket streaming path: [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19), [GpuSurveillancePipeline.java:30](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L30), [HttpServer.java:538](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L538).
-- Android WebView proxy bypass: [WebViewFragment.kt:28](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L28), [WebViewFragment.kt:228](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L228), [WebViewFragment.kt:374](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L374).
-- Zrok launch path and tokens: [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [ZrokLauncher.kt:466](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L466), [ZrokLauncher.kt:1079](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L1079), [UnifiedConfigManager.kt:800](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L800).
+- Local daemon and server ports: [CameraDaemon.java:51](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L51), [CameraDaemon.java:243](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L243), [CameraDaemon.java:381](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L381).
+- HTTP bind mode and LAN opt-in: [HttpServer.java:171](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L171), [UnifiedConfigManager.kt:618](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L618).
+- Connect/gRPC dispatch and service registration: [HttpServer.java:568](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L568), [ConnectDispatcher.java:72](../app/src/main/java/com/loabletech/bladewatch/server/connect/ConnectDispatcher.java#L72), [CameraDaemon.java:387](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L387).
+- Auth middleware, public paths, JWTs, and cookies: [AuthMiddleware.java:40](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L40), [AuthMiddleware.java:95](../app/src/main/java/com/loabletech/bladewatch/server/AuthMiddleware.java#L95), [AuthApiHandler.java:170](../app/src/main/java/com/loabletech/bladewatch/server/AuthApiHandler.java#L170), [AuthManager.java:446](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L446), [AuthManager.java:561](../app/src/main/java/com/loabletech/bladewatch/auth/AuthManager.java#L561).
+- IPC token bootstrap: [IpcTokenManager.java:54](../app/src/main/java/com/loabletech/bladewatch/server/IpcTokenManager.java#L54).
+- WebSocket streaming path: [HttpServer.java:344](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L344), [HttpServer.java:1042](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L1042), [WebSocketStreamServer.java:19](../app/src/main/java/com/loabletech/bladewatch/streaming/WebSocketStreamServer.java#L19).
+- Android WebView proxy bypass and cookie injection: [WebViewFragment.kt:33](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L33), [WebViewFragment.kt:336](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L336), [WebViewFragment.kt:375](../app/src/main/java/com/loabletech/bladewatch/ui/fragment/WebViewFragment.kt#L375).
+- Zrok launch path and tokens (only `libzrok.so` ships in `jniLibs/arm64-v8a/`): [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [ZrokLauncher.kt:36](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L36), [ZrokLauncher.kt:338](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L338), [ZrokLauncher.kt:425](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L425).

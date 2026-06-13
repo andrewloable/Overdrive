@@ -70,15 +70,19 @@ Optional daemons:
 
 - `ZROK_TUNNEL`.
 
-Startup timing:
+Startup timing (measured from app launch / boot):
 
-- Core daemon startup is delayed around `45 seconds`.
+- Core daemon startup is delayed around `45 seconds` (system stabilization).
 - Optional daemon startup is delayed around `60 seconds`.
 - Health checks begin around `90 seconds`.
-- Health checks repeat around every `30 seconds`.
-- Camera daemon starts before sentry and ACC sentry.
+- Health checks repeat every `30 seconds` (`HEALTH_CHECK_INTERVAL_MS`).
+- Within the core group, daemons are further staggered: Camera daemon first, Sentry daemon `+5 s`, ACC sentry daemon `+10 s`.
 
-The manager tracks daemons intentionally stopped by the user so health checks do not immediately restart them.
+The manager tracks daemons intentionally stopped by the user (`userStoppedDaemons`) so health checks do not immediately restart them. The user-stopped set is cleared on each fresh app launch / boot.
+
+The health check is stale-aware for the camera daemon: instead of a plain process-exists check it runs the full launch flow, which verifies **both** process existence (`ps`) and port responsiveness (`nc -z`), so a hung daemon that `ps` shows but won't accept connections is killed and relaunched, while transient ADB blips do not trigger false relaunches.
+
+`DaemonKeepaliveService` is the boot entrypoint into the manager (`startOnBoot`), but it **skips** daemon startup when a post-update launch is in progress — in that case `MainActivity` is the sole orchestrator (it runs `UpdateLifecycle.hardResetDaemons` first, then `initializeOnAppLaunch`) to avoid racing two 45 s schedules and overlapping camera handles on the AVMCamera HAL.
 
 ## Shell Launch Layer
 
@@ -113,25 +117,38 @@ Responsibilities:
 
 ## Camera Daemon
 
-`CameraDaemon` is the central daemon. It initializes:
+`CameraDaemon` is the central daemon. Its startup sequence:
 
-- TCP command server on `127.0.0.1:19876`.
-- HTTP server on `127.0.0.1:8080` by default.
-- Surveillance IPC server on `127.0.0.1:19877`.
-- ACC monitor.
-- GPU camera and surveillance pipeline.
-- Recording and streaming state.
-- Unified config.
-- Auth state.
-- Storage manager.
-- Web asset extraction.
-- Native libraries.
-- BYD data collector.
-- Trip analytics.
-- Telemetry collector.
-- Web Push notifications.
+1. Singleton enforcement: a port-in-use probe (`anyPortInUse()`) plus a `FileLock` on `/data/local/tmp/camera_daemon.lock`. If either indicates a live instance, the new process exits ("Another CameraDaemon instance is already running").
+2. Deletes any stale ready sentinel left by a previous crash.
+3. Generates the shared IPC token via `IpcTokenManager.generate()` **before** starting servers (idempotent — reuses an existing well-formed token, see `ipc-auth-and-secrets.md`).
+4. Starts the three local servers:
+   - TCP command server on `127.0.0.1:19876`.
+   - HTTP server on `127.0.0.1:8080` by default.
+   - Surveillance IPC server on `127.0.0.1:19877`.
+5. Initializes ACC monitor, GPU camera and surveillance pipeline, recording/streaming state, unified config, auth state, storage manager, web asset extraction, native libraries, BYD data collector, trip analytics, telemetry collector, and Web Push notifications.
+6. Confirms `TCP_PORT` is actually accepting connections (polls up to 5s), then writes the ready sentinel.
 
 The daemon uses an Android Looper and defensive retry handling around BYD listener paths because some firmware listeners can fail or crash unexpectedly.
+
+### Ready sentinel and readiness probe
+
+The daemon signals "startup complete" by writing its PID to a sentinel file:
+
+```text
+/data/local/tmp/camera_daemon.ready
+```
+
+It is written world-readable (`644`, via `setReadable(true, false)`) so the app UID can stat it. A stale sentinel left by a `kill -9`'d daemon is the reason readiness is **not** decided by the sentinel alone.
+
+`DaemonReadinessChecker` (app-side, [DaemonReadinessChecker.java](../app/src/main/java/com/loabletech/bladewatch/client/DaemonReadinessChecker.java)) decides readiness with two checks:
+
+- The sentinel exists and is non-empty, AND
+- a short-lived TCP connect to `127.0.0.1:19876` (the command port) succeeds (`PROBE_TIMEOUT_MS = 1000`).
+
+The TCP connect is the authoritative liveness signal — it is UID-independent and survives the head unit's `hidepid=2,gid=3009` `/proc` mount (the app UID cannot see the shell-owned daemon's `/proc` entry, so a `/proc/<pid>` check would always fail). A connect also catches the stale-sentinel case (a dead daemon refuses the connect).
+
+`waitUntilReady(timeoutMs)` polls every 500 ms and logs progress every 5 s. It is used by `CameraDaemonClient.connect()` (60 s for cold-boot callers, 2 s for mid-session reconnects) and by `SecretConfigBridge` (30 s) before any IPC read/write.
 
 ## TCP Command Server
 
@@ -154,7 +171,9 @@ It accepts JSON commands for local control. Known command areas include:
 - Auth invalidation.
 - Secret get, put, delete, and section operations.
 
-`CameraDaemonClient` is the app-side client for this interface.
+Every connection is gated twice before any command runs: the connecting socket's owning UID must be trusted (`PeerCredentials.isTrusted`), and the first message must carry a valid IPC token (`IpcTokenManager.isValid`). See `ipc-auth-and-secrets.md`.
+
+`CameraDaemonClient` is the app-side client for this interface. Before connecting it calls `DaemonReadinessChecker.waitUntilReady(...)` so it does not poll a not-yet-listening port, retries `connect()` up to 3× on `IOException` (connection refused / slow accept), and sends `IpcTokenManager.refreshToken()` (a fresh on-disk read, not the cache) as the first message so it never presents a token cached before the daemon's last (re)write.
 
 ## Surveillance IPC Server
 
@@ -171,7 +190,9 @@ It accepts local JSON commands used by the app, location sidecar, update flows, 
 - GPS update.
 - Update install actions.
 
-The server uses a thread pool for concurrent local requests.
+Like the TCP command server, each request is gated by both the caller-UID check (`PeerCredentials.isTrusted`) and a valid IPC token (`IpcTokenManager.isValid`).
+
+The server uses a fixed thread pool (8 threads) for concurrent local requests.
 
 ## HTTP Server
 
@@ -249,8 +270,9 @@ Camera daemon
 
 - Android components declared in manifest: [AndroidManifest.xml:207](../app/src/main/AndroidManifest.xml#L207), [AndroidManifest.xml:255](../app/src/main/AndroidManifest.xml#L255), [AndroidManifest.xml:306](../app/src/main/AndroidManifest.xml#L306), [AndroidManifest.xml:312](../app/src/main/AndroidManifest.xml#L312), [AndroidManifest.xml:327](../app/src/main/AndroidManifest.xml#L327).
 - Application, activity, receivers, and foreground services: [BladeWatchApplication.kt:18](../app/src/main/java/com/loabletech/bladewatch/BladeWatchApplication.kt#L18), [MainActivity.kt:46](../app/src/main/java/com/loabletech/bladewatch/ui/MainActivity.kt#L46), [BootReceiver.kt:24](../app/src/main/java/com/loabletech/bladewatch/receiver/BootReceiver.kt#L24), [ProcessRevivalReceiver.kt:29](../app/src/main/java/com/loabletech/bladewatch/receiver/ProcessRevivalReceiver.kt#L29), [LocationBootReceiver.kt:14](../app/src/main/java/com/loabletech/bladewatch/receiver/LocationBootReceiver.kt#L14), [DaemonKeepaliveService.kt:30](../app/src/main/java/com/loabletech/bladewatch/services/DaemonKeepaliveService.kt#L30), [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32).
-- Daemon startup and shell launch: [DaemonStartupManager.kt:15](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L15), [DaemonStartupManager.kt:251](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L251), [AdbDaemonLauncher.kt:17](../app/src/main/java/com/loabletech/bladewatch/launcher/AdbDaemonLauncher.kt#L17), [DaemonBootstrap.java:22](../app/src/main/java/com/loabletech/bladewatch/daemon/DaemonBootstrap.java#L22).
-- Camera daemon ports and server setup: [CameraDaemon.java:53](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L53), [CameraDaemon.java:350](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L350), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49).
-- TCP and surveillance IPC commands: [CameraDaemonClient.java:169](../app/src/main/java/com/loabletech/bladewatch/client/CameraDaemonClient.java#L169), [TcpCommandServer.java:125](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L125), [TcpCommandServer.java:262](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L262), [SurveillanceIpcServer.java:136](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L136), [SurveillanceIpcServer.java:540](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L540).
+- Daemon startup and shell launch: [DaemonStartupManager.kt:15](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L15), [DaemonStartupManager.kt:73](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L73), [DaemonStartupManager.kt:418](../app/src/main/java/com/loabletech/bladewatch/ui/daemon/DaemonStartupManager.kt#L418), [DaemonKeepaliveService.kt:72](../app/src/main/java/com/loabletech/bladewatch/services/DaemonKeepaliveService.kt#L72), [AdbDaemonLauncher.kt:17](../app/src/main/java/com/loabletech/bladewatch/launcher/AdbDaemonLauncher.kt#L17), [DaemonBootstrap.java:22](../app/src/main/java/com/loabletech/bladewatch/daemon/DaemonBootstrap.java#L22).
+- Camera daemon ports and server setup: [CameraDaemon.java:51](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L51), [CameraDaemon.java:377](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L377), [CameraDaemon.java:381](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L381), [TcpCommandServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L22), [SurveillanceIpcServer.java:23](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L23), [HttpServer.java:49](../app/src/main/java/com/loabletech/bladewatch/server/HttpServer.java#L49).
+- Daemon readiness sentinel and probe: [CameraDaemon.java:242](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L242), [CameraDaemon.java:633](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L633), [DaemonReadinessChecker.java:33](../app/src/main/java/com/loabletech/bladewatch/client/DaemonReadinessChecker.java#L33), [DaemonReadinessChecker.java:59](../app/src/main/java/com/loabletech/bladewatch/client/DaemonReadinessChecker.java#L59).
+- TCP and surveillance IPC commands: [CameraDaemonClient.java:61](../app/src/main/java/com/loabletech/bladewatch/client/CameraDaemonClient.java#L61), [TcpCommandServer.java:93](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L93), [TcpCommandServer.java:108](../app/src/main/java/com/loabletech/bladewatch/server/TcpCommandServer.java#L108), [SurveillanceIpcServer.java:75](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L75), [SurveillanceIpcServer.java:107](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L107).
 - Location sidecar IPC: [LocationSidecarService.java:32](../app/src/main/java/com/loabletech/bladewatch/services/LocationSidecarService.java#L32), [AccSentryDaemon.java:2078](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L2078).
 - Zrok tunnel process: [TunnelLauncher.kt:12](../app/src/main/java/com/loabletech/bladewatch/launcher/TunnelLauncher.kt#L12), [ZrokLauncher.kt:27](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L27), [ZrokLauncher.kt:1079](../app/src/main/java/com/loabletech/bladewatch/launcher/ZrokLauncher.kt#L1079).

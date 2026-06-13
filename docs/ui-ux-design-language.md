@@ -1,27 +1,39 @@
 # UI/UX Design Language
 
 BladeWatch's interface follows **Material 3** (Material You), as defined at
-<https://m3.material.io/>. Both the native Android shell and the embedded web UI
-render the same M3 system — the same color roles, type scale, shape scale,
-elevation model, and motion curves — so the head-unit app and the
-browser/PWA feel like one product. The native layer additionally adopts
-**Material 3 Expressive** refinements (tighter type tracking, tonal active
-indicators) tuned for a large in-car display.
+<https://m3.material.io/>. The **native Android shell** is the canonical M3
+surface — color roles, type scale, shape scale, elevation model, and motion
+curves — and additionally adopts **Material 3 Expressive** refinements (tighter
+type tracking, tonal active indicators) tuned for a large in-car display.
 
-> Material 3 version: **1.13.0** (Android Material Components), per the
-> [dimens_bladewatch.xml](../app/src/main/res/values/dimens_bladewatch.xml) header.
+The **embedded web UI** has two generations. The legacy static pages (now served
+only under the daemon's `/legacy/` prefix) mirror the native M3 system through
+the generated [design-tokens.css](../app/src/main/assets/web/shared/design-tokens.css).
+The current web UI is an **Angular 19 SPA** (`web/`) with its own component-scoped
+SCSS; it shares the same visual language and design vocabulary but is **not** wired
+to `design-tokens.css` — its SCSS uses CSS custom properties with literal
+fallbacks rather than the canonical M3 role variables, so when changing a color
+role it is the native layer and the legacy token pipeline that stay in lockstep,
+not the SPA. Treat the design tokens below as the **Android source of truth**; the
+SPA tracks the same look by convention.
+
+> Material 3 version: **1.13.0** (Android Material Components), per
+> [libs.versions.toml:9](../gradle/libs.versions.toml#L9).
 
 ## Two layers, one language
 
 | Layer | Renders | M3 source of truth |
 |-------|---------|--------------------|
 | **Android** (native shell) | `MainActivity`, fragments, dialogs, navigation rail | [themes_bladewatch.xml](../app/src/main/res/values/themes_bladewatch.xml) (roles + widgets), [colors_m3.xml](../app/src/main/res/values/colors_m3.xml) (+ `values-night`), [dimens_bladewatch.xml](../app/src/main/res/values/dimens_bladewatch.xml) (shape/spacing) |
-| **Web** (embedded UI / PWA) | local pages + Angular app served by `CameraDaemon` | [design-tokens.css](../app/src/main/assets/web/shared/design-tokens.css) (CSS custom properties mirroring the same M3 roles) |
+| **Legacy web** (static pages, `/legacy/`) | the old static HTML pages served by `CameraDaemon` | [design-tokens.css](../app/src/main/assets/web/shared/design-tokens.css) (CSS custom properties mirroring the same M3 roles) |
+| **Web SPA** (Angular 19, `web/`) | the embedded web UI / browser / tunnel client | component-scoped SCSS under `web/src` (own values; same visual language, not wired to `design-tokens.css`) |
 
-The two layers are kept in **parity**: the web `design-tokens.css` is generated
-to mirror `colors_m3.xml` (light) and its `values-night` counterpart (dark).
-Changing a color role means changing it in both places — see
-[Theming & token pipeline](#theming--token-pipeline).
+The Android shell and the **legacy** `design-tokens.css` are kept in **parity**:
+the web `design-tokens.css` is generated to mirror `colors_m3.xml` (light) and its
+`values-night` counterpart (dark). Changing a color role means changing it in both
+places — see [Theming & token pipeline](#theming--token-pipeline). The Angular SPA
+is **not** part of that generated pipeline; it carries its own SCSS values and
+should be updated by hand to keep visual parity when roles change.
 
 **Target device.** BYD Seal 15.6″ rotatable infotainment — landscape
 `1920×1080` (`960×540dp`), portrait `1080×1920` (`540×960dp`). The design
@@ -68,7 +80,7 @@ identical**; icons → M3 Material Symbols; ripple/press feedback; motion and
 transitions.
 
 **Verify before closing:** build, deploy to the head unit
-(`192.168.1.187:5555`) following the clean-reinstall steps in `CLAUDE.md`, and
+(`192.168.0.251:5555`) following the clean-reinstall steps in `CLAUDE.md`, and
 confirm the screen looks M3-correct in **light and dark** *and* behaves exactly
 as before — every control, list, dialog, and data field works identically. A
 behavior difference is a regression; fix it before closing.
@@ -223,7 +235,9 @@ Canonical spacing tokens. **Layouts must reference tokens, never hard-coded dp.*
 All native components derive from `Widget.Material3.*` via
 `Widget.BladeWatch.M3.*` in
 [themes_bladewatch.xml](../app/src/main/res/values/themes_bladewatch.xml); the
-web mirrors them with the shared tokens (<https://m3.material.io/components>).
+legacy web pages mirror them with the shared tokens, and the Angular SPA renders
+the same component vocabulary in its own SCSS
+(<https://m3.material.io/components>).
 
 - **Cards** — Filled (`colorSurfaceContainer`, `0dp` elevation, `20dp` corners)
   is the default; the Outlined variant uses a `1dp` `colorOutlineVariant` stroke.
@@ -359,8 +373,12 @@ These files live in `drawable/` but are **not** Material Symbols icons and must
   Mode is driven by `AppCompatDelegate.setDefaultNightMode`. Component widget
   styles reference `?attr/color*`, so they auto-flip; system bars, window
   background, and text colors are all wired to M3 roles.
-- **Web** — dark is the `:root` default; `:root[data-theme="light"]` overrides
-  the roles. Components reference only CSS vars, so they are theme-agnostic.
+- **Legacy web** (`design-tokens.css`) — dark is the `:root` default;
+  `:root[data-theme="light"]` overrides the roles. Components reference only CSS
+  vars, so they are theme-agnostic.
+- **Web SPA** (Angular) — theme is selected in the SPA's own SCSS / component
+  logic; it does **not** load `design-tokens.css`, so the M3 role vars above are
+  not in scope there.
 
 ### Token pipeline
 
@@ -370,7 +388,8 @@ These files live in `drawable/` but are **not** Material Symbols icons and must
   **generated** — per its header, by `dev/build_design_tokens.py` from
   `dev/design-tokens.json`, which mirrors `colors_m3.xml` plus its night variant.
   **Do not hand-edit `design-tokens.css`**; edit the source and regenerate, then
-  keep Android ↔ web **parity**.
+  keep Android ↔ legacy-web **parity**. This pipeline feeds only the legacy
+  static pages — the Angular SPA is **not** generated from it.
 - Legacy aliases (`--bg-base`, `--bg-surface`, `--brand-primary`, …) resolve to
   the canonical M3 vars so older pages keep working, but **do not use them in
   new code** — use the M3 role names.
@@ -380,7 +399,10 @@ These files live in `drawable/` but are **not** Material Symbols icons and must
 - Use **roles / tokens**, never raw hex or hard-coded `dp`.
 - Native: inherit `Widget.BladeWatch.M3.*` / `TextAppearance.BladeWatch.*`;
   reference `?attr/color*` and `@dimen/*`.
-- Web: reference `var(--role)` / `var(--radius-*)` / `var(--duration-*)`.
+- Legacy web pages: reference `var(--role)` / `var(--radius-*)` /
+  `var(--duration-*)` from `design-tokens.css`.
+- Angular SPA: keep its component SCSS visually aligned with the same M3 roles
+  by hand (it does not inherit the token pipeline).
 - Keep both light and dark complete for any new role.
 
 ## Source References
@@ -405,10 +427,14 @@ These files live in `drawable/` but are **not** Material Symbols icons and must
   [values-night/colors_m3.xml](../app/src/main/res/values-night/colors_m3.xml).
 - Shape and spacing dimens:
   [dimens_bladewatch.xml:19](../app/src/main/res/values/dimens_bladewatch.xml#L19).
-- Web tokens (color / shape / type / motion / elevation):
+- Legacy web tokens (color / shape / type / motion / elevation):
   [design-tokens.css:12](../app/src/main/assets/web/shared/design-tokens.css#L12)
   (dark `:root`),
-  [design-tokens.css:105](../app/src/main/assets/web/shared/design-tokens.css#L105)
+  [design-tokens.css:107](../app/src/main/assets/web/shared/design-tokens.css#L107)
   (light `:root[data-theme="light"]`).
 - App-shell identity (accent stripe, app bar, nav affordance):
   [app-shell.css](../app/src/main/assets/web/shared/app-shell.css).
+- Angular SPA styling (own SCSS, not the token pipeline):
+  [web/src/styles.scss](../web/src/styles.scss),
+  [web/src/app/shared/page-shared.scss](../web/src/app/shared/page-shared.scss).
+- Material Components version: [libs.versions.toml:9](../gradle/libs.versions.toml#L9).

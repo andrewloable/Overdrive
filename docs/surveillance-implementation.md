@@ -326,6 +326,7 @@ Implementation details:
 - Detector: `YoloDetector`.
 - Model asset: `assets/models/yolo11n.tflite`.
 - Runtime: TensorFlow Lite with GPU, NNAPI, or CPU fallback depending on availability.
+- GPU kernel cache: on the OpenCL GPU backend, compiled kernels are serialized to `/data/local/tmp/tflite_gpu_cache` so only the first-ever boot pays the multi-second compile cost. See `data-flow-and-storage.md`.
 - AI executor: single low-priority background thread.
 - AI cooldown: 500 ms.
 - Queue: bounded, de-duplicated quadrant queue with at most four entries.
@@ -333,6 +334,18 @@ Implementation details:
 - If all classes are disabled, YOLO is unloaded to reclaim native memory.
 
 AI runs on selected active quadrants rather than every frame. The pipeline queues the highest-threat quadrant first, then other active quadrants.
+
+### Deferred YOLO Initialization
+
+`YoloDetector.init()` is not called when `SurveillanceEngineGpu` is constructed. TFLite model load and GPU-delegate kernel compilation are deferred so they do not contend with the camera's one-time EGL/GL setup burst at startup.
+
+- The engine's `init()` only logs that YOLO is deferred until the camera's first frame.
+- `startDeferredYoloInit()` is invoked from `PanoramicCameraGpu` on the first camera frame.
+- It is idempotent through an `AtomicBoolean` so repeated first-frame callbacks start at most one init.
+- The init runs on a dedicated low-priority daemon background thread, constructs `YoloDetector`, calls `detector.init()`, then publishes the detector through a volatile field once ready.
+- A separate lazy reload path (`reloadYoloDetectorIfPossible()`) also waits for deferred init to have started before re-creating the detector after config changes.
+
+Until init completes, motion detection runs normally; AI confirmation simply does not gate events yet.
 
 YOLO is used for:
 
@@ -455,6 +468,7 @@ If no actor data exists, notifications fall back to generic motion wording.
 - `GET /api/surveillance/heatmap`.
 - `GET /api/surveillance/snapshot/{quadrant}`.
 - `GET /api/surveillance/filterlog`.
+- `POST /api/surveillance/sync` (alias of `POST /api/recordings/sync`; reconciles the shared media catalog so surveillance clips are indexed).
 
 `SafeLocationApiHandler` exposes:
 
@@ -474,11 +488,8 @@ The API persists settings through `UnifiedConfigManager` and `SurveillanceConfig
 127.0.0.1:19877
 ```
 
-Relevant command areas:
+Surveillance and config commands:
 
-- `START`.
-- `STOP`.
-- `STATUS`.
 - `ENABLE_SURVEILLANCE`.
 - `DISABLE_SURVEILLANCE`.
 - `GET_CONFIG`.
@@ -492,6 +503,15 @@ Relevant command areas:
 - `DELETE_SAFE_LOCATION`.
 - `TOGGLE_SAFE_LOCATIONS`.
 - `UPDATE_GPS`.
+
+The same IPC server also exposes vehicle/telemetry/update commands used by the engine and overlay:
+
+- `GET_VEHICLE_DATA`.
+- `GET_BATTERY_VOLTAGE`, `GET_BATTERY_POWER`, `GET_BATTERY_SOC`.
+- `GET_CHARGING_STATE`, `GET_CHARGING_POWER`.
+- `GET_DRIVING_RANGE`.
+- `SET_TELEMETRY_OVERLAY`, `GET_TELEMETRY_OVERLAY`.
+- `CHECK_UPDATE`, `INSTALL_UPDATE`.
 
 `ENABLE_SURVEILLANCE` persists the user preference. It does not blindly start motion detection if ACC is on.
 
@@ -579,14 +599,14 @@ Important safety and race-condition guards:
 
 ## Source References
 
-- Sentry and ACC daemon entry points: [AccSentryDaemon.java:39](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L39), [AccSentryDaemon.java:1900](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L1900), [CameraDaemon.java:1439](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1439), [CameraDaemon.java:1905](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1905).
-- GPU surveillance pipeline lifecycle: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:1325](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1325), [GpuSurveillancePipeline.java:1387](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1387).
-- Camera, GPU downscale, and mosaic layout: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [GpuDownscaler.java:112](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L112), [GpuMosaicRecorder.java:137](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L137), [MotionPipelineV2.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/MotionPipelineV2.java#L24).
-- Java surveillance engine and frame processing: [SurveillanceEngineGpu.java:22](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L22), [SurveillanceEngineGpu.java:621](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L621), [SurveillanceEngineGpu.java:708](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L708), [SurveillanceEngineGpu.java:817](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L817).
+- Sentry and ACC daemon entry points: [AccSentryDaemon.java:40](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L40), [AccSentryDaemon.java:348](../app/src/main/java/com/loabletech/bladewatch/daemon/AccSentryDaemon.java#L348), [CameraDaemon.java:1467](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1467), [CameraDaemon.java:1872](../app/src/main/java/com/loabletech/bladewatch/daemon/CameraDaemon.java#L1872).
+- GPU surveillance pipeline lifecycle: [GpuSurveillancePipeline.java:24](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L24), [GpuSurveillancePipeline.java:1330](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1330), [GpuSurveillancePipeline.java:1392](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuSurveillancePipeline.java#L1392).
+- Camera, GPU downscale, and mosaic layout: [PanoramicCameraGpu.java:39](../app/src/main/java/com/loabletech/bladewatch/camera/PanoramicCameraGpu.java#L39), [GpuDownscaler.java:51](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L51), [GpuDownscaler.java:112](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuDownscaler.java#L112), [GpuMosaicRecorder.java:137](../app/src/main/java/com/loabletech/bladewatch/surveillance/GpuMosaicRecorder.java#L137), [MotionPipelineV2.java:14](../app/src/main/java/com/loabletech/bladewatch/surveillance/MotionPipelineV2.java#L14).
+- Java surveillance engine and frame processing: [SurveillanceEngineGpu.java:21](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L21), [SurveillanceEngineGpu.java:635](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L635), [SurveillanceEngineGpu.java:713](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L713), [SurveillanceEngineGpu.java:599](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L599).
 - Native motion pipeline, shadow filtering, ROI, and JNI bridge: [NativeMotion.java:20](../app/src/main/java/com/loabletech/bladewatch/surveillance/NativeMotion.java#L20), [motion_pipeline_v2.cpp:186](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L186), [motion_pipeline_v2.cpp:922](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L922), [motion_pipeline_v2.cpp:1033](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1033), [SurveillanceConfig.java:330](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfig.java#L330).
-- AI detection, foveated crop, and filtering: [YoloDetector.kt:43](../app/src/main/java/com/loabletech/bladewatch/ai/YoloDetector.kt#L43), [SurveillanceEngineGpu.java:1669](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1669), [FoveatedCropper.java:61](../app/src/main/java/com/loabletech/bladewatch/surveillance/FoveatedCropper.java#L61), [DetectionBaseline.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/DetectionBaseline.java#L31).
+- AI detection, deferred init, and filtering: [YoloDetector.kt:46](../app/src/main/java/com/loabletech/bladewatch/ai/YoloDetector.kt#L46), [SurveillanceEngineGpu.java:599](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L599), [SurveillanceEngineGpu.java:1669](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1669), [FoveatedCropper.java:61](../app/src/main/java/com/loabletech/bladewatch/surveillance/FoveatedCropper.java#L61), [DetectionBaseline.java:31](../app/src/main/java/com/loabletech/bladewatch/surveillance/DetectionBaseline.java#L31).
 - Native texture tracker and actor tracking: [texture_tracker.h:69](../app/src/main/cpp/surveillance/texture_tracker.h#L69), [texture_tracker.cpp:191](../app/src/main/cpp/surveillance/texture_tracker.cpp#L191), [motion_pipeline_v2.cpp:1131](../app/src/main/cpp/surveillance/motion_pipeline_v2.cpp#L1131), [ActorTracker.java:33](../app/src/main/java/com/loabletech/bladewatch/surveillance/ActorTracker.java#L33), [SurveillanceEngineGpu.java:1433](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L1433), [SurveillanceEngineGpu.java:2129](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L2129).
-- Recording lifecycle, pre/post windows, and metadata: [SurveillanceEngineGpu.java:3248](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3248), [SurveillanceEngineGpu.java:3303](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3303), [SurveillanceEngineGpu.java:3373](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3373), [HardwareEventRecorderGpu.java:756](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L756), [EventTimelineCollector.java:42](../app/src/main/java/com/loabletech/bladewatch/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/loabletech/bladewatch/surveillance/ThumbnailBuffer.java#L32).
-- Safe locations, schedules, and config: [SafeLocationManager.java:34](../app/src/main/java/com/loabletech/bladewatch/surveillance/SafeLocationManager.java#L34), [SurveillanceConfigManager.kt:17](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfigManager.kt#L17), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
-- APIs, IPC, and notifications: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L22), [NotificationApiHandler.java:30](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L30).
-- Storage and cleanup: [StorageManager.java:404](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L404), [StorageManager.java:1685](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1685), [StorageManager.java:1958](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1958).
+- Recording lifecycle, pre/post windows, and metadata: [SurveillanceEngineGpu.java:3095](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3095), [SurveillanceEngineGpu.java:3220](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceEngineGpu.java#L3220), [HardwareEventRecorderGpu.java:763](../app/src/main/java/com/loabletech/bladewatch/surveillance/HardwareEventRecorderGpu.java#L763), [EventTimelineCollector.java:42](../app/src/main/java/com/loabletech/bladewatch/surveillance/EventTimelineCollector.java#L42), [ThumbnailBuffer.java:32](../app/src/main/java/com/loabletech/bladewatch/surveillance/ThumbnailBuffer.java#L32).
+- Safe locations, schedules, and config: [SafeLocationManager.java:35](../app/src/main/java/com/loabletech/bladewatch/surveillance/SafeLocationManager.java#L35), [SurveillanceConfigManager.kt:17](../app/src/main/java/com/loabletech/bladewatch/surveillance/SurveillanceConfigManager.kt#L17), [UnifiedConfigManager.kt:30](../app/src/main/java/com/loabletech/bladewatch/config/UnifiedConfigManager.kt#L30).
+- APIs, IPC, and notifications: [SurveillanceApiHandler.java:22](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceApiHandler.java#L22), [SurveillanceIpcServer.java:23](../app/src/main/java/com/loabletech/bladewatch/server/SurveillanceIpcServer.java#L23), [NotificationApiHandler.java:31](../app/src/main/java/com/loabletech/bladewatch/server/NotificationApiHandler.java#L31).
+- Storage and cleanup: [StorageManager.java:395](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L395), [StorageManager.java:1674](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1674), [StorageManager.java:1950](../app/src/main/java/com/loabletech/bladewatch/storage/StorageManager.java#L1950).

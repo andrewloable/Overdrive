@@ -15,7 +15,7 @@ These are the primary logs. Each daemon's stdout/stderr is redirected to a fixed
 | `/data/local/tmp/bladewatch_install.log` | Install/bootstrap scripts | Daemon install/startup bootstrap trace. |
 | `/data/local/tmp/sentry_network_diag.log` | Sentry network diagnostics | Network reachability diagnostics (when enabled). |
 
-Defined in [DaemonLauncher.kt:26-29](app/src/main/java/com/loabletech/bladewatch/launcher/DaemonLauncher.kt#L26-L29) and surfaced in the UI by [DaemonAdapter.kt:236-239](app/src/main/java/com/loabletech/bladewatch/ui/adapter/DaemonAdapter.kt#L236-L239).
+Defined in [DaemonLauncher.kt:28-31](app/src/main/java/com/loabletech/bladewatch/launcher/DaemonLauncher.kt#L28-L31) and surfaced in the UI by [DaemonAdapter.kt:236-239](app/src/main/java/com/loabletech/bladewatch/ui/adapter/DaemonAdapter.kt#L236-L239).
 
 ### System-dir fallback (sentry)
 
@@ -23,7 +23,7 @@ When the sentry daemon runs under a higher-privilege UID it may instead write to
 
 - `/data/data/com.android.providers.settings/sentry_daemon.log` (UID 1000)
 
-vs. the normal `/data/local/tmp/sentry_daemon.log` (UID 2000). See [DaemonLauncher.kt:617-618](app/src/main/java/com/loabletech/bladewatch/launcher/DaemonLauncher.kt#L617-L618).
+vs. the normal `/data/local/tmp/sentry_daemon.log` (UID 2000). The system path is defined at [DaemonLauncher.kt:30](app/src/main/java/com/loabletech/bladewatch/launcher/DaemonLauncher.kt#L30); the two-location read is at [DaemonLauncher.kt:619-622](app/src/main/java/com/loabletech/bladewatch/launcher/DaemonLauncher.kt#L619-L622).
 
 ## App-process log (shared storage, app UID)
 
@@ -45,8 +45,8 @@ Note: when daemons are running detached and logging only to files, the logcat ta
 
 ## Rotation & retention
 
-- **Daemon logs** (`DaemonLogger`, [DaemonLogger.java:44-67,345-386](app/src/main/java/com/loabletech/bladewatch/logging/DaemonLogger.java#L44-L67)): rotate by size to `<name>.log.1`, `.log.2`, `.log.3`; `rotationCount` = 3 by default. Oldest beyond the count is deleted.
-- **Debug app log** ([DebugAppLogger.kt:21,127](app/src/main/java/com/loabletech/bladewatch/logging/DebugAppLogger.kt#L21)): 5 MB/file, 3 rotations.
+- **Daemon logs** (`DaemonLogger`, [DaemonLogger.java:46-47](app/src/main/java/com/loabletech/bladewatch/logging/DaemonLogger.java#L46-L47), rotation at [DaemonLogger.java:332-386](app/src/main/java/com/loabletech/bladewatch/logging/DaemonLogger.java#L332-L386)): rotate by size (`maxFileSizeMB` = 10 by default) to `<name>.log.1`, `.log.2`, `.log.3`; `rotationCount` = 3 by default. Oldest beyond the count is deleted.
+- **Debug app log** ([DebugAppLogger.kt:27-28](app/src/main/java/com/loabletech/bladewatch/logging/DebugAppLogger.kt#L27-L28), rotation at [DebugAppLogger.kt:110-132](app/src/main/java/com/loabletech/bladewatch/logging/DebugAppLogger.kt#L110-L132)): 5 MB/file (`MAX_SIZE_BYTES`), 3 rotations (`MAX_ROTATIONS`).
 - **LogCleaner** ([LogCleaner.kt](app/src/main/java/com/loabletech/bladewatch/logging/LogCleaner.kt)): periodic sweep that deletes old `*.log` and rotated `*.log.<n>` files by retention policy.
 - Verbosity is gated by [DaemonLogConfig.java](app/src/main/java/com/loabletech/bladewatch/logging/DaemonLogConfig.java); in release builds with all flags `false`, R8 strips log calls (see CLAUDE.md → Logging).
 
@@ -75,5 +75,7 @@ Co-located in `/data/local/tmp` but used for process coordination, not logging:
 
 - `*_daemon.pid` — daemon PID files (e.g. `sentry_daemon.pid`)
 - `*.lock` — singleton locks (e.g. `acc_sentry_daemon.lock`, `camera_daemon.lock`)
-- `camera_daemon.disabled` / `cam_watchdog.pid` — camera disable sentinel / watchdog PID
+- `camera_daemon.ready` — readiness sentinel (PID of a fully-started CameraDaemon, world-readable `644`); read by the app's `DaemonReadinessChecker` (see `daemons-and-processes.md`)
+- `camera_daemon.disabled` / `cam_watchdog.pid` — camera disable sentinel / camera-watchdog PID (the watchdog script respawns the daemon)
+- `bladewatch_ipc_token` — IPC bootstrap token (see `ipc-auth-and-secrets.md`)
 - `start_*.sh` — daemon launcher scripts
