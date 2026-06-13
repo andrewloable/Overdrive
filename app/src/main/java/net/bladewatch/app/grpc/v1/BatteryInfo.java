@@ -32,6 +32,7 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private BatteryInfo() {
+    level_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -53,14 +54,60 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int LEVEL_FIELD_NUMBER = 1;
-  private int level_ = 0;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object level_ = "";
   /**
-   * <code>int32 level = 1 [json_name = "level"];</code>
+   * <pre>
+   * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+   * not a numeric percentage (the percentage is carried by SocInfo.percent).
+   * This was modeled as int32, which made strict JSON clients (connect-web)
+   * reject the entire GetStatus response with a type error. No client reads
+   * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+   * which clients tolerate via jsonOptions.ignoreUnknownFields.
+   * </pre>
+   *
+   * <code>string level = 1 [json_name = "level"];</code>
    * @return The level.
    */
   @java.lang.Override
-  public int getLevel() {
-    return level_;
+  public java.lang.String getLevel() {
+    java.lang.Object ref = level_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      level_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+   * not a numeric percentage (the percentage is carried by SocInfo.percent).
+   * This was modeled as int32, which made strict JSON clients (connect-web)
+   * reject the entire GetStatus response with a type error. No client reads
+   * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+   * which clients tolerate via jsonOptions.ignoreUnknownFields.
+   * </pre>
+   *
+   * <code>string level = 1 [json_name = "level"];</code>
+   * @return The bytes for level.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLevelBytes() {
+    java.lang.Object ref = level_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      level_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
   }
 
   private byte memoizedIsInitialized = -1;
@@ -77,16 +124,15 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (level_ != 0) {
-      output.writeInt32(1, level_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(level_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 1, level_);
     }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
     int size = 0;
-    if (level_ != 0) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(1, level_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(level_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(1, level_);
     }
     return size;
   }
@@ -112,8 +158,8 @@ private static final long serialVersionUID = 0L;
     }
     net.bladewatch.app.grpc.v1.BatteryInfo other = (net.bladewatch.app.grpc.v1.BatteryInfo) obj;
 
-    if (getLevel()
-        != other.getLevel()) return false;
+    if (!getLevel()
+        .equals(other.getLevel())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -126,7 +172,7 @@ private static final long serialVersionUID = 0L;
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + LEVEL_FIELD_NUMBER;
-    hash = (53 * hash) + getLevel();
+    hash = (53 * hash) + getLevel().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -262,7 +308,7 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      level_ = 0;
+      level_ = "";
       return this;
     }
 
@@ -313,8 +359,10 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(net.bladewatch.app.grpc.v1.BatteryInfo other) {
       if (other == net.bladewatch.app.grpc.v1.BatteryInfo.getDefaultInstance()) return this;
-      if (other.getLevel() != 0) {
-        setLevel(other.getLevel());
+      if (!other.getLevel().isEmpty()) {
+        level_ = other.level_;
+        bitField0_ |= 0x00000001;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -342,11 +390,11 @@ private static final long serialVersionUID = 0L;
             case 0:
               done = true;
               break;
-            case 8: {
-              level_ = input.readInt32();
+            case 10: {
+              level_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000001;
               break;
-            } // case 8
+            } // case 10
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -364,34 +412,119 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private int level_ ;
+    private java.lang.Object level_ = "";
     /**
-     * <code>int32 level = 1 [json_name = "level"];</code>
+     * <pre>
+     * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+     * not a numeric percentage (the percentage is carried by SocInfo.percent).
+     * This was modeled as int32, which made strict JSON clients (connect-web)
+     * reject the entire GetStatus response with a type error. No client reads
+     * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+     * which clients tolerate via jsonOptions.ignoreUnknownFields.
+     * </pre>
+     *
+     * <code>string level = 1 [json_name = "level"];</code>
      * @return The level.
      */
-    @java.lang.Override
-    public int getLevel() {
-      return level_;
+    public java.lang.String getLevel() {
+      java.lang.Object ref = level_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        level_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
     }
     /**
-     * <code>int32 level = 1 [json_name = "level"];</code>
+     * <pre>
+     * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+     * not a numeric percentage (the percentage is carried by SocInfo.percent).
+     * This was modeled as int32, which made strict JSON clients (connect-web)
+     * reject the entire GetStatus response with a type error. No client reads
+     * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+     * which clients tolerate via jsonOptions.ignoreUnknownFields.
+     * </pre>
+     *
+     * <code>string level = 1 [json_name = "level"];</code>
+     * @return The bytes for level.
+     */
+    public com.google.protobuf.ByteString
+        getLevelBytes() {
+      java.lang.Object ref = level_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        level_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+     * not a numeric percentage (the percentage is carried by SocInfo.percent).
+     * This was modeled as int32, which made strict JSON clients (connect-web)
+     * reject the entire GetStatus response with a type error. No client reads
+     * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+     * which clients tolerate via jsonOptions.ignoreUnknownFields.
+     * </pre>
+     *
+     * <code>string level = 1 [json_name = "level"];</code>
      * @param value The level to set.
      * @return This builder for chaining.
      */
-    public Builder setLevel(int value) {
-
+    public Builder setLevel(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
       level_ = value;
       bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
-     * <code>int32 level = 1 [json_name = "level"];</code>
+     * <pre>
+     * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+     * not a numeric percentage (the percentage is carried by SocInfo.percent).
+     * This was modeled as int32, which made strict JSON clients (connect-web)
+     * reject the entire GetStatus response with a type error. No client reads
+     * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+     * which clients tolerate via jsonOptions.ignoreUnknownFields.
+     * </pre>
+     *
+     * <code>string level = 1 [json_name = "level"];</code>
      * @return This builder for chaining.
      */
     public Builder clearLevel() {
+      level_ = getDefaultInstance().getLevel();
       bitField0_ = (bitField0_ & ~0x00000001);
-      level_ = 0;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+     * not a numeric percentage (the percentage is carried by SocInfo.percent).
+     * This was modeled as int32, which made strict JSON clients (connect-web)
+     * reject the entire GetStatus response with a type error. No client reads
+     * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+     * which clients tolerate via jsonOptions.ignoreUnknownFields.
+     * </pre>
+     *
+     * <code>string level = 1 [json_name = "level"];</code>
+     * @param value The bytes for level to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLevelBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      level_ = value;
+      bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }

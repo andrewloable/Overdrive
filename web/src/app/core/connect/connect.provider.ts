@@ -27,6 +27,13 @@ export function provideConnect(): EnvironmentProviders {
         createConnectTransport({
           baseUrl: '',
           interceptors: [authInterceptor],
+          // Tolerate response fields not modeled in the proto. The daemon's
+          // GetStatus re-emits the full REST /status JSON verbatim (the cosmetic
+          // `status` string, nested `gps`, `network.signal`,
+          // `battery.voltage/soc/lastUpdate`); without this, connect-web's strict
+          // JSON parse rejects the whole response and the About page (and any
+          // other GetStatus consumer) silently gets nothing.
+          jsonOptions: { ignoreUnknownFields: true },
         }),
     },
   ]);

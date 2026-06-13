@@ -11,8 +11,32 @@ public interface BatteryInfoOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>int32 level = 1 [json_name = "level"];</code>
+   * <pre>
+   * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+   * not a numeric percentage (the percentage is carried by SocInfo.percent).
+   * This was modeled as int32, which made strict JSON clients (connect-web)
+   * reject the entire GetStatus response with a type error. No client reads
+   * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+   * which clients tolerate via jsonOptions.ignoreUnknownFields.
+   * </pre>
+   *
+   * <code>string level = 1 [json_name = "level"];</code>
    * @return The level.
    */
-  int getLevel();
+  java.lang.String getLevel();
+  /**
+   * <pre>
+   * BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+   * not a numeric percentage (the percentage is carried by SocInfo.percent).
+   * This was modeled as int32, which made strict JSON clients (connect-web)
+   * reject the entire GetStatus response with a type error. No client reads
+   * battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+   * which clients tolerate via jsonOptions.ignoreUnknownFields.
+   * </pre>
+   *
+   * <code>string level = 1 [json_name = "level"];</code>
+   * @return The bytes for level.
+   */
+  com.google.protobuf.ByteString
+      getLevelBytes();
 }

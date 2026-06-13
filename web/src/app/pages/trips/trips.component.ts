@@ -11,6 +11,12 @@ import {
 } from '@angular/core';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import * as L from 'leaflet';
+// Leaflet's stylesheet. Imported here as a Vite side-effect import (Vite
+// resolves the bare node_modules specifier and injects it globally) rather than
+// via a SCSS `@import`, which Sass cannot resolve from node_modules under this
+// Vite + @analogjs build — see location.component.ts. Without this the route
+// map's tiles are mispositioned unless the Location page was opened first.
+import 'leaflet/dist/leaflet.css';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import { toast } from '../../shared/page-utils';
 import type {
@@ -151,6 +157,10 @@ export default class TripsComponent implements OnInit, OnDestroy {
   private route?: L.Polyline;
   private startDot?: L.Marker;
   private endDot?: L.Marker;
+  /** Watches the route-map host so a late layout pass recomputes the tile grid. */
+  private resizeObs?: ResizeObserver;
+  /** Points of the currently drawn route, kept so we can re-fit after a resize. */
+  private currentPoints?: L.LatLngExpression[];
 
   constructor() {
     // Build / tear down the route map as the detail overlay opens and closes.
@@ -370,6 +380,23 @@ export default class TripsComponent implements OnInit, OnDestroy {
     }).addTo(map);
     map.getContainer().classList.toggle('bw-map-dark', this.isDark());
     this.map = map;
+
+    // The map element is created from an effect()→microtask, which fires before
+    // the @if-rendered detail overlay is laid out. At init Leaflet reads a
+    // not-yet-sized container and builds a too-small tile grid, leaving black
+    // gaps. Recompute the size once layout settles (rAF) and on any later
+    // resize, then re-fit the route so the whole trace stays in view.
+    const resync = () => {
+      if (this.map !== map) return;
+      map.invalidateSize(false);
+      this.fitToRoute();
+    };
+    requestAnimationFrame(resync);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObs = new ResizeObserver(() => resync());
+      this.resizeObs.observe(host);
+    }
+
     if (this.pendingPoints) {
       this.drawRoute(this.pendingPoints);
       this.pendingPoints = undefined;
@@ -377,12 +404,15 @@ export default class TripsComponent implements OnInit, OnDestroy {
   }
 
   private destroyMap(): void {
+    this.resizeObs?.disconnect();
+    this.resizeObs = undefined;
     this.map?.remove();
     this.map = undefined;
     this.route = undefined;
     this.startDot = undefined;
     this.endDot = undefined;
     this.pendingPoints = undefined;
+    this.currentPoints = undefined;
   }
 
   /** Buffered GPS points when the trace arrives before the map is ready. */
@@ -426,7 +456,20 @@ export default class TripsComponent implements OnInit, OnDestroy {
     this.startDot = L.marker(points[0], { icon: this.dotIcon('#00D4AA') }).addTo(map);
     this.endDot = L.marker(points[points.length - 1], { icon: this.dotIcon('#EF4444') }).addTo(map);
 
-    map.fitBounds(this.route.getBounds(), { padding: [28, 28] });
+    this.currentPoints = points;
+    // Sync to the real container size before fitting, so the bounds zoom is
+    // computed against the laid-out map rather than the init-time (often
+    // smaller) size that would clip the tile grid.
+    map.invalidateSize(false);
+    this.fitToRoute();
+  }
+
+  /** Re-fits the map to the drawn route's bounds (no-op if nothing is drawn). */
+  private fitToRoute(): void {
+    const map = this.map;
+    const route = this.route;
+    if (!map || !route || !this.currentPoints || this.currentPoints.length < 2) return;
+    map.fitBounds(route.getBounds(), { padding: [28, 28] });
   }
 
   /** DivIcon dot (avoids Leaflet's broken default marker image under bundlers). */

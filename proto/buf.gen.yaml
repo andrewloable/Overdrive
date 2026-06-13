@@ -1,7 +1,12 @@
 version: v2
 plugins:
-  # Java protobuf message classes — generated into the app source tree
-  - remote: buf.build/protocolbuffers/java
+  # Java protobuf message classes — generated into the app source tree.
+  # Pinned to v35.0 (= "Protobuf Java Version: 4.35.0") to match
+  # com.google.protobuf:protobuf-java:4.35.0 in app/build.gradle.kts. The
+  # unpinned `latest` plugin drifts (e.g. v35.1 / 4.35.1) and stamps gencode
+  # newer than the runtime, which fails protobuf's RuntimeVersion check at class
+  # load and churns every generated file.
+  - remote: buf.build/protocolbuffers/java:v35.0
     out: ../app/src/main/java
 
   # TypeScript protobuf message classes for Angular web UI

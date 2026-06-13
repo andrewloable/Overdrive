@@ -236,7 +236,7 @@ public final class System extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\032bladewatch/v1/system.proto\022\rbladewatch" +
-      ".v1\"Y\n\013BatteryInfo\022\024\n\005level\030\001 \001(\005R\005level" +
+      ".v1\"Y\n\013BatteryInfo\022\024\n\005level\030\001 \001(\tR\005level" +
       "J\004\010\002\020\003J\004\010\003\020\004J\004\010\004\020\005R\006statusR\013is_chargingR" +
       "\rstatus_string\"\327\001\n\014ChargingInfo\022\035\n\nstate" +
       "_name\030\001 \001(\tR\tstateName\022\026\n\006status\030\002 \001(\tR\006" +

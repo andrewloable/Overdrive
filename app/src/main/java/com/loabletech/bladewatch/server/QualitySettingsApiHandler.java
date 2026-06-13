@@ -81,6 +81,19 @@ public class QualitySettingsApiHandler {
             handleTelemetryOverlayPost(out, body);
             return true;
         }
+        // Status overlay (floating pill) indicator visibility — camera/recording + trip.
+        // MUST write through UnifiedConfigManager (canonical /storage/emulated/0 config)
+        // because StatusOverlayService reads it via UnifiedConfigManager.loadConfig().
+        // The /api/settings/unified endpoint writes only the legacy /data/local/tmp
+        // mirror, which loadConfig() never reads, so it would never reach the overlay.
+        if (path.equals("/api/settings/status-overlay") && method.equals("GET")) {
+            sendStatusOverlaySettings(out);
+            return true;
+        }
+        if (path.equals("/api/settings/status-overlay") && method.equals("POST")) {
+            handleStatusOverlayPost(out, body);
+            return true;
+        }
         // Web-shell appearance (theme picker shipped on every page).
         // Same UnifiedConfigManager-backed pattern as the rest of /api/settings.
         if (path.equals("/api/settings/appearance") && method.equals("GET")) {
@@ -1051,6 +1064,54 @@ public class QualitySettingsApiHandler {
     /**
      * Send telemetry overlay settings.
      */
+    /**
+     * GET /api/settings/status-overlay — current floating-pill indicator
+     * visibility (camera/recording + trip), read from the canonical config so
+     * a fresh browser reflects the real on-device state.
+     */
+    private static void sendStatusOverlaySettings(OutputStream out) throws Exception {
+        JSONObject cfg = net.bladewatch.app.config.UnifiedConfigManager.getStatusOverlay();
+        JSONObject response = new JSONObject();
+        response.put("success", true);
+        response.put("cameraVisible", cfg.optBoolean("cameraVisible", true));
+        response.put("tripVisible", cfg.optBoolean("tripVisible", true));
+        HttpResponse.sendJson(out, response.toString());
+    }
+
+    /**
+     * POST /api/settings/status-overlay — body {cameraVisible?, tripVisible?}.
+     * Only the keys present are written (UnifiedConfigManager.updateSection
+     * merges), so a single-toggle POST preserves the other flag.
+     * StatusOverlayService re-reads config on its next 3–10s poll, so no
+     * explicit service nudge is needed (and the daemon can't reliably start the
+     * app-process overlay service anyway).
+     */
+    private static void handleStatusOverlayPost(OutputStream out, String body) throws Exception {
+        JSONObject response = new JSONObject();
+        try {
+            JSONObject req = new JSONObject(body == null ? "{}" : body);
+            JSONObject overlay = new JSONObject();
+            if (req.has("cameraVisible")) overlay.put("cameraVisible", req.getBoolean("cameraVisible"));
+            if (req.has("tripVisible"))   overlay.put("tripVisible", req.getBoolean("tripVisible"));
+            if (overlay.length() == 0) {
+                response.put("success", false);
+                response.put("error", "no overlay flags provided (cameraVisible/tripVisible)");
+                HttpResponse.sendJson(out, response.toString());
+                return;
+            }
+            net.bladewatch.app.config.UnifiedConfigManager.setStatusOverlay(overlay);
+            JSONObject merged = net.bladewatch.app.config.UnifiedConfigManager.getStatusOverlay();
+            response.put("success", true);
+            response.put("cameraVisible", merged.optBoolean("cameraVisible", true));
+            response.put("tripVisible", merged.optBoolean("tripVisible", true));
+        } catch (Exception e) {
+            CameraDaemon.log("Error setting status overlay: " + e.getMessage());
+            response.put("success", false);
+            response.put("error", e.getMessage());
+        }
+        HttpResponse.sendJson(out, response.toString());
+    }
+
     private static void sendTelemetryOverlaySettings(OutputStream out) throws Exception {
         JSONObject overlayConfig = net.bladewatch.app.config.UnifiedConfigManager.getTelemetryOverlay();
         JSONObject response = new JSONObject();

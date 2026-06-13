@@ -118,7 +118,9 @@ export default class SettingsComponent implements OnInit {
   readonly safeZones = signal<readonly SafeZone[]>([]);
   readonly safeLocationsEnabled = signal(false);
 
-  // Overlay (device-only — no web RPC; flags live in UnifiedConfigManager on device).
+  // Overlay indicator visibility. Persisted on-device in UnifiedConfigManager
+  // and read by StatusOverlayService; synced via /api/settings/status-overlay.
+  // localStorage is only a fast-paint cache, hydrated from the device on load.
   readonly overlayCamera = signal(true);
   readonly overlayTrip = signal(true);
 
@@ -172,6 +174,7 @@ export default class SettingsComponent implements OnInit {
     this.overlayCamera.set(localStorage.getItem('bw_overlay_camera') !== 'false');
     this.overlayTrip.set(localStorage.getItem('bw_overlay_trip') !== 'false');
     this.loadSettings();
+    this.loadOverlay();
   }
 
   select(id: SectionId): void {
@@ -456,15 +459,61 @@ export default class SettingsComponent implements OnInit {
     }
   }
 
-  // ---- Overlay (device-only, no RPC) ----
+  // ---- Overlay (synced to device via /api/settings/status-overlay) ----
+  /** Hydrate the toggles from the device's canonical config (source of truth). */
+  private async loadOverlay(): Promise<void> {
+    try {
+      const resp = await fetch('/api/settings/status-overlay', { credentials: 'same-origin' });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (typeof data.cameraVisible === 'boolean') {
+        this.overlayCamera.set(data.cameraVisible);
+        localStorage.setItem('bw_overlay_camera', String(data.cameraVisible));
+      }
+      if (typeof data.tripVisible === 'boolean') {
+        this.overlayTrip.set(data.tripVisible);
+        localStorage.setItem('bw_overlay_trip', String(data.tripVisible));
+      }
+    } catch {
+      /* offline — keep the localStorage fast-paint values */
+    }
+  }
+
   setOverlayCamera(on: boolean): void {
-    this.overlayCamera.set(on);
-    localStorage.setItem('bw_overlay_camera', String(on));
+    this.applyOverlay('camera', on);
   }
 
   setOverlayTrip(on: boolean): void {
-    this.overlayTrip.set(on);
-    localStorage.setItem('bw_overlay_trip', String(on));
+    this.applyOverlay('trip', on);
+  }
+
+  /**
+   * Optimistically flip the toggle + cache, push the single flag to the device,
+   * and revert the toggle + cache if the write fails so the UI stays honest.
+   */
+  private applyOverlay(which: 'camera' | 'trip', on: boolean): void {
+    const sig = which === 'camera' ? this.overlayCamera : this.overlayTrip;
+    const key = which === 'camera' ? 'bw_overlay_camera' : 'bw_overlay_trip';
+    const field = which === 'camera' ? 'cameraVisible' : 'tripVisible';
+    const prev = sig();
+    sig.set(on);
+    localStorage.setItem(key, String(on));
+    void (async () => {
+      try {
+        const resp = await fetch('/api/settings/status-overlay', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: on }),
+        });
+        const data = resp.ok ? await resp.json() : null;
+        if (!data?.success) throw new Error(data?.error || 'save failed');
+      } catch {
+        sig.set(prev);
+        localStorage.setItem(key, String(prev));
+        this.statusMsg.set('Failed to apply overlay setting');
+      }
+    })();
   }
 
   // ---- Daemons (read-only) ----

@@ -44,7 +44,13 @@ service SystemService {
 
 // BatteryInfo carries the Android battery level and charge state.
 message BatteryInfo {
-  int32 level = 1;
+  // BatteryMonitor.getBatteryInfo() emits a STATUS STRING here (e.g. "NORMAL"),
+  // not a numeric percentage (the percentage is carried by SocInfo.percent).
+  // This was modeled as int32, which made strict JSON clients (connect-web)
+  // reject the entire GetStatus response with a type error. No client reads
+  // battery.level. The daemon also emits voltage/soc/lastUpdate alongside it,
+  // which clients tolerate via jsonOptions.ignoreUnknownFields.
+  string level = 1;
   // status (2), is_charging (3), status_string (4) removed: BatteryMonitor.getBatteryInfo() never
   // emits them and the only consumer (dashboard) reads battery.level. Charging state is delivered
   // separately via ChargingInfo (status.charging).
