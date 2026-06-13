@@ -328,7 +328,15 @@ android {
             }
             proguardFiles(*proguardFilesList.toTypedArray())
             
-            signingConfig = signingConfigs.getByName("release")
+            // Sign only when a keystore is actually available (env KEYSTORE_FILE
+            // or a local release.jks). Otherwise build an UNSIGNED release APK
+            // (app-arm64-v8a-release-unsigned.apk) to be signed later with
+            // apksigner. This keeps signed CI/release builds working unchanged
+            // while allowing an unsigned local build without the keystore.
+            signingConfig = if (file(System.getenv("KEYSTORE_FILE") ?: "release.jks").exists())
+                signingConfigs.getByName("release")
+            else
+                null
             
             // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
