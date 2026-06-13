@@ -120,11 +120,6 @@
     "area_fuel_cap": "ฝาชาร์จ",
     "area_door_n": "ประตู {0}"
   },
-  "telegram": {
-    "recording_caption": "วิดีโอ ({0}) - {1} วิ",
-    "recording_caption_no_label": "วิดีโอ - {0} วิ",
-    "proximity_alert": "เตือนเข้าใกล้: {0} บริเวณ: {1} ({2}) กำลังเริ่มบันทึก..."
-  },
   "vehicle_control": {
     "cloud_required": "เชื่อมบัญชี BYD ในการตั้งค่า เพื่อใช้การควบคุมนี้",
     "cloud_sent": "ส่งผ่านเมฆ",

@@ -120,11 +120,6 @@
     "area_fuel_cap": "Kraftstoffkappe",
     "area_door_n": "Tür {0}"
   },
-  "telegram": {
-    "recording_caption": " Aufnahme ({0}) - {1}s",
-    "recording_caption_no_label": " Aufnahme - {0}s",
-    "proximity_alert": " Nähewarnzeit: {0} Auslöser: {1} ({2}) Aufnahme begann..."
-  },
   "vehicle_control": {
     "cloud_required": "Verbinden Sie ein BYD-Konto in Einstellungen, um diese Steuerung zu verwenden",
     "cloud_sent": "Über die Wolke gesendet",

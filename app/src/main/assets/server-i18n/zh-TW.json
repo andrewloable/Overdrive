@@ -120,11 +120,6 @@
     "area_fuel_cap": "燃料封鎖",
     "area_door_n": "門 {0}"
   },
-  "telegram": {
-    "recording_caption": "錄音 ({0}) - {1}",
-    "recording_caption_no_label": " 錄音 - {0}",
-    "proximity_alert": "近距離警報時間: {0} 引發器: {1} ({2}) 錄音開始..."
-  },
   "vehicle_control": {
     "cloud_required": "在設定中連接BYD帳戶,",
     "cloud_sent": "透過雲端發送",

@@ -120,11 +120,6 @@
     "area_fuel_cap": "燃料キャップ",
     "area_door_n": "ドア{0}"
   },
-  "telegram": {
-    "recording_caption": " 記録 ({0}) - {1}",
-    "recording_caption_no_label": " 記録 - {0}",
-    "proximity_alert": "接近警報時間: {0} トリガー: {1} ({2}) 録画開始..."
-  },
   "vehicle_control": {
     "cloud_required": "BYD アカウントを設定で接続する",
     "cloud_sent": "クラウドで送信される",

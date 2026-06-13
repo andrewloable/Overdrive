@@ -120,11 +120,6 @@
     "area_fuel_cap": "Tấm nhiên liệu",
     "area_door_n": "Cửa {0}"
   },
-  "telegram": {
-    "recording_caption": " Đăng ký ({0}) - {1}s",
-    "recording_caption_no_label": " Đăng ký - {0}s",
-    "proximity_alert": " Thời gian cảnh báo gần gũi: {0} Trigger: {1} ({2}) Việc ghi lại bắt đầu..."
-  },
   "vehicle_control": {
     "cloud_required": "Kết nối tài khoản BYD trong Cài đặt để sử dụng điều khiển này",
     "cloud_sent": "Được gửi qua đám mây",

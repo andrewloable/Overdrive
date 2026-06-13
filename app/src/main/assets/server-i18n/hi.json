@@ -120,11 +120,6 @@
     "area_fuel_cap": "ईंधन कैप",
     "area_door_n": "दरवाजा {0}"
   },
-  "telegram": {
-    "recording_caption": " रिकॉर्डिंग ({0}) - {1}s",
-    "recording_caption_no_label": " रिकॉर्डिंग - {0}s",
-    "proximity_alert": " निकटता अलर्ट समय: {0} ट्रिगर: {1} ({2}) रिकॉर्डिंग शुरू..."
-  },
   "vehicle_control": {
     "cloud_required": "इस नियंत्रण का उपयोग करने के लिए सेटिंग्स में एक BYD खाता कनेक्ट करें",
     "cloud_sent": "बादल के माध्यम से भेजा जाता है",

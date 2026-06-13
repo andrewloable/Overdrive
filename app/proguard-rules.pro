@@ -24,12 +24,6 @@
 -keep class net.bladewatch.app.daemon.AccSentryDaemon {
     public static void main(java.lang.String[]);
 }
--keep class net.bladewatch.app.daemon.TelegramBotDaemon {
-    public static void main(java.lang.String[]);
-}
--keep class net.bladewatch.app.daemon.GlobalProxyDaemon {
-    public static void main(java.lang.String[]);
-}
 -keep class net.bladewatch.app.byd.BydEventDaemon {
     public static void main(java.lang.String[]);
 }
@@ -146,7 +140,6 @@
 # TelemetrySnapshot fields accessed by overlay renderer — keep from renaming
 -keepclassmembers class net.bladewatch.app.telemetry.TelemetrySnapshot { public *; }
 -keepnames class net.bladewatch.app.abrp.** { }
--keepnames class net.bladewatch.app.telegram.** { }
 -keepnames class net.bladewatch.app.ui.** { }
 -keepnames class net.bladewatch.app.util.** { }
 -keepnames class net.bladewatch.app.webrtc.** { }

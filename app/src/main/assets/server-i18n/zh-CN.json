@@ -120,11 +120,6 @@
     "area_fuel_cap": "燃料盖",
     "area_door_n": "门{0}"
   },
-  "telegram": {
-    "recording_caption": "记录 ({0}) - {1}",
-    "recording_caption_no_label": "录音 - {0}",
-    "proximity_alert": "近距离警报时间:{0}触发器:{1} ({2}) 录音开始..."
-  },
   "vehicle_control": {
     "cloud_required": "在设置中连接BYD帐户以使用此控制",
     "cloud_sent": "通过云发送",

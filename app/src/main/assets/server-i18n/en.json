@@ -120,11 +120,6 @@
     "area_fuel_cap": "Fuel cap",
     "area_door_n": "Door {0}"
   },
-  "telegram": {
-    "recording_caption": "📹 Recording ({0}) - {1}s",
-    "recording_caption_no_label": "📹 Recording - {0}s",
-    "proximity_alert": "🚨 Proximity Alert\nTime: {0}\nTrigger: {1} ({2})\nRecording started..."
-  },
   "vehicle_control": {
     "cloud_required": "Connect a BYD account in Settings to use this control",
     "cloud_sent": "Sent via cloud",

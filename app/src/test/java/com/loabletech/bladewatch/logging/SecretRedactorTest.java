@@ -18,10 +18,10 @@ public class SecretRedactorTest {
     }
 
     @Test
-    public void redactsTelegramAndLabelledTokens() {
+    public void redactsLabelledTokens() {
         String redacted = SecretRedactor.redactMessage(
-                "Using reserved token: 123456:abcdefghi_jklmnop");
-        Assert.assertFalse(redacted.contains("123456:abcdefghi_jklmnop"));
+                "Using reserved token: supersecretvalue123");
+        Assert.assertFalse(redacted.contains("supersecretvalue123"));
         Assert.assertTrue(redacted.contains("reserved token"));
     }
 

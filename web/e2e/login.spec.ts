@@ -14,22 +14,22 @@ test.describe('login', () => {
     // The redirect + login form are the contract here; the device id loads
     // asynchronously from /auth/status and is asserted by the tests that
     // actually submit the form, so we don't gate this one on it.
-    await expect(page.locator('#tokenInput')).toBeVisible();
-    await expect(page.locator('#loginBtn')).toBeVisible();
+    await expect(page.getByPlaceholder('Access code')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
   });
 
   test('an invalid access code is rejected and stays on login', async ({ page }) => {
     await page.goto('/');
-    await page.waitForURL(/\/login\.html/, { timeout: 30_000 });
+    await page.waitForURL(/\/login(\b|$|[/?#])/, { timeout: 30_000 });
     await waitForDeviceId(page);
 
-    await page.locator('#tokenInput').fill('wrongco1'); // 8 chars, not the real code
-    await page.locator('#loginBtn').click();
+    await page.getByPlaceholder('Access code').fill('wrongco1'); // 8 chars, not the real code
+    await page.getByRole('button', { name: 'Login' }).click();
 
     // Must NOT reach the app: no SPA shell, still on the login page.
     await expect(page.locator('app-nav')).toHaveCount(0);
     await page.waitForTimeout(2000);
-    await expect(page).toHaveURL(/\/login\.html/);
+    await expect(page).toHaveURL(/\/login/);
   });
 
   // Regression for BladeWatch-75gq: isAuthenticated() previously read the

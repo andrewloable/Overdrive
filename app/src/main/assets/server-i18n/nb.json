@@ -120,11 +120,6 @@
     "area_fuel_cap": "Brenselkap",
     "area_door_n": "Dør {0}"
   },
-  "telegram": {
-    "recording_caption": " Opptak ({0}) - {1}s",
-    "recording_caption_no_label": " Opptak - {0}s",
-    "proximity_alert": " Nærhetsvaringstid: {0} Trigger: {1} ({2}) Opptak av opptak..."
-  },
   "vehicle_control": {
     "cloud_required": "Koble en BYD konto i innstillinger for å bruke denne kontrollen",
     "cloud_sent": "Sendt via sky",

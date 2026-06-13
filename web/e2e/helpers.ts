@@ -50,23 +50,23 @@ export function requireEnv(): void {
 }
 
 /**
- * Drive the real (static) login page: wait for the device id to load, enter the
+ * Drive the Angular login page: wait for the device id to load, enter the
  * access code, submit, and wait until we land inside the authenticated SPA.
  *
- * The server redirects unauthenticated page requests to /login.html (a static
- * page whose login() builds `<deviceId>-<accessCode>` and POSTs /auth/token).
- * After success it navigates to '/', the Angular app boots, and — because the
- * non-HttpOnly `byd_auth=1` hint cookie is now set — the auth guard lets us
- * through to the dashboard.
+ * The auth guard redirects unauthenticated requests to the Angular `/login`
+ * route (LoginComponent). Its onSubmit() builds `<deviceId>-<accessCode>` and
+ * POSTs /auth/token. After success it navigates to '/', the Angular app boots,
+ * and — because the non-HttpOnly `byd_auth=1` hint cookie is now set — the auth
+ * guard lets us through to the dashboard.
  */
 /**
- * Wait for the static login page to finish loading the device id from
- * /auth/status. Over a cold tunnel this fetch can be slow or transiently fail
+ * Wait for the login page to finish loading the device id from /auth/status.
+ * Over a cold tunnel this fetch can be slow or transiently fail
  * ("Connection error"); reload once before giving up so a single hiccup does
  * not flake the suite.
  */
 export async function waitForDeviceId(page: Page): Promise<void> {
-  const deviceId = page.locator('#deviceIdDisplay');
+  const deviceId = page.locator('.device-info-value');
   try {
     await expect(deviceId).toContainText('byd-', { timeout: 20_000 });
   } catch {
@@ -77,11 +77,11 @@ export async function waitForDeviceId(page: Page): Promise<void> {
 
 export async function loginViaUi(page: Page, accessCode = ACCESS_CODE): Promise<void> {
   await page.goto('/');
-  await page.waitForURL(/\/login\.html/, { timeout: 30_000 });
+  await page.waitForURL(/\/login(\b|$|[/?#])/, { timeout: 30_000 });
   await waitForDeviceId(page);
 
-  await page.locator('#tokenInput').fill(accessCode);
-  await page.locator('#loginBtn').click();
+  await page.getByPlaceholder('Access code').fill(accessCode);
+  await page.getByRole('button', { name: 'Login' }).click();
 
   // Land inside the SPA shell — URL no longer on any /login page and nav visible.
   await page.waitForURL((url) => !/login/.test(url.pathname), { timeout: 30_000 });

@@ -120,11 +120,6 @@
     "area_fuel_cap": "연료 뚜",
     "area_door_n": "문 {0}"
   },
-  "telegram": {
-    "recording_caption": " 녹음 ({0}) - {1}",
-    "recording_caption_no_label": " 녹음 - {0}",
-    "proximity_alert": " 근위 경보 시간: {0} 트리거: {1} ({2}) 녹화 시작..."
-  },
   "vehicle_control": {
     "cloud_required": "이 컨트롤을 사용하기 위해 설정에서 BYD 계정을 연결",
     "cloud_sent": "클라우드를 통해 전송",

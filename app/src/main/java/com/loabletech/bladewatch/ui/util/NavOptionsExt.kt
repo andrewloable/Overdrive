@@ -11,7 +11,7 @@ import net.bladewatch.app.R
  *
  * Two presets:
  *  - [m3SharedAxisZ] — drill-down. Use for parent → child screens (e.g.
- *    Settings → Appearance, Integrations → Telegram, Recordings → Video).
+ *    Settings → Appearance, Settings → Privacy, Recordings → Video).
  *  - [m3FadeThrough] — peer destinations. Already wired into MainActivity's
  *    rail navigation; exposed here for the rare callsite that needs it
  *    outside the rail (e.g. a tile tap on Dashboard that switches tabs).

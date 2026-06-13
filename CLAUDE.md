@@ -103,7 +103,7 @@ BladeWatch is a hybrid Android + shell-daemon + embedded web app. The critical d
 - `CameraDaemon` — the central long-running process. Owns the camera/GPU pipeline, H.264/H.265 recording, WebSocket live streaming, HTTP API server (`127.0.0.1:8080`), TCP command server (`127.0.0.1:19876`), surveillance IPC server (`127.0.0.1:19877`), telemetry, trips, BYD cloud, MQTT.
 - `SentryDaemon` / `AccSentryDaemon` — surveillance orchestration.
 - Tunnel daemons — Zrok, Cloudflared, Tailscale (native `.so` binaries in `jniLibs/`).
-- Telegram daemon, sing-box proxy daemon.
+- sing-box proxy daemon.
 
 **Embedded web UI** — static JS/CSS/HTML under `app/src/main/assets/web/`, extracted to `/data/local/tmp/web` at runtime. Talks to CameraDaemon over HTTP. WebView injects auth cookies and a JS bridge for mutating calls to avoid proxy interference.
 
@@ -134,7 +134,7 @@ C++17 sources in `app/src/main/cpp/`:
 ```
 Camera frame → GPU downscale → native motion pipeline → per-quadrant state
   → optional TFLite YOLO11n gate → event decision
-  → event recording + Telegram notification + optional BYD cloud deterrent
+  → event recording + Web Push notification + optional BYD cloud deterrent
 ```
 
 ## Key Source Locations

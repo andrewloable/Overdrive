@@ -120,11 +120,6 @@
     "area_fuel_cap": "Yakıt kapağı",
     "area_door_n": "Kapı {0}"
   },
-  "telegram": {
-    "recording_caption": " Kayıt ({0}) - {1}s",
-    "recording_caption_no_label": " Kayıtlama - {0}",
-    "proximity_alert": " Yakınlık Alarmı Zamanı: {0} Trigger: {1} ({2}) Kayıt başlandı..."
-  },
   "vehicle_control": {
     "cloud_required": "Bu kontrolü kullanmak için Ayarlarda BYD hesabını bağlayın",
     "cloud_sent": "Bulut yoluyla gönderilir",

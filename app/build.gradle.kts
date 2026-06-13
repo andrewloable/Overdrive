@@ -221,12 +221,6 @@ tasks.register("downloadOpenCV") {
     }
 }
 
-// Check surveillance dependencies before build
-tasks.register("checkSurveillanceDeps") {
-    dependsOn("downloadOpenCV")
-}
-
-
 // Task to extract web assets to /data/local/tmp/web on device
 // Run: ./gradlew :app:extractWebAssets
 tasks.register("extractWebAssets") {

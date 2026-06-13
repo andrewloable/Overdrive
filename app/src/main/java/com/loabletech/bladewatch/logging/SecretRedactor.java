@@ -16,7 +16,6 @@ public final class SecretRedactor {
 
     private static final Pattern BEARER_PATTERN = Pattern.compile("(?i)\\bBearer\\s+([A-Za-z0-9._\\-+/=]+)");
     private static final Pattern TOKEN_LABEL_PATTERN = Pattern.compile("(?i)\\b(token|reserved token|enable token|bot token)\\s*[:=]\\s*([^\\s,;]+)");
-    private static final Pattern TELEGRAM_TOKEN_PATTERN = Pattern.compile("\\b\\d{6,}:[A-Za-z0-9_-]{10,}\\b");
 
     private SecretRedactor() {}
 
@@ -45,7 +44,6 @@ public final class SecretRedactor {
 
         String redacted = redactPattern(message, BEARER_PATTERN, 1);
         redacted = redactPattern(redacted, TOKEN_LABEL_PATTERN, 2);
-        redacted = redactTelegramTokens(redacted);
         return redacted;
     }
 
@@ -56,16 +54,6 @@ public final class SecretRedactor {
             String token = matcher.group(groupToRedact);
             matcher.appendReplacement(out, Matcher.quoteReplacement(
                     matcher.group(0).replace(token, redact(token))));
-        }
-        matcher.appendTail(out);
-        return out.toString();
-    }
-
-    private static String redactTelegramTokens(String input) {
-        Matcher matcher = TELEGRAM_TOKEN_PATTERN.matcher(input);
-        StringBuffer out = new StringBuffer();
-        while (matcher.find()) {
-            matcher.appendReplacement(out, Matcher.quoteReplacement(redact(matcher.group())));
         }
         matcher.appendTail(out);
         return out.toString();

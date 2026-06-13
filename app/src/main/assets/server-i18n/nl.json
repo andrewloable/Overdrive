@@ -120,11 +120,6 @@
     "area_fuel_cap": "Brandstofkap",
     "area_door_n": "Door {0}"
   },
-  "telegram": {
-    "recording_caption": " Opname ({0}) - {1}s",
-    "recording_caption_no_label": " Opname - {0}'s",
-    "proximity_alert": " Nabijheid Alert Tijd: {0} Trigger: {1} ({2}) Opname begint..."
-  },
   "vehicle_control": {
     "cloud_required": "Verbind een BYD-account in Instellingen om deze bediening te gebruiken",
     "cloud_sent": "Gestuurd via de wolk",
