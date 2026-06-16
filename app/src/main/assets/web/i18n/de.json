@@ -1679,7 +1679,7 @@
     "on_device_privacy_hint_suffix": "auf dem Gerät.",
     "local_storage_usage": "Lokale Speicherauslastung",
     "developer_diagnostics": "Entwicklerdiagnostik",
-    “developer_diagnostics_hint”: “Dienst-Timing-Logs und Debug-App-Logs werden in der einheitlichen Gerätekonfiguration umgeschaltet. Es gibt keinen Web-RPC für diese Flags – stellen Sie sie im Bereich „Datenschutz und Daten” der Kopfeinheit-Einstellungen ein.”,
+    "developer_diagnostics_hint": "Dienst-Timing-Logs und Debug-App-Logs werden in der einheitlichen Gerätekonfiguration umgeschaltet. Es gibt keinen Web-RPC für diese Flags – stellen Sie sie im Bereich „Datenschutz und Daten“ der Kopfeinheit-Einstellungen ein.",
     "daemon_timing_logs": "Dienst-Timing-Logs",
     "debug_app_logs": "Debug-App-Logs",
     "device_only": "nur Gerät",

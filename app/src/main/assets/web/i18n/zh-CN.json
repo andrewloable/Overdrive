@@ -160,7 +160,7 @@
   "notif": {
     "page_title": "通知",
     "origin_banner": "Push notifications require Zrok or a reverse proxy. Open the dashboard from your reserved Zrok or reverse proxy URL on your phone, Add to Home Screen, then return here to enable.",
-    "backend_banner": "通知后端未初始化。请通过"服务"页面预留一个 Zrok URL，然后重启后台服务以启用推送通知。",
+    "backend_banner": "通知后端未初始化。请通过「服务」页面预留一个 Zrok URL，然后重启后台服务以启用推送通知。",
     "push_delivery": "推送",
     "push_delivery_sub": "在您目前使用的设备上启用警报.",
     "enable_btn": "在此设备上启用",
@@ -1679,7 +1679,7 @@
     "on_device_privacy_hint_suffix": "（设备上）。",
     "local_storage_usage": "本地存储占用",
     "developer_diagnostics": "开发者诊断",
-    “developer_diagnostics_hint”: “服务计时日志和调试应用日志在设备的统一配置中切换。这些标志没有网页 RPC——请在车机的”设置 → 隐私与数据”面板中设置。”,
+    "developer_diagnostics_hint": "服务计时日志和调试应用日志在设备的统一配置中切换。这些标志没有网页 RPC——请在车机的「设置 → 隐私与数据」面板中设置。",
     "daemon_timing_logs": "服务计时日志",
     "debug_app_logs": "调试应用日志",
     "device_only": "仅限设备",

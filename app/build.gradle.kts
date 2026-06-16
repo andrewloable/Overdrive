@@ -529,3 +529,55 @@ tasks.register<Exec>("buildAngularWebUI") {
 }
 // Hook into preBuild so Angular is compiled before any variant's assets are packaged.
 tasks.named("preBuild") { dependsOn("buildAngularWebUI") }
+
+// Fail the build if any web i18n catalog is invalid JSON or is missing keys that
+// en.json has. The catalog URLs are served unhashed and a corrupt/partial catalog
+// renders the whole SPA as raw keys ("dashboard.this_week"), so this MUST be caught
+// before packaging rather than at runtime on the head unit. Catches the exact class
+// of bug that smart-quote delimiters / unescaped quotes introduce.
+tasks.register("validateI18nCatalogs") {
+    description = "Validate web i18n catalogs: valid JSON + full key parity with en.json"
+    group = "verification"
+    val i18nDir = file("src/main/assets/web/i18n")
+    doLast {
+        val slurper = groovy.json.JsonSlurper()
+        fun flatten(prefix: String, obj: Any?, out: MutableSet<String>) {
+            if (obj is Map<*, *>) {
+                for ((k, v) in obj) {
+                    val kp = if (prefix.isEmpty()) k.toString() else "$prefix.$k"
+                    if (v is Map<*, *>) flatten(kp, v, out) else out.add(kp)
+                }
+            }
+        }
+        val enFile = i18nDir.resolve("en.json")
+        if (!enFile.exists()) throw GradleException("i18n: en.json missing at ${enFile.path}")
+        val enKeys = sortedSetOf<String>()
+        try {
+            flatten("", slurper.parse(enFile), enKeys)
+        } catch (e: Exception) {
+            throw GradleException("i18n: en.json is not valid JSON — ${e.message}")
+        }
+        val catalogs = i18nDir.listFiles { f -> f.name.endsWith(".json") }?.sortedBy { it.name } ?: emptyList()
+        val problems = mutableListOf<String>()
+        for (f in catalogs) {
+            val parsed = try {
+                slurper.parse(f)
+            } catch (e: Exception) {
+                problems.add("${f.name}: INVALID JSON — ${e.message}"); continue
+            }
+            if (f.name == "en.json") continue
+            val keys = sortedSetOf<String>()
+            flatten("", parsed, keys)
+            val missing = enKeys - keys
+            if (missing.isNotEmpty()) {
+                problems.add("${f.name}: ${missing.size} key(s) missing vs en.json (e.g. ${missing.take(5).joinToString(", ")})")
+            }
+        }
+        if (problems.isNotEmpty()) {
+            throw GradleException("i18n catalog validation FAILED:\n" + problems.joinToString("\n") { "  - $it" })
+        }
+        logger.lifecycle("i18n: ${catalogs.size} web catalogs valid, full key parity with en.json ✓")
+    }
+}
+// Validate before any variant's assets are packaged.
+tasks.named("preBuild") { dependsOn("validateI18nCatalogs") }

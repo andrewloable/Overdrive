@@ -105,7 +105,13 @@ Angular build output and asset areas:
   and `#` fragments are stripped before disk lookup.
 - `GET /legacy/*` → legacy pages kept for regression testing (`local/...`).
 - `GET /i18n/{tag}.json` → locale catalogs (404 on unsupported tags so the
-  runtime falls back to `en`).
+  runtime falls back to `en`). Served with `Cache-Control: no-store, no-cache,
+  must-revalidate, max-age=0` — the catalog URLs are unhashed (unlike the
+  content-hashed Angular bundle), so they must revalidate on every load or a
+  stale cached catalog would render the SPA as raw keys after an app update.
+  `?query`/`#fragment` are stripped before disk lookup (future `?v=` busting).
+  Catalogs are validated at build time by the `validateI18nCatalogs` Gradle
+  task (fails the build on invalid JSON or missing keys vs `en.json`).
 - `GET /manifest.json`, `GET /sw.js`, `GET /credits.json` → PWA assets
   (served from `local/`).
 

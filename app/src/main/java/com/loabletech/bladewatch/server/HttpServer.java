@@ -464,7 +464,13 @@ public class HttpServer {
             } else if (path.startsWith("/i18n/")) {
                 // Catalog JSON: /i18n/en.json, /i18n/zh-CN.json, …
                 // 404s on unsupported tags so the runtime falls back to en.
+                // Strip ?query / #fragment so a cache-busting suffix like
+                // ?v=<build> still resolves to the file on disk.
                 String tag = path.substring(6);
+                int q = tag.indexOf('?');
+                if (q >= 0) tag = tag.substring(0, q);
+                int hsh = tag.indexOf('#');
+                if (hsh >= 0) tag = tag.substring(0, hsh);
                 int dot = tag.lastIndexOf('.');
                 String base = dot > 0 ? tag.substring(0, dot) : tag;
                 if (!LocaleManager.isSupported(base)) {
@@ -974,14 +980,26 @@ public class HttpServer {
             // The service worker and PWA manifest also need to bypass cache —
             // a stuck-cached SW means the user can't pick up notification fixes
             // without a manual unregister.
+            //
+            // i18n catalogs (/i18n/<lang>.json) MUST also bypass cache: unlike the
+            // Angular JS/CSS bundle — whose filenames are content-hashed and so
+            // cache-bust automatically on every build — the catalog URLs are static
+            // and unhashed. A new app build ships new template keys, but a browser
+            // holding a day-old cached catalog won't have them, so the UI renders
+            // raw keys ("dashboard.this_week") until the cache expires. Revalidating
+            // guarantees catalogs refresh immediately on every reinstall/update.
+            //
             // Other shared static assets (JS/CSS/fonts/images) ship inside the APK
             // and never change without an app update, so we let the browser cache
             // them to avoid re-downloading ~360KB on every page load.
             String cacheControl;
             String fileName = new File(relativePath).getName();
+            boolean isCatalog = relativePath.startsWith("i18n/")
+                    || relativePath.startsWith("server-i18n/");
             if (relativePath.endsWith(".html")
                     || fileName.equals("sw.js")
-                    || fileName.equals("manifest.json")) {
+                    || fileName.equals("manifest.json")
+                    || isCatalog) {
                 cacheControl = "no-store, no-cache, must-revalidate, max-age=0";
             } else {
                 cacheControl = "public, max-age=86400";

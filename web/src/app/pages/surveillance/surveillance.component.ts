@@ -139,10 +139,22 @@ export default class SurveillanceComponent implements OnInit {
   async loadSnapshot(quadrant: number): Promise<void> {
     this.snapshotLoading.update(s => ({ ...s, [quadrant]: true }));
     try {
-      const resp = await this.clients.surveillance.getSnapshot({ quadrant });
-      if (resp.imageJpeg && resp.imageJpeg.length > 0) {
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(resp.imageJpeg as any)));
+      // The UI numbers quadrants 1-4 for display, but the daemon snapshot
+      // endpoint is 0-indexed (Q0=front, Q1=right, Q2=rear, Q3=left). Without
+      // the -1, quadrant 4 fell outside the daemon's valid 0-3 range and came
+      // back as a small JSON error that the old length>0 check below treated as
+      // image bytes — rendering a broken <img> in the bottom-right cell.
+      const resp = await this.clients.surveillance.getSnapshot({ quadrant: quadrant - 1 });
+      const bytes = new Uint8Array((resp.imageJpeg ?? []) as any);
+      // Only render if the payload is actually a JPEG (SOI marker FF D8). The
+      // daemon returns a JSON error (not a JPEG) when no frame is available
+      // yet; guarding on the magic bytes keeps the graceful "tap to load"
+      // placeholder instead of a broken image icon.
+      if (bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+        const b64 = btoa(String.fromCharCode(...bytes));
         this.snapshots.update(s => ({ ...s, [quadrant]: `data:image/jpeg;base64,${b64}` }));
+      } else {
+        this.snapshots.update(s => { const next = { ...s }; delete next[quadrant]; return next; });
       }
     } catch { /* ignore */ } finally {
       this.snapshotLoading.update(s => ({ ...s, [quadrant]: false }));
