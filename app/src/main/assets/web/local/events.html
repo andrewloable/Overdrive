@@ -560,11 +560,11 @@
            finishes its post-record window (~10–15 s). The card swaps to a
            normal recording entry the moment the rename completes. */
         .recording-card-inflight {
-            border: 1px solid rgba(0, 212, 170, 0.45);
-            background: linear-gradient(135deg, rgba(0, 212, 170, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.45);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%);
             cursor: default;
         }
-        .recording-card-inflight:hover { border-color: rgba(0, 212, 170, 0.65); }
+        .recording-card-inflight:hover { border-color: rgba(0, 212, 255, 0.65); }
         .recording-card-inflight:active { transform: none; }
         .recording-card-inflight .inflight-badge {
             position: absolute;
@@ -573,7 +573,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(0, 212, 170, 0.85);
+            background: rgba(0, 212, 255, 0.85);
             color: #0a0a0f;
             font-size: 10px;
             font-weight: 700;
@@ -594,8 +594,8 @@
             50%      { opacity: 0.4; transform: scale(0.7); }
         }
         .recording-badge.live {
-            background: rgba(0, 212, 170, 0.18);
-            color: #00d4aa;
+            background: rgba(0, 212, 255, 0.18);
+            color: #00D4FF;
         }
 
         /* Brief post-finalize highlight so the user can see the entry the
@@ -604,8 +604,8 @@
             animation: recording-just-finalized 1.6s ease-out;
         }
         @keyframes recording-just-finalized {
-            0%   { box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.65); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0); }
+            0%   { box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.65); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
         }
         
         .recording-info {

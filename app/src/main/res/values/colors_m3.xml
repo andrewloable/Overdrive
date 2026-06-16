@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Material 3 token palette generated from seed #00D4AA (brand teal).
-  Light theme — premium warm-neutral surfaces (not pure white).
-  Surfaces tinted ~2% toward the brand for cohesion.
+  Material 3 token palette generated from seed #00D4FF (BladeWatch brand
+  cyan-blue — the logo accent in drawable/ic_sidebar_logo.xml).
+  Light theme — premium cool-neutral surfaces (not pure white).
+  Generated with @material/material-color-utilities.
   Names follow the M3 system tokens: md_sys_color_<role>.
 -->
 <resources>
 
     <!-- Primary -->
-    <color name="md_sys_color_primary_light">#00876C</color>
+    <color name="md_sys_color_primary_light">#00677E</color>
     <color name="md_sys_color_on_primary_light">#FFFFFF</color>
-    <color name="md_sys_color_primary_container_light">#78F3CC</color>
-    <color name="md_sys_color_on_primary_container_light">#002115</color>
+    <color name="md_sys_color_primary_container_light">#B4EBFF</color>
+    <color name="md_sys_color_on_primary_container_light">#001F27</color>
 
     <!-- Secondary -->
-    <color name="md_sys_color_secondary_light">#4B635A</color>
+    <color name="md_sys_color_secondary_light">#4C626A</color>
     <color name="md_sys_color_on_secondary_light">#FFFFFF</color>
-    <color name="md_sys_color_secondary_container_light">#CDE8DC</color>
-    <color name="md_sys_color_on_secondary_container_light">#072019</color>
+    <color name="md_sys_color_secondary_container_light">#CEE6F0</color>
+    <color name="md_sys_color_on_secondary_container_light">#061E25</color>
 
-    <!-- Tertiary (sky-blue accent for vehicle / data viz) -->
-    <color name="md_sys_color_tertiary_light">#00658F</color>
+    <!-- Tertiary (indigo accent for vehicle / data viz, distinct from cyan primary) -->
+    <color name="md_sys_color_tertiary_light">#595C7E</color>
     <color name="md_sys_color_on_tertiary_light">#FFFFFF</color>
-    <color name="md_sys_color_tertiary_container_light">#C5E7FF</color>
-    <color name="md_sys_color_on_tertiary_container_light">#001E2E</color>
+    <color name="md_sys_color_tertiary_container_light">#DFE0FF</color>
+    <color name="md_sys_color_on_tertiary_container_light">#161937</color>
 
     <!-- Error -->
     <color name="md_sys_color_error_light">#BA1A1A</color>
@@ -31,29 +32,29 @@
     <color name="md_sys_color_error_container_light">#FFDAD6</color>
     <color name="md_sys_color_on_error_container_light">#410002</color>
 
-    <!-- Background / surfaces (warm neutral, slight teal tint) -->
-    <color name="md_sys_color_background_light">#F7FAF7</color>
-    <color name="md_sys_color_on_background_light">#181C1A</color>
-    <color name="md_sys_color_surface_light">#F7FAF7</color>
-    <color name="md_sys_color_on_surface_light">#181C1A</color>
-    <color name="md_sys_color_surface_variant_light">#DBE5DD</color>
-    <color name="md_sys_color_on_surface_variant_light">#3F4944</color>
-    <color name="md_sys_color_surface_dim_light">#D8DBD7</color>
-    <color name="md_sys_color_surface_bright_light">#F7FAF7</color>
+    <!-- Background / surfaces (cool neutral, slight blue tint) -->
+    <color name="md_sys_color_background_light">#FBFCFE</color>
+    <color name="md_sys_color_on_background_light">#191C1D</color>
+    <color name="md_sys_color_surface_light">#FBFCFE</color>
+    <color name="md_sys_color_on_surface_light">#191C1D</color>
+    <color name="md_sys_color_surface_variant_light">#DBE4E8</color>
+    <color name="md_sys_color_on_surface_variant_light">#40484B</color>
+    <color name="md_sys_color_surface_dim_light">#D8DADC</color>
+    <color name="md_sys_color_surface_bright_light">#FBFCFE</color>
     <color name="md_sys_color_surface_container_lowest_light">#FFFFFF</color>
-    <color name="md_sys_color_surface_container_low_light">#F1F4F0</color>
-    <color name="md_sys_color_surface_container_light">#ECEFEC</color>
-    <color name="md_sys_color_surface_container_high_light">#E6E9E6</color>
-    <color name="md_sys_color_surface_container_highest_light">#E0E4E1</color>
+    <color name="md_sys_color_surface_container_low_light">#F2F4F5</color>
+    <color name="md_sys_color_surface_container_light">#ECEEEF</color>
+    <color name="md_sys_color_surface_container_high_light">#E7E8EA</color>
+    <color name="md_sys_color_surface_container_highest_light">#E1E3E4</color>
 
     <!-- Outline / dividers -->
-    <color name="md_sys_color_outline_light">#6F7975</color>
-    <color name="md_sys_color_outline_variant_light">#BFC9C3</color>
+    <color name="md_sys_color_outline_light">#70787C</color>
+    <color name="md_sys_color_outline_variant_light">#BFC8CC</color>
 
     <!-- Inverse / scrim -->
-    <color name="md_sys_color_inverse_surface_light">#2D3130</color>
-    <color name="md_sys_color_inverse_on_surface_light">#EEF1ED</color>
-    <color name="md_sys_color_inverse_primary_light">#5DDBB6</color>
+    <color name="md_sys_color_inverse_surface_light">#2E3132</color>
+    <color name="md_sys_color_inverse_on_surface_light">#EFF1F2</color>
+    <color name="md_sys_color_inverse_primary_light">#3CD7FF</color>
     <color name="md_sys_color_scrim_light">#000000</color>
 
     <!-- Brand-aware status colors (paired with surface tones) -->

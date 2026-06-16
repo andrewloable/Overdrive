@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Material 3 token palette — DARK theme.
-  Generated from seed #00D4AA. Surfaces follow M3 elevation tonal stepping
-  (dim/bright + 5 container tiers) so we can stack two surfaces without
-  needing elevation shadows that read poorly on dark.
+  Generated from seed #00D4FF (BladeWatch brand cyan-blue). Surfaces follow
+  M3 elevation tonal stepping (dim/bright + 5 container tiers) so we can stack
+  two surfaces without needing elevation shadows that read poorly on dark.
+  Generated with @material/material-color-utilities.
 -->
 <resources>
 
     <!-- Primary -->
-    <color name="md_sys_color_primary_dark">#5DDBB6</color>
-    <color name="md_sys_color_on_primary_dark">#003828</color>
-    <color name="md_sys_color_primary_container_dark">#00513B</color>
-    <color name="md_sys_color_on_primary_container_dark">#78F3CC</color>
+    <color name="md_sys_color_primary_dark">#3CD7FF</color>
+    <color name="md_sys_color_on_primary_dark">#003642</color>
+    <color name="md_sys_color_primary_container_dark">#004E5F</color>
+    <color name="md_sys_color_on_primary_container_dark">#B4EBFF</color>
 
     <!-- Secondary -->
-    <color name="md_sys_color_secondary_dark">#B1CCC0</color>
-    <color name="md_sys_color_on_secondary_dark">#1D352D</color>
-    <color name="md_sys_color_secondary_container_dark">#334B43</color>
-    <color name="md_sys_color_on_secondary_container_dark">#CDE8DC</color>
+    <color name="md_sys_color_secondary_dark">#B3CAD4</color>
+    <color name="md_sys_color_on_secondary_dark">#1D333B</color>
+    <color name="md_sys_color_secondary_container_dark">#344A52</color>
+    <color name="md_sys_color_on_secondary_container_dark">#CEE6F0</color>
 
-    <!-- Tertiary -->
-    <color name="md_sys_color_tertiary_dark">#85CFFF</color>
-    <color name="md_sys_color_on_tertiary_dark">#00344C</color>
-    <color name="md_sys_color_tertiary_container_dark">#004C6C</color>
-    <color name="md_sys_color_on_tertiary_container_dark">#C5E7FF</color>
+    <!-- Tertiary (indigo accent, distinct from cyan primary) -->
+    <color name="md_sys_color_tertiary_dark">#C1C4EB</color>
+    <color name="md_sys_color_on_tertiary_dark">#2B2E4D</color>
+    <color name="md_sys_color_tertiary_container_dark">#414465</color>
+    <color name="md_sys_color_on_tertiary_container_dark">#DFE0FF</color>
 
     <!-- Error -->
     <color name="md_sys_color_error_dark">#FFB4AB</color>
@@ -31,29 +32,29 @@
     <color name="md_sys_color_error_container_dark">#93000A</color>
     <color name="md_sys_color_on_error_container_dark">#FFDAD6</color>
 
-    <!-- Background / surfaces — deep, near-black with subtle teal undertone -->
-    <color name="md_sys_color_background_dark">#0E1311</color>
-    <color name="md_sys_color_on_background_dark">#DEE4E0</color>
-    <color name="md_sys_color_surface_dark">#0E1311</color>
-    <color name="md_sys_color_on_surface_dark">#DEE4E0</color>
-    <color name="md_sys_color_surface_variant_dark">#3F4944</color>
-    <color name="md_sys_color_on_surface_variant_dark">#BFC9C3</color>
-    <color name="md_sys_color_surface_dim_dark">#0E1311</color>
-    <color name="md_sys_color_surface_bright_dark">#343937</color>
-    <color name="md_sys_color_surface_container_lowest_dark">#080D0B</color>
-    <color name="md_sys_color_surface_container_low_dark">#161B19</color>
-    <color name="md_sys_color_surface_container_dark">#1A1F1D</color>
-    <color name="md_sys_color_surface_container_high_dark">#242927</color>
-    <color name="md_sys_color_surface_container_highest_dark">#2F3432</color>
+    <!-- Background / surfaces — deep, near-black with subtle blue undertone -->
+    <color name="md_sys_color_background_dark">#111415</color>
+    <color name="md_sys_color_on_background_dark">#E1E3E4</color>
+    <color name="md_sys_color_surface_dark">#111415</color>
+    <color name="md_sys_color_on_surface_dark">#E1E3E4</color>
+    <color name="md_sys_color_surface_variant_dark">#40484B</color>
+    <color name="md_sys_color_on_surface_variant_dark">#BFC8CC</color>
+    <color name="md_sys_color_surface_dim_dark">#111415</color>
+    <color name="md_sys_color_surface_bright_dark">#373A3B</color>
+    <color name="md_sys_color_surface_container_lowest_dark">#0C0F10</color>
+    <color name="md_sys_color_surface_container_low_dark">#191C1D</color>
+    <color name="md_sys_color_surface_container_dark">#1D2021</color>
+    <color name="md_sys_color_surface_container_high_dark">#272A2C</color>
+    <color name="md_sys_color_surface_container_highest_dark">#2E3132</color>
 
     <!-- Outline / dividers -->
-    <color name="md_sys_color_outline_dark">#899692</color>
-    <color name="md_sys_color_outline_variant_dark">#3F4944</color>
+    <color name="md_sys_color_outline_dark">#899296</color>
+    <color name="md_sys_color_outline_variant_dark">#40484B</color>
 
     <!-- Inverse / scrim -->
-    <color name="md_sys_color_inverse_surface_dark">#DEE4E0</color>
-    <color name="md_sys_color_inverse_on_surface_dark">#2D3130</color>
-    <color name="md_sys_color_inverse_primary_dark">#00876C</color>
+    <color name="md_sys_color_inverse_surface_dark">#E1E3E4</color>
+    <color name="md_sys_color_inverse_on_surface_dark">#2E3132</color>
+    <color name="md_sys_color_inverse_primary_dark">#00677E</color>
     <color name="md_sys_color_scrim_dark">#000000</color>
 
     <!-- Brand-aware status colors -->

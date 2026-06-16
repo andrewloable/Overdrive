@@ -54,7 +54,7 @@ BYD.performance = {
     // (grid, text, crosshair, tooltip) get refreshed from CSS tokens by
     // _refreshPalette() so they flip with [data-theme="light"].
     colors: {
-        system: '#00D4AA',
+        system: '#00D4FF',
         app: '#0EA5E9',
         gpu: '#a855f7',
         soc: '#22c55e',

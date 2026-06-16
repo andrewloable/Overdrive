@@ -9,6 +9,8 @@ import java.io.OutputStream;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * HTTP API handler for authentication endpoints.
@@ -18,20 +20,32 @@ import java.util.concurrent.ConcurrentHashMap;
  * - POST /auth/token      - Validate device token and get JWT (rate-limited)
  * - POST /auth/logout     - Clear session
  *
- * Rate limiting on /auth/token: 10 attempts per minute per client identity, then
- * 30s lockout. Identity is the X-Forwarded-For value when present (so a tunnel
- * attacker can't share the loopback bucket with the legitimate WebView), falling
- * back to socket address otherwise.
+ * Rate limiting on /auth/token: 10 attempts per minute per TCP peer, then 30s
+ * per-identity lockout; plus a global cap (30 failures / 2 min → 5 min lockout)
+ * that is immune to identity rotation. Identity is always the real TCP socket
+ * address — never X-Forwarded-For (attacker-controlled).
  */
 public class AuthApiHandler {
 
-    // Rate-limit constants — small numbers picked for human convenience while
-    // making brute-force attempts on a 64-bit token costly.
+    // Per-identity rate-limit constants
     private static final int RATE_LIMIT_WINDOW_MS = 60_000;     // 1 minute window
-    private static final int RATE_LIMIT_MAX_ATTEMPTS = 10;      // 10 attempts allowed
-    private static final long RATE_LIMIT_LOCKOUT_MS = 30_000;   // 30s lockout after exceeded
+    private static final int RATE_LIMIT_MAX_ATTEMPTS = 10;      // attempts per identity per window
+    private static final long RATE_LIMIT_LOCKOUT_MS = 30_000;   // per-identity lockout duration
+
+    // Global rate-limit: caps total failed attempts regardless of identity rotation
+    private static final int GLOBAL_FAIL_THRESHOLD = 30;        // failed attempts across all IPs
+    private static final long GLOBAL_LOCKOUT_MS = 300_000;      // 5-minute global lockout
+    private static final long GLOBAL_WINDOW_MS = 120_000;       // 2-minute counting window
+
+    // Bounded map size: prevents OOM from identity rotation (attacker flooding new IPs)
+    private static final int MAX_IDENTITY_BUCKETS = 256;
 
     private static final ConcurrentHashMap<String, RateLimitBucket> rateLimits = new ConcurrentHashMap<>();
+
+    // Global failure tracking (not per-identity — immune to rotation)
+    private static final AtomicLong globalWindowStart = new AtomicLong(System.currentTimeMillis());
+    private static final AtomicInteger globalFailCount = new AtomicInteger(0);
+    private static volatile long globalLockoutUntil = 0L;
 
     private static class RateLimitBucket {
         final Deque<Long> attempts = new ArrayDeque<>();
@@ -52,13 +66,13 @@ public class AuthApiHandler {
                                   String rateLimitIdentity, boolean secureCookie) throws Exception {
 
         if (path.equals("/auth/status") && method.equals("GET")) {
-            return handleStatus(out);
+            return handleStatus(out, rateLimitIdentity);
         }
 
         if (path.equals("/auth/token") && method.equals("POST")) {
-            // Rate-limit token validation to slow down brute-force attempts
-            // through public tunnels. Identity prefers X-Forwarded-For so a
-            // tunnel attacker can't share a bucket with the loopback caller.
+            // Rate-limit token validation to slow down brute-force attempts.
+            // Identity is always the real TCP peer socket (set by HttpServer) —
+            // never X-Forwarded-For, which is client-controlled.
             String idForLimit = (rateLimitIdentity != null && !rateLimitIdentity.isEmpty())
                 ? rateLimitIdentity : "unknown";
             String rateError = checkRateLimit(idForLimit);
@@ -84,13 +98,25 @@ public class AuthApiHandler {
      */
     private static String checkRateLimit(String identity) {
         long now = System.currentTimeMillis();
+
+        // Global lockout check — immune to identity rotation
+        if (globalLockoutUntil > now) {
+            long secs = (globalLockoutUntil - now) / 1000 + 1;
+            return Messages.get("errors.rate_limited_locked_for_seconds", secs);
+        }
+
+        // Per-identity bucket (bounded map — evict oldest if full)
+        if (rateLimits.size() >= MAX_IDENTITY_BUCKETS && !rateLimits.containsKey(identity)) {
+            String oldest = rateLimits.keys().nextElement();
+            rateLimits.remove(oldest);
+        }
         RateLimitBucket bucket = rateLimits.computeIfAbsent(identity, k -> new RateLimitBucket());
         synchronized (bucket) {
             if (bucket.lockedUntil > now) {
                 long secs = (bucket.lockedUntil - now) / 1000 + 1;
                 return Messages.get("errors.rate_limited_locked_for_seconds", secs);
             }
-            // Drop attempts outside the window
+            // Drop attempts outside the per-identity window
             long windowStart = now - RATE_LIMIT_WINDOW_MS;
             while (!bucket.attempts.isEmpty() && bucket.attempts.peekFirst() < windowStart) {
                 bucket.attempts.pollFirst();
@@ -108,6 +134,25 @@ public class AuthApiHandler {
     }
 
     /**
+     * Record a failed login attempt toward the global cap.
+     * Call after a validation failure (not for rate-limit rejections).
+     */
+    static void recordGlobalFailure() {
+        long now = System.currentTimeMillis();
+        // Reset window if expired
+        if (now - globalWindowStart.get() > GLOBAL_WINDOW_MS) {
+            globalWindowStart.set(now);
+            globalFailCount.set(0);
+        }
+        int fails = globalFailCount.incrementAndGet();
+        if (fails >= GLOBAL_FAIL_THRESHOLD && globalLockoutUntil <= now) {
+            globalLockoutUntil = now + GLOBAL_LOCKOUT_MS;
+            log("Global brute-force threshold reached (" + fails + " failures) — global lockout for "
+                + (GLOBAL_LOCKOUT_MS / 1000) + "s");
+        }
+    }
+
+    /**
      * Reset the rate-limit bucket for an identity after a successful login.
      */
     private static void clearRateLimit(String identity) {
@@ -116,20 +161,22 @@ public class AuthApiHandler {
     
     /**
      * GET /auth/status
-     * Returns device info.
+     * Returns device status. deviceId is only included for loopback callers
+     * (WebView on the same device) — tunnel/LAN callers get status:ok only.
      */
-    private static boolean handleStatus(OutputStream out) throws Exception {
+    private static boolean handleStatus(OutputStream out, String identity) throws Exception {
         AuthManager.AuthState state = AuthManager.getState();
-        
+
         JSONObject response = new JSONObject();
         response.put("status", "ok");
-        
-        if (state != null) {
+
+        // Only expose deviceId to loopback callers. Tunnel/LAN callers (non-loopback
+        // socket address) must not receive it — it halves the brute-force search space.
+        boolean isLoopback = identity != null && identity.contains("127.0.0.1");
+        if (isLoopback && state != null) {
             response.put("deviceId", state.deviceId);
-        } else {
-            response.put("deviceId", "unknown");
         }
-        
+
         HttpResponse.sendJson(out, response.toString());
         return true;
     }
@@ -176,6 +223,7 @@ public class AuthApiHandler {
                 response.put("success", false);
                 response.put("error", Messages.get("errors.invalid_device_token"));
                 log("Invalid token attempt from " + rateLimitIdentity);
+                recordGlobalFailure();
             }
 
         } catch (Exception e) {

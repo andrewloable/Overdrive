@@ -1,10 +1,10 @@
 <div class="page">
   <div class="page-header">
-    <h1>Notifications</h1>
+    <h1>{{ 'notifications.title' | translate }}</h1>
   </div>
 
   @if (loading()) {
-    <div class="loading">Loading…</div>
+    <div class="loading">{{ 'notifications.loading' | translate }}</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
   } @else {
@@ -13,28 +13,28 @@
     }
 
     <div class="card">
-      <div class="section-title">Push Subscriptions</div>
+      <div class="section-title">{{ 'notifications.pushSubscriptions' | translate }}</div>
       @for (sub of subscriptions(); track sub.id) {
         <div class="sub-row">
           <div class="sub-info">
-            <div class="sub-label">{{ sub.label || 'Browser' }}</div>
-            <div class="sub-meta">ID: {{ sub.id }}</div>
+            <div class="sub-label">{{ sub.label || ('notifications.defaultLabel' | translate) }}</div>
+            <div class="sub-meta">{{ 'notifications.idPrefix' | translate }}{{ sub.id }}</div>
           </div>
-          <button class="btn btn-danger btn-sm" (click)="unsubscribe(sub.id)">Remove</button>
+          <button class="btn btn-danger btn-sm" (click)="unsubscribe(sub.id)">{{ 'notifications.remove' | translate }}</button>
         </div>
       } @empty {
-        <p class="empty-text">No push subscriptions yet.</p>
+        <p class="empty-text">{{ 'notifications.empty' | translate }}</p>
       }
     </div>
 
     <div class="actions">
       @if (vapidKey()) {
         <button class="btn btn-primary" (click)="subscribe()" [disabled]="subscribing()">
-          {{ subscribing() ? 'Subscribing…' : 'Enable Push Notifications' }}
+          {{ subscribing() ? ('notifications.subscribing' | translate) : ('notifications.enablePush' | translate) }}
         </button>
       }
       <button class="btn btn-secondary" (click)="sendTest()" [disabled]="testSending() || subscriptions().length === 0">
-        {{ testSending() ? 'Sending…' : 'Send Test' }}
+        {{ testSending() ? ('notifications.sending' | translate) : ('notifications.sendTest' | translate) }}
       </button>
     </div>
   }

@@ -2,7 +2,7 @@
   <div class="vp-shell" (click)="$event.stopPropagation()">
     <div class="vp-topbar">
       <div class="vp-title" [title]="title()">{{ title() }}</div>
-      <button class="vp-close" type="button" (click)="onClose()" aria-label="Close">✕</button>
+      <button class="vp-close" type="button" (click)="onClose()" [attr.aria-label]="'pip.close' | translate">✕</button>
     </div>
 
     <div class="vp-stage">
@@ -40,7 +40,7 @@
     @if (legend()) {
       <div class="vp-legend">{{ legend() }}</div>
     } @else if (spansView().length === 0) {
-      <div class="vp-legend vp-legend-muted">No detection events</div>
+      <div class="vp-legend vp-legend-muted">{{ 'pip.noDetectionEvents' | translate }}</div>
     }
 
     @if (hasPlaylist()) {
@@ -50,9 +50,9 @@
           type="button"
           (click)="prev()"
           [disabled]="!canPrev()"
-          aria-label="Previous clip"
+          [attr.aria-label]="'pip.previousClip' | translate"
         >
-          ‹ Prev
+          {{ 'pip.prev' | translate }}
         </button>
         <span class="vp-count">{{ index() + 1 | number }} / {{ playlistCount() | number }}</span>
         <button
@@ -60,9 +60,9 @@
           type="button"
           (click)="next()"
           [disabled]="!canNext()"
-          aria-label="Next clip"
+          [attr.aria-label]="'pip.nextClip' | translate"
         >
-          Next ›
+          {{ 'pip.next' | translate }}
         </button>
       </div>
     }

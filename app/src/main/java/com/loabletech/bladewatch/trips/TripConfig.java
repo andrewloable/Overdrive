@@ -122,7 +122,13 @@ public class TripConfig {
     }
 
     public void setCurrency(String currency) {
-        this.currency = currency != null ? currency : "";
+        if (currency == null || currency.isEmpty()) { this.currency = ""; return; }
+        // Reject HTML-injection chars; cap at 8 chars (enough for any symbol/code)
+        if (currency.contains("<") || currency.contains(">") || currency.length() > 8) {
+            this.currency = "";
+            return;
+        }
+        this.currency = currency;
     }
 
     public void setDistanceUnit(String unit) {

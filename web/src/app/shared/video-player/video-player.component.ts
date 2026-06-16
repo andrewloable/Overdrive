@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 /**
@@ -57,7 +58,7 @@ export interface PlayerItem {
 @Component({
   selector: 'app-video-player',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TranslateModule],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
 })

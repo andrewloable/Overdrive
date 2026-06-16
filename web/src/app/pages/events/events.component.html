@@ -1,5 +1,5 @@
 <div class="page">
-  <div class="page-header"><h1>Events</h1></div>
+  <div class="page-header"><h1>{{ 'events.title' | translate }}</h1></div>
 
   @if (activeFile(); as file) {
     <app-video-player
@@ -11,7 +11,7 @@
   }
 
   @if (loading()) {
-    <div class="loading">Loading…</div>
+    <div class="loading">{{ 'events.loading' | translate }}</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
   } @else {
@@ -32,7 +32,7 @@
           </div>
         </div>
       } @empty {
-        <div class="empty-text">No sentry events recorded.</div>
+        <div class="empty-text">{{ 'events.empty' | translate }}</div>
       }
     </div>
   }

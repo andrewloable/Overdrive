@@ -1,9 +1,9 @@
 @import '../../shared/page-shared';
 
 .status-banner {
-  background: rgba(0, 212, 170, 0.1);
-  border: 1px solid rgba(0, 212, 170, 0.3);
-  color: var(--brand-primary, #00D4AA);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--brand-primary, #00D4FF);
   border-radius: 10px;
   padding: 12px 16px;
   font-size: 14px;
@@ -48,7 +48,7 @@
   flex: 1; border: none; background: var(--bg-elevated, #1E1E24);
   color: var(--text-secondary, #A1A1AA); font: inherit; font-size: 14px;
   padding: 10px; border-radius: 10px; cursor: pointer;
-  &.active { background: var(--brand-primary, #00D4AA); color: #06281f; font-weight: 600; }
+  &.active { background: var(--brand-primary, #00D4FF); color: #00363F; font-weight: 600; }
 }
 
 /* Rows + controls */
@@ -64,7 +64,7 @@
   background: var(--bg-elevated, #1E1E24);
   color: var(--text-secondary, #A1A1AA); font: inherit; font-size: 13px;
   padding: 7px 18px; border-radius: 20px; cursor: pointer; min-width: 72px;
-  &.on { background: var(--brand-primary, #00D4AA); color: #06281f; border-color: transparent; font-weight: 600; }
+  &.on { background: var(--brand-primary, #00D4FF); color: #00363F; border-color: transparent; font-weight: 600; }
   &:disabled { opacity: 0.5; }
 }
 
@@ -86,11 +86,11 @@
   border: 1px solid var(--border-default, rgba(255,255,255,0.12));
   background: var(--bg-elevated, #1E1E24); color: var(--text-secondary, #A1A1AA);
   font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-  &.active { background: var(--brand-primary, #00D4AA); color: #06281f; border-color: transparent; font-weight: 600; }
+  &.active { background: var(--brand-primary, #00D4FF); color: #00363F; border-color: transparent; font-weight: 600; }
   &:disabled { opacity: 0.5; }
 }
 .win-head { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 6px; }
-.win-pos { font-size: 13px; color: var(--brand-primary, #00D4AA); font-weight: 600; }
+.win-pos { font-size: 13px; color: var(--brand-primary, #00D4FF); font-weight: 600; }
 .preset-row { display: flex; gap: 6px; }
 .preset { flex: 1; }
 
@@ -125,7 +125,7 @@
 .gps-coords {
   font-family: monospace;
   font-size: 15px;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
   margin-bottom: 8px;
 }
 

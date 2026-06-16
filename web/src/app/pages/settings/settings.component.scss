@@ -1,9 +1,9 @@
 @import '../../shared/page-shared';
 
 .status-banner {
-  background: rgba(0, 212, 170, 0.1);
-  border: 1px solid rgba(0, 212, 170, 0.3);
-  color: var(--brand-primary, #00D4AA);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: var(--brand-primary, #00D4FF);
   border-radius: 10px;
   padding: 12px 16px;
   font-size: 14px;
@@ -19,7 +19,7 @@
 .update-version {
   font-size: 16px;
   font-weight: 600;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
 }
 
 .update-notes {
@@ -67,7 +67,7 @@
 
   &:hover { background: var(--surface-hover, rgba(255,255,255,0.04)); }
   &.active {
-    background: var(--brand-primary-dim, rgba(0,212,170,0.12));
+    background: var(--brand-primary-dim, rgba(0,212, 255,0.12));
     color: var(--text-primary, #fff);
     font-weight: 600;
   }
@@ -102,7 +102,7 @@
   font-size: 13px;
   transition: border-color 0.15s ease;
 
-  &.active { border-color: var(--brand-primary, #00D4AA); color: var(--text-primary, #fff); }
+  &.active { border-color: var(--brand-primary, #00D4FF); color: var(--text-primary, #fff); }
 }
 
 .theme-swatch {
@@ -134,7 +134,7 @@
   border-radius: 8px;
   cursor: pointer;
 
-  &.active { background: var(--brand-primary, #00D4AA); color: #06281f; font-weight: 600; }
+  &.active { background: var(--brand-primary, #00D4FF); color: #00363F; font-weight: 600; }
 }
 
 .hint {
@@ -158,8 +158,8 @@
 
 /* ---- Note / danger cards ---- */
 .note-card {
-  background: var(--brand-primary-dim, rgba(0,212,170,0.08));
-  border-color: rgba(0,212,170,0.25);
+  background: var(--brand-primary-dim, rgba(0,212, 255,0.08));
+  border-color: rgba(0,212, 255,0.25);
 }
 
 .danger-card {
@@ -184,13 +184,13 @@
   color: var(--text-primary, #fff);
   transition: border-color 0.15s ease;
 
-  &.active { border-color: var(--brand-primary, #00D4AA); }
+  &.active { border-color: var(--brand-primary, #00D4FF); }
 }
 
 .radio-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .radio-label { font-size: 14px; color: var(--text-primary, #fff); }
 .radio-desc { font-size: 12px; color: var(--text-muted, #71717A); }
-.radio-dot { font-size: 18px; color: var(--brand-primary, #00D4AA); }
+.radio-dot { font-size: 18px; color: var(--brand-primary, #00D4FF); }
 
 /* ---- Range slider ---- */
 .slider-value {
@@ -202,7 +202,7 @@
 
 .range {
   width: 100%;
-  accent-color: var(--brand-primary, #00D4AA);
+  accent-color: var(--brand-primary, #00D4FF);
 }
 
 /* ---- Info grid (storage / privacy) ---- */
@@ -219,25 +219,11 @@
   .path { font-size: 11px; word-break: break-all; color: var(--text-muted, #71717A); }
 }
 
-/* ---- Daemon status rows ---- */
-.daemon-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-
-  &:last-child { border-bottom: none; }
-}
-
-.daemon-name { font-size: 14px; color: var(--text-primary, #fff); flex: 0 0 auto; min-width: 150px; }
-.daemon-detail { font-size: 12px; color: var(--text-muted, #71717A); flex: 1; }
-
 .link-btn {
   float: right;
   border: none;
   background: transparent;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
   font: inherit;
   font-size: 12px;
   cursor: pointer;

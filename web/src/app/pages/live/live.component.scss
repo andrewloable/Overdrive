@@ -79,7 +79,7 @@
   color: #000;
   background: linear-gradient(
     135deg,
-    var(--brand-primary, #00d4aa) 0%,
+    var(--brand-primary, #00D4FF) 0%,
     var(--brand-secondary, #0ea5e9) 100%
   );
 
@@ -113,8 +113,8 @@
   }
 
   &.active {
-    color: var(--brand-primary, #00d4aa);
-    background: rgba(0, 212, 170, 0.08);
+    color: var(--brand-primary, #00D4FF);
+    background: rgba(0, 212, 255, 0.08);
   }
 
   &:hover:not(.active) {

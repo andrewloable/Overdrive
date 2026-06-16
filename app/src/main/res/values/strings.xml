@@ -86,9 +86,9 @@
     <!-- item_safe_location -->
 
     <!-- item_daemon_card -->
-    <string name="daemon_card_default_name">Daemon Name</string>
+    <string name="daemon_card_default_name">Service Name</string>
     <string name="daemon_card_default_status">Status message</string>
-    <string name="daemon_card_subprocesses">SUBPROCESSES</string>
+    <string name="daemon_card_subprocesses">PROCESSES</string>
 
     <!-- item_time_window -->
 
@@ -109,7 +109,7 @@
     <string name="camera_option_3">Camera 3</string>
     <string name="camera_option_4">Camera 4</string>
     <string name="camera_option_5">Camera 5</string>
-    <string name="camera_selection_hint">Auto picks the right camera for your trim on every boot. Camera 1 = BYD Seal, Camera 0 = Atto trims. Restart the daemon after changing camera ID for the setting to take effect.</string>
+    <string name="camera_selection_hint">Auto picks the right camera for your trim on every boot. Camera 1 = BYD Seal, Camera 0 = Atto trims. Restart the camera service after changing camera ID for the setting to take effect.</string>
 
     <!-- fragment_dashboard -->
     <string name="dashboard_scan_to_connect">Scan to Connect</string>
@@ -123,10 +123,10 @@
     <string name="cd_set_password">Set custom password</string>
     <string name="dialog_set_password_title">Set Custom Password</string>
     <string name="dialog_set_password_message">Enter a new access password. This replaces the auto-generated token.</string>
-    <string name="dialog_set_password_hint">New password (min 4 characters)</string>
+    <string name="dialog_set_password_hint">New password (min 12 characters)</string>
     <string name="toast_password_set">Password updated</string>
-    <string name="toast_password_too_short">Password must be at least 4 characters</string>
-    <string name="toast_password_save_failed">Failed to save password — daemon not ready</string>
+    <string name="toast_password_too_short">Password must be at least 12 characters</string>
+    <string name="toast_password_save_failed">Failed to save password — service not ready</string>
 
     <!-- fragment_recording_controls -->
 
@@ -172,14 +172,14 @@
 
     <!-- fragment_webview -->
     <string name="webview_loading">Loading…</string>
-    <string name="webview_camera_daemon_not_running">Camera Daemon Not Running</string>
-    <string name="webview_start_camera_daemon">Start the Camera Daemon from the Daemons screen to access this page.</string>
+    <string name="webview_camera_daemon_not_running">Camera Not Running</string>
+    <string name="webview_start_camera_daemon">Start the Camera service from the Services screen to access this page.</string>
 
     <!-- dialog_roi_drawing -->
 
     <!-- dialog_zrok_token -->
     <string name="zrok_enable_token_hint">Enable Token</string>
-    <string name="zrok_token_storage_note">Token is stored securely and shared between app and daemon processes.</string>
+    <string name="zrok_token_storage_note">Token is stored securely and shared between the app and background services.</string>
     <string name="zrok_reset_environment">Reset Zrok Environment</string>
     <string name="zrok_reset_environment_desc">Removes environment and token. You will need to re-enable with your token (uses a device slot).</string>
 
@@ -325,12 +325,12 @@
     <string name="toast_failed_with_message">Failed: %1$s</string>
     <string name="toast_camera_id_set">Camera %1$d set — next ACC cycle</string>
     <string name="toast_clearing_camera_config">Clearing camera config…</string>
-    <string name="toast_restarting_camera_daemon">Restarting camera daemon…</string>
-    <string name="toast_camera_daemon_restarting">Camera daemon restarting with full probe</string>
-    <string name="toast_camera_restart_failed">Config cleared but daemon restart failed. Please restart manually.</string>
+    <string name="toast_restarting_camera_daemon">Restarting camera service…</string>
+    <string name="toast_camera_daemon_restarting">Camera service restarting with full probe</string>
+    <string name="toast_camera_restart_failed">Config cleared but service restart failed. Please restart manually.</string>
     <string name="toast_failed_with_message_x">Failed: %1$s</string>
     <string name="toast_soh_reset_success">SOH estimation reset — will recalculate from next data</string>
-    <string name="toast_soh_reset_failed_no_daemon">Reset failed — daemon not responding and file not writable</string>
+    <string name="toast_soh_reset_failed_no_daemon">Reset failed — service not responding and file not writable</string>
     <string name="toast_soh_reset_failed_with_message">Reset failed: %1$s</string>
     <string name="toast_select_at_least_one_category">Select at least one category</string>
     <string name="toast_reset_failed_with_error">Reset failed: %1$s</string>
@@ -389,8 +389,8 @@
     <string name="dialog_regenerate_token_title">Regenerate Token</string>
     <string name="dialog_regenerate_token_message">This will invalidate the current token. All active sessions will be logged out. Continue?</string>
     <string name="toast_token_regenerated_logged_out">New token generated. All sessions logged out.</string>
-    <string name="toast_token_regenerated_restart">Token regenerated. Daemon may need restart to apply.</string>
-    <string name="toast_token_regenerated_no_notify">Token regenerated. Could not notify daemon.</string>
+    <string name="toast_token_regenerated_restart">Token regenerated. Services may need restart to apply.</string>
+    <string name="toast_token_regenerated_no_notify">Token regenerated. Could not notify background service.</string>
     <string name="toast_token_regenerated">Token regenerated</string>
     <string name="dashboard_no_tunnel">No tunnel running</string>
     <string name="dashboard_starting_zrok">Starting Zrok tunnel…</string>
@@ -487,7 +487,7 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_recording">Recording</string>
     <string name="settings_section_surveillance">Surveillance</string>
-    <string name="settings_section_daemons">Daemons</string>
+    <string name="settings_section_daemons">Services</string>
     <string name="settings_section_privacy">Privacy &amp; data</string>
     <string name="settings_section_overlay">Status overlay</string>
     <string name="settings_overlay_subtitle">Choose which segments of the floating status pill stay visible.</string>
@@ -507,7 +507,7 @@
 
     <!-- Settings → Privacy pane copy -->
     <string name="settings_privacy_title">Privacy &amp; data</string>
-    <string name="settings_privacy_body">Reset clears recordings index, cached credentials, daemon state, and on-device preferences. The action cannot be undone.</string>
+    <string name="settings_privacy_body">Reset clears recordings index, cached credentials, service state, and on-device preferences. The action cannot be undone.</string>
 
     <!-- Settings → About pane copy -->
     <string name="settings_about_title">About BladeWatch</string>
@@ -723,7 +723,7 @@
     <!-- Section row subtitles (portrait) -->
     <string name="settings_section_recording_subtitle">Pre/post buffers, codec, storage limits.</string>
     <string name="settings_section_surveillance_subtitle">Detection zones, schedule, motion sensitivity.</string>
-    <string name="settings_section_daemons_subtitle">Zrok tunnel and daemon runners.</string>
+    <string name="settings_section_daemons_subtitle">Zrok tunnel and background services.</string>
 
     <!-- About / data row subtitles -->
     <string name="settings_about_row_title">About BladeWatch</string>
@@ -759,10 +759,10 @@
     <string name="settings_privacy_storage_unavailable">Unavailable</string>
     <string name="settings_privacy_storage_count_format">%1$d clip</string>
     <string name="settings_privacy_storage_count_format_plural">%1$d clips</string>
-    <string name="settings_privacy_reset_subtitle">Choose categories: recordings, events, daemon configs, cached telemetry…</string>
+    <string name="settings_privacy_reset_subtitle">Choose categories: recordings, events, service configs, cached telemetry…</string>
     <string name="settings_developer_overline">DEVELOPER</string>
-    <string name="settings_developer_timing_logs_title">Daemon timing logs</string>
-    <string name="settings_developer_timing_logs_subtitle">Log elapsed-time markers during daemon startup. Disable in normal use to keep logcat clean.</string>
+    <string name="settings_developer_timing_logs_title">Service timing logs</string>
+    <string name="settings_developer_timing_logs_subtitle">Log elapsed-time markers during service startup. Disable in normal use to keep logcat clean.</string>
     <string name="settings_developer_debug_logs_title">Developer debug logs</string>
     <string name="settings_developer_debug_logs_subtitle">Log all Activity and Fragment lifecycle events and startup steps to /storage/emulated/0/BladeWatch/data/debug_app.log. Crashes are always captured. Off by default.</string>
 
@@ -924,4 +924,38 @@
     <string name="vehicle_status_range_fmt">Range: %1$d km</string>
     <string name="vehicle_status_charge_unknown">Charge: —</string>
     <string name="vehicle_status_range_unknown">Range: —</string>
+
+    <!-- ============================================================== -->
+    <!-- Startup screen (fragment_startup / StartupFragment)              -->
+    <!-- ============================================================== -->
+    <string name="startup_subtitle">Getting your dashcam ready</string>
+    <string name="startup_header_preparing">Getting things ready…</string>
+    <string name="startup_header_starting">Starting up…</string>
+    <string name="startup_header_verifying">Almost ready…</string>
+    <string name="startup_header_ready">Everything\'s ready</string>
+    <string name="startup_daemon_camera">Camera</string>
+    <string name="startup_daemon_camera_desc">Live view &amp; recording</string>
+    <string name="startup_daemon_sentry">Sentry Mode</string>
+    <string name="startup_daemon_sentry_desc">Motion detection &amp; alerts</string>
+    <string name="startup_daemon_parking">Parking Guard</string>
+    <string name="startup_daemon_parking_desc">Keeps watch while parked</string>
+    <string name="startup_status_waiting">Waiting</string>
+    <string name="startup_status_starting">Starting</string>
+    <string name="startup_status_ready">Ready</string>
+    <string name="startup_status_failed">Failed</string>
+    <string name="startup_continue_anyway">Continue anyway</string>
+    <string name="startup_continue">Continue →</string>
+
+    <!-- Live view banner (LiveViewController) -->
+    <string name="live_retry">Retry</string>
+    <string name="live_connecting">Connecting to camera…</string>
+    <string name="live_error_fmt">Error: %1$s</string>
+    <string name="live_camera_unavailable_fmt">Camera unavailable\n%1$s</string>
+
+    <!-- Trip detail route (TripDetailController) -->
+    <string name="trip_no_route_data">No route data for this trip</string>
+
+    <!-- Recording severity badges (RecordingAdapter) -->
+    <string name="rec_severity_critical">CRITICAL</string>
+    <string name="rec_severity_alert">ALERT</string>
 </resources>

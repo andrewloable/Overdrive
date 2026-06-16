@@ -3,6 +3,7 @@ package net.bladewatch.app.ui.fragment.liveview
 import android.content.Context
 import android.graphics.Color
 import android.graphics.SurfaceTexture
+import net.bladewatch.app.R
 import net.bladewatch.app.ui.common.BladeTheme
 import android.os.Handler
 import android.os.Looper
@@ -111,7 +112,7 @@ internal class LiveViewController(private val context: Context) {
         bannerMessage.textSize = 16f
         bannerMessage.gravity = Gravity.CENTER
 
-        retryButton.text = "Retry"
+        retryButton.text = context.getString(R.string.live_retry)
         retryButton.visibility = View.GONE
         retryButton.setOnClickListener { retry() }
 
@@ -163,18 +164,18 @@ internal class LiveViewController(private val context: Context) {
         when (status) {
             is LiveStreamStatus.Idle -> banner.visibility = View.GONE
             is LiveStreamStatus.Connecting -> {
-                bannerMessage.text = "Connecting to camera…"
+                bannerMessage.text = context.getString(R.string.live_connecting)
                 retryButton.visibility = View.GONE
                 banner.visibility = View.VISIBLE
             }
             is LiveStreamStatus.Live -> banner.visibility = View.GONE
             is LiveStreamStatus.Error -> {
-                bannerMessage.text = "Error: ${status.reason}"
+                bannerMessage.text = context.getString(R.string.live_error_fmt, status.reason)
                 retryButton.visibility = View.VISIBLE
                 banner.visibility = View.VISIBLE
             }
             is LiveStreamStatus.Unavailable -> {
-                bannerMessage.text = "Camera unavailable\n${status.reason}"
+                bannerMessage.text = context.getString(R.string.live_camera_unavailable_fmt, status.reason)
                 retryButton.visibility = View.VISIBLE
                 banner.visibility = View.VISIBLE
             }

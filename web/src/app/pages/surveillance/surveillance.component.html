@@ -1,94 +1,94 @@
 <div class="page">
   <div class="page-header">
-    <h1>Surveillance</h1>
+    <h1>{{ 'surveillance.title' | translate }}</h1>
     <div class="status-badge" [class.active]="active()" [class.inactive]="!active()">
-      {{ active() ? 'Active' : 'Inactive' }}
+      {{ active() ? ('surveillance.active' | translate) : ('surveillance.inactive' | translate) }}
     </div>
   </div>
 
   @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
 
   @if (loading()) {
-    <div class="loading">Loading…</div>
+    <div class="loading">{{ 'surveillance.loading' | translate }}</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
   } @else {
     <div class="card">
       <div class="toggle-row">
         <div>
-          <div class="toggle-label">Surveillance Mode</div>
-          <div class="toggle-sub">{{ pipelineRunning() ? 'Pipeline running' : 'Pipeline stopped' }}</div>
+          <div class="toggle-label">{{ 'surveillance.surveillance_mode' | translate }}</div>
+          <div class="toggle-sub">{{ pipelineRunning() ? ('surveillance.pipeline_running' | translate) : ('surveillance.pipeline_stopped' | translate) }}</div>
         </div>
         <button class="toggle" [class.on]="active()" (click)="toggle()" [disabled]="toggling()"></button>
       </div>
     </div>
 
     <div class="card">
-      <div class="section-title">Detection Config</div>
+      <div class="section-title">{{ 'surveillance.detection_config' | translate }}</div>
 
       <div class="form-group">
-        <label class="form-label">Sensitivity ({{ sensitivity() }})</label>
+        <label class="form-label">{{ 'surveillance.sensitivity' | translate }} ({{ sensitivity() }})</label>
         <input type="range" min="1" max="5" step="1" class="range-input"
           [ngModel]="sensitivity()" (ngModelChange)="sensitivity.set($event)">
       </div>
 
       <div class="form-group">
-        <label class="form-label">Distance Preset</label>
+        <label class="form-label">{{ 'surveillance.distance_preset' | translate }}</label>
         <select class="form-select" [ngModel]="distancePreset()" (ngModelChange)="distancePreset.set($event)">
-          <option value="NEAR">Near</option>
-          <option value="SHORT">Short</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="BALANCED">Balanced</option>
-          <option value="LONG">Long</option>
-          <option value="FAR">Far</option>
+          <option value="NEAR">{{ 'surveillance.preset_near' | translate }}</option>
+          <option value="SHORT">{{ 'surveillance.preset_short' | translate }}</option>
+          <option value="MEDIUM">{{ 'surveillance.preset_medium' | translate }}</option>
+          <option value="BALANCED">{{ 'surveillance.preset_balanced' | translate }}</option>
+          <option value="LONG">{{ 'surveillance.preset_long' | translate }}</option>
+          <option value="FAR">{{ 'surveillance.preset_far' | translate }}</option>
         </select>
       </div>
 
       <div class="toggle-row">
-        <div class="toggle-label">AI Detection</div>
+        <div class="toggle-label">{{ 'surveillance.ai_detection' | translate }}</div>
         <button class="toggle" [class.on]="aiEnabled()" (click)="aiEnabled.set(!aiEnabled())"></button>
       </div>
 
       @if (aiEnabled()) {
         <div class="form-group">
-          <label class="form-label">AI Confidence ({{ aiConfidence() | number:'1.2-2' }})</label>
+          <label class="form-label">{{ 'surveillance.ai_confidence' | translate }} ({{ aiConfidence() | number:'1.2-2' }})</label>
           <input type="range" min="0" max="1" step="0.05" class="range-input"
             [ngModel]="aiConfidence()" (ngModelChange)="aiConfidence.set(+$event)">
         </div>
       }
 
       <div class="detect-row">
-        <label class="check-label"><input type="checkbox" [ngModel]="detectPerson()" (ngModelChange)="detectPerson.set($event)"> Person</label>
-        <label class="check-label"><input type="checkbox" [ngModel]="detectCar()" (ngModelChange)="detectCar.set($event)"> Car</label>
-        <label class="check-label"><input type="checkbox" [ngModel]="detectBike()" (ngModelChange)="detectBike.set($event)"> Bike</label>
+        <label class="check-label"><input type="checkbox" [ngModel]="detectPerson()" (ngModelChange)="detectPerson.set($event)"> {{ 'surveillance.person' | translate }}</label>
+        <label class="check-label"><input type="checkbox" [ngModel]="detectCar()" (ngModelChange)="detectCar.set($event)"> {{ 'surveillance.car' | translate }}</label>
+        <label class="check-label"><input type="checkbox" [ngModel]="detectBike()" (ngModelChange)="detectBike.set($event)"> {{ 'surveillance.bike' | translate }}</label>
       </div>
 
       <div class="toggle-row">
-        <div class="toggle-label">Night Mode</div>
+        <div class="toggle-label">{{ 'surveillance.night_mode' | translate }}</div>
         <button class="toggle" [class.on]="nightMode()" (click)="nightMode.set(!nightMode())"></button>
       </div>
 
       <div class="actions">
         <button class="btn btn-primary" (click)="saveConfig()" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save Config' }}
+          {{ saving() ? ('surveillance.saving' | translate) : ('surveillance.save_config' | translate) }}
         </button>
       </div>
     </div>
 
     <div class="card">
       <div class="section-title">
-        Live Snapshots
-        <button class="refresh-all-btn" (click)="loadAllSnapshots()">Refresh All</button>
+        {{ 'surveillance.live_snapshots' | translate }}
+        <button class="refresh-all-btn" (click)="loadAllSnapshots()">{{ 'surveillance.refresh_all' | translate }}</button>
       </div>
       <div class="snapshot-grid">
         @for (q of quadrants; track q) {
           <div class="snapshot-cell" (click)="loadSnapshot(q)">
             @if (snapshotLoading()[q]) {
-              <div class="snap-loading">Loading…</div>
+              <div class="snap-loading">{{ 'surveillance.loading' | translate }}</div>
             } @else if (snapshots()[q]) {
-              <img [src]="snapshots()[q]" [alt]="'Quadrant ' + q" class="snap-img">
+              <img [src]="snapshots()[q]" [alt]="('surveillance.quadrant' | translate) + ' ' + q" class="snap-img">
             } @else {
-              <div class="snap-placeholder">Cam {{ q }}<br><span>tap to load</span></div>
+              <div class="snap-placeholder">{{ 'surveillance.cam' | translate }} {{ q }}<br><span>{{ 'surveillance.tap_to_load' | translate }}</span></div>
             }
           </div>
         }
@@ -97,16 +97,16 @@
 
     <div class="card">
       <div class="section-title">
-        Safe Locations
+        {{ 'surveillance.safe_locations' | translate }}
         <button class="toggle" [class.on]="safeLocationsEnabled()" (click)="toggleSafeLocations()" style="width:36px;height:20px"></button>
       </div>
       @for (zone of safeZones(); track zone.id) {
         <div class="zone-row">
           <div class="zone-name">{{ zone.name || zone.id }}</div>
-          <button class="btn btn-danger btn-sm" (click)="deleteZone(zone.id)">Remove</button>
+          <button class="btn btn-danger btn-sm" (click)="deleteZone(zone.id)">{{ 'surveillance.remove' | translate }}</button>
         </div>
       } @empty {
-        <p class="empty-text">No safe zones configured.</p>
+        <p class="empty-text">{{ 'surveillance.no_safe_zones' | translate }}</p>
       }
     </div>
   }

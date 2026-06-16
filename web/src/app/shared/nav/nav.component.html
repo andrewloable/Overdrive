@@ -1,46 +1,46 @@
 <nav class="bottom-tab-bar" role="navigation">
-  <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{exact:true}" class="bottom-tab" aria-label="Dashboard" (click)="closeOverflow()">
+  <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{exact:true}" class="bottom-tab" [attr.aria-label]="'nav.dashboard' | translate" (click)="closeOverflow()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
       <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
     </svg>
-    <span>Dashboard</span>
+    <span>{{ 'nav.dashboard' | translate }}</span>
   </a>
 
-  <a routerLink="/recording" routerLinkActive="is-active" class="bottom-tab" aria-label="Recording" (click)="closeOverflow()">
+  <a routerLink="/recording" routerLinkActive="is-active" class="bottom-tab" [attr.aria-label]="'nav.recording' | translate" (click)="closeOverflow()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
     </svg>
-    <span>Recording</span>
+    <span>{{ 'nav.recording' | translate }}</span>
   </a>
 
-  <a routerLink="/surveillance" routerLinkActive="is-active" class="bottom-tab" aria-label="Surveillance" (click)="closeOverflow()">
+  <a routerLink="/surveillance" routerLinkActive="is-active" class="bottom-tab" [attr.aria-label]="'nav.surveillance' | translate" (click)="closeOverflow()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
-    <span>Surveillance</span>
+    <span>{{ 'nav.surveillance' | translate }}</span>
   </a>
 
-  <a routerLink="/trips" routerLinkActive="is-active" class="bottom-tab" aria-label="Trips" (click)="closeOverflow()">
+  <a routerLink="/trips" routerLinkActive="is-active" class="bottom-tab" [attr.aria-label]="'nav.trips' | translate" (click)="closeOverflow()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 17h2v-7l4 4 4-4 4 4 4-4v7h2"/><path d="M4 5h16"/>
     </svg>
-    <span>Trips</span>
+    <span>{{ 'nav.trips' | translate }}</span>
   </a>
 
-  <a routerLink="/vehicle" routerLinkActive="is-active" class="bottom-tab" aria-label="Vehicle" (click)="closeOverflow()">
+  <a routerLink="/vehicle" routerLinkActive="is-active" class="bottom-tab" [attr.aria-label]="'nav.vehicle' | translate" (click)="closeOverflow()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </svg>
-    <span>Vehicle</span>
+    <span>{{ 'nav.vehicle' | translate }}</span>
   </a>
 
-  <button class="bottom-tab" [class.is-active]="overflowOpen()" (click)="toggleOverflow()" aria-label="More" type="button">
+  <button class="bottom-tab" [class.is-active]="overflowOpen()" (click)="toggleOverflow()" [attr.aria-label]="'nav.more' | translate" type="button">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
       <circle cx="12" cy="19" r="1" fill="currentColor"/>
     </svg>
-    <span>More</span>
+    <span>{{ 'nav.more' | translate }}</span>
   </button>
 </nav>
 
@@ -51,51 +51,51 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M23 7l-7 5 7 5V7z"/><rect width="15" height="14" x="1" y="5" rx="2"/>
       </svg>
-      <span>Live</span>
+      <span>{{ 'nav.live' | translate }}</span>
     </a>
     <a routerLink="/location" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
       </svg>
-      <span>Location</span>
+      <span>{{ 'nav.location' | translate }}</span>
     </a>
     <a routerLink="/diagnostics" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
-      <span>Diagnostics</span>
+      <span>{{ 'nav.diagnostics' | translate }}</span>
     </a>
     <a routerLink="/events" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/>
       </svg>
-      <span>Events</span>
+      <span>{{ 'nav.events' | translate }}</span>
     </a>
     <a routerLink="/notifications" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
-      <span>Notifications</span>
+      <span>{{ 'nav.notifications' | translate }}</span>
     </a>
     <a routerLink="/performance" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
       </svg>
-      <span>Performance</span>
+      <span>{{ 'nav.performance' | translate }}</span>
     </a>
     <a routerLink="/settings" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
-      <span>Settings</span>
+      <span>{{ 'nav.settings' | translate }}</span>
     </a>
     <a routerLink="/about" routerLinkActive="is-active" class="overflow-item" (click)="closeOverflow()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
       </svg>
-      <span>About</span>
+      <span>{{ 'nav.about' | translate }}</span>
     </a>
   </div>
 }

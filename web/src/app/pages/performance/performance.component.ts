@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 /**
@@ -18,7 +19,7 @@ interface PerfMetrics {
 @Component({
   selector: 'app-performance',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TranslateModule],
   templateUrl: './performance.component.html',
   styleUrl: './performance.component.scss',
 })

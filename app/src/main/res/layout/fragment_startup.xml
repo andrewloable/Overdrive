@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="48dp"
-        android:text="BladeWatch"
+        android:text="@string/app_name"
         android:textAppearance="@style/TextAppearance.BladeWatch.HeadlineMedium"
         android:textColor="?attr/colorPrimary"
         app:layout_constraintEnd_toEndOf="parent"
@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="System Starting"
+        android:text="@string/startup_subtitle"
         android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant"
         app:layout_constraintEnd_toEndOf="parent"
@@ -65,7 +65,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Preparing system..."
+                    android:text="@string/startup_header_preparing"
                     android:textAppearance="@style/TextAppearance.BladeWatch.LabelLarge"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -103,14 +103,30 @@
                     android:layout_marginEnd="12dp"
                     android:background="@drawable/status_dot_offline" />
 
-                <TextView
-                    android:id="@+id/tvCameraName"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Camera Daemon"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvCameraName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/startup_daemon_camera"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/tvCameraDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/startup_daemon_camera_desc"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvCameraStatus"
@@ -118,7 +134,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="64dp"
                     android:gravity="end"
-                    android:text="WAITING"
+                    android:text="@string/startup_status_waiting"
                     android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOutline" />
 
@@ -159,14 +175,30 @@
                     android:layout_marginEnd="12dp"
                     android:background="@drawable/status_dot_offline" />
 
-                <TextView
-                    android:id="@+id/tvSentryName"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Sentry Daemon"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvSentryName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/startup_daemon_sentry"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/tvSentryDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/startup_daemon_sentry_desc"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvSentryStatus"
@@ -174,7 +206,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="64dp"
                     android:gravity="end"
-                    android:text="WAITING"
+                    android:text="@string/startup_status_waiting"
                     android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOutline" />
 
@@ -215,14 +247,30 @@
                     android:layout_marginEnd="12dp"
                     android:background="@drawable/status_dot_offline" />
 
-                <TextView
-                    android:id="@+id/tvAccSentryName"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="ACC Sentry"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvAccSentryName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/startup_daemon_parking"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/tvAccSentryDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/startup_daemon_parking_desc"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvAccSentryStatus"
@@ -230,7 +278,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="64dp"
                     android:gravity="end"
-                    android:text="WAITING"
+                    android:text="@string/startup_status_waiting"
                     android:textAppearance="@style/TextAppearance.BladeWatch.LabelMedium"
                     android:textColor="?attr/colorOutline" />
 
@@ -272,7 +320,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Continue anyway"
+        android:text="@string/startup_continue_anyway"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

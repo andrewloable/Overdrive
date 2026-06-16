@@ -5,7 +5,7 @@
   @color/bg_base, @color/text_primary, etc. flip automatically when
   the user toggles theme.
 
-  Brand teal stays the same in both themes for identity continuity.
+  Brand cyan-blue stays the same in both themes for identity continuity.
 -->
 <resources>
     <!-- App icon background -->
@@ -15,23 +15,23 @@
     <color name="white">#FFFFFFFF</color>
 
     <!-- Brand (slightly deeper for AA contrast on light surfaces) -->
-    <color name="brand_primary">#00876C</color>
+    <color name="brand_primary">#00677E</color>
     <color name="brand_secondary">#00658F</color>
     <color name="brand_cyan">@color/brand_primary</color>
-    <color name="brand_cyan_glow">#3300876C</color>
+    <color name="brand_cyan_glow">#3300677E</color>
 
     <!-- Backgrounds — M3 light surface stack -->
-    <color name="bg_base">#F7FAF7</color>
-    <color name="bg_surface">#ECEFEC</color>
-    <color name="bg_elevated">#E6E9E6</color>
-    <color name="bg_hover">#E0E4E1</color>
+    <color name="bg_base">#FBFCFE</color>
+    <color name="bg_surface">#ECEEEF</color>
+    <color name="bg_elevated">#E7E8EA</color>
+    <color name="bg_hover">#E1E3E4</color>
 
     <color name="surface_variant">@color/bg_elevated</color>
 
     <!-- Text — dark on light -->
-    <color name="text_primary">#181C1A</color>
-    <color name="text_secondary">#3F4944</color>
-    <color name="text_muted">#6F7975</color>
+    <color name="text_primary">#191C1D</color>
+    <color name="text_secondary">#40484B</color>
+    <color name="text_muted">#70787C</color>
 
     <!-- Borders -->
     <color name="border_default">#26000000</color>
@@ -41,8 +41,8 @@
          tone with the app's day/night setting. The light variants give a
          translucent pearl pill with a faint brand-tinted ring; the night
          variants live in values-night/colors.xml. -->
-    <color name="overlay_pill_background">#E6F7FAF7</color>
-    <color name="overlay_pill_stroke">#3300876C</color>
+    <color name="overlay_pill_background">#E6FBFCFE</color>
+    <color name="overlay_pill_stroke">#3300677E</color>
 
     <!-- Status — AA on light surfaces -->
     <color name="status_success">#1F7A3F</color>

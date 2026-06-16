@@ -75,12 +75,12 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--brand-primary, #00D4AA) 0%, var(--brand-secondary, #0EA5E9) 100%);
+  background: linear-gradient(135deg, var(--brand-primary, #00D4FF) 0%, var(--brand-secondary, #0EA5E9) 100%);
   color: #000;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
   }
 }
 
@@ -129,7 +129,7 @@
   box-sizing: border-box;
 
   &:focus {
-    border-color: var(--brand-primary, #00D4AA);
+    border-color: var(--brand-primary, #00D4FF);
   }
 }
 
@@ -172,8 +172,8 @@
   flex-shrink: 0;
 
   &.on {
-    background: var(--brand-primary, #00D4AA);
-    border-color: var(--brand-primary, #00D4AA);
+    background: var(--brand-primary, #00D4FF);
+    border-color: var(--brand-primary, #00D4FF);
   }
 
   &::after {

@@ -239,7 +239,7 @@
             // Outer disc — gradient fill + thin teal-tinted rim
             // instead of the flat white stroke. The rim catches the
             // ambient and gives the disc the "shiny bezel" feel.
-            +         '<circle r="12" fill="url(#evChargeBoltGrad)" stroke="rgba(0,212,170,0.45)" stroke-width="1.2"/>'
+            +         '<circle r="12" fill="url(#evChargeBoltGrad)" stroke="rgba(0,212, 255,0.45)" stroke-width="1.2"/>'
             // Specular highlight — a small bright crescent in the
             // upper-left quadrant that sells the gloss. Painted as a
             // semi-transparent white ellipse, no animation.

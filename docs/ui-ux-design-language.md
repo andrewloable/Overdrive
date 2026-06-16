@@ -96,11 +96,12 @@ complete; dark is the default on the head unit.
 
 **Accent roles** — each has a `*-container` and an `on-*` text pair:
 
-- `primary` — teal-green brand accent (dark `#5DDBB6`, light `#00876C`); CTAs,
-  active states, sliders.
-- `secondary` — muted green; secondary affordances, nav active-indicator container.
-- `tertiary` — sky-blue (dark `#85CFFF`); links, info accents, and the second
-  stop of the brand accent stripe.
+- `primary` — cyan-blue brand accent (dark `#3CD7FF`, light `#00677E`); CTAs,
+  active states, sliders. Generated from the BladeWatch logo seed `#00D4FF`
+  (see `drawable/ic_sidebar_logo.xml`).
+- `secondary` — muted blue-grey; secondary affordances, nav active-indicator container.
+- `tertiary` — indigo (dark `#C1C4EB`, light `#595C7E`); links, info accents, and
+  the second stop of the brand accent stripe — kept distinct from the cyan primary.
 - `error` — destructive actions and validation.
 
 **Surfaces & neutrals:**

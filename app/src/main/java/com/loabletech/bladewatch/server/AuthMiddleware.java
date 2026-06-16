@@ -30,20 +30,27 @@ import java.util.Set;
  * - /shared/*         - Static assets (CSS, JS, fonts, models)
  * - /favicon.ico      - Browser favicon
  *
- * Notably NOT public anymore:
- * - /status           - leaks ACC/charging/recording state, requires auth
- * - /auth/status      - public login helper for the login page
+ * Notably NOT public (requires auth):
+ * - /status           - leaks ACC/charging/recording state
+ *
+ * /auth/status is still public but only returns deviceId for loopback callers.
+ * Tunnel/LAN callers receive status:ok with no deviceId to prevent brute-force aid.
  */
 public class AuthMiddleware {
 
     // Paths that don't require authentication
     private static final Set<String> PUBLIC_PATHS = new HashSet<>(Arrays.asList(
-        "/auth/status",  // Login page needs deviceId hint before user has JWT
+        "/auth/status",  // Login page polls this; deviceId returned only to loopback callers
         "/auth/token",
         "/auth/logout",
         "/login.html",
         "/login",
         "/favicon.ico",
+        // Favicon variants — browsers and iOS fetch these without auth cookies.
+        "/favicon.png",
+        "/favicon-32x32.png",
+        "/favicon-16x16.png",
+        "/apple-touch-icon.png",
         // PWA install assets — the browser fetches these as part of service-
         // worker registration and manifest discovery, with no Bearer header
         // (browser-internal fetch, not auth.js-wrapped).

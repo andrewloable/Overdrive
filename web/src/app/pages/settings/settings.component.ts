@@ -1,15 +1,14 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import type { CheckUpdateResponse } from '../../../gen/bladewatch/v1/update_pb';
 import type { GetStorageSettingsResponse } from '../../../gen/bladewatch/v1/storage_pb';
-import type { GetStatusResponse } from '../../../gen/bladewatch/v1/system_pb';
 import type { SafeZone } from '../../../gen/bladewatch/v1/safe_locations_pb';
 import type { PreviewCleanupResponse } from '../../../gen/bladewatch/v1/storage_pb';
 
-type SectionId = 'appearance' | 'recording' | 'surveillance' | 'overlay' | 'daemons' | 'privacy';
+type SectionId = 'appearance' | 'recording' | 'surveillance' | 'overlay' | 'privacy';
 type ThemeMode = 'auto' | 'light' | 'dark';
 type RecordingTab = 'capture' | 'quality' | 'storage';
 
@@ -17,12 +16,6 @@ interface RecordingModeOption {
   value: string;
   label: string;
   description: string;
-}
-
-interface DaemonStatusRow {
-  label: string;
-  running: boolean;
-  detail: string;
 }
 
 /**
@@ -35,7 +28,7 @@ interface DaemonStatusRow {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FormsModule, TitleCasePipe],
+  imports: [FormsModule, TitleCasePipe, TranslateModule],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
@@ -48,7 +41,6 @@ export default class SettingsComponent implements OnInit {
     { id: 'recording', label: 'Recording', ready: true },
     { id: 'surveillance', label: 'Surveillance', ready: true },
     { id: 'overlay', label: 'Status overlay', ready: true },
-    { id: 'daemons', label: 'Daemons', ready: true },
     { id: 'privacy', label: 'Privacy & data', ready: true },
   ];
   readonly active = signal<SectionId>('appearance');
@@ -124,45 +116,6 @@ export default class SettingsComponent implements OnInit {
   readonly overlayCamera = signal(true);
   readonly overlayTrip = signal(true);
 
-  // Daemons (read-only, derived from system.getStatus).
-  readonly systemStatus = signal<GetStatusResponse | null>(null);
-  readonly daemonRows = computed<DaemonStatusRow[]>(() => {
-    const s = this.systemStatus();
-    if (!s) return [];
-    const rec = s.recordingStatus;
-    const trip = s.tripStatus;
-    const net = s.network;
-    const cameraRunning = rec?.pipelineRunning ?? false;
-    return [
-      {
-        label: 'Camera Daemon',
-        running: cameraRunning,
-        detail: cameraRunning
-          ? (rec?.isRecording ? `Recording (${rec?.configuredMode || 'NONE'})` : 'Pipeline running')
-          : 'Not running',
-      },
-      {
-        label: 'Surveillance Pipeline',
-        running: s.gpuSurveillance ?? false,
-        detail: s.gpuSurveillance ? 'GPU sentry active' : 'Idle',
-      },
-      {
-        label: 'Trip Analytics',
-        running: trip?.tripActive ?? false,
-        detail: trip?.enabled
-          ? (trip?.tripActive ? 'Trip in progress' : 'Enabled — no active trip')
-          : 'Disabled',
-      },
-      {
-        label: 'HTTP API Server',
-        running: true,
-        detail: net?.lanHttpEnabled
-          ? `LAN HTTP on ${net?.httpBind || 'unknown'}`
-          : `Loopback only (${net?.httpBind || '127.0.0.1:8080'})`,
-      },
-    ];
-  });
-
   // Privacy
   readonly cleanupPreview = signal<PreviewCleanupResponse | null>(null);
   readonly cleanupBusy = signal(false);
@@ -183,7 +136,6 @@ export default class SettingsComponent implements OnInit {
     this.formatConfirm.set(false);
     this.cleanupConfirm.set(false);
     if (id === 'surveillance' && this.safeZones().length === 0) this.loadSurveillance();
-    if (id === 'daemons') this.loadStatus();
     if (id === 'privacy' && !this.storage()) this.loadStorage();
     if (id === 'recording' && !this.storage()) this.loadStorage();
   }
@@ -520,18 +472,12 @@ export default class SettingsComponent implements OnInit {
   private async loadStatus(): Promise<void> {
     try {
       const resp = await this.clients.system.getStatus({});
-      this.systemStatus.set(resp);
       const mode = resp.recordingStatus?.configuredMode;
       if (mode) this.recordingMode.set(mode);
     } catch {
-      // Don't surface this as a global banner — loadStatus runs on init (for the
-      // recording mode) and on the Daemons section. The Daemons section already
-      // shows an empty/unavailable state when systemStatus is null.
+      // Don't surface this as a global banner — loadStatus runs on init to
+      // hydrate recordingMode from the live daemon state.
     }
-  }
-
-  refreshDaemons(): void {
-    this.loadStatus();
   }
 
   // ---- Updates ----

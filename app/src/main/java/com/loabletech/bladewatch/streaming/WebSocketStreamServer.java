@@ -4,6 +4,7 @@ import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -45,17 +46,26 @@ public class WebSocketStreamServer extends WebSocketServer
     private byte[] reusableFrameBuffer = new byte[512 * 1024];
 
     public WebSocketStreamServer() {
-        super(new InetSocketAddress(PORT));
+        super(loopbackAddress(PORT));
         setReuseAddr(true);
         setConnectionLostTimeout(30);
-        logger.info("WebSocketStreamServer created on port " + PORT);
+        logger.info("WebSocketStreamServer created on 127.0.0.1:" + PORT);
     }
 
     public WebSocketStreamServer(int port) {
-        super(new InetSocketAddress(port));
+        super(loopbackAddress(port));
         setReuseAddr(true);
         setConnectionLostTimeout(30);
-        logger.info("WebSocketStreamServer created on port " + port);
+        logger.info("WebSocketStreamServer created on 127.0.0.1:" + port);
+    }
+
+    private static InetSocketAddress loopbackAddress(int port) {
+        try {
+            return new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port);
+        } catch (Exception e) {
+            // Unreachable — "127.0.0.1" is always resolvable
+            return new InetSocketAddress(port);
+        }
     }
 
     public void setIdleShutdownCallback(Runnable callback) {

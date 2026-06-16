@@ -210,8 +210,8 @@
             '   background: var(--bg-hover, rgba(255,255,255,0.06));',
             '   color: var(--text-primary, #fff); }',
             '#bydThemePicker .byd-theme-opt.active {',
-            '   background: rgba(0, 212, 170, 0.12);',
-            '   color: var(--brand-primary, #00D4AA); }',
+            '   background: rgba(0, 212, 255, 0.12);',
+            '   color: var(--brand-primary, #00D4FF); }',
             '#bydThemePicker .byd-theme-opt svg { width: 16px; height: 16px; flex-shrink: 0; }'
         ].join(' ');
         document.head.appendChild(s);

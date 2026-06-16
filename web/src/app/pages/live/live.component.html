@@ -3,13 +3,13 @@
     <canvas #streamCanvas class="stream-canvas"></canvas>
 
     <div class="stream-badge" [class.live]="streamConnected()">
-      {{ streamConnected() ? '● LIVE' : '○ Connecting…' }}
+      {{ streamConnected() ? ('live.badgeLive' | translate) : ('live.badgeConnecting' | translate) }}
     </div>
 
     @if (!streamConnected()) {
       <div class="stream-banner">
-        <span class="banner-text">Camera stream not connected</span>
-        <button type="button" class="banner-retry" (click)="retryStream()">Retry</button>
+        <span class="banner-text">{{ 'live.notConnected' | translate }}</span>
+        <button type="button" class="banner-retry" (click)="retryStream()">{{ 'live.retry' | translate }}</button>
       </div>
     }
   </div>

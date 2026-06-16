@@ -10,6 +10,7 @@ import {
   effect,
 } from '@angular/core';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import * as L from 'leaflet';
 // Leaflet's stylesheet. Imported here as a Vite side-effect import (Vite
 // resolves the bare node_modules specifier and injects it globally) rather than
@@ -69,7 +70,7 @@ const KM_PER_MI = 0.621371;
 @Component({
   selector: 'app-trips',
   standalone: true,
-  imports: [DecimalPipe, UpperCasePipe],
+  imports: [DecimalPipe, UpperCasePipe, TranslateModule],
   templateUrl: './trips.component.html',
   styleUrl: './trips.component.scss',
 })
@@ -448,12 +449,12 @@ export default class TripsComponent implements OnInit, OnDestroy {
     this.endDot?.remove();
 
     this.route = L.polyline(points, {
-      color: '#00D4AA',
+      color: '#00D4FF',
       weight: 4,
       opacity: 0.9,
     }).addTo(map);
 
-    this.startDot = L.marker(points[0], { icon: this.dotIcon('#00D4AA') }).addTo(map);
+    this.startDot = L.marker(points[0], { icon: this.dotIcon('#00D4FF') }).addTo(map);
     this.endDot = L.marker(points[points.length - 1], { icon: this.dotIcon('#EF4444') }).addTo(map);
 
     this.currentPoints = points;

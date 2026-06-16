@@ -620,7 +620,7 @@ class DashboardFragment : Fragment() {
             .setView(container)
             .setPositiveButton(getString(R.string.action_done)) { _, _ ->
                 val pw = input.text?.toString()?.trim().orEmpty()
-                if (pw.length < 4) {
+                if (pw.length < AuthManager.CUSTOM_SECRET_MIN_LENGTH) {
                     Toast.makeText(ctx, getString(R.string.toast_password_too_short), Toast.LENGTH_SHORT).show()
                 } else {
                     setCustomPassword(pw)

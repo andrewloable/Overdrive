@@ -5,30 +5,30 @@
   layouts that reference @color/bg_base etc. flip automatically when the
   user picks dark mode (or follow-system at night).
 
-  Brand teal stays the same in both themes for identity continuity.
+  Brand cyan-blue stays the same in both themes for identity continuity.
 -->
 <resources>
     <!-- Legacy compat colors -->
     <color name="white">#FFFFFFFF</color>
 
     <!-- Brand -->
-    <color name="brand_primary">#5DDBB6</color>
+    <color name="brand_primary">#3CD7FF</color>
     <color name="brand_secondary">#85CFFF</color>
     <color name="brand_cyan">@color/brand_primary</color>
-    <color name="brand_cyan_glow">#335DDBB6</color>
+    <color name="brand_cyan_glow">#333CD7FF</color>
 
     <!-- Backgrounds — M3 surface tonal stack -->
-    <color name="bg_base">#0E1311</color>
-    <color name="bg_surface">#1A1F1D</color>
-    <color name="bg_elevated">#242927</color>
-    <color name="bg_hover">#2F3432</color>
+    <color name="bg_base">#111415</color>
+    <color name="bg_surface">#1D2021</color>
+    <color name="bg_elevated">#272A2C</color>
+    <color name="bg_hover">#2E3132</color>
 
     <color name="surface_variant">@color/bg_elevated</color>
 
     <!-- Text -->
-    <color name="text_primary">#DEE4E0</color>
-    <color name="text_secondary">#BFC9C3</color>
-    <color name="text_muted">#899692</color>
+    <color name="text_primary">#E1E3E4</color>
+    <color name="text_secondary">#BFC8CC</color>
+    <color name="text_muted">#899296</color>
 
     <!-- Borders -->
     <color name="border_default">#26FFFFFF</color>
@@ -36,7 +36,7 @@
     <!-- Floating status overlay — dark variant (charcoal glass + faint
          brand-tinted ring). See values/colors.xml for the light pair. -->
     <color name="overlay_pill_background">#CC16161A</color>
-    <color name="overlay_pill_stroke">#335DDBB6</color>
+    <color name="overlay_pill_stroke">#333CD7FF</color>
 
     <!-- Status -->
     <color name="status_success">#5BD382</color>
@@ -59,7 +59,7 @@
 
     <!-- Switches -->
     <color name="switch_track_on">@color/brand_primary</color>
-    <color name="switch_thumb_on">#003828</color>
+    <color name="switch_thumb_on">#003642</color>
     <color name="switch_track_off">@color/bg_hover</color>
     <color name="switch_thumb_off">@color/text_muted</color>
 

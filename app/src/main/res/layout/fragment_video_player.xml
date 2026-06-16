@@ -16,7 +16,7 @@
     that's the letterbox color, not a theme decision.
 
   Brand correctness:
-    The progress / thumb tint is ?attr/colorPrimary (brand teal), so the
+    The progress / thumb tint is ?attr/colorPrimary (brand cyan-blue), so the
     accent still flips to the dark-mode primary when the rest of the app
     does. The previous build hard-coded #6C63FF (purple) which never
     matched anything in the design system — that has been replaced.
@@ -130,7 +130,7 @@
                 android:layout_height="match_parent" />
         </FrameLayout>
 
-        <!-- Seek bar — brand teal accent so it matches the rest of the app -->
+        <!-- Seek bar — brand cyan-blue accent so it matches the rest of the app -->
         <SeekBar
             android:id="@+id/seekBar"
             android:layout_width="match_parent"

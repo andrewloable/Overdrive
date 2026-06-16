@@ -28,8 +28,8 @@ const TRIPS = {
     // the --chart-* CSS variables (same pattern as performance.js).
     // Brand and tier colours stay theme-independent.
     colors: {
-        brand: '#00D4AA',
-        brandRgba: 'rgba(0, 212, 170, 0.25)',
+        brand: '#00D4FF',
+        brandRgba: 'rgba(0, 212, 255, 0.25)',
         accent: '#0EA5E9',
         danger: '#EF4444',
         warning: '#F59E0B',
@@ -986,7 +986,7 @@ const TRIPS = {
         const tripCost = trip.tripCost || trip.trip_cost || 0;
         // Build cost string: prefer stored cost, then compute from energy, then from SoC
         let costStr = '';
-        const cur = trip.currency || this.currency || '$';
+        const cur = BYD.core._esc(trip.currency || this.currency || '$');
         if (tripCost > 0) {
             costStr = cur + tripCost.toFixed(1);
         } else if (energyUsed > 0 && this.electricityRate > 0) {
@@ -1330,7 +1330,7 @@ const TRIPS = {
                         };
                         const tempLabels = { cold: BYD.i18n.t('trip.temp_label.cold'), mild: BYD.i18n.t('trip.temp_label.mild'), hot: BYD.i18n.t('trip.temp_label.hot') };
                         const styleLabels = { low: BYD.i18n.t('trip.style_label.low'), mid: BYD.i18n.t('trip.style_label.mid'), high: BYD.i18n.t('trip.style_label.high') };
-                        const speedColors = { city: 'rgba(99,102,241,0.15);color:#6366F1', suburban: 'rgba(0,212,170,0.15);color:var(--brand-primary)', highway: 'rgba(245,158,11,0.15);color:var(--warning)' };
+                        const speedColors = { city: 'rgba(99,102,241,0.15);color:#6366F1', suburban: 'rgba(0,212, 255,0.15);color:var(--brand-primary)', highway: 'rgba(245,158,11,0.15);color:var(--warning)' };
                         const tempColors = { cold: 'rgba(14,165,233,0.15);color:#0EA5E9', mild: 'rgba(34,197,94,0.15);color:#22C55E', hot: 'rgba(239,68,68,0.15);color:var(--danger)' };
                         const styleColors = { low: 'rgba(34,197,94,0.15);color:#22C55E', mid: 'rgba(245,158,11,0.15);color:var(--warning)', high: 'rgba(239,68,68,0.15);color:var(--danger)' };
                         const neutralPill = 'rgba(148,163,184,0.18);color:var(--text-muted)';
@@ -1719,7 +1719,7 @@ const TRIPS = {
             const tripEnergy = trip.energyUsedKwh || trip.energy_used_kwh || 0;
             const tripCost = trip.tripCost || trip.trip_cost || 0;
             const avgCost = stats.avgCost || 0;
-            const currency = trip.currency || this.currency || '$';
+            const currency = BYD.core._esc(trip.currency || this.currency || '$');
             const tripDur = trip.durationSeconds || trip.duration_seconds || 0;
             const avgDur = stats.avgDurationSeconds || 0;
             const tripDist = trip.distanceKm || trip.distance_km || 0;
@@ -2040,7 +2040,7 @@ const TRIPS = {
 
         let color, glowColor;
         if (score >= 80) { color = '#22C55E'; glowColor = 'rgba(34,197,94,0.3)'; }
-        else if (score >= 60) { color = '#00D4AA'; glowColor = 'rgba(0,212,170,0.3)'; }
+        else if (score >= 60) { color = '#00D4FF'; glowColor = 'rgba(0,212, 255,0.3)'; }
         else if (score >= 40) { color = '#F59E0B'; glowColor = 'rgba(245,158,11,0.3)'; }
         else { color = '#EF4444'; glowColor = 'rgba(239,68,68,0.3)'; }
 
@@ -2096,8 +2096,8 @@ const TRIPS = {
                 card.style.background = 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)';
                 card.style.borderColor = 'rgba(34,197,94,0.2)';
             } else if (score >= 60) {
-                card.style.background = 'linear-gradient(135deg, rgba(0,212,170,0.08) 0%, rgba(14,165,233,0.06) 100%)';
-                card.style.borderColor = 'rgba(0,212,170,0.15)';
+                card.style.background = 'linear-gradient(135deg, rgba(0,212, 255,0.08) 0%, rgba(14,165,233,0.06) 100%)';
+                card.style.borderColor = 'rgba(0,212, 255,0.15)';
             } else if (score >= 40) {
                 card.style.background = 'linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(245,158,11,0.04) 100%)';
                 card.style.borderColor = 'rgba(245,158,11,0.2)';
@@ -2505,7 +2505,7 @@ const TRIPS = {
             ctx.beginPath();
             ctx.moveTo(x, pad.top);
             ctx.lineTo(x, pad.top + ch);
-            ctx.strokeStyle = 'rgba(0,212,170,0.6)';
+            ctx.strokeStyle = 'rgba(0,212, 255,0.6)';
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
             ctx.stroke();
@@ -2528,7 +2528,7 @@ const TRIPS = {
             ctx.beginPath();
             ctx.roundRect(tx, ty, tw, 70, 6);
             ctx.fill();
-            ctx.strokeStyle = 'rgba(0,212,170,0.3)';
+            ctx.strokeStyle = 'rgba(0,212, 255,0.3)';
             ctx.lineWidth = 1;
             ctx.stroke();
 

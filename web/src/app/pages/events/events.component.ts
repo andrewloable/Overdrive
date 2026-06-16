@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import {
   VideoPlayerComponent,
@@ -10,7 +11,7 @@ import type { RecordingEntry } from '../../../gen/bladewatch/v1/recordings_pb';
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [DatePipe, VideoPlayerComponent],
+  imports: [DatePipe, VideoPlayerComponent, TranslateModule],
   templateUrl: './events.component.html',
   styleUrl: './events.component.scss',
 })

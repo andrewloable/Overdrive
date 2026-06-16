@@ -1,27 +1,27 @@
 <div class="page">
   <div class="page-header">
-    <h1>About</h1>
+    <h1>{{ 'about.title' | translate }}</h1>
   </div>
 
   @if (loading()) {
-    <div class="loading">Loading…</div>
+    <div class="loading">{{ 'about.loading' | translate }}</div>
   } @else {
     <!-- Identity card: brand + version + build/package -->
     <div class="card">
       <div class="info-row">
-        <span class="info-label">App Version</span>
+        <span class="info-label">{{ 'about.app_version' | translate }}</span>
         <span class="info-value">{{ appVersion() || '—' }}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Build</span>
+        <span class="info-label">{{ 'about.build' | translate }}</span>
         <span class="info-value mono">{{ packageId }}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Device ID</span>
+        <span class="info-label">{{ 'about.device_id' | translate }}</span>
         <span class="info-value mono">{{ deviceId() || '—' }}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Platform</span>
+        <span class="info-label">{{ 'about.platform' | translate }}</span>
         <span class="info-value">BYD DiLink v3 (Android 10+)</span>
       </div>
     </div>
@@ -29,8 +29,8 @@
     <!-- License card -> full MIT text -->
     <button type="button" class="card card-action" (click)="open('license')">
       <div class="card-action-text">
-        <div class="section-title">License</div>
-        <p class="about-text">MIT License — tap to read the full text.</p>
+        <div class="section-title">{{ 'about.license' | translate }}</div>
+        <p class="about-text">{{ 'about.license_summary' | translate }}</p>
       </div>
       <span class="chevron">›</span>
     </button>
@@ -38,16 +38,16 @@
     <!-- Getting Started card -> setup steps -->
     <button type="button" class="card card-action" (click)="open('setup')">
       <div class="card-action-text">
-        <div class="section-title">Getting Started</div>
-        <p class="about-text">Three quick steps to get the best experience.</p>
+        <div class="section-title">{{ 'about.getting_started' | translate }}</div>
+        <p class="about-text">{{ 'about.getting_started_summary' | translate }}</p>
       </div>
       <span class="chevron">›</span>
     </button>
 
     <div class="card">
       <div class="section-title">BladeWatch</div>
-      <p class="about-text">Advanced sentry mode and dashcam system for BYD vehicles.</p>
-      <p class="about-text">Your data stays on your device. No cloud required.</p>
+      <p class="about-text">{{ 'about.tagline' | translate }}</p>
+      <p class="about-text">{{ 'about.privacy_note' | translate }}</p>
     </div>
   }
 
@@ -56,8 +56,8 @@
     <div class="modal-backdrop" (click)="close()">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h2>License</h2>
-          <button type="button" class="modal-close" (click)="close()" aria-label="Close">✕</button>
+          <h2>{{ 'about.license' | translate }}</h2>
+          <button type="button" class="modal-close" (click)="close()" [attr.aria-label]="'about.close' | translate">✕</button>
         </div>
         <pre class="license-text">{{ licenseText }}</pre>
       </div>
@@ -69,10 +69,10 @@
     <div class="modal-backdrop" (click)="close()">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h2>Getting Started</h2>
-          <button type="button" class="modal-close" (click)="close()" aria-label="Close">✕</button>
+          <h2>{{ 'about.getting_started' | translate }}</h2>
+          <button type="button" class="modal-close" (click)="close()" [attr.aria-label]="'about.close' | translate">✕</button>
         </div>
-        <p class="modal-subtitle">Three quick steps to get the best experience:</p>
+        <p class="modal-subtitle">{{ 'about.setup_subtitle' | translate }}</p>
         <ol class="setup-steps">
           @for (step of setupSteps; track step.title) {
             <li class="setup-step">

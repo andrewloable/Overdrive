@@ -24,7 +24,7 @@ public class SafeLocation {
 
     public SafeLocation(String name, double latitude, double longitude, int radiusMeters) {
         this.id = UUID.randomUUID().toString().substring(0, 8);
-        this.name = name;
+        this.name = sanitizeName(name);
         this.latitude = latitude;
         this.longitude = longitude;
         this.radiusMeters = Math.max(50, Math.min(500, radiusMeters));
@@ -35,7 +35,7 @@ public class SafeLocation {
     /** Deserialize from JSON */
     public SafeLocation(JSONObject json) {
         this.id = json.optString("id", UUID.randomUUID().toString().substring(0, 8));
-        this.name = json.optString("name", "Unnamed");
+        this.name = sanitizeName(json.optString("name", "Unnamed"));
         this.latitude = json.optDouble("lat", 0.0);
         this.longitude = json.optDouble("lng", 0.0);
         this.radiusMeters = json.optInt("radiusM", 150);
@@ -70,9 +70,17 @@ public class SafeLocation {
     public long getCreatedAt() { return createdAt; }
 
     // Setters
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) { this.name = sanitizeName(name); }
     public void setLatitude(double lat) { this.latitude = lat; }
     public void setLongitude(double lng) { this.longitude = lng; }
     public void setRadiusMeters(int r) { this.radiusMeters = Math.max(50, Math.min(500, r)); }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    /** Strip HTML-injection chars and cap length. */
+    private static String sanitizeName(String name) {
+        if (name == null || name.trim().isEmpty()) return "Unnamed";
+        String cleaned = name.replace("<", "").replace(">", "").trim();
+        if (cleaned.isEmpty()) return "Unnamed";
+        return cleaned.length() > 64 ? cleaned.substring(0, 64) : cleaned;
+    }
 }

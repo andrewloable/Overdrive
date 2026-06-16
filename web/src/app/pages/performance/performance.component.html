@@ -1,10 +1,10 @@
 <div class="page">
   <div class="page-header">
-    <h1>Performance</h1>
+    <h1>{{ 'performance.title' | translate }}</h1>
   </div>
 
   @if (loading()) {
-    <div class="loading">Loading metrics…</div>
+    <div class="loading">{{ 'performance.loading_metrics' | translate }}</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
   } @else if (metrics()) {
@@ -12,9 +12,9 @@
 
     <!-- CPU -->
     <div class="metric-card">
-      <div class="metric-title">CPU</div>
+      <div class="metric-title">{{ 'performance.cpu' | translate }}</div>
       <div class="metric-bar-row">
-        <span class="metric-bar-label">System Usage</span>
+        <span class="metric-bar-label">{{ 'performance.system_usage' | translate }}</span>
         <div class="metric-bar">
           <div class="metric-fill primary" [style.width.%]="m.cpu.system"
                [class.warn]="m.cpu.system > 70" [class.crit]="m.cpu.system > 90"></div>
@@ -22,23 +22,23 @@
         <span class="metric-bar-value">{{ m.cpu.system | number:'1.0-1' }}%</span>
       </div>
       <div class="metric-bar-row">
-        <span class="metric-bar-label">App Usage</span>
+        <span class="metric-bar-label">{{ 'performance.app_usage' | translate }}</span>
         <div class="metric-bar">
           <div class="metric-fill secondary" [style.width.%]="m.cpu.app"></div>
         </div>
         <span class="metric-bar-value">{{ m.cpu.app | number:'1.0-1' }}%</span>
       </div>
       <div class="metric-grid">
-        <div class="grid-cell"><span class="grid-label">Frequency</span><span class="grid-value">{{ m.cpu.freqMhz | number:'1.0-0' }} MHz</span></div>
-        <div class="grid-cell"><span class="grid-label">Temperature</span><span class="grid-value">{{ m.cpu.tempC > 0 ? (m.cpu.tempC | number:'1.0-1') + '°C' : 'N/A' }}</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.frequency' | translate }}</span><span class="grid-value">{{ m.cpu.freqMhz | number:'1.0-0' }} MHz</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.temperature' | translate }}</span><span class="grid-value">{{ m.cpu.tempC > 0 ? (m.cpu.tempC | number:'1.0-1') + '°C' : ('performance.na' | translate) }}</span></div>
       </div>
     </div>
 
     <!-- Memory -->
     <div class="metric-card">
-      <div class="metric-title">Memory</div>
+      <div class="metric-title">{{ 'performance.memory' | translate }}</div>
       <div class="metric-bar-row">
-        <span class="metric-bar-label">Usage</span>
+        <span class="metric-bar-label">{{ 'performance.usage' | translate }}</span>
         <div class="metric-bar">
           <div class="metric-fill tertiary" [style.width.%]="m.memory.usagePercent"
                [class.warn]="m.memory.usagePercent > 70" [class.crit]="m.memory.usagePercent > 90"></div>
@@ -46,17 +46,17 @@
         <span class="metric-bar-value">{{ m.memory.usagePercent | number:'1.0-1' }}%</span>
       </div>
       <div class="metric-grid">
-        <div class="grid-cell"><span class="grid-label">Total</span><span class="grid-value">{{ m.memory.totalMb | number:'1.0-0' }} MB</span></div>
-        <div class="grid-cell"><span class="grid-label">Used</span><span class="grid-value">{{ m.memory.usedMb | number:'1.0-0' }} MB</span></div>
-        <div class="grid-cell"><span class="grid-label">App</span><span class="grid-value">{{ m.memory.appTotalMb | number:'1.0-1' }} MB</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.total' | translate }}</span><span class="grid-value">{{ m.memory.totalMb | number:'1.0-0' }} MB</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.used' | translate }}</span><span class="grid-value">{{ m.memory.usedMb | number:'1.0-0' }} MB</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.app' | translate }}</span><span class="grid-value">{{ m.memory.appTotalMb | number:'1.0-1' }} MB</span></div>
       </div>
     </div>
 
     <!-- GPU -->
     <div class="metric-card">
-      <div class="metric-title">GPU</div>
+      <div class="metric-title">{{ 'performance.gpu' | translate }}</div>
       <div class="metric-bar-row">
-        <span class="metric-bar-label">Usage</span>
+        <span class="metric-bar-label">{{ 'performance.usage' | translate }}</span>
         <div class="metric-bar">
           <div class="metric-fill error" [style.width.%]="m.gpu.usage"
                [class.warn]="m.gpu.usage > 70" [class.crit]="m.gpu.usage > 90"></div>
@@ -64,24 +64,24 @@
         <span class="metric-bar-value">{{ m.gpu.usage | number:'1.0-1' }}%</span>
       </div>
       <div class="metric-grid">
-        <div class="grid-cell"><span class="grid-label">Frequency</span><span class="grid-value">{{ m.gpu.freqMhz | number:'1.0-0' }} MHz</span></div>
-        <div class="grid-cell"><span class="grid-label">Temperature</span><span class="grid-value">{{ m.gpu.tempC > 0 ? (m.gpu.tempC | number:'1.0-1') + '°C' : 'N/A' }}</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.frequency' | translate }}</span><span class="grid-value">{{ m.gpu.freqMhz | number:'1.0-0' }} MHz</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.temperature' | translate }}</span><span class="grid-value">{{ m.gpu.tempC > 0 ? (m.gpu.tempC | number:'1.0-1') + '°C' : ('performance.na' | translate) }}</span></div>
       </div>
     </div>
 
     <!-- App Process -->
     <div class="metric-card">
-      <div class="metric-title">App Process</div>
+      <div class="metric-title">{{ 'performance.app_process' | translate }}</div>
       <div class="metric-grid">
-        <div class="grid-cell"><span class="grid-label">Threads</span><span class="grid-value">{{ m.app.threads }}</span></div>
-        <div class="grid-cell"><span class="grid-label">GC Cycles</span><span class="grid-value">{{ m.app.gcCount }}</span></div>
-        <div class="grid-cell"><span class="grid-label">Open FDs</span><span class="grid-value">{{ m.app.openFds }}</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.threads' | translate }}</span><span class="grid-value">{{ m.app.threads }}</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.gc_cycles' | translate }}</span><span class="grid-value">{{ m.app.gcCount }}</span></div>
+        <div class="grid-cell"><span class="grid-label">{{ 'performance.open_fds' | translate }}</span><span class="grid-value">{{ m.app.openFds }}</span></div>
       </div>
     </div>
 
     <div class="actions">
       <button class="btn btn-secondary" (click)="playAudioTest()" [disabled]="audioTesting()">
-        {{ audioTesting() ? 'Playing…' : 'Audio Test (3s)' }}
+        {{ audioTesting() ? ('performance.playing' | translate) : ('performance.audio_test' | translate) }}
       </button>
     </div>
   }

@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import type { SurveillanceConfig } from '../../../../gen/bladewatch/v1/surveillance_pb';
 import type { SafeZone } from '../../../../gen/bladewatch/v1/safe_locations_pb';
@@ -8,7 +9,7 @@ import type { SafeZone } from '../../../../gen/bladewatch/v1/safe_locations_pb';
 @Component({
   selector: 'app-surveillance',
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, TranslateModule],
   templateUrl: './surveillance.component.html',
   styleUrl: './surveillance.component.scss',
 })

@@ -42,7 +42,7 @@ public class AuthServiceImpl {
 
     private ConnectResponse handleGetAuthStatus(String requestJson, String clientIdentity) throws ConnectException {
         return ConnectHandlerUtil.captureString(out ->
-                AuthApiHandler.handle("GET", "/auth/status", null, out, null, false));
+                AuthApiHandler.handle("GET", "/auth/status", null, out, clientIdentity, false));
     }
 
     private ConnectResponse handleInvalidateAuthCache(String requestJson, String clientIdentity) throws ConnectException {

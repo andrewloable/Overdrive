@@ -223,7 +223,7 @@ public class AuthManager {
             if (state.deviceId == null || state.deviceId.isEmpty()) {
                 state.deviceId = loadDeviceId();
             }
-            String candidateSecret = generateSecret(8);
+            String candidateSecret = generateSecret(20);
             state.deviceSecret = candidateSecret;
             boolean persisted = writeToConfig(state);
             if (!persisted) {
@@ -372,7 +372,7 @@ public class AuthManager {
             state = fresh;
         }
 
-        String candidate = generateSecret(8);
+        String candidate = generateSecret(20);
         state.deviceSecret = candidate;
         state.tokenEpoch = state.tokenEpoch + 1;
 
@@ -403,8 +403,10 @@ public class AuthManager {
      * minimum length before calling. Returns the new full device token, or
      * null if persistence failed.
      */
+    public static final int CUSTOM_SECRET_MIN_LENGTH = 12;
+
     public static synchronized String setCustomSecret(String customSecret) {
-        if (customSecret == null || customSecret.isEmpty()) return null;
+        if (customSecret == null || customSecret.length() < CUSTOM_SECRET_MIN_LENGTH) return null;
         AuthState state = getState();
         if (state == null) {
             state = new AuthState();
@@ -783,7 +785,7 @@ public class AuthManager {
     // ==================== CRYPTO UTILS ====================
 
     private static String generateSecret(int length) {
-        String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {

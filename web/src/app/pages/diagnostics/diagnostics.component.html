@@ -1,17 +1,17 @@
 <div class="page">
   <div class="page-header">
-    <h1>Diagnostics</h1>
-    <p class="page-sub">System health and tools</p>
+    <h1>{{ 'diagnostics.title' | translate }}</h1>
+    <p class="page-sub">{{ 'diagnostics.subtitle' | translate }}</p>
   </div>
 
   <!-- ===================== HEALTH ===================== -->
-  <div class="section-title">Health</div>
+  <div class="section-title">{{ 'diagnostics.health' | translate }}</div>
 
   <div class="health-grid">
     <!-- Network -->
     <div class="health-tile">
       <div class="tile-head">
-        <span class="tile-label">Network</span>
+        <span class="tile-label">{{ 'diagnostics.network' | translate }}</span>
       </div>
       @let n = network();
       <div class="tile-value">{{ n.topLine }}</div>
@@ -27,7 +27,7 @@
     <!-- Storage -->
     <div class="health-tile">
       <div class="tile-head">
-        <span class="tile-label">Storage</span>
+        <span class="tile-label">{{ 'diagnostics.storage' | translate }}</span>
       </div>
       @let s = storage();
       <div class="tile-value">{{ s.usedLine }}</div>
@@ -39,46 +39,46 @@
     <!-- Camera (clickable -> Camera Probe) -->
     <button type="button" class="health-tile clickable" (click)="openCameraDialog()">
       <div class="tile-head">
-        <span class="tile-label">Camera</span>
+        <span class="tile-label">{{ 'diagnostics.camera' | translate }}</span>
         <span class="dot" [class]="'dot-' + camera().dot"></span>
       </div>
       <div class="tile-value">{{ camera().value }}</div>
       <div class="tile-foot">
-        <span class="tile-foot-text">Tap to reconfigure</span>
+        <span class="tile-foot-text">{{ 'diagnostics.tap_to_reconfigure' | translate }}</span>
       </div>
     </button>
 
     <!-- Battery (clickable -> Battery Health) -->
     <button type="button" class="health-tile clickable" (click)="openBatteryDialog()">
       <div class="tile-head">
-        <span class="tile-label">Battery</span>
+        <span class="tile-label">{{ 'diagnostics.battery' | translate }}</span>
         <span class="dot" [class]="'dot-' + battery().dot"></span>
       </div>
       <div class="tile-value">{{ battery().value }}</div>
       <div class="tile-foot">
-        <span class="tile-foot-text">Tap for battery health</span>
+        <span class="tile-foot-text">{{ 'diagnostics.tap_for_battery_health' | translate }}</span>
       </div>
     </button>
   </div>
 
   <!-- ===================== TOOLS ===================== -->
-  <div class="section-title tools-title">Tools</div>
+  <div class="section-title tools-title">{{ 'diagnostics.tools' | translate }}</div>
 
   <div class="tools-grid">
     <button type="button" class="tool-card" (click)="openCameraDialog()">
-      <span class="tool-label">Camera probe</span>
+      <span class="tool-label">{{ 'diagnostics.camera_probe' | translate }}</span>
     </button>
 
     <button type="button" class="tool-card" (click)="openBatteryDialog()">
-      <span class="tool-label">Battery health</span>
+      <span class="tool-label">{{ 'diagnostics.battery_health' | translate }}</span>
     </button>
 
     <a class="tool-card" routerLink="/performance">
-      <span class="tool-label">Performance</span>
+      <span class="tool-label">{{ 'diagnostics.performance' | translate }}</span>
     </a>
 
     <a class="tool-card" routerLink="/settings">
-      <span class="tool-label">Settings</span>
+      <span class="tool-label">{{ 'diagnostics.settings' | translate }}</span>
     </a>
   </div>
 </div>
@@ -87,10 +87,9 @@
 @if (cameraDialogOpen()) {
   <div class="dialog-overlay" (click)="closeCameraDialog()">
     <div class="dialog" (click)="$event.stopPropagation()">
-      <div class="dialog-title">Camera probe</div>
+      <div class="dialog-title">{{ 'diagnostics.camera_probe' | translate }}</div>
       <p class="dialog-desc">
-        Choose Auto to let BladeWatch detect the camera, or pin a specific camera index.
-        Changes apply on the next camera restart.
+        {{ 'diagnostics.camera_probe_desc' | translate }}
       </p>
 
       <div class="radio-list">
@@ -100,7 +99,7 @@
             name="cameraSel"
             [checked]="cameraSelection() === -1"
             (change)="selectCamera(-1)" />
-          <span class="radio-text">Auto</span>
+          <span class="radio-text">{{ 'diagnostics.auto' | translate }}</span>
         </label>
 
         @for (id of cameraOptions; track id) {
@@ -120,9 +119,9 @@
       }
 
       <div class="dialog-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeCameraDialog()">Close</button>
+        <button type="button" class="btn btn-secondary" (click)="closeCameraDialog()">{{ 'diagnostics.close' | translate }}</button>
         <button type="button" class="btn btn-primary" (click)="saveCamera()" [disabled]="cameraSaving()">
-          {{ cameraSaving() ? 'Saving…' : 'Save' }}
+          {{ cameraSaving() ? ('diagnostics.saving' | translate) : ('diagnostics.save' | translate) }}
         </button>
       </div>
     </div>
@@ -133,25 +132,25 @@
 @if (batteryDialogOpen()) {
   <div class="dialog-overlay" (click)="closeBatteryDialog()">
     <div class="dialog" (click)="$event.stopPropagation()">
-      <div class="dialog-title">Battery health</div>
+      <div class="dialog-title">{{ 'diagnostics.battery_health' | translate }}</div>
 
       @let sh = soh();
       <div class="soh-hero">
         <span class="soh-percent">{{ sohPercentLabel() }}</span>
-        <span class="soh-caption">State of Health</span>
+        <span class="soh-caption">{{ 'diagnostics.state_of_health' | translate }}</span>
       </div>
 
       <div class="info-grid">
         <div class="info-cell">
-          <span class="info-label">Source</span>
+          <span class="info-label">{{ 'diagnostics.source' | translate }}</span>
           <span class="info-value">{{ sh.displaySource || '—' }}</span>
         </div>
         <div class="info-cell">
-          <span class="info-label">Nominal capacity</span>
+          <span class="info-label">{{ 'diagnostics.nominal_capacity' | translate }}</span>
           <span class="info-value">{{ sh.nominalCapacityKwh > 0 ? (sh.nominalCapacityKwh.toFixed(1) + ' kWh') : '—' }}</span>
         </div>
         <div class="info-cell">
-          <span class="info-label">Calibration</span>
+          <span class="info-label">{{ 'diagnostics.calibration' | translate }}</span>
           <span class="info-value">{{ sh.nominalSource || '—' }}</span>
         </div>
       </div>
@@ -161,9 +160,9 @@
       }
 
       <div class="dialog-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">Close</button>
+        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">{{ 'diagnostics.close' | translate }}</button>
         <button type="button" class="btn btn-danger" (click)="resetSoh()" [disabled]="sohResetting()">
-          {{ sohResetting() ? 'Resetting…' : 'Reset SOH' }}
+          {{ sohResetting() ? ('diagnostics.resetting' | translate) : ('diagnostics.reset_soh' | translate) }}
         </button>
       </div>
     </div>

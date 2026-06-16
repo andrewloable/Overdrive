@@ -1,8 +1,8 @@
 <div class="page">
   <div class="page-header">
-    <h1>Recordings</h1>
+    <h1>{{ 'recording.title' | translate }}</h1>
     @if (usedBytes() > 0) {
-      <div class="stats-bar">{{ usedMb() | number }} MB · {{ totalCount() | number }} files</div>
+      <div class="stats-bar">{{ usedMb() | number }} {{ 'recording.mb' | translate }} · {{ totalCount() | number }} {{ 'recording.files' | translate }}</div>
     }
   </div>
 
@@ -15,33 +15,33 @@
       [class.active]="segment() === 'DASHCAM'"
       (click)="setSegment('DASHCAM')"
     >
-      Dashcam <span class="seg-count">{{ dashcamCount() | number }}</span>
+      {{ 'recording.dashcam' | translate }} <span class="seg-count">{{ dashcamCount() | number }}</span>
     </button>
     <button
       class="segment"
       [class.active]="segment() === 'SURVEILLANCE'"
       (click)="setSegment('SURVEILLANCE')"
     >
-      Surveillance <span class="seg-count">{{ surveillanceCount() | number }}</span>
+      {{ 'recording.surveillance' | translate }} <span class="seg-count">{{ surveillanceCount() | number }}</span>
     </button>
   </div>
 
   <!-- Date navigation -->
   <div class="date-row">
     <div class="date-presets">
-      <button class="date-pill" [class.active]="dateLabel() === 'Today'" (click)="goToday()">Today</button>
-      <button class="date-pill" [class.active]="dateLabel() === 'Yesterday'" (click)="goYesterday()">Yesterday</button>
-      <button class="date-pill" [class.active]="dateMode() === 'ALL'" (click)="setDateMode('ALL')">All</button>
+      <button class="date-pill" [class.active]="dateLabel() === 'Today'" (click)="goToday()">{{ 'recording.today' | translate }}</button>
+      <button class="date-pill" [class.active]="dateLabel() === 'Yesterday'" (click)="goYesterday()">{{ 'recording.yesterday' | translate }}</button>
+      <button class="date-pill" [class.active]="dateMode() === 'ALL'" (click)="setDateMode('ALL')">{{ 'recording.all' | translate }}</button>
     </div>
     @if (dateMode() === 'DAY') {
       <div class="date-nav">
-        <button class="date-arrow" (click)="shiftDay(-1)" aria-label="Previous day">‹</button>
+        <button class="date-arrow" (click)="shiftDay(-1)" [attr.aria-label]="'recording.previous_day' | translate">‹</button>
         <span class="date-label">{{ dateLabel() }}</span>
         <button
           class="date-arrow"
           (click)="shiftDay(1)"
           [disabled]="!canGoNextDay()"
-          aria-label="Next day"
+          [attr.aria-label]="'recording.next_day' | translate"
         >›</button>
       </div>
     } @else {
@@ -52,28 +52,28 @@
   <!-- Filter chips: per-segment -->
   @if (segment() === 'SURVEILLANCE') {
     <div class="chip-row">
-      <span class="chip-group-label">Who</span>
+      <span class="chip-group-label">{{ 'recording.who' | translate }}</span>
       @for (c of actorChips; track c.key) {
         <button class="chip" [class.active]="isActor(c.key)" (click)="toggleActor(c.key)">{{ c.label }}</button>
       }
     </div>
     <div class="chip-row">
-      <span class="chip-group-label">Severity</span>
+      <span class="chip-group-label">{{ 'recording.severity' | translate }}</span>
       @for (c of severityChips; track c.key) {
         <button class="chip" [class.active]="isSeverity(c.key)" (click)="toggleSeverity(c.key)">{{ c.label }}</button>
       }
       @if (chipsActive()) {
-        <button class="chip chip-reset" (click)="resetChips()">Reset</button>
+        <button class="chip chip-reset" (click)="resetChips()">{{ 'recording.reset' | translate }}</button>
       }
     </div>
   } @else {
     <div class="chip-row">
-      <span class="chip-group-label">Type</span>
+      <span class="chip-group-label">{{ 'recording.type' | translate }}</span>
       @for (c of typeChips; track c.key) {
         <button class="chip" [class.active]="isType(c.key)" (click)="toggleType(c.key)">{{ c.label }}</button>
       }
       @if (chipsActive()) {
-        <button class="chip chip-reset" (click)="resetChips()">Reset</button>
+        <button class="chip chip-reset" (click)="resetChips()">{{ 'recording.reset' | translate }}</button>
       }
     </div>
   }
@@ -81,26 +81,26 @@
   <!-- Multi-select toolbar -->
   <div class="select-bar">
     @if (selectMode()) {
-      <span class="select-count">{{ selectedCount() | number }} selected</span>
+      <span class="select-count">{{ selectedCount() | number }} {{ 'recording.selected' | translate }}</span>
       <button class="select-action" (click)="selectAllVisible()">
-        {{ allVisibleSelected() ? 'Deselect All' : 'Select All' }}
+        {{ (allVisibleSelected() ? 'recording.deselect_all' : 'recording.select_all') | translate }}
       </button>
       <button
         class="select-action danger"
         (click)="deleteSelected()"
         [disabled]="selectedCount() === 0"
-      >Delete</button>
-      <button class="select-action" (click)="exitSelect()">Cancel</button>
+      >{{ 'recording.delete' | translate }}</button>
+      <button class="select-action" (click)="exitSelect()">{{ 'recording.cancel' | translate }}</button>
     } @else {
-      <span class="select-count">{{ visibleCount() | number }} clips</span>
+      <span class="select-count">{{ visibleCount() | number }} {{ 'recording.clips' | translate }}</span>
       @if (visibleCount() > 0) {
-        <button class="select-action" (click)="enterSelect()">Select</button>
+        <button class="select-action" (click)="enterSelect()">{{ 'recording.select' | translate }}</button>
       }
     }
   </div>
 
   @if (loading()) {
-    <div class="loading">Loading…</div>
+    <div class="loading">{{ 'recording.loading' | translate }}</div>
   } @else if (error()) {
     <div class="error-card">{{ error() }}</div>
   } @else {
@@ -127,7 +127,7 @@
             <div class="rec-type-badge" [class]="typeName(rec.type)">{{ typeName(rec.type) }}</div>
           </div>
           @if (!selectMode()) {
-            <button class="delete-btn" (click)="deleteRecording(rec, $event)" title="Delete">
+            <button class="delete-btn" (click)="deleteRecording(rec, $event)" [title]="'recording.delete' | translate">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
                 <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -136,7 +136,7 @@
           }
         </div>
       } @empty {
-        <div class="empty-text">No recordings found.</div>
+        <div class="empty-text">{{ 'recording.no_recordings_found' | translate }}</div>
       }
     </div>
   }

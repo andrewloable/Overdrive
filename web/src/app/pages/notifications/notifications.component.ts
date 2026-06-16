@@ -1,12 +1,13 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import type { PushSubscriptionRecord } from '../../../../gen/bladewatch/v1/notifications_pb';
 
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslateModule],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.scss',
 })

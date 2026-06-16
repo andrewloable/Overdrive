@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 type Tab = 'climate' | 'seats' | 'windows';
@@ -15,7 +16,7 @@ interface GpsLocation { lat: number; lng: number; accuracy?: number; }
 @Component({
   selector: 'app-vehicle',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TranslateModule],
   templateUrl: './vehicle.component.html',
   styleUrl: './vehicle.component.scss',
 })

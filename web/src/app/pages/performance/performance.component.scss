@@ -42,9 +42,9 @@
   height: 100%;
   border-radius: 3px;
   transition: width 0.5s ease;
-  background: var(--brand-primary, #00D4AA);
+  background: var(--brand-primary, #00D4FF);
 
-  &.primary   { background: var(--brand-primary, #00D4AA); }
+  &.primary   { background: var(--brand-primary, #00D4FF); }
   &.secondary { background: #6366F1; }
   &.tertiary  { background: #14B8A6; }
   &.error     { background: #F97316; }

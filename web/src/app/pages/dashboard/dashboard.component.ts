@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import QRCode from 'qrcode';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import { toast } from '../../shared/page-utils';
@@ -51,7 +52,7 @@ interface SohStatus {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslateModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -243,36 +244,25 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   // ============================ Week stats ============================
 
   /**
-   * Rolls up TripsService.GetSummary({days:7}) WeeklyRollup JSON blobs into one
-   * "This Week" total. Mirrors the native dashboard + the Trips screen so the
-   * numbers never disagree. Keys: tripCount, totalDistanceKm,
-   * totalDurationSeconds.
+   * Rolls up TripsService.ListTrips({days:7, limit:100}) into "This Week" totals.
+   * Mirrors the native DashboardFragment exactly — same RPC, same fields — so
+   * the numbers are always consistent between the app and the webapp.
    */
   private async refreshWeek(): Promise<void> {
     try {
-      const resp = await this.clients.trips.getSummary({ days: 7 });
-      const entries = resp.summary ?? [];
-      let tripCount = 0;
+      const resp = await this.clients.trips.listTrips({ days: 7, limit: 100 });
+      const trips = resp.trips ?? [];
       let totalDistanceKm = 0;
       let totalDurationSeconds = 0;
-      let parsed = 0;
-      for (const e of entries) {
-        let r: Record<string, any>;
-        try {
-          r = JSON.parse(e.rollupJson) as Record<string, any>;
-        } catch {
-          continue;
-        }
-        parsed++;
-        tripCount += Number(r['tripCount'] ?? 0);
-        totalDistanceKm += Number(r['totalDistanceKm'] ?? 0);
-        totalDurationSeconds += Number(r['totalDurationSeconds'] ?? 0);
+      for (const t of trips) {
+        totalDistanceKm += t.distanceKm;
+        totalDurationSeconds += t.durationSeconds;
       }
       this.week.set({
-        tripCount,
+        tripCount: trips.length,
         totalDistanceKm,
         totalDurationSeconds,
-        loaded: parsed > 0 || resp.success,
+        loaded: true,
       });
     } catch {
       this.week.set({ tripCount: 0, totalDistanceKm: 0, totalDurationSeconds: 0, loaded: false });

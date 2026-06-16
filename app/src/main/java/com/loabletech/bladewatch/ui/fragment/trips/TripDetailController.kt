@@ -223,7 +223,7 @@ internal class TripDetailController(
         mapView.overlays.clear()
         if (points.size < 2) {
             mapView.visibility = View.GONE
-            mapStatusText.text = "No route data for this trip"
+            mapStatusText.text = context.getString(R.string.trip_no_route_data)
             mapStatusText.visibility = View.VISIBLE
             return
         }

@@ -366,16 +366,10 @@ public class HttpServer {
             }
 
             // Route auth endpoints (all public). The /auth/token endpoint is
-            // rate-limited by client identity (real IP via X-Forwarded-For if
-            // present, else socket) to slow brute-force attempts via tunnels.
+            // rate-limited by socket address. We never key on X-Forwarded-For
+            // because it is client-controlled — rotating it defeats per-IP limits.
             if (path.startsWith("/auth/")) {
-                String identity;
-                if (forwardedFor != null && !forwardedFor.isEmpty()) {
-                    int comma = forwardedFor.indexOf(',');
-                    identity = (comma > 0 ? forwardedFor.substring(0, comma) : forwardedFor).trim();
-                } else {
-                    identity = String.valueOf(client.getRemoteSocketAddress());
-                }
+                String identity = String.valueOf(client.getRemoteSocketAddress());
                 AuthApiHandler.handle(method, path, body, out, identity, hasTunnelHeaders);
                 client.close();
                 return;
@@ -408,14 +402,10 @@ public class HttpServer {
                 return;
             }
 
-            // Derive client identity (X-Forwarded-For / socket) for Connect rate limiting.
-            String connectClientIdentity;
-            if (forwardedFor != null && !forwardedFor.isEmpty()) {
-                int comma = forwardedFor.indexOf(',');
-                connectClientIdentity = (comma > 0 ? forwardedFor.substring(0, comma) : forwardedFor).trim();
-            } else {
-                connectClientIdentity = String.valueOf(client.getRemoteSocketAddress());
-            }
+            // Derive client identity for Connect rate limiting. Always use the
+            // real TCP peer — X-Forwarded-For is client-controlled and must not
+            // be trusted for rate-limit keying.
+            String connectClientIdentity = String.valueOf(client.getRemoteSocketAddress());
 
             // Route to modular handlers first
             if (routeToHandlers(method, path, body, rangeHeader, ifNoneMatchHeader,
@@ -541,6 +531,16 @@ public class HttpServer {
             } else if (path.startsWith("/view/")) {
                 // Legacy view page - redirect
                 HttpResponse.sendHtml(out, "<html><head><meta http-equiv='refresh' content='0;url=/'></head></html>");
+            } else if (path.equals("/favicon.ico") || path.equals("/favicon.png")
+                    || path.equals("/favicon-32x32.png") || path.equals("/favicon-16x16.png")
+                    || path.equals("/apple-touch-icon.png")) {
+                // Favicon / PWA icon files — must be served as files, not caught by the
+                // SPA fallback below. iOS fetches apple-touch-icon without cookies so
+                // these paths are also whitelisted in AuthMiddleware.PUBLIC_PATHS.
+                String filename = path.substring(1);
+                if (!serveStaticFile(out, "angular/" + filename)) {
+                    HttpResponse.sendError(out, 404, "Not Found: " + path);
+                }
             } else {
                 // Angular SPA fallback — serve index.html for all unrecognised paths so
                 // the Angular router can handle the route client-side.

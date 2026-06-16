@@ -1,5 +1,5 @@
 <div class="page">
-  <div class="page-header"><h1>Vehicle Control</h1></div>
+  <div class="page-header"><h1>{{ 'vehicle.title' | translate }}</h1></div>
 
   @if (statusMsg()) {
     <div class="status-banner error">{{ statusMsg() }}</div>
@@ -8,16 +8,16 @@
   <!-- Status pills -->
   <div class="pill-row">
     <div class="pill">
-      <span class="pill-label">Lock</span>
+      <span class="pill-label">{{ 'vehicle.lock' | translate }}</span>
       <span class="pill-value">{{ lockLabel() }}</span>
     </div>
     @if (battery()) {
       <div class="pill">
-        <span class="pill-label">Charge</span>
+        <span class="pill-label">{{ 'vehicle.charge' | translate }}</span>
         <span class="pill-value">{{ battery().soc | number:'1.0-0' }}%</span>
       </div>
       <div class="pill">
-        <span class="pill-label">Range</span>
+        <span class="pill-label">{{ 'vehicle.range' | translate }}</span>
         <span class="pill-value">{{ battery().rangeKm | number:'1.0-0' }} km</span>
       </div>
     }
@@ -31,7 +31,7 @@
           <div class="tpms-pos">{{ t.pos }}</div>
           <div class="tpms-psi">{{ t.psi | number:'1.0-1' }} <span>psi</span></div>
           <div class="tpms-temp">{{ t.tempC | number:'1.0-0' }}°C</div>
-          @if (t.leak) { <div class="tpms-alert">Leak</div> }
+          @if (t.leak) { <div class="tpms-alert">{{ 'vehicle.leak' | translate }}</div> }
         </div>
       }
     </div>
@@ -39,9 +39,9 @@
 
   <!-- Control tabs -->
   <div class="tabs">
-    <button class="tab" [class.active]="tab() === 'climate'" (click)="setTab('climate')">Climate</button>
-    <button class="tab" [class.active]="tab() === 'seats'" (click)="setTab('seats')">Seats</button>
-    <button class="tab" [class.active]="tab() === 'windows'" (click)="setTab('windows')">Windows</button>
+    <button class="tab" [class.active]="tab() === 'climate'" (click)="setTab('climate')">{{ 'vehicle.climate' | translate }}</button>
+    <button class="tab" [class.active]="tab() === 'seats'" (click)="setTab('seats')">{{ 'vehicle.seats' | translate }}</button>
+    <button class="tab" [class.active]="tab() === 'windows'" (click)="setTab('windows')">{{ 'vehicle.windows' | translate }}</button>
   </div>
 
   @switch (tab()) {
@@ -50,19 +50,19 @@
         @if (climate()) {
           @let c = climate();
           <div class="row">
-            <span class="row-label">Air Conditioning</span>
+            <span class="row-label">{{ 'vehicle.air_conditioning' | translate }}</span>
             <button class="toggle" [class.on]="c.acOn" (click)="toggleAc()" [disabled]="busy() === 'ac'">
-              {{ c.acOn ? 'On' : 'Off' }}
+              {{ (c.acOn ? 'vehicle.on' : 'vehicle.off') | translate }}
             </button>
           </div>
           <div class="row">
-            <span class="row-label">Max Cooling</span>
+            <span class="row-label">{{ 'vehicle.max_cooling' | translate }}</span>
             <button class="toggle" [class.on]="c.maxCooling" (click)="toggleMaxCooling()" [disabled]="busy() === 'max'">
-              {{ c.maxCooling ? 'On' : 'Off' }}
+              {{ (c.maxCooling ? 'vehicle.on' : 'vehicle.off') | translate }}
             </button>
           </div>
           <div class="row">
-            <span class="row-label">Temperature</span>
+            <span class="row-label">{{ 'vehicle.temperature' | translate }}</span>
             <div class="stepper">
               <button (click)="changeTemp(-1)" [disabled]="busy() === 'temp'">−</button>
               <span class="stepper-value">{{ c.setpointC | number:'1.0-0' }}°C</span>
@@ -70,7 +70,7 @@
             </div>
           </div>
           <div class="row">
-            <span class="row-label">Fan</span>
+            <span class="row-label">{{ 'vehicle.fan' | translate }}</span>
             <div class="stepper">
               <button (click)="changeFan(-1)" [disabled]="busy() === 'fan'">−</button>
               <span class="stepper-value">{{ c.fanLevel }}</span>
@@ -78,10 +78,10 @@
             </div>
           </div>
           @if (c.insideTempC) {
-            <p class="hint">Cabin: {{ c.insideTempC | number:'1.0-1' }}°C</p>
+            <p class="hint">{{ 'vehicle.cabin' | translate }}: {{ c.insideTempC | number:'1.0-1' }}°C</p>
           }
         } @else {
-          <p class="hint">Climate state unavailable.</p>
+          <p class="hint">{{ 'vehicle.climate_unavailable' | translate }}</p>
         }
       </div>
     }
@@ -90,14 +90,14 @@
       <div class="card">
         @for (seat of ['driver','passenger']; track seat) {
           <div class="seat-block">
-            <div class="seat-title">{{ seat === 'driver' ? 'Driver' : 'Passenger' }}</div>
+            <div class="seat-title">{{ (seat === 'driver' ? 'vehicle.driver' : 'vehicle.passenger') | translate }}</div>
             <div class="row">
-              <span class="row-label">Heat</span>
+              <span class="row-label">{{ 'vehicle.heat' | translate }}</span>
               <button class="cycle" [class.on]="seatHeat($any(seat)) > 0" (click)="cycleSeat($any(seat), 'heat')"
                       [disabled]="busy() === seat + '-heat'">{{ seatLabel(seatHeat($any(seat))) }}</button>
             </div>
             <div class="row">
-              <span class="row-label">Cool / Vent</span>
+              <span class="row-label">{{ 'vehicle.cool_vent' | translate }}</span>
               <button class="cycle" [class.on]="seatVent($any(seat)) > 0" (click)="cycleSeat($any(seat), 'vent')"
                       [disabled]="busy() === seat + '-vent'">{{ seatLabel(seatVent($any(seat))) }}</button>
             </div>
@@ -109,11 +109,11 @@
     @case ('windows') {
       <div class="card">
         <div class="row">
-          <span class="row-label">All Windows</span>
+          <span class="row-label">{{ 'vehicle.all_windows' | translate }}</span>
           <div class="btn-group">
-            <button class="mini" (click)="allWindows('close')" [disabled]="busy() === 'all-close'">Close</button>
-            <button class="mini" (click)="allWindows('vent')" [disabled]="busy() === 'all-vent'">Vent</button>
-            <button class="mini" (click)="allWindows('open')" [disabled]="busy() === 'all-open'">Open</button>
+            <button class="mini" (click)="allWindows('close')" [disabled]="busy() === 'all-close'">{{ 'vehicle.close' | translate }}</button>
+            <button class="mini" (click)="allWindows('vent')" [disabled]="busy() === 'all-vent'">{{ 'vehicle.vent' | translate }}</button>
+            <button class="mini" (click)="allWindows('open')" [disabled]="busy() === 'all-open'">{{ 'vehicle.open' | translate }}</button>
           </div>
         </div>
         @for (w of windowDefs; track w.idx) {
@@ -137,8 +137,8 @@
   <!-- GPS (retained until the dedicated Location screen ships) -->
   <div class="card">
     <div class="section-title">
-      GPS Location
-      <button class="btn-icon" (click)="refreshGps()" title="Refresh" [disabled]="gpsLoading()">
+      {{ 'vehicle.gps_location' | translate }}
+      <button class="btn-icon" (click)="refreshGps()" [title]="'vehicle.refresh' | translate" [disabled]="gpsLoading()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spin]="gpsLoading()">
           <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
         </svg>
@@ -146,7 +146,7 @@
     </div>
 
     @if (gpsLoading()) {
-      <div class="loading-small">Fetching location…</div>
+      <div class="loading-small">{{ 'vehicle.fetching_location' | translate }}</div>
     } @else if (gpsLocation()) {
       @let loc = gpsLocation()!;
       <div class="gps-coords">
@@ -154,11 +154,11 @@
       </div>
       @if (googleMapsUrl()) {
         <a class="maps-link" [href]="googleMapsUrl()" target="_blank" rel="noopener">
-          Open in Google Maps ↗
+          {{ 'vehicle.open_in_google_maps' | translate }} ↗
         </a>
       }
     } @else {
-      <p class="no-gps">No GPS fix available</p>
+      <p class="no-gps">{{ 'vehicle.no_gps_fix' | translate }}</p>
     }
   </div>
 </div>

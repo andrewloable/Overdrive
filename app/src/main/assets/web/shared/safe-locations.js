@@ -174,7 +174,7 @@ window.SafeLocations = {
 
         const marker = L.marker([zone.lat, zone.lng], { title: zone.name })
             .addTo(this.map)
-            .bindPopup(BYD.i18n.t('safe_loc.popup_radius', {name: zone.name, meters: zone.radiusM}));
+            .bindPopup(BYD.i18n.t('safe_loc.popup_radius', {name: BYD.core._esc(zone.name), meters: zone.radiusM}));
 
         this.zoneCircles[zone.id] = circle;
         this.zoneMarkers[zone.id] = marker;
@@ -199,15 +199,15 @@ window.SafeLocations = {
                 <div style="display:flex; align-items:center; justify-content:space-between;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-size:14px;">${z.enabled ? '🟢' : '⚪'}</span>
-                        <span style="font-weight:600; font-size:13px;">${z.name}</span>
+                        <span style="font-weight:600; font-size:13px;">${BYD.core._esc(z.name)}</span>
                         <span style="font-size:11px; color:var(--text-muted);">${z.radiusM}m</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:4px;">
                         <label class="toggle-switch" style="transform:scale(0.75);">
-                            <input type="checkbox" ${z.enabled ? 'checked' : ''} onchange="SafeLocations.toggleZone('${z.id}', this.checked)">
+                            <input type="checkbox" ${z.enabled ? 'checked' : ''} onchange="SafeLocations.toggleZone('${BYD.core._esc(z.id)}', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
-                        <button onclick="SafeLocations.deleteZone('${z.id}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;" title="${BYD.i18n.t('common.delete')}">🗑️</button>
+                        <button onclick="SafeLocations.deleteZone('${BYD.core._esc(z.id)}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;" title="${BYD.i18n.t('common.delete')}">🗑️</button>
                     </div>
                 </div>
             </div>

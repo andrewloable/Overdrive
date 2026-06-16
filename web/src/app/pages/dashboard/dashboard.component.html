@@ -2,101 +2,101 @@
   <!-- ===================== Trip-stats hero ("This Week") ===================== -->
   <section class="hero">
     <div class="hero-head">
-      <span class="hero-eyebrow">This Week</span>
+      <span class="hero-eyebrow">{{ 'dashboard.this_week' | translate }}</span>
       <span class="hero-headline">{{ weekHeadline() }}</span>
     </div>
 
     <div class="hero-stats">
       <div class="hero-stat">
         <span class="hero-stat-value">{{ tripsLabel() }}</span>
-        <span class="hero-stat-label">Trips</span>
+        <span class="hero-stat-label">{{ 'dashboard.trips' | translate }}</span>
       </div>
       <div class="hero-stat">
         <span class="hero-stat-value">{{ distanceLabel() }}</span>
-        <span class="hero-stat-label">Distance</span>
+        <span class="hero-stat-label">{{ 'dashboard.distance' | translate }}</span>
       </div>
       <div class="hero-stat">
         <span class="hero-stat-value">{{ driveTimeLabel() }}</span>
-        <span class="hero-stat-label">Drive time</span>
+        <span class="hero-stat-label">{{ 'dashboard.drive_time' | translate }}</span>
       </div>
     </div>
 
-    <a class="btn btn-primary hero-cta" routerLink="/trips">View all trips</a>
+    <a class="btn btn-primary hero-cta" routerLink="/trips">{{ 'dashboard.view_all_trips' | translate }}</a>
   </section>
 
   <!-- ===================== Status chips ===================== -->
   <div class="chip-row">
     <span class="chip" [class]="'chip-' + tunnelChip()">
       <span class="chip-dot"></span>
-      {{ chipText(tunnelChip(), 'Tunnel · Online', 'Tunnel · Connecting', 'Tunnel · Offline') }}
+      {{ chipText(tunnelChip(), 'dashboard.tunnel_online' | translate, 'dashboard.tunnel_connecting' | translate, 'dashboard.tunnel_offline' | translate) }}
     </span>
     <span class="chip" [class]="'chip-' + servicesChip()">
       <span class="chip-dot"></span>
-      {{ chipText(servicesChip(), 'Services · Up', 'Services · Partial', 'Services · Down') }}
+      {{ chipText(servicesChip(), 'dashboard.services_up' | translate, 'dashboard.services_partial' | translate, 'dashboard.services_down' | translate) }}
     </span>
     <span class="chip" [class]="'chip-' + recordingChip()">
       <span class="chip-dot"></span>
-      {{ chipText(recordingChip(), 'Recording', 'Recording', 'Idle') }}
+      {{ chipText(recordingChip(), 'dashboard.recording' | translate, 'dashboard.recording' | translate, 'dashboard.idle' | translate) }}
     </span>
   </div>
 
   <!-- ===================== Metric tiles ===================== -->
   <div class="metric-grid">
     <a class="metric-tile" routerLink="/live">
-      <span class="metric-label">Live</span>
-      <span class="metric-value">Camera</span>
-      <span class="metric-sub">Open the live feed</span>
+      <span class="metric-label">{{ 'dashboard.live' | translate }}</span>
+      <span class="metric-value">{{ 'dashboard.camera' | translate }}</span>
+      <span class="metric-sub">{{ 'dashboard.open_live_feed' | translate }}</span>
     </a>
 
     <a class="metric-tile" routerLink="/recording">
-      <span class="metric-label">Recordings</span>
+      <span class="metric-label">{{ 'dashboard.recordings' | translate }}</span>
       <span class="metric-value" [class.recording]="recordingChip() === 'on'">
-        {{ recordingChip() === 'on' ? 'REC' : 'Idle' }}
+        {{ recordingChip() === 'on' ? ('dashboard.rec' | translate) : ('dashboard.idle' | translate) }}
       </span>
-      <span class="metric-sub">View clips</span>
+      <span class="metric-sub">{{ 'dashboard.view_clips' | translate }}</span>
     </a>
 
     <a class="metric-tile" routerLink="/diagnostics">
-      <span class="metric-label">Diagnostics</span>
-      <span class="metric-value">Health</span>
-      <span class="metric-sub">Network · Storage · Camera</span>
+      <span class="metric-label">{{ 'dashboard.diagnostics' | translate }}</span>
+      <span class="metric-value">{{ 'dashboard.health' | translate }}</span>
+      <span class="metric-sub">{{ 'dashboard.network_storage_camera' | translate }}</span>
     </a>
 
     <button type="button" class="metric-tile" (click)="openBatteryDialog()">
-      <span class="metric-label">Vehicle</span>
+      <span class="metric-label">{{ 'dashboard.vehicle' | translate }}</span>
       <span class="metric-value">{{ vehicleTileLabel() }}</span>
-      <span class="metric-sub">Battery capacity</span>
+      <span class="metric-sub">{{ 'dashboard.battery_capacity' | translate }}</span>
     </button>
   </div>
 
   <a class="metric-tile metric-wide" routerLink="/vehicle">
-    <span class="metric-label">Vehicle</span>
-    <span class="metric-value">Appearance &amp; controls</span>
-    <span class="metric-sub">Open vehicle page</span>
+    <span class="metric-label">{{ 'dashboard.vehicle' | translate }}</span>
+    <span class="metric-value">{{ 'dashboard.appearance_and_controls' | translate }}</span>
+    <span class="metric-sub">{{ 'dashboard.open_vehicle_page' | translate }}</span>
   </a>
 
   <!-- ===================== Connect card ===================== -->
   <section class="card connect-card">
-    <div class="section-title">Connect</div>
+    <div class="section-title">{{ 'dashboard.connect' | translate }}</div>
 
     <div class="connect-body">
       <div class="qr-box">
         @if (qrDataUrl()) {
-          <img class="qr-img" [src]="qrDataUrl()" alt="QR code for the share link" />
+          <img class="qr-img" [src]="qrDataUrl()" [alt]="'dashboard.qr_alt' | translate" />
         } @else {
-          <div class="qr-placeholder">No URL</div>
+          <div class="qr-placeholder">{{ 'dashboard.no_url' | translate }}</div>
         }
       </div>
 
       <div class="connect-info">
         <div class="info-row">
-          <span class="info-label">Share link</span>
+          <span class="info-label">{{ 'dashboard.share_link' | translate }}</span>
           <button type="button" class="info-value link" (click)="copyUrl()" [title]="tunnelUrl()">
             {{ tunnelUrl() || '—' }}
           </button>
         </div>
         <div class="info-row">
-          <span class="info-label">Device ID</span>
+          <span class="info-label">{{ 'dashboard.device_id' | translate }}</span>
           <button type="button" class="info-value mono" (click)="copyDeviceId()" [title]="deviceId()">
             {{ deviceId() || '—' }}
           </button>
@@ -109,9 +109,7 @@
     }
 
     <p class="connect-note">
-      Scan the QR or tap a value to copy. The access code and password are
-      managed on the device — they can't be viewed or changed from the web for
-      security.
+      {{ 'dashboard.connect_note' | translate }}
     </p>
   </section>
 </div>
@@ -120,20 +118,19 @@
 @if (batteryDialogOpen()) {
   <div class="dialog-overlay" (click)="closeBatteryDialog()">
     <div class="dialog" (click)="$event.stopPropagation()">
-      <div class="dialog-title">Battery capacity</div>
+      <div class="dialog-title">{{ 'dashboard.battery_capacity' | translate }}</div>
       <p class="dialog-desc">
-        Set the nominal usable capacity (kWh) for this vehicle. Used for State of
-        Health and energy estimates.
+        {{ 'dashboard.battery_capacity_desc' | translate }}
       </p>
 
       @let sh = soh();
       <div class="soh-hero">
         <span class="soh-percent">{{ sohPercentLabel() }}</span>
-        <span class="soh-caption">State of Health</span>
+        <span class="soh-caption">{{ 'dashboard.state_of_health' | translate }}</span>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="capInput">Nominal capacity (kWh)</label>
+        <label class="form-label" for="capInput">{{ 'dashboard.nominal_capacity_kwh' | translate }}</label>
         <input
           id="capInput"
           class="form-input"
@@ -142,24 +139,24 @@
           min="8"
           max="120"
           step="0.1"
-          placeholder="e.g. 82.5"
+          [placeholder]="'dashboard.nominal_capacity_placeholder' | translate"
           [value]="capacityInput()"
           (input)="onCapacityInput($any($event.target).value)" />
       </div>
 
       <div class="info-grid">
         <div class="info-cell">
-          <span class="info-cell-label">Source</span>
+          <span class="info-cell-label">{{ 'dashboard.source' | translate }}</span>
           <span class="info-cell-value">{{ sh.nominalSource || '—' }}</span>
         </div>
         <div class="info-cell">
-          <span class="info-cell-label">Current</span>
+          <span class="info-cell-label">{{ 'dashboard.current' | translate }}</span>
           <span class="info-cell-value">
             {{ sh.nominalCapacityKwh > 0 ? (sh.nominalCapacityKwh.toFixed(1) + ' kWh') : '—' }}
           </span>
         </div>
         <div class="info-cell">
-          <span class="info-cell-label">SOH source</span>
+          <span class="info-cell-label">{{ 'dashboard.soh_source' | translate }}</span>
           <span class="info-cell-value">{{ sh.displaySource || '—' }}</span>
         </div>
       </div>
@@ -169,12 +166,12 @@
       }
 
       <div class="dialog-actions">
-        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">Close</button>
+        <button type="button" class="btn btn-secondary" (click)="closeBatteryDialog()">{{ 'dashboard.close' | translate }}</button>
         <button type="button" class="btn btn-danger" (click)="resetCapacity()" [disabled]="sohSaving()">
-          Reset
+          {{ 'dashboard.reset' | translate }}
         </button>
         <button type="button" class="btn btn-primary" (click)="saveCapacity()" [disabled]="sohSaving()">
-          {{ sohSaving() ? 'Saving…' : 'Save' }}
+          {{ sohSaving() ? ('dashboard.saving' | translate) : ('dashboard.save' | translate) }}
         </button>
       </div>
     </div>

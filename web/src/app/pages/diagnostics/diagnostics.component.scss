@@ -182,7 +182,7 @@
 .dialog-msg {
   margin-top: 14px;
   font-size: 13px;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
 }
 
 .dialog-actions {
@@ -211,12 +211,12 @@
   transition: border-color 0.2s, background 0.2s;
 
   &.selected {
-    border-color: var(--brand-primary, #00D4AA);
-    background: rgba(0, 212, 170, 0.08);
+    border-color: var(--brand-primary, #00D4FF);
+    background: rgba(0, 212, 255, 0.08);
   }
 
   input[type='radio'] {
-    accent-color: var(--brand-primary, #00D4AA);
+    accent-color: var(--brand-primary, #00D4FF);
     width: 16px;
     height: 16px;
   }

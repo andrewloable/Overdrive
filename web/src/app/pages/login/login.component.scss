@@ -73,7 +73,7 @@
 
 .device-info-value {
   font-size: 13px;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
   font-family: monospace;
   margin-top: 4px;
 }
@@ -126,8 +126,8 @@
   transition: all 0.2s;
 
   &:focus {
-    border-color: var(--brand-primary, #00D4AA);
-    box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+    border-color: var(--brand-primary, #00D4FF);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
   }
 
   &.input-error {
@@ -163,12 +163,12 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--brand-primary, #00D4AA) 0%, var(--brand-secondary, #0EA5E9) 100%);
+  background: linear-gradient(135deg, var(--brand-primary, #00D4FF) 0%, var(--brand-secondary, #0EA5E9) 100%);
   color: #000;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
   }
 
   &:disabled {

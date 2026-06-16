@@ -27,8 +27,8 @@
 
   &.active {
     color: #000;
-    background: var(--brand-primary, #00D4AA);
-    border-color: var(--brand-primary, #00D4AA);
+    background: var(--brand-primary, #00D4FF);
+    border-color: var(--brand-primary, #00D4FF);
   }
 }
 
@@ -56,8 +56,8 @@
 
   &.active {
     color: #000;
-    background: var(--brand-primary, #00D4AA);
-    border-color: var(--brand-primary, #00D4AA);
+    background: var(--brand-primary, #00D4FF);
+    border-color: var(--brand-primary, #00D4FF);
   }
 }
 
@@ -168,7 +168,7 @@
 .score-fill {
   height: 100%;
   border-radius: 20px;
-  background: var(--brand-primary, #00D4AA);
+  background: var(--brand-primary, #00D4FF);
   transition: width 0.3s ease;
 
   &.good { background: var(--success, #22C55E); }
@@ -195,7 +195,7 @@
 .back-btn {
   background: none;
   border: none;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -278,8 +278,8 @@
 
   &.active {
     color: #000;
-    background: var(--brand-primary, #00D4AA);
-    border-color: var(--brand-primary, #00D4AA);
+    background: var(--brand-primary, #00D4FF);
+    border-color: var(--brand-primary, #00D4FF);
   }
 
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -300,7 +300,7 @@
 
 .sync-result {
   font-size: 13px;
-  color: var(--brand-primary, #00D4AA);
+  color: var(--brand-primary, #00D4FF);
   margin-top: 12px;
 
   &.err { color: var(--danger, #EF4444); }
@@ -310,9 +310,9 @@
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 
 .toast {
-  background: rgba(0,212,170,0.15);
-  border: 1px solid rgba(0,212,170,0.3);
-  color: var(--brand-primary, #00D4AA);
+  background: rgba(0,212, 255,0.15);
+  border: 1px solid rgba(0,212, 255,0.3);
+  color: var(--brand-primary, #00D4FF);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 13px;

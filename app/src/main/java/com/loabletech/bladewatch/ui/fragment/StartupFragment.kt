@@ -120,19 +120,19 @@ class StartupFragment : Fragment() {
         val statusColor: Int
         when (status) {
             DaemonStatus.RUNNING -> {
-                statusText = "RUNNING"
+                statusText = getString(R.string.startup_status_ready)
                 statusColor = requireContext().getColor(R.color.status_running)
             }
             DaemonStatus.STARTING -> {
-                statusText = "STARTING"
+                statusText = getString(R.string.startup_status_starting)
                 statusColor = requireContext().getColor(R.color.status_starting)
             }
             DaemonStatus.ERROR -> {
-                statusText = "ERROR"
+                statusText = getString(R.string.startup_status_failed)
                 statusColor = requireContext().getColor(R.color.status_error)
             }
             else -> {
-                statusText = "WAITING"
+                statusText = getString(R.string.startup_status_waiting)
                 statusColor = requireContext().getColor(R.color.text_muted)
             }
         }
@@ -164,9 +164,9 @@ class StartupFragment : Fragment() {
 
             val states = daemonsViewModel.daemonStates.value ?: emptyMap()
             tvStartupHeader.text = when {
-                coreDaemons.all { states[it]?.status == DaemonStatus.RUNNING } -> "All systems ready"
-                coreDaemons.any { states[it]?.status == DaemonStatus.STARTING } -> "Starting daemons..."
-                else -> "Preparing system..."
+                coreDaemons.all { states[it]?.status == DaemonStatus.RUNNING } -> getString(R.string.startup_header_ready)
+                coreDaemons.any { states[it]?.status == DaemonStatus.STARTING } -> getString(R.string.startup_header_starting)
+                else -> getString(R.string.startup_header_preparing)
             }
 
             for (type in coreDaemons) {
@@ -185,7 +185,7 @@ class StartupFragment : Fragment() {
         if (navigated) return
         val elapsed = (SystemClock.elapsedRealtime() - fragmentCreatedAtMs)
         DebugAppLogger.log("StartupFragment", "All daemons ready at +${elapsed}ms — verifying HTTP health")
-        tvStartupHeader.text = "Verifying systems..."
+        tvStartupHeader.text = getString(R.string.startup_header_verifying)
         verifyDaemonHealth()
     }
 
@@ -210,10 +210,10 @@ class StartupFragment : Fragment() {
                 DebugAppLogger.log("StartupFragment", "HTTP health check passed — navigating to dashboard")
                 handler.post {
                     if (!navigated && isAdded && view != null) {
-                        tvStartupHeader.text = "All systems ready"
+                        tvStartupHeader.text = getString(R.string.startup_header_ready)
                         progressStartup.visibility = View.GONE
                         btnContinueAnyway.visibility = View.VISIBLE
-                        btnContinueAnyway.text = "Continue →"
+                        btnContinueAnyway.text = getString(R.string.startup_continue)
                         handler.postDelayed({ navigateToDashboard() }, 1500)
                     }
                 }

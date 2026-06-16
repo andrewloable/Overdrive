@@ -39,13 +39,13 @@
   font-size: 12px;
   cursor: pointer;
 
-  &:hover { border-color: var(--brand-primary, #00D4AA); }
+  &:hover { border-color: var(--brand-primary, #00D4FF); }
 
   .dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: var(--brand-primary, #00D4AA);
+    background: var(--brand-primary, #00D4FF);
     flex: 0 0 auto;
-    box-shadow: 0 0 0 3px rgba(0,212,170,0.18);
+    box-shadow: 0 0 0 3px rgba(0,212, 255,0.18);
   }
   .url {
     font-family: monospace;

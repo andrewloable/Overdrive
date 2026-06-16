@@ -508,6 +508,9 @@ tasks.register<Exec>("buildAngularWebUI") {
     workingDir = rootProject.file("web")
     commandLine("npm", "run", "build")
     doLast {
+        // Clear stale hashed chunks from previous builds so old assets (and any
+        // pre-rebrand colors baked into them) never ship in the APK.
+        delete(file("src/main/assets/web/angular"))
         copy {
             from(rootProject.file("web/dist"))
             into(file("src/main/assets/web/angular"))

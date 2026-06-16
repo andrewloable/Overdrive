@@ -12,7 +12,7 @@
  *      (currently optional; pages opt in by adding <header class="app-bar">).
  *   3. M3 Expressive active-link affordance: a 3px leading inset stripe in
  *      colorPrimary on the active sidebar link. Replaces the previous
- *      "background: rgba(0, 212, 170, 0.1)" tint that read off-brand under
+ *      "background: rgba(0, 212, 255, 0.1)" tint that read off-brand under
  *      light theme.
  *   4. A no-flash bootstrap rule (html.shell-ready -> visibility:visible)
  *      paired with app-shell.js's mount() event. Pages that opt in by adding

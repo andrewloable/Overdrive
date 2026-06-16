@@ -1,5 +1,5 @@
 <div class="page">
-  <div class="page-header"><h1>Trips</h1></div>
+  <div class="page-header"><h1>{{ 'trips.title' | translate }}</h1></div>
   @if (statusMsg()) { <div class="toast">{{ statusMsg() }}</div> }
 
   <!-- ============================ DETAIL OVERLAY ============================ -->
@@ -7,8 +7,8 @@
     @let s = trip.summary!;
     <div class="detail-view">
       <div class="detail-topbar">
-        <button class="back-btn" (click)="closeDetail()">‹ Back</button>
-        <button class="btn btn-danger btn-sm" (click)="deleteTrip(s)">Delete</button>
+        <button class="back-btn" (click)="closeDetail()">‹ {{ 'trips.back' | translate }}</button>
+        <button class="btn btn-danger btn-sm" (click)="deleteTrip(s)">{{ 'trips.delete' | translate }}</button>
       </div>
 
       <div class="detail-title">{{ detailTitle(s.startTime) }}</div>
@@ -18,51 +18,51 @@
       <div class="map-card">
         <div #mapEl class="route-map"></div>
         @if (!hasRoute()) {
-          <div class="map-empty">No route data for this trip</div>
+          <div class="map-empty">{{ 'trips.no_route_data' | translate }}</div>
         }
       </div>
 
       <!-- Summary grid -->
       <div class="card">
-        <div class="section-title">Trip Summary</div>
+        <div class="section-title">{{ 'trips.trip_summary' | translate }}</div>
         <div class="stat-grid three">
           <div class="stat-card">
-            <div class="stat-label">Distance</div>
+            <div class="stat-label">{{ 'trips.distance' | translate }}</div>
             <div class="stat-value">{{ distanceLabel(s.distanceKm) }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Duration</div>
+            <div class="stat-label">{{ 'trips.duration' | translate }}</div>
             <div class="stat-value">{{ durationLabel(s.durationSeconds) }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Avg Speed</div>
+            <div class="stat-label">{{ 'trips.avg_speed' | translate }}</div>
             <div class="stat-value">{{ speedLabel(s.avgSpeedKmh) }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Max Speed</div>
+            <div class="stat-label">{{ 'trips.max_speed' | translate }}</div>
             <div class="stat-value">{{ speedLabel(s.maxSpeedKmh) }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">SoC</div>
+            <div class="stat-label">{{ 'trips.soc' | translate }}</div>
             <div class="stat-value">{{ s.socStart | number:'1.0-0' }} → {{ s.socEnd | number:'1.0-0' }}%</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Cost</div>
+            <div class="stat-label">{{ 'trips.cost' | translate }}</div>
             <div class="stat-value">
               @if (s.tripCost > 0 && s.currency) { {{ s.currency }} {{ s.tripCost | number:'1.2-2' }} }
               @else { — }
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Ext Temp</div>
+            <div class="stat-label">{{ 'trips.ext_temp' | translate }}</div>
             <div class="stat-value">@if (s.extTempC !== 0) { {{ s.extTempC }}°C } @else { — }</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Elev Gain</div>
+            <div class="stat-label">{{ 'trips.elev_gain' | translate }}</div>
             <div class="stat-value">@if (trip.elevationGainM > 0) { +{{ trip.elevationGainM | number:'1.0-0' }}m } @else { — }</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Score</div>
+            <div class="stat-label">{{ 'trips.score' | translate }}</div>
             <div class="stat-value">@if (s.overallScore > 0) { {{ s.overallScore }} } @else { — }</div>
           </div>
         </div>
@@ -70,7 +70,7 @@
 
       <!-- Driving score bars -->
       <div class="card">
-        <div class="section-title">Driving Scores</div>
+        <div class="section-title">{{ 'trips.driving_scores' | translate }}</div>
         @for (bar of detailScoreBars(); track bar.name) {
           <div class="score-row">
             <div class="score-name">{{ bar.name }}</div>
@@ -83,19 +83,19 @@
       </div>
     </div>
   } @else if (detailLoading()) {
-    <div class="loading">Loading trip…</div>
+    <div class="loading">{{ 'trips.loading_trip' | translate }}</div>
   } @else {
     @if (detailError()) { <div class="error-card">{{ detailError() }}</div> }
 
     <!-- ============================ TAB BAR ============================ -->
     <div class="tab-bar">
-      <button class="tab" [class.active]="activeTab() === 'trips'" (click)="selectTab('trips')">Trips</button>
-      <button class="tab" [class.active]="activeTab() === 'stats'" (click)="selectTab('stats')">Stats</button>
-      <button class="tab" [class.active]="activeTab() === 'storage'" (click)="selectTab('storage')">Storage</button>
+      <button class="tab" [class.active]="activeTab() === 'trips'" (click)="selectTab('trips')">{{ 'trips.tab_trips' | translate }}</button>
+      <button class="tab" [class.active]="activeTab() === 'stats'" (click)="selectTab('stats')">{{ 'trips.tab_stats' | translate }}</button>
+      <button class="tab" [class.active]="activeTab() === 'storage'" (click)="selectTab('storage')">{{ 'trips.tab_storage' | translate }}</button>
     </div>
 
     @if (loading()) {
-      <div class="loading">Loading…</div>
+      <div class="loading">{{ 'trips.loading' | translate }}</div>
     } @else if (error()) {
       <div class="error-card">{{ error() }}</div>
     } @else {
@@ -104,16 +104,16 @@
       @if (activeTab() === 'trips') {
         <div class="filter-row">
           @for (d of daysOptions; track d) {
-            <button class="pill" [class.active]="daysFilter() === d" (click)="selectDays(d)">{{ d }} Days</button>
+            <button class="pill" [class.active]="daysFilter() === d" (click)="selectDays(d)">{{ 'trips.days' | translate:{ count: d } }}</button>
           }
         </div>
 
         @if (summary(); as sum) {
           <div class="card">
-            <div class="section-title">Period Summary</div>
+            <div class="section-title">{{ 'trips.period_summary' | translate }}</div>
             <div class="stat-grid three">
               <div class="stat-card">
-                <div class="stat-label">Trips</div>
+                <div class="stat-label">{{ 'trips.tab_trips' | translate }}</div>
                 <div class="stat-value">{{ sum.tripCount }}</div>
               </div>
               <div class="stat-card">
@@ -121,19 +121,19 @@
                 <div class="stat-value">{{ distanceLabel(sum.totalDistanceKm) }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Hours</div>
+                <div class="stat-label">{{ 'trips.hours' | translate }}</div>
                 <div class="stat-value">{{ hoursLabel(sum.totalDurationSeconds) }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Efficiency</div>
+                <div class="stat-label">{{ 'trips.efficiency' | translate }}</div>
                 <div class="stat-value">{{ sum.avgEfficiency | number:'1.0-0' }}%</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">kWh</div>
+                <div class="stat-label">{{ 'trips.kwh' | translate }}</div>
                 <div class="stat-value">{{ sum.totalEnergyKwh | number:'1.1-1' }}</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">kWh/100km</div>
+                <div class="stat-label">{{ 'trips.kwh_per_100km' | translate }}</div>
                 <div class="stat-value">{{ (sum.avgEnergyPerKm * 100) | number:'1.2-2' }}</div>
               </div>
             </div>
@@ -155,7 +155,7 @@
               }
             </div>
           } @empty {
-            <div class="empty-text">No trips recorded yet.</div>
+            <div class="empty-text">{{ 'trips.no_trips_recorded' | translate }}</div>
           }
         </div>
       }
@@ -163,36 +163,36 @@
       <!-- ============================ STATS TAB ============================ -->
       @if (activeTab() === 'stats') {
         <div class="card">
-          <div class="section-title">Driver Score</div>
+          <div class="section-title">{{ 'trips.driver_score' | translate }}</div>
           @if (dna(); as d) {
             <div class="big-stat">{{ driverScore() }} <span class="big-unit">/ 500</span></div>
-            <div class="big-sub">Overall: {{ d.overall }} / 100</div>
+            <div class="big-sub">{{ 'trips.overall' | translate }}: {{ d.overall }} / 100</div>
           } @else {
-            <div class="big-sub">Not enough data yet</div>
+            <div class="big-sub">{{ 'trips.not_enough_data' | translate }}</div>
           }
         </div>
 
         <div class="card">
-          <div class="section-title">Personalized Range</div>
+          <div class="section-title">{{ 'trips.personalized_range' | translate }}</div>
           @if (range(); as r) {
             @if (r.estimatedKm > 0) {
               <div class="big-stat">{{ r.estimatedKm | number:'1.0-0' }} <span class="big-unit">km</span></div>
               @if (r.builtInKm > 0) {
-                <div class="big-sub">BYD estimate: {{ r.builtInKm | number:'1.0-0' }} km</div>
+                <div class="big-sub">{{ 'trips.byd_estimate_value' | translate }} {{ r.builtInKm | number:'1.0-0' }} km</div>
               }
             } @else if (r.builtInKm > 0) {
               <div class="big-stat">{{ r.builtInKm | number:'1.0-0' }} <span class="big-unit">km</span></div>
-              <div class="big-sub">BYD estimate</div>
+              <div class="big-sub">{{ 'trips.byd_estimate' | translate }}</div>
             } @else {
-              <div class="big-sub">Not enough data yet</div>
+              <div class="big-sub">{{ 'trips.not_enough_data' | translate }}</div>
             }
           } @else {
-            <div class="big-sub">{{ rangeMessage() || 'Not enough data yet' }}</div>
+            <div class="big-sub">{{ rangeMessage() || ('trips.not_enough_data' | translate) }}</div>
           }
         </div>
 
         <div class="card">
-          <div class="section-title">Driving DNA</div>
+          <div class="section-title">{{ 'trips.driving_dna' | translate }}</div>
           @if (dna()) {
             @for (bar of dnaBars(); track bar.name) {
               <div class="score-row">
@@ -204,7 +204,7 @@
               </div>
             }
           } @else {
-            <div class="empty-text">No DNA data yet</div>
+            <div class="empty-text">{{ 'trips.no_dna_data' | translate }}</div>
           }
         </div>
       }
@@ -212,37 +212,37 @@
       <!-- ============================ STORAGE TAB ============================ -->
       @if (activeTab() === 'storage') {
         <div class="card">
-          <div class="section-title">Trip Storage</div>
+          <div class="section-title">{{ 'trips.trip_storage' | translate }}</div>
 
           <div class="toggle-row">
             <div>
-              <div class="toggle-label">Trip Analytics</div>
-              <div class="toggle-sub">Record trips, scores, and telemetry</div>
+              <div class="toggle-label">{{ 'trips.trip_analytics' | translate }}</div>
+              <div class="toggle-sub">{{ 'trips.trip_analytics_sub' | translate }}</div>
             </div>
             <div class="toggle" [class.on]="formEnabled()" (click)="formEnabled.set(!formEnabled())"></div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Electricity Rate</label>
+            <label class="form-label">{{ 'trips.electricity_rate' | translate }}</label>
             <div class="rate-row">
               <input
                 class="form-input currency-input"
                 type="text"
                 [value]="formCurrency()"
                 (input)="formCurrency.set($any($event.target).value)"
-                aria-label="Currency" />
+                [attr.aria-label]="'trips.currency' | translate" />
               <input
                 class="form-input"
                 type="number"
                 step="0.0001"
                 [value]="formRate()"
                 (input)="formRate.set($any($event.target).value)"
-                aria-label="Rate" />
+                [attr.aria-label]="'trips.rate' | translate" />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Distance Unit</label>
+            <label class="form-label">{{ 'trips.distance_unit' | translate }}</label>
             <div class="seg-group">
               <button class="seg" [class.active]="formDistanceUnit() === 'km'" (click)="formDistanceUnit.set('km')">km</button>
               <button class="seg" [class.active]="formDistanceUnit() === 'mi'" (click)="formDistanceUnit.set('mi')">mi</button>
@@ -250,49 +250,49 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Storage Location</label>
+            <label class="form-label">{{ 'trips.storage_location' | translate }}</label>
             <div class="seg-group">
-              <button class="seg" [class.active]="formStorageType() === 'INTERNAL'" (click)="formStorageType.set('INTERNAL')">Internal</button>
+              <button class="seg" [class.active]="formStorageType() === 'INTERNAL'" (click)="formStorageType.set('INTERNAL')">{{ 'trips.internal' | translate }}</button>
               @if (storage(); as st) {
                 <button
                   class="seg"
                   [class.active]="formStorageType() === 'SD_CARD'"
                   [disabled]="!st.sdCardAvailable"
                   (click)="st.sdCardAvailable && formStorageType.set('SD_CARD')">
-                  SD Card@if (!st.sdCardAvailable) { (N/A) }
+                  {{ 'trips.sd_card' | translate }}@if (!st.sdCardAvailable) { {{ 'trips.not_available' | translate }} }
                 </button>
               } @else {
-                <button class="seg" disabled>SD Card (N/A)</button>
+                <button class="seg" disabled>{{ 'trips.sd_card' | translate }} {{ 'trips.not_available' | translate }}</button>
               }
             </div>
           </div>
 
           @if (storage(); as st) {
             <div class="storage-usage">
-              {{ st.usedMb | number:'1.0-1' }} {{ st.usedUnit }} used / {{ st.limitMb }} MB limit · {{ st.tripsCount }} trips
+              {{ st.usedMb | number:'1.0-1' }} {{ st.usedUnit }} {{ 'trips.used' | translate }} / {{ st.limitMb }} {{ 'trips.mb_limit' | translate }} · {{ st.tripsCount }} {{ 'trips.trips_count' | translate }}
             </div>
             @if (st.storagePath) { <div class="storage-path">{{ st.storagePath }}</div> }
           }
 
           <div class="actions">
             <button class="btn btn-primary" [disabled]="saving()" (click)="applyStorageSettings()">
-              {{ saving() ? 'Applying…' : 'Apply' }}
+              {{ (saving() ? 'trips.applying' : 'trips.apply') | translate }}
             </button>
           </div>
         </div>
 
         <div class="card">
-          <div class="section-title">Database Catalog</div>
-          <div class="toggle-sub">Reconcile the trips index with telemetry files on disk.</div>
+          <div class="section-title">{{ 'trips.database_catalog' | translate }}</div>
+          <div class="toggle-sub">{{ 'trips.database_catalog_sub' | translate }}</div>
           @if (syncResult()) {
             <div class="sync-result" [class.err]="syncIsError()">{{ syncResult() }}</div>
             <div class="actions">
-              <button class="btn btn-secondary" (click)="dismissSync()">Dismiss</button>
+              <button class="btn btn-secondary" (click)="dismissSync()">{{ 'trips.dismiss' | translate }}</button>
             </div>
           } @else {
             <div class="actions">
               <button class="btn btn-primary" [disabled]="syncRunning()" (click)="syncDatabase()">
-                {{ syncRunning() ? 'Syncing…' : 'Sync Database' }}
+                {{ (syncRunning() ? 'trips.syncing' : 'trips.sync_database') | translate }}
               </button>
             </div>
           }

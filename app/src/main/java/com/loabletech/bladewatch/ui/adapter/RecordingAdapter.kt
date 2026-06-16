@@ -124,14 +124,14 @@ class RecordingAdapter(
             when (recording.peakSeverity?.uppercase()) {
                 "CRITICAL" -> {
                     tvSeverity?.visibility = View.VISIBLE
-                    tvSeverity?.text = "CRITICAL"
+                    tvSeverity?.text = itemView.context.getString(R.string.rec_severity_critical)
                     tvSeverity?.setBackgroundColor(0xCCEF4444.toInt())
                     severityStripe?.visibility = View.VISIBLE
                     severityStripe?.setBackgroundColor(0xFFEF4444.toInt())
                 }
                 "ALERT" -> {
                     tvSeverity?.visibility = View.VISIBLE
-                    tvSeverity?.text = "ALERT"
+                    tvSeverity?.text = itemView.context.getString(R.string.rec_severity_alert)
                     tvSeverity?.setBackgroundColor(0xCCFF8800.toInt())
                     severityStripe?.visibility = View.VISIBLE
                     severityStripe?.setBackgroundColor(0xFFFF9B3D.toInt())

@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 /**
@@ -62,7 +63,7 @@ interface SohStatus {
 @Component({
   selector: 'app-diagnostics',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, TranslateModule],
   templateUrl: './diagnostics.component.html',
   styleUrl: './diagnostics.component.scss',
 })

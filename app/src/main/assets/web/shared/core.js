@@ -883,7 +883,7 @@ BYD.core = {
         const evSohRow = document.getElementById('evSohRow');
         if (evSohEl && status.soh && status.soh.percent > 0) {
             evSohEl.textContent = status.soh.percent.toFixed(1) + '%';
-            evSohEl.style.color = status.soh.percent >= 90 ? '#22c55e' : status.soh.percent >= 80 ? '#00D4AA' : status.soh.percent >= 70 ? '#fbbf24' : '#ef4444';
+            evSohEl.style.color = status.soh.percent >= 90 ? '#22c55e' : status.soh.percent >= 80 ? '#00D4FF' : status.soh.percent >= 70 ? '#fbbf24' : '#ef4444';
             if (evSohRow) evSohRow.style.display = '';
         }
 

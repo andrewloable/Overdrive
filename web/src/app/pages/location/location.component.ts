@@ -16,6 +16,7 @@ import * as L from 'leaflet';
 // Vite + @analogjs build. Leaflet classes are all `.leaflet-*`-namespaced, so
 // global injection is safe.
 import 'leaflet/dist/leaflet.css';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 /**
@@ -59,7 +60,7 @@ const STALE_MS = 30_000;
 @Component({
   selector: 'app-location',
   standalone: true,
-  imports: [],
+  imports: [TranslateModule],
   templateUrl: './location.component.html',
   styleUrl: './location.component.scss',
 })
@@ -179,7 +180,7 @@ export default class LocationComponent implements OnInit, AfterViewInit, OnDestr
       <div class="bw-car-marker" style="transform: rotate(${rot}deg)">
         <svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
           <circle cx="24" cy="24" r="21" fill="rgba(0,0,0,0.45)"/>
-          <circle cx="24" cy="24" r="15" fill="#00D4AA" stroke="#fff" stroke-width="3"/>
+          <circle cx="24" cy="24" r="15" fill="#00D4FF" stroke="#fff" stroke-width="3"/>
           <path d="M24 9 L31 27 L24 23 L17 27 Z" fill="#fff"/>
           <circle cx="24" cy="24" r="3.4" fill="#fff"/>
         </svg>

@@ -4,10 +4,10 @@
       <img src="/shared/app-icon-glyph-dark.webp" alt="BladeWatch">
     </div>
     <h1 class="login-title">BladeWatch</h1>
-    <p class="login-subtitle">Enter your device token to access</p>
+    <p class="login-subtitle">{{ 'login.subtitle' | translate }}</p>
 
     <div class="device-info">
-      <div class="device-info-label">Device ID</div>
+      <div class="device-info-label">{{ 'login.device_id' | translate }}</div>
       <div class="device-info-value">{{ deviceId() }}</div>
     </div>
 
@@ -18,7 +18,7 @@
     }
 
     <div class="form-group">
-      <label class="form-label">Access Code</label>
+      <label class="form-label">{{ 'login.access_code' | translate }}</label>
       <input
         type="text"
         class="form-input"
@@ -26,11 +26,11 @@
         [ngModel]="accessCode()"
         (ngModelChange)="accessCode.set($event)"
         (keypress)="onKeyPress($event)"
-        placeholder="Access code"
+        [placeholder]="'login.access_code_placeholder' | translate"
         autocomplete="off"
         spellcheck="false"
       >
-      <p class="form-hint">Find this in your BladeWatch app → Dashboard → Access Code</p>
+      <p class="form-hint">{{ 'login.form_hint' | translate }}</p>
       @if (error()) {
         <p class="form-error">{{ error() }}</p>
       }
@@ -40,12 +40,12 @@
       @if (loading()) {
         <span class="spinner"></span>
       } @else {
-        <span>Login</span>
+        <span>{{ 'login.login' | translate }}</span>
       }
     </button>
 
     <div class="login-footer">
-      <p>Your data stays on your device.</p>
+      <p>{{ 'login.footer' | translate }}</p>
     </div>
   </div>
 </div>

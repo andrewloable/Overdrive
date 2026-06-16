@@ -2,10 +2,10 @@
 
 .page-header { display: flex; align-items: center; justify-content: space-between; }
 
-.toast { background: rgba(0,212,170,0.15); border: 1px solid rgba(0,212,170,0.3); color: var(--brand-primary, #00D4AA); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
+.toast { background: rgba(0,212, 255,0.15); border: 1px solid rgba(0,212, 255,0.3); color: var(--brand-primary, #00D4FF); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
 
 .range-input {
-  width: 100%; accent-color: var(--brand-primary, #00D4AA);
+  width: 100%; accent-color: var(--brand-primary, #00D4FF);
   -webkit-appearance: none; height: 4px;
   background: var(--bg-elevated, #1E1E24); border-radius: 2px; outline: none;
 }
@@ -19,13 +19,13 @@
   display: flex; align-items: center; gap: 8px;
   font-size: 14px; color: var(--text-primary, #fff); cursor: pointer;
 
-  input[type=checkbox] { accent-color: var(--brand-primary, #00D4AA); width: 16px; height: 16px; }
+  input[type=checkbox] { accent-color: var(--brand-primary, #00D4FF); width: 16px; height: 16px; }
 }
 
 .section-title { display: flex; align-items: center; justify-content: space-between; }
 
 .refresh-all-btn {
-  background: none; border: none; color: var(--brand-primary, #00D4AA);
+  background: none; border: none; color: var(--brand-primary, #00D4FF);
   font-size: 12px; cursor: pointer; &:hover { text-decoration: underline; }
 }
 

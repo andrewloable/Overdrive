@@ -15,7 +15,7 @@ window.Icons = {
     
     // All cameras (filled car)
     camAll: `<svg viewBox="0 0 32 32" fill="none">
-        <path d="M10 6h12v2l2 2v12l-2 2v2H10v-2l-2-2V10l2-2V6z" stroke="var(--brand-primary)" stroke-width="1.2" fill="rgba(0,212,170,0.15)"/>
+        <path d="M10 6h12v2l2 2v12l-2 2v2H10v-2l-2-2V10l2-2V6z" stroke="var(--brand-primary)" stroke-width="1.2" fill="rgba(0,212, 255,0.15)"/>
         <path d="M12 8h8v4H12z" stroke="var(--brand-primary)" stroke-width="0.8" opacity="0.6"/>
         <path d="M12 20h8v4H12z" stroke="var(--brand-primary)" stroke-width="0.8" opacity="0.6"/>
     </svg>`,

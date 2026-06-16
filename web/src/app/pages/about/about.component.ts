@@ -1,4 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 /**
@@ -9,6 +10,7 @@ import { ConnectClients } from '../../core/connect/connect-clients';
 @Component({
   selector: 'app-about',
   standalone: true,
+  imports: [TranslateModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
 })

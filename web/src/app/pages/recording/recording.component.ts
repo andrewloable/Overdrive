@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 import { toast } from '../../shared/page-utils';
 import {
@@ -16,7 +17,7 @@ type DateMode = 'ALL' | 'DAY';
 @Component({
   selector: 'app-recording',
   standalone: true,
-  imports: [DecimalPipe, VideoPlayerComponent],
+  imports: [DecimalPipe, TranslateModule, VideoPlayerComponent],
   templateUrl: './recording.component.html',
   styleUrl: './recording.component.scss',
 })

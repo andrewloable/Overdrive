@@ -8,6 +8,7 @@ import {
   ElementRef,
   ViewChild,
 } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
 // SotaPlayer is a global loaded from public/vendor/SotaPlayer.js (no module).
@@ -27,6 +28,7 @@ declare var SotaPlayer: any;
 @Component({
   selector: 'app-live',
   standalone: true,
+  imports: [TranslateModule],
   templateUrl: './live.component.html',
   styleUrl: './live.component.scss',
 })

@@ -48,7 +48,7 @@ public class SafeLocationApiHandler {
 
             case "POST": {
                 JSONObject req = new JSONObject(body);
-                String name = req.optString("name", "Unnamed");
+                String name = sanitizeZoneName(req.optString("name", "Unnamed"));
                 double lat = req.optDouble("lat", 0);
                 double lng = req.optDouble("lng", 0);
                 int radiusM = req.optInt("radiusM", 150);
@@ -111,6 +111,14 @@ public class SafeLocationApiHandler {
             default:
                 return false;
         }
+    }
+
+    /** Sanitize a zone name: strip angle brackets, cap length, fall back to default. */
+    static String sanitizeZoneName(String name) {
+        if (name == null || name.trim().isEmpty()) return "Unnamed";
+        String cleaned = name.replace("<", "").replace(">", "").trim();
+        if (cleaned.isEmpty()) return "Unnamed";
+        return cleaned.length() > 64 ? cleaned.substring(0, 64) : cleaned;
     }
 
     private static String extractQueryParam(String path, String param) {
