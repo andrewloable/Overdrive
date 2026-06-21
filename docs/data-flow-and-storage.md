@@ -137,11 +137,20 @@ Main secret path:
 /storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_secrets.json
 ```
 
-Like the unified config, the secret store now lives under the user-visible
-BladeWatch app-files tree so secrets survive uninstall/reinstall. A
-`/data/local/tmp/bladewatch_secrets.json` legacy mirror is still best-effort
-written for older hardcoded readers, and an existing legacy file is migrated to
-the new path on first init.
+The secret store lives under the user-visible BladeWatch app-files tree so
+secrets survive uninstall/reinstall. On upgrade the store falls back to reading
+from the legacy `/data/local/tmp/bladewatch_secrets.json` path if the primary
+file is absent; once a write succeeds to the primary, the legacy file is
+deleted so plaintext secrets are never left in `/data/local/tmp`.
+
+**At-rest permission enforcement note (BYD DiLink v3):** the primary path is on
+sdcardfs (`/storage/emulated/0`). POSIX mode bits are set to `rw-------` via
+`Files.setPosixFilePermissions`, but sdcardfs enforces permissions primarily via
+Android permission grants rather than traditional Unix mode bits — `mode 600` is
+best-effort on this filesystem. The long-term fix is moving secrets to a
+daemon-held native key store (Track1 `uy93.12`). Until then, the primary
+protection is restricting writes to the shell-UID daemon and requiring the IPC
+token for all app→daemon secret reads.
 
 `SecretConfigStore` stores secret sections such as auth device secret and tunnel tokens. The file is created with owner-only (`rw-------`) permissions. Direct writes are restricted to shell UID where practical; the Android app uses the TCP bridge when it cannot access the file directly.
 

@@ -26,6 +26,13 @@ public class TcpCommandServer {
     private volatile boolean running = true;
     private static final SecretConfigStore SECRET_STORE = new SecretConfigStore();
 
+    // ponytail: test seam — null = live SECRET_STORE; non-null = injected store (test-only)
+    static SecretConfigStore secretStoreForTest = null;
+
+    private SecretConfigStore store() {
+        return secretStoreForTest != null ? secretStoreForTest : SECRET_STORE;
+    }
+
     public TcpCommandServer(int port) {
         this.port = port;
     }
@@ -134,7 +141,7 @@ public class TcpCommandServer {
         }
     }
 
-    private JSONObject processCommand(JSONObject cmd) throws Exception {
+    JSONObject processCommand(JSONObject cmd) throws Exception {
         String action = cmd.optString("cmd", "");
         JSONObject response = new JSONObject();
         
@@ -430,7 +437,7 @@ public class TcpCommandServer {
             case "secret_get": {
                 String section = cmd.optString("section", "");
                 String key = cmd.optString("key", "");
-                String value = SECRET_STORE.getString(section, key);
+                String value = store().getString(section, key);
                 response.put("status", "ok");
                 response.put("value", value == null ? "" : value);
                 break;
@@ -438,7 +445,7 @@ public class TcpCommandServer {
 
             case "secret_get_section": {
                 String section = cmd.optString("section", "");
-                JSONObject data = SECRET_STORE.loadSection(section);
+                JSONObject data = store().loadSection(section);
                 response.put("status", "ok");
                 response.put("section", data);
                 break;
@@ -450,13 +457,13 @@ public class TcpCommandServer {
                 Object value = cmd.has("value") ? cmd.get("value") : null;
                 boolean ok;
                 if (value == null || value == JSONObject.NULL) {
-                    ok = SECRET_STORE.delete(section, key);
+                    ok = store().delete(section, key);
                 } else if (value instanceof Boolean) {
-                    ok = SECRET_STORE.putBoolean(section, key, (Boolean) value);
+                    ok = store().putBoolean(section, key, (Boolean) value);
                 } else if (value instanceof Number) {
-                    ok = SECRET_STORE.putLong(section, key, ((Number) value).longValue());
+                    ok = store().putLong(section, key, ((Number) value).longValue());
                 } else {
-                    ok = SECRET_STORE.putString(section, key, String.valueOf(value));
+                    ok = store().putString(section, key, String.valueOf(value));
                 }
                 response.put("status", ok ? "ok" : "error");
                 if (!ok) {
@@ -468,7 +475,7 @@ public class TcpCommandServer {
             case "secret_delete": {
                 String section = cmd.optString("section", "");
                 String key = cmd.optString("key", "");
-                boolean ok = SECRET_STORE.delete(section, key);
+                boolean ok = store().delete(section, key);
                 response.put("status", ok ? "ok" : "error");
                 if (!ok) {
                     response.put("message", "Failed to delete secret");
@@ -476,44 +483,8 @@ public class TcpCommandServer {
                 break;
             }
 
-            case "shell":
-                // Execute shell command (used by SentryDaemon to run commands as UID 2000)
-                String shellCmd = cmd.optString("command", "");
-                CameraDaemon.log("Shell command received: " + shellCmd);
-                if (!shellCmd.isEmpty()) {
-                    try {
-                        Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", shellCmd});
-                        int exitCode = process.waitFor();
-                        java.io.BufferedReader reader = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(process.getInputStream()));
-                        StringBuilder output = new StringBuilder();
-                        String outputLine;
-                        while ((outputLine = reader.readLine()) != null) {
-                            output.append(outputLine).append("\n");
-                        }
-                        // Also read stderr
-                        java.io.BufferedReader errReader = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(process.getErrorStream()));
-                        StringBuilder errOutput = new StringBuilder();
-                        while ((outputLine = errReader.readLine()) != null) {
-                            errOutput.append(outputLine).append("\n");
-                        }
-                        
-                        response.put("status", "ok");
-                        response.put("output", output.toString().trim());
-                        response.put("stderr", errOutput.toString().trim());
-                        response.put("exitCode", exitCode);
-                        CameraDaemon.log("Shell command completed: exitCode=" + exitCode + ", output=" + output.toString().trim());
-                    } catch (Exception e) {
-                        CameraDaemon.log("Shell command failed: " + e.getMessage());
-                        response.put("status", "error");
-                        response.put("message", "Shell exec failed: " + e.getMessage());
-                    }
-                } else {
-                    response.put("status", "error");
-                    response.put("message", "No command specified");
-                }
-                break;
+            // uy93.2: "shell" (free-form sh -c over IPC) removed — RCE as UID 2000.
+            // No live caller found; SentryDaemon runs its own shell commands directly.
 
             default:
                 response.put("status", "error");

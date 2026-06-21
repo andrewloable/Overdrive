@@ -39,6 +39,12 @@ public final class PeerCredentials {
     // Resolved lazily from the app's package context and cached. -1 = unresolved.
     private static volatile int cachedAppUid = -1;
 
+    // ponytail: test seam — null = live resolveAppUid(); non-null = injected result (test-only)
+    static volatile Integer appUidOverrideForTest = null;
+
+    // ponytail: test seam — null = real /proc scan; non-null = injected peer UID (test-only)
+    static volatile Integer peerUidForTest = null;
+
     private static final int ROOT_UID = 0;
     private static final int SYSTEM_UID = 1000;
     private static final int SHELL_UID = 2000;
@@ -49,6 +55,7 @@ public final class PeerCredentials {
      * @return the peer UID, or -1 if it could not be determined.
      */
     public static int resolvePeerUid(Socket client) {
+        if (peerUidForTest != null) return peerUidForTest;
         if (client == null) return -1;
         int clientPort = client.getPort();      // remote (client ephemeral) port
         int serverPort = client.getLocalPort(); // our listening port
@@ -76,26 +83,22 @@ public final class PeerCredentials {
     public static boolean isTrusted(int uid) {
         if (uid == ROOT_UID || uid == SYSTEM_UID || uid == SHELL_UID) return true;
         if (uid < 0) return false;
-        int appUid = resolveAppUid();
+        int appUid = (appUidOverrideForTest != null) ? appUidOverrideForTest : resolveAppUid();
         if (appUid > 0) {
             // Compare on the per-user base app-id so a non-zero Android user still
             // matches (uid = userId * 100000 + appId).
             return uid == appUid || (uid % 100000) == (appUid % 100000);
         }
-        // The daemon's app-context resolution failed (createAppContext() returned a
-        // fallback PermissionBypassContext with null base). This happens on BYD
-        // firmware where ActivityThread methods time out. Without a resolved app UID
-        // we cannot verify the peer's identity at this gate — trust any regular app
-        // UID (>= 10000) and let the IPC token gate (IpcTokenManager.isValid) provide
-        // primary security. This is safe because:
-        //   1. Only loopback connections are accepted (bound to 127.0.0.1).
-        //   2. The bearer token is a 32-char SecureRandom value.
-        //   3. The daemon rejects invalid/absent tokens after this check.
-        if (uid >= 10000) {
-            logger.warn("App UID resolution unavailable — trusting uid=" + uid
-                    + " via IPC token fallback (token gate still active)");
-            return true;
-        }
+        // uy93.1: App-context UID resolution failed. Without a confirmed app UID we
+        // cannot distinguish the legitimate BladeWatch app from any co-resident app
+        // that also holds the world-readable IPC token. The fail-open path that
+        // previously trusted uid>=10000 is removed: an unverified peer is rejected.
+        //
+        // Impact on BYD firmware: when ActivityThread/createAppContext times out,
+        // the app will be denied at this gate until its UID resolves. The correct
+        // long-term fix is a positive identity factor (signature attestation or a
+        // per-install non-world-readable secret); this change removes the security
+        // hole as the immediate priority.
         return false;
     }
 

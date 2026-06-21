@@ -93,6 +93,8 @@ public class HttpServer {
             extractAssetDir(assetManager, "web/shared", new File(WEB_ROOT, "shared"));
             // Extract Angular SPA build output.
             extractAssetDir(assetManager, "web/angular", new File(WEB_ROOT, "angular"));
+            // Extract three.js hero page (vehicle 3D hero, served at /hero/).
+            extractAssetDir(assetManager, "web/hero", new File(WEB_ROOT, "hero"));
             // Extract i18n catalogs (one JSON per supported locale).
             // The web/i18n directory is created by the NLLB translation pipeline
             // — at minimum web/i18n/en.json must exist for the runtime to load.
@@ -241,6 +243,8 @@ public class HttpServer {
             String authHeader = null;
             String contentTypeHeader = null;
             String connectVersionHeader = null;
+            // uy93.5: second factor for /api/vehicle/* POST from non-loopback.
+            String vehicleActionTokenHeader = null;
             // Reverse-proxy fingerprints — used by AuthMiddleware to disable
             // the loopback safety net when a tunnel relayed the request.
             // zrok injects X-Forwarded-*.
@@ -272,6 +276,8 @@ public class HttpServer {
                     contentTypeHeader = line.substring(13).trim();
                 } else if (lower.startsWith("connect-protocol-version:")) {
                     connectVersionHeader = line.substring(25).trim();
+                } else if (lower.startsWith("x-vehicle-action-token:")) {
+                    vehicleActionTokenHeader = line.substring(23).trim();
                 } else if (lower.startsWith("accept-language:")) {
                     // First-touch locale hint. Only used if the user has never
                     // explicitly chosen via the picker (LocaleManager file empty).
@@ -400,6 +406,23 @@ public class HttpServer {
                     client.getRemoteSocketAddress(), hasTunnelHeaders)) {
                 client.close();
                 return;
+            }
+
+            // uy93.5: vehicle actuation POST from non-loopback requires a short-lived
+            // action token (X-Vehicle-Action-Token) in addition to the session JWT.
+            // The WebView always connects from loopback (127.0.0.1 / ::1) and is exempt.
+            // The /api/vehicle/action-token issue endpoint itself is also exempt.
+            String vehicleActionPathOnly = path.contains("?") ? path.substring(0, path.indexOf("?")) : path;
+            if (method.equals("POST")
+                    && vehicleActionPathOnly.startsWith("/api/vehicle/")
+                    && !vehicleActionPathOnly.equals("/api/vehicle/action-token")
+                    && !client.getInetAddress().isLoopbackAddress()) {
+                net.bladewatch.app.auth.AuthManager.AuthState actionState = net.bladewatch.app.auth.AuthManager.getState();
+                if (actionState == null || !VehicleActionToken.validate(vehicleActionTokenHeader, actionState.deviceSecret)) {
+                    HttpResponse.sendJsonForbidden(out, "Vehicle action token required — use GET /api/vehicle/action-token first");
+                    client.close();
+                    return;
+                }
             }
 
             // Derive client identity for Connect rate limiting. Always use the
@@ -537,6 +560,15 @@ public class HttpServer {
             } else if (path.startsWith("/view/")) {
                 // Legacy view page - redirect
                 HttpResponse.sendHtml(out, "<html><head><meta http-equiv='refresh' content='0;url=/'></head></html>");
+            } else if (path.startsWith("/hero/")) {
+                // Three.js vehicle hero page — served directly, NOT caught by the SPA
+                // fallback. hero.html references ../shared/vendor/ (already served at /shared/).
+                String filePath = path.substring(1);
+                int q = filePath.indexOf('?');
+                if (q >= 0) filePath = filePath.substring(0, q);
+                if (!serveStaticFile(out, filePath)) {
+                    HttpResponse.sendError(out, 404, "Not Found: " + path);
+                }
             } else if (path.equals("/favicon.ico") || path.equals("/favicon.png")
                     || path.equals("/favicon-32x32.png") || path.equals("/favicon-16x16.png")
                     || path.equals("/apple-touch-icon.png")) {

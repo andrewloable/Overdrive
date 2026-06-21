@@ -106,7 +106,7 @@
               @case ('capture') {
                 <div class="card">
                   <div class="section-title">{{ 'settings.recording_mode_acc' | translate }}</div>
-                  <p class="hint" style="margin-top:0">{{ 'settings.recording_mode_hint' | translate }}</p>
+                  <p class="hint">{{ 'settings.recording_mode_hint' | translate }}</p>
                   <div class="radio-list">
                     @for (m of recordingModes; track m.value) {
                       <button type="button" class="radio-row" [class.active]="recordingMode() === m.value"
@@ -123,7 +123,7 @@
 
                 <div class="card">
                   <div class="section-title">{{ 'settings.recording_limit' | translate }}</div>
-                  <p class="hint" style="margin-top:0">{{ 'settings.recording_limit_hint' | translate }}</p>
+                  <p class="hint">{{ 'settings.recording_limit_hint' | translate }}</p>
                   <div class="seg">
                     @for (lim of recordingLimits; track lim) {
                       <button type="button" class="seg-btn" [class.active]="recordingLimit() === lim"
@@ -208,7 +208,7 @@
                   @if (st.sdCardAvailable) {
                     <div class="card danger-card">
                       <div class="section-title">{{ 'settings.format_external_drive' | translate }}</div>
-                      <p class="hint" style="margin-top:0">{{ 'settings.format_external_hint' | translate }}</p>
+                      <p class="hint">{{ 'settings.format_external_hint' | translate }}</p>
                       <div class="actions">
                         <button class="btn btn-danger" (click)="formatVolume()" [disabled]="formatBusy()">
                           {{ formatBusy() ? ('settings.formatting' | translate) : (formatConfirm() ? ('settings.tap_again_erase' | translate) : ('settings.format_sd_usb' | translate)) }}
@@ -228,7 +228,7 @@
 
           @case ('surveillance') {
             <div class="card note-card">
-              <p class="hint" style="margin:0">
+              <p class="hint">
                 {{ 'settings.surv_note' | translate }}
               </p>
             </div>
@@ -294,7 +294,7 @@
                 <span class="toggle-label">{{ 'settings.night_mode' | translate }}</span>
                 <button type="button" class="toggle" [class.on]="survNightMode()" (click)="survNightMode.set(!survNightMode())"></button>
               </div>
-              <label class="form-label" style="margin-top:12px">{{ 'settings.deterrent_action' | translate }}</label>
+              <label class="form-label">{{ 'settings.deterrent_action' | translate }}</label>
               <div class="seg">
                 @for (d of survDeterrents; track d) {
                   <button type="button" class="seg-btn" [class.active]="survDeterrent() === d"
@@ -350,7 +350,7 @@
 
           @case ('overlay') {
             <div class="card note-card">
-              <p class="hint" style="margin:0">
+              <p class="hint">
                 {{ 'settings.overlay_note' | translate }}
               </p>
             </div>
@@ -378,7 +378,7 @@
           @case ('privacy') {
             <div class="card">
               <div class="section-title">{{ 'settings.on_device_privacy' | translate }}</div>
-              <p class="hint" style="margin-top:0">
+              <p class="hint">
                 {{ 'settings.on_device_privacy_hint' | translate }}
                 <code>/storage/emulated/0/BladeWatch</code> {{ 'settings.on_device_privacy_hint_suffix' | translate }}
               </p>
@@ -401,7 +401,7 @@
 
             <div class="card">
               <div class="section-title">{{ 'settings.developer_diagnostics' | translate }}</div>
-              <p class="hint" style="margin-top:0">
+              <p class="hint">
                 {{ 'settings.developer_diagnostics_hint' | translate }}
               </p>
               <div class="toggle-row">
@@ -416,7 +416,7 @@
 
             <div class="card danger-card">
               <div class="section-title">{{ 'settings.reset_data' | translate }}</div>
-              <p class="hint" style="margin-top:0">
+              <p class="hint">
                 {{ 'settings.reset_data_hint' | translate }}
               </p>
               <div class="actions">
@@ -426,7 +426,7 @@
               </div>
               @if (cleanupPreview()) {
                 @let prev = cleanupPreview()!;
-                <div class="info-grid" style="margin-top:12px">
+                <div class="info-grid">
                   <div class="info-row"><span>{{ 'settings.deletable' | translate }}</span><b>{{ formatBytes(prev.totalDeletableBytes) }} {{ 'settings.across' | translate }} {{ prev.totalDeletableCount }} {{ 'settings.files' | translate }}</b></div>
                 </div>
                 @if (prev.totalDeletableCount > 0) {

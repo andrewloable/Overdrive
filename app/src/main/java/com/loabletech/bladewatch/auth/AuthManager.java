@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -522,7 +523,7 @@ public class AuthManager {
         try {
             String content = parts[0] + "." + parts[1];
             String expectedSig = hmacSha256(content, state.deviceSecret);
-            if (!expectedSig.equals(parts[2])) return false;
+            if (!MessageDigest.isEqual(expectedSig.getBytes(StandardCharsets.UTF_8), parts[2].getBytes(StandardCharsets.UTF_8))) return false;
             String headerJson = new String(base64UrlDecode(parts[0]), StandardCharsets.UTF_8);
             if (!"THM".equals(extractJsonString(headerJson, "typ"))) return false;
             String payloadJson = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
@@ -583,7 +584,7 @@ public class AuthManager {
             String content = parts[0] + "." + parts[1];
             String expectedSig = hmacSha256(content, state.deviceSecret);
 
-            if (!expectedSig.equals(parts[2])) {
+            if (!MessageDigest.isEqual(expectedSig.getBytes(StandardCharsets.UTF_8), parts[2].getBytes(StandardCharsets.UTF_8))) {
                 log("JWT signature mismatch - token may have been regenerated");
                 return JwtValidation.failure("Invalid signature");
             }
@@ -876,11 +877,11 @@ public class AuthManager {
         CameraDaemon.log("AUTH: " + message);
     }
 
-    static void setTestState(AuthState state) {
+    public static void setTestState(AuthState state) {
         testStateOverride = state;
     }
 
-    static void clearTestState() {
+    public static void clearTestState() {
         testStateOverride = null;
     }
 

@@ -1,6 +1,25 @@
 <div class="page">
   <div class="page-header"><h1>{{ 'vehicle.title' | translate }}</h1></div>
 
+  <!-- 3D car hero (three.js). Transparent iframe over a 2D silhouette fallback. -->
+  <div class="hero-strip">
+    <div class="hero-fallback" aria-hidden="true">
+      <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 55 Q35 30 70 25 L130 25 Q165 30 170 55 L175 55 Q178 55 178 58 L178 62 Q178 65 175 65 L25 65 Q22 65 22 62 L22 58 Q22 55 25 55 Z" fill="currentColor" opacity="0.18"/>
+        <circle cx="55" cy="65" r="10" fill="currentColor" opacity="0.25"/>
+        <circle cx="145" cy="65" r="10" fill="currentColor" opacity="0.25"/>
+        <path d="M68 25 Q80 12 100 11 Q120 12 132 25 Z" fill="currentColor" opacity="0.12"/>
+      </svg>
+    </div>
+    <iframe #heroFrame
+      [src]="heroSrc"
+      class="hero-iframe"
+      sandbox="allow-scripts allow-same-origin"
+      (load)="onHeroLoad(heroFrame)"
+      title="Vehicle 3D hero"
+    ></iframe>
+  </div>
+
   @if (statusMsg()) {
     <div class="status-banner error">{{ statusMsg() }}</div>
   }

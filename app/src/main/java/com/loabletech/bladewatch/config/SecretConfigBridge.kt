@@ -2,6 +2,7 @@ package net.bladewatch.app.config
 
 import net.bladewatch.app.client.CameraDaemonClient
 import net.bladewatch.app.client.DaemonReadinessChecker
+import net.bladewatch.app.daemon.AppIntegrityCheck
 import android.os.Looper
 import android.util.Log
 import org.json.JSONObject
@@ -112,6 +113,12 @@ object SecretConfigBridge {
     }
 
     private fun readViaIpcOnCurrentThread(section: String, key: String): String? {
+        // Refuse privileged IPC if the APK signing cert doesn't match the expected
+        // release cert (uy93.10). Dev/unsigned builds always pass (cert empty = no check).
+        if (AppIntegrityCheck.isTamperedCached()) {
+            Log.e("SecretConfigBridge", "IPC secret fetch blocked: APK integrity check failed")
+            return null
+        }
         if (!DaemonReadinessChecker.waitUntilReady(30_000)) {
             Log.w("SecretConfigBridge", "Daemon not ready for IPC read after 30s")
             return null

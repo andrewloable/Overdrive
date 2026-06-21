@@ -75,6 +75,61 @@ public class AuthManagerTest {
         Assert.assertTrue(AuthManager.validateJwt(newJwt).valid);
     }
 
+    // --- JWT signature pinning (baseline for uy93.3: String.equals → MessageDigest.isEqual) ---
+
+    @Test
+    public void validJwtSignatureIsAccepted() throws Exception {
+        AuthManager.AuthState state = makeState("byd-test", "secret123", 0);
+        AuthManager.setTestState(state);
+        String jwt = buildJwt(state.deviceId, state.deviceSecret, 3600, state.tokenEpoch);
+        AuthManager.JwtValidation result = AuthManager.validateJwt(jwt);
+        Assert.assertTrue(result.valid);
+    }
+
+    @Test
+    public void tamperedJwtSignatureIsRejected() throws Exception {
+        AuthManager.AuthState state = makeState("byd-test", "secret123", 0);
+        AuthManager.setTestState(state);
+        String jwt = buildJwt(state.deviceId, state.deviceSecret, 3600, state.tokenEpoch);
+        // Flip the last character of the signature (third dot-segment)
+        int lastDot = jwt.lastIndexOf('.');
+        String tampered = jwt.substring(0, lastDot + 1) + flipLastChar(jwt.substring(lastDot + 1));
+        AuthManager.JwtValidation result = AuthManager.validateJwt(tampered);
+        Assert.assertFalse(result.valid);
+        Assert.assertEquals("Invalid signature", result.error);
+    }
+
+    // --- Thumb token signature pinning ---
+
+    @Test
+    public void validThumbTokenIsAccepted() {
+        AuthManager.AuthState state = makeState("byd-test", "secret123", 0);
+        AuthManager.setTestState(state);
+        String filename = "event_2026_001.jpg";
+        String token = AuthManager.signThumbToken(filename, 3600);
+        Assert.assertNotNull(token);
+        Assert.assertTrue(AuthManager.validateThumbToken(filename, token));
+    }
+
+    @Test
+    public void tamperedThumbTokenSignatureIsRejected() {
+        AuthManager.AuthState state = makeState("byd-test", "secret123", 0);
+        AuthManager.setTestState(state);
+        String filename = "event_2026_001.jpg";
+        String token = AuthManager.signThumbToken(filename, 3600);
+        Assert.assertNotNull(token);
+        int lastDot = token.lastIndexOf('.');
+        String tampered = token.substring(0, lastDot + 1) + flipLastChar(token.substring(lastDot + 1));
+        Assert.assertFalse(AuthManager.validateThumbToken(filename, tampered));
+    }
+
+    private String flipLastChar(String s) {
+        if (s == null || s.isEmpty()) return s;
+        char last = s.charAt(s.length() - 1);
+        char flipped = (last == 'A') ? 'B' : 'A';
+        return s.substring(0, s.length() - 1) + flipped;
+    }
+
     private AuthManager.AuthState makeState(String deviceId, String secret, long epoch) {
         AuthManager.AuthState state = new AuthManager.AuthState();
         state.deviceId = deviceId;

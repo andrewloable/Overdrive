@@ -1,5 +1,6 @@
 package net.bladewatch.app.server;
 
+import net.bladewatch.app.auth.AuthManager;
 import net.bladewatch.app.byd.BydDataCollector;
 import net.bladewatch.app.byd.BydVehicleData;
 import net.bladewatch.app.byd.routing.VehicleCommandRouter;
@@ -42,6 +43,13 @@ public class VehicleControlApiHandler {
 
     public static boolean handle(String method, String path, String body, OutputStream out) throws Exception {
         String cleanPath = path.contains("?") ? path.substring(0, path.indexOf("?")) : path;
+
+        // GET /api/vehicle/action-token — issue a short-lived second-factor token (uy93.5).
+        // Required by non-loopback callers for vehicle POST commands; loopback (WebView) is exempt.
+        if (cleanPath.equals("/api/vehicle/action-token") && method.equals("GET")) {
+            handleIssueActionToken(out);
+            return true;
+        }
 
         // GET /api/vehicle/state
         if (cleanPath.equals("/api/vehicle/state") && method.equals("GET")) {
@@ -152,6 +160,27 @@ public class VehicleControlApiHandler {
         }
 
         return false;
+    }
+
+    /**
+     * Issue a short-lived vehicle action token (uy93.5). The token must be
+     * presented as X-Vehicle-Action-Token on subsequent POST /api/vehicle/*
+     * requests from non-loopback callers. Loopback (WebView) callers skip this.
+     */
+    private static void handleIssueActionToken(OutputStream out) throws Exception {
+        JSONObject resp = new JSONObject();
+        AuthManager.AuthState state = AuthManager.getState();
+        if (state == null || state.deviceSecret == null || state.deviceSecret.isEmpty()) {
+            resp.put("success", false);
+            resp.put("error", "Device secret not available");
+            HttpResponse.sendJson(out, resp.toString());
+            return;
+        }
+        String token = VehicleActionToken.issue(state.deviceSecret);
+        resp.put("success", true);
+        resp.put("token", token);
+        resp.put("expiresInSeconds", VehicleActionToken.WINDOW_SECONDS);
+        HttpResponse.sendJson(out, resp.toString());
     }
 
     /**

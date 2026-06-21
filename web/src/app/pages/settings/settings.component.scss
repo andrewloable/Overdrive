@@ -139,9 +139,18 @@
 
 .hint {
   font-size: 12px;
-  color: var(--text-muted, #71717A);
+  color: var(--text-muted);
   margin: 10px 0 0;
 }
+
+/* Hints that follow a section-title need no extra top gap (title already has margin-bottom). */
+.section-title + .hint { margin-top: 0; }
+
+/* Cleanup preview grid appears after an .actions row; use the card gap token. */
+.actions + .info-grid { margin-top: var(--card-gap); }
+
+/* Form label after toggle rows needs a gap to visually separate the group. */
+.toggle-row + .form-label { margin-top: var(--card-gap); }
 
 .placeholder { text-align: center; padding: 32px 16px; }
 
@@ -158,8 +167,10 @@
 
 /* ---- Note / danger cards ---- */
 .note-card {
-  background: var(--brand-primary-dim, rgba(0,212, 255,0.08));
-  border-color: rgba(0,212, 255,0.25);
+  background: var(--surface-container-high);
+  border-color: var(--outline-variant);
+
+  .hint { margin: 0; }
 }
 
 .danger-card {

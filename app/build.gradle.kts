@@ -252,6 +252,17 @@ tasks.register("extractWebAssets") {
     }
 }
 
+// Embed the current git branch in the APK filename so builds from different
+// branches are always distinguishable (e.g. bladewatch-flutter-refactor-arm64-v8a-debug.apk).
+val gitBranch: String = try {
+    val proc = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+        .directory(rootProject.projectDir)
+        .start()
+    proc.inputStream.bufferedReader().readLine()?.trim()
+        ?.replace(Regex("[^A-Za-z0-9._-]"), "-")
+        ?: "unknown"
+} catch (_: Exception) { "unknown" }
+
 android {
     signingConfigs {
         create("release") {
@@ -269,8 +280,8 @@ android {
         applicationId = "net.bladewatch.app"
         minSdk = 25
         targetSdk = 25
-        versionCode = 10000
-        versionName = "1.0.0.0"
+        versionCode = 10010
+        versionName = "1.0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Note: abiFilters removed - using splits.abi instead for size optimization
@@ -340,12 +351,21 @@ android {
             
             // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
+
+            // APK signing-cert SHA-256 for self-integrity check (uy93.10).
+            // Set via CI env var RELEASE_CERT_SHA256 (hex, lowercase).
+            // Empty string = dev/unsigned build = check disabled.
+            val certSha = System.getenv("RELEASE_CERT_SHA256") ?: ""
+            buildConfigField("String", "RELEASE_CERT_SHA256", "\"$certSha\"")
         }
         debug {
             isMinifyEnabled = false
-            
+
             // GitHub release channel for update checks.
             buildConfigField("String", "UPDATE_CHANNEL", "\"alpha\"")
+
+            // Dev builds: no expected cert — check always disabled.
+            buildConfigField("String", "RELEASE_CERT_SHA256", "\"\"")
         }
     }
     
@@ -359,6 +379,16 @@ android {
         }
     }
     
+    // Rename APK outputs to include the git branch:
+    //   bladewatch-<branch>-arm64-v8a-<buildtype>.apk
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val out = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            out.outputFileName = "bladewatch-${gitBranch}-arm64-v8a-${variant.buildType.name}.apk"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { ConnectClients } from '../../core/connect/connect-clients';
 
@@ -22,6 +23,7 @@ interface GpsLocation { lat: number; lng: number; accuracy?: number; }
 })
 export default class VehicleComponent implements OnInit, OnDestroy {
   private readonly clients = inject(ConnectClients);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly state = signal<any | null>(null);
   readonly tab = signal<Tab>('climate');
@@ -31,6 +33,11 @@ export default class VehicleComponent implements OnInit, OnDestroy {
   readonly gpsLocation = signal<GpsLocation | null>(null);
   readonly gpsLoading = signal(true);
   readonly googleMapsUrl = signal('');
+
+  // 3D hero
+  readonly heroSrc: SafeResourceUrl = this.sanitizer.bypassSecurityTrustResourceUrl('/hero/hero.html');
+  readonly heroColor = signal('#E8E8EC');
+  readonly heroFile = signal('destroyer.glb');
 
   private pollTimer?: ReturnType<typeof setInterval>;
 
@@ -68,6 +75,31 @@ export default class VehicleComponent implements OnInit, OnDestroy {
     this.loadState();
     this.pollTimer = setInterval(() => this.loadState(), 3000);
     this.loadGps();
+    this.loadHeroConfig();
+  }
+
+  private async loadHeroConfig(): Promise<void> {
+    try {
+      const [sel, mf] = await Promise.all([
+        this.clients.system.getSelectedModel({}),
+        this.clients.system.getModelsManifest({}),
+      ]);
+      if (sel.color) this.heroColor.set(sel.color);
+      if (mf.manifestJson) {
+        const manifest = JSON.parse(mf.manifestJson);
+        const entry = (manifest.models ?? []).find((m: any) => m.id === sel.modelId);
+        if (entry?.file) this.heroFile.set(entry.file);
+      }
+    } catch { /* keep defaults */ }
+  }
+
+  onHeroLoad(iframe: HTMLIFrameElement): void {
+    try {
+      const hero = (iframe.contentWindow as any)?.Hero;
+      if (!hero) return;
+      hero.loadModel(this.heroFile());
+      hero.setColor(this.heroColor());
+    } catch { /* cross-origin or not ready — ignore */ }
   }
 
   ngOnDestroy(): void {

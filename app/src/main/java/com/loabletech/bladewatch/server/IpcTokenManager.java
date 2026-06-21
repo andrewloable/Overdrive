@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import net.bladewatch.app.logging.DaemonLogger;
 
@@ -57,7 +59,8 @@ public final class IpcTokenManager {
     private static final String TOKEN_CHARS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    private static volatile String cachedToken = null;
+    // ponytail: package-private for test injection; null forces a disk read
+    static volatile String cachedToken = null;
 
     private IpcTokenManager() {}
 
@@ -172,10 +175,13 @@ public final class IpcTokenManager {
         return getToken();
     }
 
-    /** Returns true if the supplied token matches the current token. */
+    /** Returns true if the supplied token matches the current token. Constant-time compare (uy93.3). */
     public static boolean isValid(String token) {
         if (token == null || token.isEmpty()) return false;
         String expected = getToken();
-        return expected != null && expected.equals(token);
+        if (expected == null) return false;
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8));
     }
 }

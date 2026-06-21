@@ -46,7 +46,13 @@ Always pass `-s 192.168.0.251:5555` to every `adb` command to avoid ambiguity if
 # Push web assets to connected device for development iteration
 ./gradlew :app:extractWebAssets
 
-# Install debug APK to device (ABI split produces arm64-v8a-specific filename)
+# APK filename convention — the git branch is always embedded:
+#   app/build/outputs/apk/debug/bladewatch-<branch>-arm64-v8a-debug.apk
+# e.g. on branch flutter-refactor:
+#   bladewatch-flutter-refactor-arm64-v8a-debug.apk
+# This is enforced by applicationVariants.all { } in app/build.gradle.kts.
+
+# Install debug APK to device (branch name is in the filename — see above)
 #
 # IMPORTANT: Always STOP all running BladeWatch daemons and UNINSTALL the old
 # app BEFORE installing a new APK. The shell-launched daemons run as detached
@@ -77,7 +83,8 @@ adb -s 192.168.0.251:5555 shell '
 # NOTE: killing daemons can briefly drop the ADB-over-TCP connection; if so,
 # reconnect: until [ "$(adb -s 192.168.0.251:5555 get-state)" = device ]; do adb connect 192.168.0.251:5555; sleep 3; done
 adb -s 192.168.0.251:5555 uninstall net.bladewatch.app
-adb -s 192.168.0.251:5555 install app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+# APK filename includes the branch name (e.g. flutter-refactor):
+adb -s 192.168.0.251:5555 install "app/build/outputs/apk/debug/bladewatch-$(git rev-parse --abbrev-ref HEAD)-arm64-v8a-debug.apk"
 
 # Clear all logs (logcat buffer + daemon log files + debug app log)
 adb -s 192.168.0.251:5555 logcat -c

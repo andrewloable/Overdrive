@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import net.bladewatch.app.daemon.AppIntegrityCheck
 import net.bladewatch.app.logging.DebugAppLogger
 import net.bladewatch.app.logging.LogConfig
 import net.bladewatch.app.logging.LogManager
@@ -37,6 +38,10 @@ class BladeWatchApplication : Application() {
                     .build()
             )
         }
+
+        // APK signing-cert integrity check (uy93.10). Report-only for dev/unsigned builds
+        // (RELEASE_CERT_SHA256 is empty) — blocks privileged IPC for tampered release APKs.
+        AppIntegrityCheck.isTampered(this)
 
         // Apply the user-picked locale before any Activity/Fragment is created.
         // Auto-mode (or unset) writes an empty list so AppCompat falls back to

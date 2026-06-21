@@ -24,16 +24,20 @@ class SecretConfigStore @JvmOverloads constructor(
 ) {
     companion object {
         const val DEFAULT_PATH = "/storage/emulated/0/Android/data/net.bladewatch.app/files/bladewatch_secrets.json"
-        private const val LEGACY_PATH = "/data/local/tmp/bladewatch_secrets.json"
+        const val LEGACY_PATH = "/data/local/tmp/bladewatch_secrets.json"
     }
 
     private val lock = Any()
+
+    // ponytail: test seam — null = real LEGACY_PATH; non-null = injected path (test-only)
+    @JvmField var legacyPathForTest: String? = null
+    private val effectiveLegacyPath: String get() = legacyPathForTest ?: LEGACY_PATH
 
     fun exists(): Boolean = file.exists()
 
     fun canReadDirectly(): Boolean {
         if (file.exists()) return file.canRead()
-        val legacyFile = File(LEGACY_PATH)
+        val legacyFile = File(effectiveLegacyPath)
         return !legacyFile.exists() || legacyFile.canRead()
     }
 
@@ -154,7 +158,7 @@ class SecretConfigStore @JvmOverloads constructor(
 
     private fun readRootMap(): MutableMap<String, Any?> {
         if (!file.exists()) {
-            val legacyFile = File(LEGACY_PATH)
+            val legacyFile = File(effectiveLegacyPath)
             if (!legacyFile.exists() || legacyFile.absolutePath == file.absolutePath) {
                 return LinkedHashMap()
             }
@@ -200,7 +204,7 @@ class SecretConfigStore @JvmOverloads constructor(
                 }
             }
             applyOwnerOnlyPermissions(file)
-            mirrorLegacy(root)
+            deleteLegacyIfPresent()
             true
         } catch (_: Exception) {
             try { tmp.delete() } catch (_: Exception) {}
@@ -208,19 +212,15 @@ class SecretConfigStore @JvmOverloads constructor(
         }
     }
 
-    private fun mirrorLegacy(root: MutableMap<String, Any?>) {
-        if (file.absolutePath == LEGACY_PATH) return
-        val legacyFile = File(LEGACY_PATH)
-        val parent = legacyFile.parentFile ?: return
+    // uy93.4: on every successful primary write, delete any legacy plaintext copy.
+    // readRootMap() still falls back to legacyFile when primary is absent (one-time upgrade
+    // migration path), but once the primary is written the legacy is gone.
+    private fun deleteLegacyIfPresent() {
+        if (file.absolutePath == effectiveLegacyPath) return
         try {
-            if (!parent.exists()) parent.mkdirs()
-            FileOutputStream(legacyFile).use { out ->
-                out.write(serializeObject(root).toByteArray(StandardCharsets.UTF_8))
-            }
-            applyOwnerOnlyPermissions(legacyFile)
-        } catch (_: Exception) {
-            // Legacy mirror is best-effort for older hardcoded readers only.
-        }
+            val legacyFile = File(effectiveLegacyPath)
+            if (legacyFile.exists()) legacyFile.delete()
+        } catch (_: Exception) {}
     }
 
     private fun applyOwnerOnlyPermissions(target: File) {

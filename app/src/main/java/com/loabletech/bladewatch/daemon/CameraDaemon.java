@@ -271,6 +271,9 @@ public class CameraDaemon {
         }
         logT("singletonLock acquired");
 
+        // Report-only Frida/hook detection (uy93.9). Never enforces; disable via kill-switch file.
+        RaspDetector.checkAndReport();
+
         // Remove any stale ready sentinel left by a previous crash before we write a new one at startup completion
         new File(READY_SENTINEL).delete();
 

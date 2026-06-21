@@ -46,12 +46,12 @@
     public static java.lang.String d(java.lang.String);
 }
 
-# Keep class names for daemon subpackages (for Class.forName if used internally)
-# but allow method/field renaming
+# Keep class names for daemon subpackages (daemon entry points + BYD SDK hooks).
+# net.bladewatch.app.server.** is NOT kept — server classes are Android-side only,
+# not reflected; R8 can rename both their class names and members.
 -keepnames class net.bladewatch.app.daemon.** { }
 -keepnames class net.bladewatch.app.byd.** { }
 -keepnames class net.bladewatch.app.camera.** { }
--keepnames class net.bladewatch.app.server.** { }
 -keepnames class net.bladewatch.app.encoding.** { }
 -keepnames class net.bladewatch.app.stream.** { }
 -keepnames class net.bladewatch.app.monitor.** { }
@@ -95,10 +95,8 @@
 -dontwarn com.google.auto.value.**
 -dontwarn org.tensorflow.lite.gpu.**
 
-# AI detection classes - keep class names but allow method obfuscation
-# Detection data class needs field names for any serialization
+# AI detection classes - Detection fields are needed for TFLite serialization
 -keep class net.bladewatch.app.ai.Detection { *; }
--keepnames class net.bladewatch.app.ai.** { }
 
 # ==================== Kotlin & AndroidX ====================
 -dontwarn kotlin.**
@@ -121,28 +119,28 @@
 -keep class net.bladewatch.app.services.LocationSidecarService { *; }
 
 # ==================== App Packages (allow obfuscation) ====================
-# Keep class names for debugging but obfuscate methods/fields
--keepnames class net.bladewatch.app.auth.** { }
--keepnames class net.bladewatch.app.bridge.** { }
--keepnames class net.bladewatch.app.byd.** { }
--keepnames class net.bladewatch.app.client.** { }
--keepnames class net.bladewatch.app.config.** { }
--keepnames class net.bladewatch.app.launcher.** { }
--keepnames class net.bladewatch.app.manager.** { }
--keepnames class net.bladewatch.app.proximity.** { }
--keepnames class net.bladewatch.app.recording.** { }
--keepnames class net.bladewatch.app.service.** { }
--keepnames class net.bladewatch.app.shell.** { }
--keepnames class net.bladewatch.app.storage.** { }
--keepnames class net.bladewatch.app.streaming.** { }
--keepnames class net.bladewatch.app.surveillance.** { }
--keepnames class net.bladewatch.app.telemetry.** { }
+#
+# Packages below are Android-side only — NOT accessed via Class.forName or
+# BYD SDK reflection. R8 is free to rename both class names and members.
+# (Ponytail: these -keepnames were preventing class-name obfuscation for no
+# functional reason; removing them lets R8 fully rename these packages.)
+#
+# Packages that MUST preserve class names for reflection:
+#   - daemon.** / byd.** / camera.** — daemon entry points + BYD SDK hooks
+#   - encoding.** / stream.** / monitor.** / ai.** — daemon-side classes
+#   - logging.** — kept separately below (DaemonLogConfig runtime control)
+#
 # TelemetrySnapshot fields accessed by overlay renderer — keep from renaming
 -keepclassmembers class net.bladewatch.app.telemetry.TelemetrySnapshot { public *; }
--keepnames class net.bladewatch.app.abrp.** { }
--keepnames class net.bladewatch.app.ui.** { }
--keepnames class net.bladewatch.app.util.** { }
--keepnames class net.bladewatch.app.webrtc.** { }
+#
+# BYD/daemon packages: MUST preserve class names for shell entry points and BYD hooks
+-keepnames class net.bladewatch.app.byd.** { }
+-keepnames class net.bladewatch.app.daemon.** { }
+-keepnames class net.bladewatch.app.camera.** { }
+-keepnames class net.bladewatch.app.encoding.** { }
+-keepnames class net.bladewatch.app.stream.** { }
+-keepnames class net.bladewatch.app.monitor.** { }
+-keepnames class net.bladewatch.app.ai.** { }
 
 # ==================== Serialization & Parcelable ====================
 -keepclassmembers class * implements android.os.Parcelable {
