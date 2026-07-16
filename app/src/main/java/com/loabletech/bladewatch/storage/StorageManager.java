@@ -916,7 +916,15 @@ public class StorageManager {
      * against switching while recording/surveillance is active.
      */
     public void applyAutoStoragePriority() {
-        // 1. SD card (discovered in constructor via tryLoadSdCardFromCache / discoverSdCard)
+        // 1. SD card (discovered in constructor via tryLoadSdCardFromCache / discoverSdCard).
+        // Those two only ever detect a volume already in "mounted" state — neither
+        // calls `sm mount`. A card that's physically present but sitting unmounted
+        // at this point in boot (e.g. vold didn't auto-mount it) would otherwise be
+        // invisible here forever. ensureSdCardMounted() is the method that actually
+        // issues `sm mount`; call it now so presence, not prior mount state, decides.
+        if (!sdCardAvailable) {
+            ensureSdCardMounted(true);
+        }
         if (sdCardAvailable && sdCardPath != null) {
             File bladeWatchDir = new File(sdCardPath, "BladeWatch");
             if (bladeWatchDir.exists()) {
@@ -924,7 +932,8 @@ public class StorageManager {
             } else {
                 logInfo("Auto-priority: SD card found, creating BladeWatch/ at " + sdCardPath);
             }
-            // initSdCardDirectories() already ran in the constructor — dirs exist.
+            // initSdCardDirectories() already ran — either in the constructor's
+            // discovery, or just above inside ensureSdCardMounted() — dirs exist.
             recordingsStorageType = StorageType.SD_CARD;
             surveillanceStorageType = StorageType.SD_CARD;
             tripsStorageType = StorageType.SD_CARD;

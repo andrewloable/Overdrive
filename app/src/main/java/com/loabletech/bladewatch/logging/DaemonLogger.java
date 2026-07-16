@@ -216,7 +216,11 @@ public class DaemonLogger {
         // Print to stdout for daemon processes running via app_process.
         // Include timestamp so the shell wrapper's log file has timestamps
         // on every line, not just the wrapper's own echo statements.
-        if (globalConfig.enableStdoutLog) {
+        // Errors only: the shell launcher appends this stream to an
+        // unbounded, never-rotated file (e.g. cam_daemon.log) across every
+        // daemon restart — DEBUG/INFO/WARN volume there grew that file to
+        // multiple gigabytes.
+        if (globalConfig.enableStdoutLog && level == Level.ERROR) {
             System.out.println(tag + ": [" + timestamp + "] " + redactedMessage);
         }
         

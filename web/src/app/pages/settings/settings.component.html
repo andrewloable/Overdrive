@@ -151,13 +151,6 @@
                       <option value="MAX">{{ 'settings.quality_max' | translate }}</option>
                     </select>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">{{ 'settings.video_codec' | translate }}</label>
-                    <select class="form-select" [ngModel]="codec()" (ngModelChange)="codec.set($event)">
-                      <option value="H264">{{ 'settings.codec_h264' | translate }}</option>
-                      <option value="H265">{{ 'settings.codec_h265' | translate }}</option>
-                    </select>
-                  </div>
                   <div class="actions">
                     <button class="btn btn-primary" (click)="saveQuality()" [disabled]="saving()">
                       {{ saving() ? ('settings.saving' | translate) : ('settings.save_quality' | translate) }}

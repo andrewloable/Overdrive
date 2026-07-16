@@ -154,7 +154,6 @@ export default class SettingsComponent implements OnInit {
         this.clients.settings.getLocale({}),
       ]);
       this.recordingQuality.set(quality.recordingQuality || 'STANDARD');
-      this.codec.set(quality.codec || 'H264');
       if (quality.recordingSegmentMinutes) this.recordingLimit.set(quality.recordingSegmentMinutes);
       this.lang.set(locale.lang || 'en');
       // GetLocaleResponse.supported is map<string,bool> (codes mapped to true),

@@ -36,7 +36,7 @@ public class QualitySettingsApiHandler {
     /** @deprecated mirrors recordingQuality; kept until persistence migration completes. */
     @Deprecated
     private static String recordingBitrate = "STANDARD";
-    private static String recordingCodec = "H264";      // H264 or H265
+    private static String recordingCodec = "H264";      // H264 only — HEVC playback isn't supported by the WebView video player
     
     private static final String UNIFIED_CONFIG_FILE = "/data/local/tmp/bladewatch_config.json";
     private static final String LEGACY_SETTINGS_FILE = "/data/local/tmp/camera_settings.json";
@@ -674,7 +674,6 @@ public class QualitySettingsApiHandler {
         // Add codec info for UI
         JSONObject codecInfo = new JSONObject();
         codecInfo.put("H264", "H.264/AVC (Compatible)");
-        codecInfo.put("H265", "H.265/HEVC (50% smaller)");
         response.put("codecOptions", codecInfo);
         
         // Add FPS options for UI. Range 10..30 — clamped server-side by
@@ -744,7 +743,7 @@ public class QualitySettingsApiHandler {
             if (settings.has("codec") || settings.has("recordingCodec")) {
                 String codecKey = settings.has("codec") ? "codec" : "recordingCodec";
                 String codec = settings.getString(codecKey).toUpperCase();
-                if (codec.equals("H264") || codec.equals("H265")) {
+                if (codec.equals("H264")) {
                     recordingCodec = codec;
                     CameraDaemon.log("Recording codec set to: " + codec);
                     CameraDaemon.setRecordingCodec(codec);
@@ -864,7 +863,7 @@ public class QualitySettingsApiHandler {
                     }
                     if (recording.has("codec")) {
                         String codec = recording.getString("codec");
-                        if (codec.equals("H264") || codec.equals("H265")) {
+                        if (codec.equals("H264")) {
                             recordingCodec = codec;
                             CameraDaemon.log("Restored recording codec from unified: " + codec);
                         }
@@ -927,7 +926,7 @@ public class QualitySettingsApiHandler {
                 }
                 if (settings.has("recordingCodec")) {
                     String codec = settings.getString("recordingCodec");
-                    if (codec.equals("H264") || codec.equals("H265")) {
+                    if (codec.equals("H264")) {
                         recordingCodec = codec;
                     }
                 }
@@ -1028,7 +1027,7 @@ public class QualitySettingsApiHandler {
     }
     
     public static void setRecordingCodec(String codec) {
-        if (codec.equals("H264") || codec.equals("H265")) {
+        if (codec.equals("H264")) {
             recordingCodec = codec;
             CameraDaemon.setRecordingCodec(codec);
             persistSettings();
@@ -1056,7 +1055,7 @@ public class QualitySettingsApiHandler {
     }
     
     public static void setRecordingCodecStatic(String codec) {
-        if (codec.equals("H264") || codec.equals("H265")) {
+        if (codec.equals("H264")) {
             recordingCodec = codec;
         }
     }

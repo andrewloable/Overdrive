@@ -95,7 +95,7 @@ message GetQualityResponse {
 message SetQualityRequest {
   // One of: ECONOMY, STANDARD, HIGH, PREMIUM, MAX. Leave empty to keep current.
   string recording_quality = 1;
-  // One of: H264, H265. Leave empty to keep current.
+  // H264 only. Leave empty to keep current.
   string codec = 2;
   // Streaming quality preset. Leave empty to keep current.
   string streaming_quality = 3;

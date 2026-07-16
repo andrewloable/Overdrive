@@ -322,9 +322,9 @@ public class TcpCommandServer {
                 break;
 
             case "setCodec":
-                // Set recording codec: H264 or H265
+                // Recording codec is H264-only — HEVC playback isn't supported by the WebView video player.
                 String codecValue = cmd.optString("value", "").toUpperCase();
-                if (codecValue.equals("H264") || codecValue.equals("H265")) {
+                if (codecValue.equals("H264")) {
                     CameraDaemon.setRecordingCodec(codecValue);
                     HttpServer.setRecordingCodec(codecValue);
                     response.put("status", "ok");
@@ -332,7 +332,7 @@ public class TcpCommandServer {
                     response.put("message", "Codec set to " + codecValue + " - restart recording to apply");
                 } else {
                     response.put("status", "error");
-                    response.put("message", "Invalid codec. Use H264 or H265");
+                    response.put("message", "Invalid codec. Only H264 is supported");
                 }
                 break;
 
@@ -421,8 +421,7 @@ public class TcpCommandServer {
                     .put("MEDIUM", "3 Mbps")
                     .put("HIGH", "6 Mbps"));
                 response.put("codecOptions", new JSONObject()
-                    .put("H264", "H.264/AVC (Compatible)")
-                    .put("H265", "H.265/HEVC (50% smaller)"));
+                    .put("H264", "H.264/AVC (Compatible)"));
                 break;
 
             case "auth_invalidate":

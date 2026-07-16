@@ -142,7 +142,7 @@ class RecordingSettingsController(private val context: Context) {
                 val mode = status?.currentMode ?: "NONE"
                 selectedMode = RecordingMode.values().find { it.value == mode } ?: RecordingMode.NONE
                 if (quality != null) {
-                    selectedQuality = quality.quality; selectedCodec = quality.codec
+                    selectedQuality = quality.quality
                     selectedLimit = RecordingLimit.fromMinutes(quality.segmentMinutes)
                 }
                 if (storage != null) {
@@ -298,21 +298,6 @@ class RecordingSettingsController(private val context: Context) {
             })
         }
         card.addView(tierRow)
-        card.addView(spacer(dp(16)))
-
-        // Codec
-        card.addView(sectionLabel("Codec"))
-        card.addView(spacer(dp(8)))
-        val codecRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("H264", "H265").forEach { codec ->
-            val btn = makeSegmentBtn(codec, selectedCodec == codec) {
-                selectedCodec = codec; dirty = true; renderCurrentTab()
-            }
-            codecRow.addView(btn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, dp(8), 0)
-            })
-        }
-        card.addView(codecRow)
 
         contentArea.addView(card)
         contentArea.addView(spacer(dp(12)))

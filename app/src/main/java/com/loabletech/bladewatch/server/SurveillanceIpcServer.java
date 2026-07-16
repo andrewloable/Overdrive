@@ -575,7 +575,7 @@ public class SurveillanceIpcServer implements Runnable {
             // Handle codec setting
             if (config.has("codec")) {
                 String codec = config.optString("codec", "H264").toUpperCase();
-                if (codec.equals("H264") || codec.equals("H265")) {
+                if (codec.equals("H264")) {
                     CameraDaemon.setRecordingCodec(codec);
                     // Also update HttpServer's static setting for web UI sync
                     HttpServer.setRecordingCodecStatic(codec);

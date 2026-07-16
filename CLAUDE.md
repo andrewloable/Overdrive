@@ -8,6 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This project was forked from "Overdrive" and rebranded to BladeWatch (package `com.loabletech.bladewatch`). The legacy BladeWatch app is kept at `/Volumes/mandark-1Tb/projects/loabletech/BladeWatch-Legacy` for reference only — do not modify it.
 
+## Execution Mode
+
+Do **not** use subagents, the `Agent` tool, or the `Workflow` tool in this project. Do all work directly in the foreground yourself — investigation, ADB commands, code reads, and edits included. Do not launch background tasks; run commands in the foreground and wait for their result before continuing.
+
 ## Git Workflow
 
 Do **not** run `git add`, `git commit`, or `git push` automatically. All commits are reviewed and made manually by the developer. Make code changes and stop — do not stage or commit them.
